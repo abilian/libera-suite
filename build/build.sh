@@ -262,6 +262,22 @@ failing_rule() {
     # way. A byte count cannot lie the same way.
     echo "    ($(tr -cd '\r' < "$mk" | wc -c | tr -d ' ') CR bytes in $(wc -l < "$mk" | tr -d ' ') lines)" >&2
 
+    # The rule above it, which is the point.
+    #
+    # Grepping for the name alone prints the broken rule and nothing to compare
+    # it against. OpenSSL compiled apps\app_rand.obj and then could not find
+    # apps\apps.c, two rules a few lines apart in one file -- so quoting, line
+    # endings, tabs, the working directory and the source tree are all shared
+    # by a case that works and a case that does not, and none of them can be
+    # the difference. A window shows both; the matching lines show one.
+    n="$(grep -n -F "$want" "$mk" 2>/dev/null | head -1 | cut -d: -f1)"
+    [ -n "$n" ] || return 0
+    from=$(( n > 14 ? n - 14 : 1 ))
+    echo >&2
+    echo "--- lines $from to $((n + 3)), so the rule before it is visible ---" >&2
+    sed -n "${from},$((n + 3))p" "$mk" | sed 's/\t/<TAB>/g' | cat -n |
+        awk -v o="$from" '{ $1 = $1 + o - 1; print "    " $0 }' >&2
+
     # And the file itself. A dependency nmake cannot make is either a rule it
     # misread or a file that is not there, and those want opposite fixes.
     f="$(printf '%s' "$want" | tr '\\' '/')"
