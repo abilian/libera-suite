@@ -353,9 +353,15 @@ check_cygwin() {
     # Cygwin's base install. `make` runs the build; `python3` is spawned to
     # generate data/rules.mk, which is where this stopped the first time the
     # rest was right. Each one found the hard way, so the list is a list.
+    #
+    # Asked of Cygwin's own bash, not of this shell. Cygwin's python3 is a
+    # Cygwin symlink, which Git Bash does not see as an executable file: a
+    # `[ -x ]` from out here reports it missing while it works perfectly well
+    # in there. The shell that will run nc-build-cygwin.sh is the only one
+    # whose answer means anything.
     missing_cyg=""
     for tool in make python3; do
-        [ -x "$root_u/bin/$tool.exe" ] || [ -x "$root_u/bin/$tool" ] ||
+        "$root_u/bin/bash.exe" -lc "command -v $tool" >/dev/null 2>&1 ||
             missing_cyg="$missing_cyg $tool"
     done
     if [ -n "$missing_cyg" ]; then

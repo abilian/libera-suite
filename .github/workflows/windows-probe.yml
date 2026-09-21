@@ -157,10 +157,12 @@ jobs:
           # Neither is in Cygwin's base install, and neither failure is visible
           # until ICU's configure is already running: make builds it, python3
           # is spawned to generate data/rules.mk.
+          #
+          # Asked of Cygwin's bash: python3 in there is a Cygwin symlink, and
+          # a `[ -x ]` from Git Bash calls it missing while it works.
           for tool in make python3; do
-            [ -x "$root_u/bin/$tool.exe" ] || [ -x "$root_u/bin/$tool" ] || {
+            "$root_u/bin/bash.exe" -lc "command -v $tool" || {
               echo "FATAL: Cygwin has no $tool after setup" >&2
-              ls -1 "$root_u/bin" | head -40 >&2
               exit 1
             }
           done
