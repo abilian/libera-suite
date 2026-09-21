@@ -189,32 +189,62 @@ cmd_configure() {
     mkdir -p "$OUT/core"
     echo "==> cmake configure (no vcpkg toolchain: surface the plain-CMake gaps first)"
     cd "$OUT/core"
-    cmake -G Ninja \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DEO_CORE_OUTPUT_DIR="$OUT/core/bin" \
-        -DEO_CORE_TOOLS_DIR="$OUT/core/tools" \
-        "$SRC/core" || { third_party_logs; exit 1; }
+    # Teed rather than redirected: a configure that prints nothing for minutes
+    # reads as hung, and build_3rdparty.py is minutes. The status goes through
+    # a file because a pipeline's exit status is the last command's, and POSIX
+    # sh has no pipefail.
+    cmake_log="$OUT/core/cmake-configure.log"
+    {
+        cmake -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DEO_CORE_OUTPUT_DIR="$OUT/core/bin" \
+            -DEO_CORE_TOOLS_DIR="$OUT/core/tools" \
+            "$SRC/core" 2>&1
+        echo "$?" > "$OUT/core/.cmake-status"
+    } | tee "$cmake_log"
+    [ "$(cat "$OUT/core/.cmake-status")" = 0 ] || {
+        failed_tree "$cmake_log"
+        named_logs "$cmake_log"
+        exit 1
+    }
 }
 
-# What the third-party build actually said.
+# What the failing component's source tree actually contains.
 #
-# common.cmake runs build_3rdparty.py through execute_process and prints its
-# output when it finishes, so a failure arrives as "Aborting ICU: Configuration
-# failed (see .../icu-build.log)" -- a path, on a machine you may not be
-# sitting at. Each recipe writes its own log somewhere under third_party, and
-# going to find it is a step nobody should have to take twice.
+# build_3rdparty.py names the one that stopped -- "❌ openssl failed" -- and a
+# build tool complaining it cannot make a source file is either a tool that
+# cannot read the tree or a tree that is not there. Those want opposite fixes
+# and the logs distinguish them badly, so list it.
+failed_tree() {
+    name="$(sed -n 's/.*[^a-z]\([a-z0-9_-]*\) failed with code.*/\1/p' "$1" | tail -1)"
+    [ -n "$name" ] || return 0
+    dir="$OUT/core/third_party/work/$name"
+    echo >&2
+    echo "--- $name's work tree: $dir ---" >&2
+    if [ -d "$dir" ]; then
+        ls -1 "$dir" 2>/dev/null | head -25 | sed 's/^/    /' >&2
+        echo "    ($(find "$dir" -type f 2>/dev/null | wc -l | tr -d " ") files in all)" >&2
+    else
+        echo "    the directory does not exist" >&2
+    fi
+}
+
+# The log the failure named, and only that one.
 #
-# The newest two, tail only: a configure log is thousands of lines of feature
-# probes and the answer is at the end.
-third_party_logs() {
-    tp="$OUT/core/third_party"
-    [ -d "$tp" ] || return 0
-    found="$(find "$tp" -name '*.log' -type f 2>/dev/null |
-        while read -r f; do printf '%s\t%s\n' "$(mtime "$f")" "$f"; done |
-        sort -rn | cut -f2 | head -2)"
-    [ -n "$found" ] || return 0
-    for f in $found; do
-        echo
+# The first version of this tailed the two newest *.log under third_party,
+# which is a proxy and a bad one: a recipe that fails without writing a log --
+# OpenSSL hands its output back through run_command instead -- leaves the
+# newest files belonging to whatever succeeded before it. It printed forty
+# lines of a component that had worked, labelled as the failure.
+#
+# So read the path out of what cmake actually said. A recipe that names a log
+# gets it tailed; one that does not has already printed everything it has.
+named_logs() {
+    for f in $(sed -n 's/.*(see \([^)]*\.log\)).*/\1/p' "$1" | sort -u); do
+        # /cygdrive/d/... is how the Cygwin side of the ICU build spells it.
+        case "$f" in /cygdrive/?/*) f="$(echo "$f" | sed 's|^/cygdrive/\(.\)|\1:|')" ;; esac
+        [ -f "$f" ] || continue
+        echo >&2
         echo "--- the last 40 lines of $f ---" >&2
         tail -40 "$f" >&2
     done
