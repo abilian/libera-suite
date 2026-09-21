@@ -9,6 +9,8 @@ set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 . "$HERE/common.sh"
+# Defines msvc_env(), which is a no-op off Windows.
+. "$HERE/msvc-env.sh"
 # A local clone to copy objects from, so iterating does not refetch 1.5 GB.
 MIRROR="${MIRROR:-$HOME/ghorg/euro-office}"
 
@@ -173,6 +175,10 @@ cmd_fetch() {
 
 cmd_configure() {
     setup_env
+    # Before the toolchain check, so `cl` is on PATH by the time anything looks
+    # for a compiler. On Windows without this, CMake picks up mingw's gcc and
+    # configures a GNU build in silence.
+    msvc_env
     # Before cmake, because everything this catches fails deep inside a
     # third-party build and in somebody else's words. V8's gn gen wants the
     # host's glib and fails *after* depot_tools has fetched V8 -- 991 seconds,
@@ -191,6 +197,7 @@ cmd_configure() {
 }
 
 cmd_build() {
+    msvc_env
     setup_env
     cd "$OUT/core"
 
