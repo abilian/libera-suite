@@ -176,7 +176,14 @@ jobs:
       - name: toolchain
         run: |
           export PATH="$PERL_BIN:$PATH"
-          echo "perl in use: $(command -v perl)"
+          # Both sides of the boundary. The recipes run through cmake, which
+          # runs Python, which resolves tools with shutil.which -- so what bash
+          # sees and what Python sees are two different questions, and OpenSSL's
+          # Configure is invoked with the second one.
+          echo "bash   perl:  $(command -v perl)"
+          python -c "import shutil; print('python perl: ', shutil.which('perl'))"
+          python -c "import shutil; print('python nmake:', shutil.which('nmake'))"
+          python -c "import shutil; print('python cl:   ', shutil.which('cl'))"
           sh build/toolchain.sh check
 
       - name: fetch
@@ -212,5 +219,9 @@ jobs:
           # somebody guessed at: ICU's lands in
           # third_party/install/icu/icu-build.log, which the old two globs
           # missed entirely.
+          # Logs, plus the makefiles the recipes generate: OpenSSL's Configure
+          # writes one, and when nmake cannot make sense of it the makefile is
+          # the evidence, not the log.
           path: |
             ${{ env.BUILD_ROOT }}/out/**/*.log
+            ${{ env.BUILD_ROOT }}/out/**/makefile
