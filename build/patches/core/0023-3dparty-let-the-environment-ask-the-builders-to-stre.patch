@@ -1,0 +1,32 @@
+From 3ea55275d4788ece11eea9bdfd019667931cc23a Mon Sep 17 00:00:00 2001
+From: Libera Suite <dev@liberasuite.eu>
+Date: Mon, 21 Sep 2026 19:44:08 +0200
+Subject: [PATCH] 3dparty: let the environment ask the builders to stream their
+ output
+
+---
+ Common/3dParty/build_3rdparty_common.py | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/Common/3dParty/build_3rdparty_common.py b/Common/3dParty/build_3rdparty_common.py
+index e819dd6b96..860369d1a6 100644
+--- a/Common/3dParty/build_3rdparty_common.py
++++ b/Common/3dParty/build_3rdparty_common.py
+@@ -151,6 +151,17 @@ def run_command(
+     ):
+ 
+     cwd = (cwd or Path.cwd()).resolve()
++    # A failing recipe reports through abort_op below, which prints stderr and
++    # falls back to stdout only when stderr is empty. nmake writes its banner
++    # and its fatal error to stderr and every command it runs to stdout, so the
++    # half that says *what* was being built is the half that gets dropped.
++    # Same for a recipe whose detail is on stdout: ICU's configure summary is
++    # there, and the failure that reaches the caller is a bare exit code.
++    #
++    # Rather than pass verbose=True at each of the fifty-odd call sites, let the
++    # environment say so. Unset, nothing changes.
++    if os.environ.get( "EO_3RDPARTY_VERBOSE" ):
++        verbose = True
+     output_pipe = None if verbose else subprocess.PIPE
+     final_env = os.environ.copy() | ( {} if env is None else env )
+ 

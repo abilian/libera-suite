@@ -57,6 +57,15 @@ jobs:
       run:
         shell: bash
 
+    env:
+      # build_3rdparty_common.run_command pipes both streams and, on failure,
+      # reports stderr -- falling back to stdout only when stderr is empty. For
+      # nmake that is exactly backwards: the banner and the fatal error go to
+      # stderr, and every command it ran goes to stdout, so the half naming the
+      # target is the half thrown away. Six rounds of this read one error with
+      # no context. Patch 0023 makes the variable turn the pipes off.
+      EO_3RDPARTY_VERBOSE: '1'
+
     steps:
       # PowerShell, not wmic: wmic is deprecated and already absent from newer
       # Windows images, so a report written with it would start failing on an
