@@ -331,6 +331,9 @@ origin-check: ## read the origin back as a stranger and verify every hash
 smoke: ## the converter: fonts, docx -> odt -> docx, docx -> pdf
 	sh build/smoke.sh
 
+odf-report: ## ODF round-trip fidelity: the corpus through x2t, report in tools/odf-roundtrip/out/
+	uv run python tools/odf-roundtrip/roundtrip.py
+
 # Does the patch queue still apply to the pinned SHAs? Scratch worktrees, so it
 # disturbs nothing and costs seconds. Run it after editing build/patches/.
 patches: ## does the patch queue still apply to the pinned SHAs?
