@@ -129,6 +129,7 @@ package_for() {
     perl:windows) echo "StrawberryPerl.StrawberryPerl" ;;
     node:windows | npm:windows) echo "OpenJS.NodeJS.LTS" ;;
     nasm:windows) echo "NASM.NASM" ;;
+    perlmod:windows) echo "StrawberryPerl.StrawberryPerl" ;;
     *:windows) echo "$1" ;;
     # Same name everywhere it is not listed below.
     gcc:debian | g++:debian | make:debian) echo "build-essential" ;;
@@ -215,8 +216,22 @@ cmd_check() {
     done
 
     if command -v perl >/dev/null 2>&1; then
-        perl -MFindBin -MIPC::Cmd -e 'exit 0' 2>/dev/null ||
-            want perlmod "perl without FindBin or IPC::Cmd, which OpenSSL's Configure needs"
+        if ! perl -MFindBin -MIPC::Cmd -e 'exit 0' 2>/dev/null; then
+            if [ "$FAMILY" = windows ]; then
+                # Measured on a GitHub runner: the perl that answers here is Git
+                # for Windows' own, a trimmed MSYS2 build missing parts of core
+                # that OpenSSL's Configure reaches for. Installing Strawberry
+                # Perl is not enough on its own -- Git Bash puts /usr/bin ahead
+                # of anything winget adds, so the trimmed one still wins. It has
+                # to come first on PATH.
+                want perlmod "perl at $(command -v perl), which has no FindBin or IPC::Cmd.
+     That is Git for Windows' own perl. OpenSSL's Configure needs a full one,
+     and it has to precede Git's on PATH:
+       export PATH=/c/Strawberry/perl/bin:\$PATH"
+            else
+                want perlmod "perl without FindBin or IPC::Cmd, which OpenSSL's Configure needs"
+            fi
+        fi
     fi
 
     if [ "$FAMILY" = windows ]; then

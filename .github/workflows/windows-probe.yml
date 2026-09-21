@@ -82,8 +82,25 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Git for Windows ships a trimmed perl and puts it first, and OpenSSL's
+      # Configure wants a full one. The runner images carry Strawberry Perl, so
+      # this is usually a reorder rather than an install.
+      - name: A perl OpenSSL can use
+        run: |
+          if [ -x /c/Strawberry/perl/bin/perl.exe ]; then
+            echo 'C:\Strawberry\perl\bin' >> "$GITHUB_PATH"
+          else
+            echo "no Strawberry Perl on this image; installing"
+            winget install --exact --silent --accept-package-agreements \
+              StrawberryPerl.StrawberryPerl || true
+            echo 'C:\Strawberry\perl\bin' >> "$GITHUB_PATH"
+          fi
+
       - name: toolchain
-        run: sh build/toolchain.sh check
+        run: |
+          echo "perl in use: $(command -v perl)"
+          perl -V:version 2>/dev/null || true
+          sh build/toolchain.sh check
 
       - name: fetch
         if: inputs.stage != 'toolchain'
