@@ -152,15 +152,18 @@ jobs:
           "$setup" --quiet-mode --no-shortcuts --no-startmenu --no-desktop \
             --root "$root" --local-package-dir "$(cygpath -w "$RUNNER_TEMP")" \
             --site http://mirrors.kernel.org/sourceware/cygwin/ \
-            --packages make
+            --packages make,python3
 
-          # make is a separate package, and a Cygwin without it gets past every
-          # path check and fails inside runConfigureICU.
-          [ -x "$root_u/bin/make.exe" ] || {
-            echo "FATAL: Cygwin has no make after setup" >&2
-            ls -1 "$root_u/bin" | head -30 >&2
-            exit 1
-          }
+          # Neither is in Cygwin's base install, and neither failure is visible
+          # until ICU's configure is already running: make builds it, python3
+          # is spawned to generate data/rules.mk.
+          for tool in make python3; do
+            [ -x "$root_u/bin/$tool.exe" ] || [ -x "$root_u/bin/$tool" ] || {
+              echo "FATAL: Cygwin has no $tool after setup" >&2
+              ls -1 "$root_u/bin" | head -40 >&2
+              exit 1
+            }
+          done
           echo "CYGWIN_ROOT=$root" >> "$GITHUB_ENV"
           echo "cygwin: $root, $("$root_u/bin/make.exe" --version | head -1)"
 

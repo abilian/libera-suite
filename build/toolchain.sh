@@ -349,10 +349,23 @@ check_cygwin() {
         echo "       is not at C:\\cygwin64 set CYGWIN_ROOT to where it is." >&2
         return 1
     fi
-    if [ ! -x "$root_u/bin/make.exe" ]; then
-        echo "FATAL: Cygwin at $root has no make." >&2
-        echo "       ICU's configure runs it; a base Cygwin does not ship it." >&2
-        echo "       Re-run Cygwin's setup and select the 'make' package." >&2
+    # What ICU's configure reaches for beyond a shell, and none of it is in
+    # Cygwin's base install. `make` runs the build; `python3` is spawned to
+    # generate data/rules.mk, which is where this stopped the first time the
+    # rest was right. Each one found the hard way, so the list is a list.
+    missing_cyg=""
+    for tool in make python3; do
+        [ -x "$root_u/bin/$tool.exe" ] || [ -x "$root_u/bin/$tool" ] ||
+            missing_cyg="$missing_cyg $tool"
+    done
+    if [ -n "$missing_cyg" ]; then
+        echo "FATAL: Cygwin at $root is missing:$missing_cyg" >&2
+        echo "       ICU's configure runs all of these, and a base Cygwin" >&2
+        echo "       ships none of them. Re-run Cygwin's setup and select" >&2
+        echo "       them, or:" >&2
+        echo "         <cygwin>\\cygwinsetup.exe --quiet-mode --root $root \\" >&2
+        echo "           --site http://mirrors.kernel.org/sourceware/cygwin/ \\" >&2
+        echo "           --packages $(echo $missing_cyg | tr ' ' ',')" >&2
         return 1
     fi
     echo "    Cygwin: $root"
