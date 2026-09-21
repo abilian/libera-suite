@@ -154,7 +154,7 @@ jobs:
           sh build/check-patches.sh
 
       - name: configure
-        if: inputs.configure
+        # if: inputs.configure
         run: |
           export PATH="$PERL_BIN:$PATH"
           sh build/build.sh configure
