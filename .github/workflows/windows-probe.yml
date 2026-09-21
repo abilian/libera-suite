@@ -1,34 +1,49 @@
 # Does any of this build on Windows?
 #
-# **A probe, not a gate.** It never runs on a push, nothing depends on it, and a
-# red result is information rather than a broken build. `ci.yml` next door is
-# unrun scaffolding and this is deliberately not that: it exists because nobody
-# here owns a Windows machine, and a hosted runner answers the first two
+# **Not a gate.** Nothing depends on it and a red result is information. The
+# Linux workflow next door is disabled and has never worked; this one is here
+# because nobody owns a Windows machine, and a hosted runner answers the cheap
 # questions for nothing.
+#
+# Two stages run on every push that could affect them:
 #
 #   toolchain   what the runner has, and what build/toolchain.sh makes of it
 #   fetch       clone the pinned sources and apply the patch queue
+#
+# `fetch` is the Windows-specific one and it is cheap. build/patches/ is a wire
+# format whose context lines carry trailing whitespace, and a checkout with
+# core.autocrlf on would rewrite every one of them.
+#
+# The third stage is hours and is asked for by hand:
+#
 #   configure   cmake, which drags in boost, ICU, OpenSSL and V8
 #
-# Run the cheap one first. Each stage includes the ones before it.
-#
-# The order is chosen so the fast failures come first. `fetch` is the one that
-# tests something Windows-specific and cheap: build/patches/ is a wire format
-# whose context lines carry trailing whitespace, and a checkout with
-# core.autocrlf on would rewrite every one of them. `configure` is the hours-long
-# one, and the question it answers -- whether V8 8.9 builds under VS 2022 -- is
-# the one that decides whether Windows is a project or an afternoon.
-name: windows probe
+# That one answers whether V8 8.9 builds under the runner's MSVC, which decides
+# whether Windows is a project or an afternoon. It is off by default because a
+# hosted runner throws its disk away, so a run that hits the six-hour limit
+# gains nothing on a retry.
+name: windows
 
 on:
+  push:
+    # Only when something that could change the answer moves. A docs-only push
+    # has no business spending twenty minutes cloning six repositories. Delete
+    # these three lines to run it on everything.
+    paths:
+      - 'build/**'
+      - '.github/workflows/windows-probe.yml'
   workflow_dispatch:
     inputs:
-      stage:
-        description: how far to go
-        required: true
-        default: toolchain
-        type: choice
-        options: [toolchain, fetch, configure]
+      configure:
+        description: 'also run configure (hours: boost, ICU, OpenSSL, V8)'
+        type: boolean
+        default: false
+
+# A second push should replace the first run, not queue behind twenty minutes
+# of it.
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   probe:
@@ -123,7 +138,6 @@ jobs:
           sh build/toolchain.sh check
 
       - name: fetch
-        if: inputs.stage != 'toolchain'
         run: |
           export PATH="$PERL_BIN:$PATH"
           sh build/build.sh fetch
@@ -134,14 +148,13 @@ jobs:
       # apply, which is the one thing this stage exists to find out.
       # continue-on-error says the same thing honestly: red step, live job.
       - name: what the patch queue did
-        if: inputs.stage != 'toolchain'
         continue-on-error: true
         run: |
           export PATH="$PERL_BIN:$PATH"
           sh build/check-patches.sh
 
       - name: configure
-        if: inputs.stage == 'configure'
+        if: inputs.configure
         run: |
           export PATH="$PERL_BIN:$PATH"
           sh build/build.sh configure

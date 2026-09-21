@@ -1,8 +1,16 @@
 name: CI (nox)
 
+# **Disabled on purpose, and it has never worked.** It names a nox session that
+# does not exist and a Python matrix down to 3.9 against `requires-python =
+# ">=3.12"`, and a runner has neither an editor payload nor a browser, so the
+# suite it would run is the third of it that needs neither. Verification happens
+# on the laptop; see CLAUDE.md.
+#
+# Left in place rather than deleted because the shape is worth keeping for when
+# there is something here worth running. Until then it fires only when somebody
+# asks it to.
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   check:
