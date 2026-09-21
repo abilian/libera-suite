@@ -135,16 +135,34 @@ jobs:
       - name: Cygwin, for ICU
         run: |
           choco install --yes --no-progress cygwin
-          choco install --yes --no-progress cyg-get
-          cyg-get make
           root='C:\tools\cygwin'
-          [ -x "$(cygpath -u "$root")/bin/make.exe" ] || {
-            echo "FATAL: cygwin installed without make" >&2
-            ls -1 "$(cygpath -u "$root")/bin" | head -20 >&2
+          root_u="$(cygpath -u "$root")"
+
+          # Cygwin's own setup, not choco's cyg-get wrapper. choco installs
+          # that as a .bat on a PATH this shell was started before, and says so
+          # itself: "Environment Vars (like PATH) have changed. Close/reopen
+          # your shell." The setup exe it copies into the root has no such
+          # problem.
+          setup="$(ls "$root_u"/*setup*.exe 2>/dev/null | head -1)"
+          [ -n "$setup" ] || {
+            echo "FATAL: no Cygwin setup exe in $root" >&2
+            ls -1 "$root_u" | head -20 >&2
+            exit 1
+          }
+          "$setup" --quiet-mode --no-shortcuts --no-startmenu --no-desktop \
+            --root "$root" --local-package-dir "$(cygpath -w "$RUNNER_TEMP")" \
+            --site http://mirrors.kernel.org/sourceware/cygwin/ \
+            --packages make
+
+          # make is a separate package, and a Cygwin without it gets past every
+          # path check and fails inside runConfigureICU.
+          [ -x "$root_u/bin/make.exe" ] || {
+            echo "FATAL: Cygwin has no make after setup" >&2
+            ls -1 "$root_u/bin" | head -30 >&2
             exit 1
           }
           echo "CYGWIN_ROOT=$root" >> "$GITHUB_ENV"
-          echo "cygwin: $root"
+          echo "cygwin: $root, $("$root_u/bin/make.exe" --version | head -1)"
 
       # $PERL_BIN first, explicitly, in every step that runs the build scripts.
       # Repetitive on purpose: it is the only spelling that is deterministic
