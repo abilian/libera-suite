@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Libera Suite</title>
+    <style>
+      /* The editor's own tokens, by the editor's own names, copied from the
+         :root block of the built web-apps CSS. Same names, so a real design
+         system later has something to replace rather than two palettes to
+         reconcile. test_the_start_page_uses_the_editors_own_palette keeps
+         them honest against the payload.
+
+         Light only, and deliberately: **the editor does not follow the system
+         theme.** Measured -- it renders theme-light with --background-toolbar
+         #f7f7f7 whether the OS is light or dark, and it persists a theme only
+         once the user changes one. A prefers-color-scheme block here would
+         show a dark start window beside a light editor, which is worse than
+         no dark mode at all. When the editor's chosen theme becomes readable
+         from here (same origin, but the key sits behind its own prefix), this
+         should follow that instead; the dark values are .theme-dark in
+         web-apps' app.css. */
+      :root {
+        color-scheme: light;
+        --background-normal: #fff;
+        --background-toolbar: #f7f7f7;
+        --background-toolbar-additional: #efefef;
+        --background-accent-button: #446995;
+        --highlight-button-hover: #e0e0e0;
+        --border-toolbar: #cbcbcb;
+        --border-divider: #dfdfdf;
+        --border-regular-control: #c0c0c0;
+        --text-normal: rgba(0, 0, 0, 0.8);
+        --text-secondary: rgba(0, 0, 0, 0.6);
+        --text-tertiary: rgba(0, 0, 0, 0.4);
+        --text-link: #445799;
+        --canvas-background: #eee;
+        /* web-apps' --border-radius-button-normal. The editor is square. */
+        --radius: 2px;
+
+        /* Ours, and deliberately not named like the editor's: nothing above
+           this line is a decision we get to make, and nothing below it comes
+           out of the payload. Palette A from the brand guide -- paper is the
+           ground for anything that is not a tile, and only a tile carries
+           colour. --libera-suite-pressed is the family colour darkened 6%,
+           which is the least that keeps paper on it above 4.5:1 (measured
+           6.05:1; undarkened it is 4.82:1 and already passes, so this is
+           headroom for the pressed state rather than a fix). */
+        --libera-paper: #f6f1e9;
+        --libera-suite: #b5462b;
+        --libera-suite-pressed: #9c3c25;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        /* web-apps' own stack, not the system UI font: this window sits beside
+           the editor and should not look like a different application. */
+        font: 12px/1.5 Arial, Helvetica, "Helvetica Neue", sans-serif;
+        color: var(--text-normal);
+        background: var(--canvas-background);
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      /* The editor's toolbar strip, in the one form this window needs it --
+         with one band of Libera colour along its top edge. A band and not a
+         panel: this window sits beside the editor, and a start screen painted
+         terracotta beside a document painted the editor's grey reads as two
+         applications. The tiles on the buttons do the rest of the telling. */
+      header {
+        background: var(--background-toolbar);
+        border-top: 4px solid var(--libera-suite);
+        border-bottom: 1px solid var(--border-toolbar);
+        padding: 14px 20px;
+      }
+      /* The wordmark, drawn, rather than "Libera Suite" set in Arial. The
+         letters are outlines, so this needs no font and looks the same on
+         every platform -- which is the reason the brand ships them that way. */
+      header h1 { margin: 0; line-height: 0; }
+      header h1 svg { display: block; height: 22px; width: auto; }
+      header p { margin: 9px 0 0; color: var(--text-secondary); }
+      main { padding: 20px; }
+      h2 {
+        font-size: 11px;
+        font-weight: bold;
+        color: var(--text-secondary);
+        margin: 20px 0 8px;
+      }
+      main > h2:first-child { margin-top: 0; }
+      .new { display: flex; gap: 8px; flex-wrap: wrap; }
+      button {
+        font: inherit;
+        color: var(--text-normal);
+        background: var(--background-normal);
+        border: 1px solid var(--border-regular-control);
+        border-radius: var(--radius);
+        padding: 9px 12px;
+        cursor: pointer;
+        text-align: left;
+      }
+      button:hover { background: var(--highlight-button-hover); }
+      button:focus-visible { outline: 2px solid var(--libera-suite); outline-offset: 1px; }
+      button:disabled { opacity: 0.4; cursor: default; background: var(--background-normal); }
+      .new button { flex: 1 1 140px; display: flex; align-items: center; gap: 10px; }
+      /* 28px, so the glyph in the crook is still a glyph: the brand drops to a
+         mark without one below 32, and these are the only marks in the window
+         that have to say which editor rather than which product. */
+      .tile { flex: 0 0 auto; width: 28px; height: 28px; }
+      .new .kind { display: block; font-weight: bold; }
+      .new .ext { display: block; color: var(--text-tertiary); }
+      .wide { width: 100%; }
+      /* The one filled button in the window. Open is what this window is for
+         when the Recent list is empty, which is every first run. */
+      #open {
+        color: var(--libera-paper);
+        background: var(--libera-suite);
+        border-color: var(--libera-suite);
+      }
+      #open:hover { background: var(--libera-suite-pressed); }
+      /* :disabled above resets every button to the plain background, because
+         :hover still applies to a disabled button and would otherwise light it
+         up. This one has a background of its own to keep; opacity does the
+         disabling. */
+      #open:disabled, #open:disabled:hover { background: var(--libera-suite); }
+      ul { list-style: none; margin: 0; padding: 0; }
+      li + li { margin-top: 4px; }
+      .recent { width: 100%; display: flex; align-items: baseline; gap: 12px; }
+      .recent .name { flex: 0 0 auto; white-space: nowrap; }
+      /* The containing folder, not the whole path: a path reversed with
+         direction:rtl to truncate on the left puts its leading slash at the
+         far end, which reads as a trailing one. Right-truncating the folder
+         has no such trick in it, and the file name is already beside it. */
+      .recent .where { flex: 1 1 auto; min-width: 0; text-align: right;
+        color: var(--text-tertiary); overflow: hidden;
+        text-overflow: ellipsis; white-space: nowrap; }
+      .empty { color: var(--text-tertiary); }
+      .problem {
+        margin: 16px 0 0;
+        padding: 9px 12px;
+        border: 1px solid var(--border-regular-control);
+        border-radius: var(--radius);
+        background: var(--background-normal);
+      }
+      footer {
+        margin: 20px 20px 0;
+        padding: 12px 0 20px;
+        border-top: 1px solid var(--border-divider);
+        color: var(--text-secondary);
+      }
+      footer dl { display: grid; grid-template-columns: max-content 1fr;
+        gap: 2px 14px; margin: 0; }
+      footer dt { color: var(--text-tertiary); }
+      footer dd { margin: 0; overflow-wrap: anywhere; }
+      a { color: var(--text-link); }
+    </style>
+  </head>
+  <body>
+    <!-- The brand marks, drawn once each. The L is the same path in all
+         three tiles, so it is defined once and used; what differs is the
+         ground colour and the glyph in the crook, which is the whole idea
+         of the mark. Copied from brand/svg/ in the branding repository,
+         which is where they are drawn -- do not edit them here.
+
+         Inline rather than fetched: the host serves no static files at
+         all, and a kilobyte of markup is a smaller thing to carry than a
+         route, a content type and a path that has to stay inside a
+         directory. -->
+    <svg style="display: none" aria-hidden="true">
+      <defs>
+        <path id="tile-l" d="M33 24 H43 A3 3 0 0 1 46 27 V57 A3 3 0 0 0 49 60 H71 A3 3 0 0 1 74 63 V73 A3 3 0 0 1 71 76 H33 A3 3 0 0 1 30 73 V27 A3 3 0 0 1 33 24 Z"/>
+      </defs>
+      <symbol id="tile-words" viewBox="10 10 80 80">
+        <rect x="10" y="10" width="80" height="80" rx="18" fill="#6F6BAD"/>
+        <use href="#tile-l" fill="#F6F1E9"/>
+        <rect x="52" y="28" width="24" height="5" rx="2.5" fill="#F6F1E9"/>
+        <rect x="52" y="37" width="24" height="5" rx="2.5" fill="#F6F1E9"/>
+        <rect x="52" y="46" width="16" height="5" rx="2.5" fill="#F6F1E9"/>
+      </symbol>
+      <symbol id="tile-tables" viewBox="10 10 80 80">
+        <rect x="10" y="10" width="80" height="80" rx="18" fill="#00877C"/>
+        <use href="#tile-l" fill="#F6F1E9"/>
+        <rect x="52" y="28" width="11" height="11" rx="2" fill="#F6F1E9"/>
+        <rect x="65" y="28" width="11" height="11" rx="2" fill="#F6F1E9"/>
+        <rect x="52" y="41" width="11" height="11" rx="2" fill="#F6F1E9"/>
+        <rect x="65" y="41" width="11" height="11" rx="2" fill="#F6F1E9"/>
+      </symbol>
+      <symbol id="tile-slides" viewBox="10 10 80 80">
+        <rect x="10" y="10" width="80" height="80" rx="18" fill="#A28137"/>
+        <use href="#tile-l" fill="#F6F1E9"/>
+        <rect x="52" y="30" width="24" height="15" rx="2" fill="#F6F1E9"/>
+        <rect x="52" y="49" width="14" height="4" rx="2" fill="#F6F1E9"/>
+      </symbol>
+    </svg>
+    <header>
+      <h1><svg role="img" aria-label="Libera Suite" viewBox="-8.0 18.0 394.9 106.0"><path d="M18.6 25.700000000000003V100.0H6.25V25.700000000000003Z M40.75 48.699999999999996V100.0H28.400000000000002V48.699999999999996Z M62.8 86.7Q64.9 89.25 67.375 90.3Q69.85 91.35 72.6 91.35Q75.45 91.35 77.725 90.32499999999999Q80.0 89.3 81.6 87.125Q83.2 84.95 84.05000000000001 81.575Q84.9 78.2 84.9 73.5Q84.9 65.05 82.10000000000001 61.275Q79.30000000000001 57.5 74.05000000000001 57.5Q70.5 57.5 67.85 59.125Q65.2 60.75 62.8 63.699999999999996ZM62.8 55.0Q65.9 51.75 69.67500000000001 49.825Q73.45 47.9 78.30000000000001 47.9Q82.75 47.9 86.325 49.65Q89.9 51.4 92.42500000000001 54.675Q94.95 57.949999999999996 96.30000000000001 62.599999999999994Q97.65 67.25 97.65 73.05Q97.65 79.3 96.10000000000001 84.4Q94.55000000000001 89.5 91.67500000000001 93.125Q88.80000000000001 96.75 84.75 98.75Q80.7 100.75 75.75 100.75Q73.35 100.75 71.4 100.275Q69.45 99.8 67.80000000000001 98.94999999999999Q66.15 98.1 64.775 96.875Q63.400000000000006 95.65 62.150000000000006 94.15L61.6 97.6Q61.3 98.9 60.575 99.45Q59.85 100.0 58.6 100.0H50.45V25.700000000000003H62.8Z M137.25 68.45Q137.25 66.05 136.575 63.925Q135.9 61.8 134.55 60.199999999999996Q133.2 58.599999999999994 131.125 57.675Q129.05 56.75 126.3 56.75Q120.94999999999999 56.75 117.875 59.8Q114.8 62.85 113.94999999999999 68.45ZM113.69999999999999 75.9Q114.0 79.85 115.1 82.725Q116.19999999999999 85.6 118.0 87.475Q119.8 89.35 122.275 90.275Q124.75 91.2 127.75 91.2Q130.75 91.2 132.925 90.5Q135.1 89.8 136.725 88.94999999999999Q138.35 88.1 139.575 87.4Q140.8 86.7 141.95 86.7Q143.5 86.7 144.25 87.85L147.8 92.35Q145.75 94.75 143.2 96.375Q140.65 98.0 137.875 98.975Q135.1 99.95 132.225 100.35Q129.35 100.75 126.64999999999999 100.75Q121.3 100.75 116.69999999999999 98.975Q112.1 97.2 108.69999999999999 93.725Q105.3 90.25 103.35 85.125Q101.39999999999999 80.0 101.39999999999999 73.25Q101.39999999999999 68.0 103.1 63.375Q104.8 58.75 107.975 55.325Q111.14999999999999 51.9 115.725 49.9Q120.3 47.9 126.05 47.9Q130.9 47.9 135.0 49.45Q139.1 51.0 142.05 53.974999999999994Q145.0 56.949999999999996 146.675 61.27499999999999Q148.35 65.6 148.35 71.15Q148.35 73.95 147.75 74.92500000000001Q147.15 75.9 145.45 75.9Z M166.25 57.599999999999994Q168.65 53.0 171.95 50.375Q175.25 47.75 179.75 47.75Q183.3 47.75 185.45 49.3L184.65 58.55Q184.4 59.449999999999996 183.925 59.824999999999996Q183.45 60.199999999999996 182.65 60.199999999999996Q181.9 60.199999999999996 180.425 59.949999999999996Q178.95 59.699999999999996 177.55 59.699999999999996Q175.5 59.699999999999996 173.9 60.3Q172.3 60.9 171.025 62.025Q169.75 63.15 168.775 64.75Q167.8 66.35 166.95 68.4V100.0H154.6V48.699999999999996H161.85Q163.75 48.699999999999996 164.5 49.375Q165.25 50.05 165.5 51.8Z M215.35000000000002 78.1Q210.0 78.35 206.35000000000002 79.025Q202.70000000000002 79.7 200.5 80.75Q198.3 81.8 197.35000000000002 83.19999999999999Q196.4 84.6 196.4 86.25Q196.4 89.5 198.325 90.9Q200.25 92.3 203.35000000000002 92.3Q207.15 92.3 209.925 90.925Q212.70000000000002 89.55 215.35000000000002 86.75ZM187.05 55.849999999999994Q195.9 47.75 208.35000000000002 47.75Q212.85000000000002 47.75 216.40000000000003 49.224999999999994Q219.95000000000002 50.699999999999996 222.40000000000003 53.324999999999996Q224.85000000000002 55.949999999999996 226.125 59.599999999999994Q227.4 63.25 227.4 67.6V100.0H221.8Q220.05 100.0 219.10000000000002 99.475Q218.15 98.95 217.60000000000002 97.35L216.5 93.65Q214.55 95.4 212.70000000000002 96.725Q210.85000000000002 98.05 208.85000000000002 98.94999999999999Q206.85000000000002 99.85 204.57500000000002 100.32499999999999Q202.3 100.8 199.55 100.8Q196.3 100.8 193.55 99.925Q190.8 99.05 188.8 97.3Q186.8 95.55 185.7 92.94999999999999Q184.6 90.35 184.6 86.9Q184.6 84.95 185.25 83.025Q185.9 81.1 187.375 79.35Q188.85 77.6 191.2 76.05Q193.55 74.5 196.97500000000002 73.35Q200.4 72.2 204.95 71.475Q209.5 70.75 215.35000000000002 70.6V67.6Q215.35000000000002 62.449999999999996 213.15000000000003 59.974999999999994Q210.95000000000002 57.5 206.8 57.5Q203.8 57.5 201.825 58.2Q199.85 58.9 198.35 59.775Q196.85 60.65 195.625 61.349999999999994Q194.4 62.05 192.9 62.05Q191.6 62.05 190.7 61.375Q189.8 60.699999999999996 189.25 59.8Z" fill="#1E1A17"/><rect x="27.08" y="21.70" width="15.00" height="15.00" rx="4.00" fill="#B5462B"/><path d="M270.6552 79.2052Q270.5004 79.4632 270.3198 79.59219999999999Q270.1392 79.7212 269.8812 79.7212Q269.5888 79.7212 269.1932 79.4288Q268.7976 79.1364 268.2042 78.7838Q267.6108 78.4312 266.77660000000003 78.1388Q265.9424 77.8464 264.7556 77.8464Q263.6376 77.8464 262.7862 78.1474Q261.9348 78.44839999999999 261.3586 78.9644Q260.7824 79.4804 260.49 80.17699999999999Q260.1976 80.8736 260.1976 81.682Q260.1976 82.714 260.70500000000004 83.3934Q261.2124 84.0728 262.0466 84.5544Q262.8808 85.036 263.9386 85.3886Q264.9964 85.74119999999999 266.1058 86.11959999999999Q267.2152 86.498 268.273 86.971Q269.3308 87.444 270.165 88.16640000000001Q270.99920000000003 88.8888 271.50660000000005 89.938Q272.014 90.9872 272.014 92.518Q272.014 94.1348 271.46360000000004 95.5538Q270.9132 96.9728 269.85540000000003 98.022Q268.7976 99.0712 267.2582 99.67320000000001Q265.7188 100.2752 263.758 100.2752Q261.35 100.2752 259.3892 99.4066Q257.4284 98.538 256.03520000000003 97.0588L256.9984 95.4764Q257.136 95.2872 257.3338 95.1582Q257.5316 95.0292 257.7724 95.0292Q257.996 95.0292 258.2798 95.2098Q258.5636 95.3904 258.9248 95.6656Q259.286 95.9408 259.7504 96.26759999999999Q260.2148 96.5944 260.80820000000006 96.86959999999999Q261.40160000000003 97.1448 262.15840000000003 97.3254Q262.9152 97.506 263.8612 97.506Q265.048 97.506 265.9768 97.17920000000001Q266.9056 96.8524 267.55060000000003 96.259Q268.1956 95.6656 268.5396 94.84Q268.8836 94.0144 268.8836 92.9996Q268.8836 91.8816 268.37620000000004 91.1678Q267.8688 90.45400000000001 267.0432 89.97240000000001Q266.2176 89.49080000000001 265.1512 89.1554Q264.08480000000003 88.82 262.98400000000004 88.4674Q261.8832 88.1148 260.8168 87.6504Q259.7504 87.186 258.9248 86.44640000000001Q258.0992 85.7068 257.59180000000003 84.5974Q257.0844 83.488 257.0844 81.854Q257.0844 80.5468 257.59180000000003 79.32560000000001Q258.0992 78.1044 259.071 77.1584Q260.0428 76.2124 261.46180000000004 75.6448Q262.8808 75.0772 264.7212 75.0772Q266.78520000000003 75.0772 268.47940000000006 75.7308Q270.1736 76.3844 271.4636 77.6228Z M293.7892 97.3512Q295.32 97.3512 296.524 96.8352Q297.728 96.3192 298.56219999999996 95.3904Q299.39639999999997 94.4616 299.835 93.17160000000001Q300.2736 91.8816 300.2736 90.3336V75.3524H303.5932V90.3336Q303.5932 92.4664 302.91380000000004 94.2896Q302.2344 96.1128 300.9702 97.44579999999999Q299.706 98.7788 297.8828 99.5356Q296.0596 100.2924 293.7892 100.2924Q291.5188 100.2924 289.6956 99.5356Q287.87239999999997 98.7788 286.5996 97.44579999999999Q285.3268 96.1128 284.6474 94.2896Q283.968 92.4664 283.968 90.3336V75.3524H287.2876V90.3164Q287.2876 91.8644 287.7262 93.15440000000001Q288.1648 94.4444 288.999 95.3732Q289.8332 96.302 291.0458 96.82660000000001Q292.2584 97.3512 293.7892 97.3512Z M320.48359999999997 100.0H317.1468V75.3524H320.48359999999997Z M351.01359999999994 78.156H343.03279999999995V100.0H339.7132V78.156H331.7152V75.3524H351.01359999999994Z M377.43279999999993 97.2824 377.4155999999999 100.0H362.22799999999995V75.3524H377.4155999999999V78.07H365.56479999999993V86.2572H375.16239999999993V88.8716H365.56479999999993V97.2824Z" fill="#8A7F76"/></svg></h1>
+      <p>Your documents, on your own machine.</p>
+    </header>
+    <main>
+      <h2>New</h2>
+      <div class="new" id="new"></div>
+
+      <h2>Open</h2>
+      <button class="wide" id="open">Open a document…</button>
+
+      <h2>Recent</h2>
+      <ul id="recent">
+        <li class="empty">Nothing yet.</li>
+      </ul>
+
+      <p class="problem" id="problem" hidden></p>
+
+    </main>
+    <footer>
+      <dl id="payload"></dl>
+    </footer>
+
+    <script>
+      // Every request goes through here, and this is where !ok becomes a
+      // throw. fetch resolves for 404 and 500 -- only a network error rejects
+      // -- so a caller that forgets to check the status sees success. Making
+      // the one helper throw means there is nothing left to forget: the page
+      // has no other way to reach the host.
+      const host = async (path, body) => {
+        const response = await fetch(
+          "/__host__/" + path,
+          body === undefined ? {} : { method: "POST", body },
+        );
+        if (!response.ok) {
+          throw new Error(`the host answered ${response.status}`);
+        }
+        return response;
+      };
+
+      const buttons = (disabled) => {
+        for (const b of document.querySelectorAll("button")) b.disabled = disabled;
+      };
+
+      const problem = (text) => {
+        const box = document.getElementById("problem");
+        box.textContent = text;
+        box.hidden = false;
+      };
+
+      // Anything that opens a document ends this window: the host closes it
+      // once the document window is up, so there is nothing to do here but
+      // stop the user clicking twice while that happens.
+      //
+      // And put everything back if it does not happen: a start window left
+      // disabled is one that is still on screen and takes no clicks at all,
+      // which is how this was found. host() throws on a bad status so that
+      // this catch is reached.
+      let leaving = false;
+      const once = (fn) => async (...args) => {
+        if (leaving) return;
+        leaving = true;
+        buttons(true);
+        try {
+          await fn(...args);
+        } catch (e) {
+          leaving = false;
+          buttons(false);
+          problem(`That did not work: ${e.message || e}`);
+        }
+      };
+
+      // Each section on its own: a start window with no recent list is still
+      // a start window, and one that renders nothing because the third fetch
+      // failed is not.
+      const section = async (what, fill) => {
+        try {
+          await fill();
+        } catch (e) {
+          problem(`Could not load ${what}: ${e.message || e}`);
+        }
+      };
+
+      const json = async (path) => (await host(path)).json();
+
+      async function loadNew() {
+        const apps = await json("apps");
+        const box = document.getElementById("new");
+        for (const app of apps) {
+          if (!app.creates) continue;
+          const button = document.createElement("button");
+          // The tile is keyed by the editor's own name, so an editor that
+          // gains a File > New without gaining a tile draws an empty square
+          // and says nothing about it. test_every_new_button_has_a_tile_to_draw
+          // is what notices; there is nothing useful this page could do here.
+          button.innerHTML =
+            '<svg class="tile" aria-hidden="true"><use /></svg>' +
+            '<span><span class="kind"></span><span class="ext"></span></span>';
+          button.querySelector("use").setAttribute("href", "#tile-" + app.name);
+          button.querySelector(".kind").textContent = app.kind;
+          button.querySelector(".ext").textContent = "." + app.ext;
+          button.onclick = once(() => host("new?type=" + app.doctype, ""));
+          box.append(button);
+        }
+
+      }
+
+      async function loadRecent() {
+        const recents = await json("recents");
+        const list = document.getElementById("recent");
+        if (recents.length) {
+          list.replaceChildren(
+            ...recents.slice(0, 10).map((entry) => {
+              const item = document.createElement("li");
+              const button = document.createElement("button");
+              button.className = "recent";
+              const parts = entry.path.split("/");
+              const name = document.createElement("span");
+              name.className = "name";
+              name.textContent = parts.pop();
+              const where = document.createElement("span");
+              where.className = "where";
+              where.textContent = parts.join("/") || "/";
+              button.append(name, where);
+              button.onclick = once(() =>
+                host("open-recent", JSON.stringify({ id: entry.id })),
+              );
+              item.append(button);
+              return item;
+            }),
+          );
+        }
+
+      }
+
+      async function loadPayload() {
+        const info = await json("payload");
+        const rows = [
+          ["Payload", info.version || "unknown"],
+          ["Found via", info.origin || "—"],
+          ["Platform", info.platform || "—"],
+          ["Location", info.root || "—"],
+        ];
+        document.getElementById("payload").replaceChildren(
+          ...rows.flatMap(([label, value]) => {
+            const dt = document.createElement("dt");
+            dt.textContent = label;
+            const dd = document.createElement("dd");
+            dd.textContent = value;
+            return [dt, dd];
+          }),
+        );
+      }
+
+      document.getElementById("open").onclick = once(() =>
+        host("open-document", ""),
+      );
+      section("the editors", loadNew);
+      section("your recent documents", loadRecent);
+      section("the payload", loadPayload);
+    </script>
+  </body>
+</html>

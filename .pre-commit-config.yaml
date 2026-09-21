@@ -1,0 +1,49 @@
+repos:
+
+- repo: https://github.com/charliermarsh/ruff-pre-commit
+  rev: 'v0.16.6'
+  hooks:
+    - id: ruff
+    - id: ruff-format
+
+# JavaScript held to the same standard as the Python. bridge.js is the only
+# JS we write, and it had no linting at all until it became worth reading.
+# The rules turned off in biome.json are turned off for reasons: the bridge
+# logs every call's `arguments`, which is the whole point of it.
+- repo: https://github.com/biomejs/pre-commit
+  rev: 'v2.5.13'
+  hooks:
+    - id: biome-check
+      additional_dependencies: ["@biomejs/biome@2.5.13"]
+
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+  hooks:
+    # Generic
+    - id: check-added-large-files
+    - id: fix-byte-order-marker
+    - id: check-case-conflict
+    - id: check-executables-have-shebangs
+    - id: check-merge-conflict
+    - id: check-symlinks
+    # Basic syntax checks
+    - id: check-ast
+    - id: check-json
+    - id: check-toml
+    - id: check-xml
+    - id: check-yaml
+    # Security
+    - id: detect-private-key
+    # Whitespace. build/patches/ is excluded throughout: git format-patch output
+    # is a wire format -- context lines keep their trailing whitespace and the
+    # "-- " signature ends in a space -- and rewriting either makes `git am`
+    # reject the series.
+    - id: end-of-file-fixer
+      exclude: '^build/patches/'
+    - id: mixed-line-ending
+      exclude: '^build/patches/'
+    - id: trailing-whitespace
+      exclude: '^build/patches/'
+    # Misc Python
+    - id: debug-statements
+    - id: check-docstring-first

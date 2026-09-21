@@ -1,0 +1,111 @@
+# Does any of this build on Windows?
+#
+# **A probe, not a gate.** It never runs on a push, nothing depends on it, and a
+# red result is information rather than a broken build. `ci.yml` next door is
+# unrun scaffolding and this is deliberately not that: it exists because nobody
+# here owns a Windows machine, and a hosted runner answers the first two
+# questions for nothing.
+#
+#   toolchain   what the runner has, and what build/toolchain.sh makes of it
+#   fetch       clone the pinned sources and apply the patch queue
+#   configure   cmake, which drags in boost, ICU, OpenSSL and V8
+#
+# Run the cheap one first. Each stage includes the ones before it.
+#
+# The order is chosen so the fast failures come first. `fetch` is the one that
+# tests something Windows-specific and cheap: build/patches/ is a wire format
+# whose context lines carry trailing whitespace, and a checkout with
+# core.autocrlf on would rewrite every one of them. `configure` is the hours-long
+# one, and the question it answers -- whether V8 8.9 builds under VS 2022 -- is
+# the one that decides whether Windows is a project or an afternoon.
+name: windows probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: how far to go
+        required: true
+        default: toolchain
+        type: choice
+        options: [toolchain, fetch, configure]
+
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 350
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      # PowerShell, not wmic: wmic is deprecated and already absent from newer
+      # Windows images, so a report written with it would start failing on an
+      # image bump and tell us nothing about the build.
+      - name: What this machine is
+        shell: pwsh
+        run: |
+          Get-CimInstance Win32_Processor |
+            Select-Object Name, NumberOfCores, NumberOfLogicalProcessors | Format-List
+          '{0:N1} GB RAM' -f ((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
+          Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' |
+            Select-Object DeviceID,
+              @{n='FreeGB';e={'{0:N1}' -f ($_.FreeSpace / 1GB)}},
+              @{n='SizeGB';e={'{0:N1}' -f ($_.Size / 1GB)}} | Format-Table
+
+      # A full build tree is about 30 GB and the runners keep most of their
+      # space on D:. Deep paths are the other Windows tax, since V8's checkout
+      # is long enough to matter, so the root is one letter.
+      - name: Choose a build root
+        run: |
+          if [ -d /d ]; then drive=d; else drive=c; fi
+          mkdir -p "/$drive/b"
+          echo "BUILD_ROOT=${drive^^}:/b" >> "$GITHUB_ENV"
+          df -h "/$drive/b"
+
+      # Before any clone, including the ones build.sh makes. git's Windows
+      # default rewrites line endings on checkout, and build/patches/ does not
+      # survive that: `git am --keep-cr` is applying a series whose context must
+      # match byte for byte.
+      - name: Stop git rewriting line endings
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          # build.sh refuses to fetch without one, because a build records the
+          # commit it came from. A runner has none.
+          git config --global user.name 'windows probe'
+          git config --global user.email 'probe@localhost'
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: toolchain
+        run: sh build/toolchain.sh check
+
+      - name: fetch
+        if: inputs.stage != 'toolchain'
+        run: sh build/build.sh fetch
+
+      # The patch queue is the reason the fetch stage is worth running on its
+      # own: if the series applied, Windows has not mangled it.
+      - name: what the patch queue did
+        if: inputs.stage != 'toolchain'
+        run: sh build/check-patches.sh || true
+
+      - name: configure
+        if: inputs.stage == 'configure'
+        run: sh build/build.sh configure
+
+      - name: Keep the logs either way
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-probe-logs
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            ${{ env.BUILD_ROOT }}/out/*.log
+            ${{ env.BUILD_ROOT }}/out/core/third_party/*.log

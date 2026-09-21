@@ -1,0 +1,26 @@
+[Desktop Entry]
+Type=Application
+Name=Libera Suite
+GenericName=Office Suite
+Comment=Documents, spreadsheets, presentations and diagrams
+Exec=libera %F
+Icon=eu.liberasuite.Libera
+Terminal=false
+Categories=Office;WordProcessor;Spreadsheet;Presentation;
+StartupNotify=true
+StartupWMClass=libera
+# The Linux half of CFBundleDocumentTypes in build/macos-app.sh, and the two
+# are meant to stay the same set. One entry per format host/apps.py routes to
+# an editor and the desktop actually has a shared-mime-info name for -- which
+# is why the long tail (.fodp, .otp, .vssm) is absent: xdg-mime does not know
+# those, so naming them here would associate nothing.
+#
+# Two entries here have no counterpart on the Mac, both because macOS has no
+# system name for them: application/vnd.visio, where the only identifier on
+# offer belongs to LibreOffice, and application/msword, left out with it
+# because .doc opens and cannot be saved.
+#
+# No Words/Tables/Slides split. One binary opens all of these and picks the
+# editor from the extension (apps.for_document), so one entry is honest and
+# three would put three Libera Suites in every Open With menu.
+MimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/msword;application/vnd.oasis.opendocument.text;application/rtf;text/plain;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel;application/vnd.oasis.opendocument.spreadsheet;text/csv;application/vnd.openxmlformats-officedocument.presentationml.presentation;application/vnd.ms-powerpoint;application/vnd.oasis.opendocument.presentation;application/vnd.visio;

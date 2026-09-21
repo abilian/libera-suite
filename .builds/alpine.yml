@@ -1,0 +1,26 @@
+image: alpine/latest
+packages:
+  - uv
+  - gcc
+  - python3-dev
+
+secrets:
+  - b88a4c2c-944c-42a6-9fbb-7483049c458a
+
+sources:
+  - git@git.sr.ht:~sfermigier/local-office
+
+tasks:
+  - install: |
+      cd local-office
+      uv sync
+  - test: |
+      cd local-office
+      uv run pytest -q --tb=short
+  - lint: |
+      cd local-office
+      uv run ruff check
+      uv run ty check src
+  - nox: |
+      cd local-office
+      uvx nox

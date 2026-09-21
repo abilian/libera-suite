@@ -1,0 +1,284 @@
+target-version = "py310"
+preview = true
+
+lint.select = [
+    "ALL",
+]
+
+include = [
+    "pyproject.toml",
+    "src/**/*.py",
+    "tests/**/*.py",
+    "build/**/*.py",
+    "docs/*.py",
+    "docs/figures/*.py",
+]
+
+lint.extend-ignore = [
+    # Later (or never)
+    "CPY", # Copyright
+    "A",
+    "ANN",
+    "ERA",
+    "FBT",
+    "D",
+    "DOC",
+
+    # False positive (or not)
+    "S101", # Use of `assert` detected
+    "D203", # one-blank-line-before-class
+    "D213", # multi-line-summary-second-line
+    "COM812", # ...
+    "T201", # Print...
+    "PERF401", # list comprehension - explicit append loop is clearer
+
+    # Fix later (or not)
+    # ...
+]
+
+[lint.extend-per-file-ignores]
+# stubs/ names what pyobjc names. NSMenuItem, callAfter and
+# setAssociatedObject are Objective-C spellings, and a stub that renamed them
+# would describe a module that does not exist.
+"stubs/**/*.pyi" = [
+    "N802", # callAfter -- pyobjc's name
+    "N816", # setAssociatedObject -- likewise
+]
+# payload.py runs allfontsgen out of the payload it just unpacked: that is the
+# job, and the generated font index cannot be built anywhere but the target.
+# convert.py shells out to x2t for every open and save: that is the host's job.
+"src/libera/host/convert.py" = [
+    "S404",    # subprocess import
+    "S603",    # subprocess call -- argv form, no shell, binary from our own payload
+    "PLC0415", # x2t is found through the session, which is bound per thread
+]
+# The two container-side checks. Neither is shipped and neither runs on a
+# user's machine: they exist inside a build container, once, to prove that the
+# thing just built actually does something.
+#
+# runtime-smoke.py starts the application inside the Flatpak sandbox and reads
+# the page it serves.
+"build/flatpak/runtime-smoke.py" = [
+    "S404",  # subprocess import -- starting `flatpak run` is the job
+    "S603",  # subprocess call -- argv form, no shell, a fixed executable
+    "S607",  # flatpak comes from the image, by name
+    "S310",  # urlopen -- the URL is the one our own loopback server printed
+    "S108",  # /tmp/serve.log, in a --rm container with one process in it
+]
+# gui-smoke.py opens a real window under Xvfb and screenshots it.
+"build/test-linux/gui-smoke.py" = [
+    "S404",   # subprocess import
+    "S603",   # subprocess call -- argv form, no shell
+    "S607",   # xwininfo and scrot come from the image, by name
+    "PLC0415", # PIL is imported where it is used: only this path needs it
+]
+# desktop.py runs the system's own tools -- open, xdg-open -- and asks the OS
+# who you are, which on macOS means Foundation and elsewhere means pwd.
+"src/libera/host/desktop.py" = [
+    "S404",
+    "S603",
+    "S607",    # open and xdg-open come from the system, by name
+    "PLC0415", # Foundation is macOS-only, pwd is Unix-only
+    "TC003",   # pathlib is used at runtime, not only in annotations
+]
+# launcher.py runs update-desktop-database, which is the system's own tool and
+# the only way the Open With menu learns about a new association.
+"src/libera/launcher.py" = [
+    "S404",  # subprocess import
+    "S603",  # subprocess call -- argv form, no shell, a path from `which`
+]
+# docs/ carries two generators for the site's images: shots.py drives the
+# shipped CLI and a browser, figures/ builds diagrams with svg-plus. Tools, not
+# shipped code, and each figure is run on its own rather than imported.
+"docs/*.py" = [
+    "INP001", # not a package
+    "S404",   # subprocess import -- running `libera --serve` is the job
+    "S603",   # subprocess call -- argv form, no shell
+    "S310",   # urlopen on the loopback URL the subprocess just printed
+    # The start window prints each recent document's directory, so the work
+    # root is visible in a published screenshot, and macOS answers
+    # tempfile.gettempdir() with /var/folders/s1/p081nm8s0fld.../T.
+    "S108",   # a scratch directory under /tmp, on purpose
+]
+"docs/figures/*.py" = [
+    "INP001", # a directory of scripts, each run on its own, sharing theme.py
+]
+"src/libera/host/opening.py" = ["TC003"]
+"src/libera/host/recents.py" = ["TC003"]
+# session.py holds the registry and the thread binding, both module state by
+# design: the session for a request is bound to the thread serving it.
+"src/libera/host/session.py" = [
+    "PLW0603",
+    "TC003",
+]
+# server.py shells out to x2t for every open and save: that is the host's job.
+# The server package, one reason per module now that they are separate.
+"src/libera/host/server/get.py" = [
+    # payload is imported where it is used: `libera --payload-install` has to
+    # work before there is a payload to import anything out of.
+    "PLC0415",
+]
+"src/libera/host/server/post.py" = [
+    "S404",   # subprocess import
+    "S603",   # subprocess call -- argv form, no shell, a path from our own tree
+    # The chooser and window-opener hooks are set once by whoever owns windows;
+    # the harness leaves them unset. Handing them to every caller instead would
+    # be worse, not better.
+    "PLW0603",
+]
+"src/libera/host/server/handler.py" = [
+    # Handler subclasses SimpleHTTPRequestHandler, and an override's parameter
+    # *names* are part of its contract: the base class is free to call them by
+    # keyword. log_request takes a `size` we ignore, and log_message a `format`
+    # that shadows the builtin -- both spellings are the standard library's.
+    "ARG002", # log_request(size), required by the override and unused here
+    "A002",   # log_message(format), named by the base class
+]
+# The payload package, one reason per module now that they are separate.
+"src/libera/payload/generate.py" = [
+    "S404",   # subprocess import -- running allfontsgen is the job
+    "S603",   # subprocess call -- argv form, no shell, path from our own tree
+]
+"src/libera/payload/installer.py" = [
+    "S310",   # urlopen -- the URL comes from our own manifest, https by default
+    "S202",   # tarfile.extractall -- every member is checked by safe_extract first
+]
+# window.py imports pywebview and AppKit lazily: both are needed only when
+# there is a window, and `libera payload install` has to work without one. Its
+# save panel needs an Objective-C action target, whose selector name is part of
+# the contract with AppKit.
+# app.py was carved out of window.py and keeps its reasons: webview, AppKit and
+# PyObjCTools are imported where they are used, because this module is read on
+# every platform and they exist on one.
+"src/libera/host/app.py" = [
+    "PLC0415", # webview and AppKit, imported where they are used
+    "TC003",   # pathlib is used at runtime, not only in annotations
+    # run() is a sequence of setup steps, not a knot: server, choosers, port,
+    # window opener, platform quirks, windows. Splitting it would scatter an
+    # order that has to be read top to bottom.
+    "C901",
+]
+# The window package. pywebview and AppKit are imported where they are used in
+# both halves: this module is read on every platform and they exist on one.
+"src/libera/host/window/windows.py" = [
+    "PLC0415", # lazy GUI imports
+    "TC003",   # pathlib is used at runtime, not only in annotations
+]
+"src/libera/host/window/dialogs.py" = [
+    "PLC0415", # lazy GUI imports
+    "N802",    # formatChanged: is an Objective-C selector
+    "TC003",   # pathlib is used at runtime, not only in annotations
+]
+# menu.py is Cocoa: selector names are the contract with AppKit, the frameworks
+# are imported where they are used because this module is imported on every
+# platform, the target and delegate are module state because AppKit holds them
+# by an unretained pointer, and a class full of one-line actions is not
+# "complex" in the sense the rule means.
+# The menu package. Selector names are the contract with AppKit, the
+# frameworks are imported where they are used because these modules are read
+# on every platform, and a class full of one-line actions is not "complex" in
+# the sense the rule means.
+"src/libera/host/menu/actions.py" = [
+    "N802",    # newDocument:, openRecent: and friends are selectors
+    "PLC0415", # AppKit and webview only where they are used
+    "C901",    # a class of one-line menu actions
+    "PLR6301", # AppKit calls these, not us
+    "E501",    # a selector plus its Objective-C call is sometimes long
+]
+# gtk.py builds the same bar for pywebview, whose menu classes it imports
+# where it uses them: this module is read on every platform and only Linux
+# hands the result to `webview.start`.
+"src/libera/host/menu/gtk.py" = [
+    "PLC0415", # webview.menu only where it is used
+]
+"src/libera/host/menu/build.py" = [
+    "PLC0415", # AppKit only where it is used
+    # TARGET and _RECENT_DELEGATE must outlive install(): AppKit holds a menu
+    # item's target by an unretained pointer. They live on `actions` and are
+    # assigned there, which is a module attribute rather than a global.
+    "PLW0603",
+    "E501",
+]
+# gui.py asks whether the GTK bindings are installed, which it can only do by
+# trying to import them -- at module scope that import is the failure it is
+# meant to report. It also asks the distribution's own python the same
+# question, which is the only way to tell "PyGObject is not installed" apart
+# from "PyGObject is installed and this virtualenv cannot see it" -- two
+# failures needing opposite advice.
+"src/libera/gui.py" = [
+    "PLC0415",
+    "S404",   # subprocess import
+    "S603",   # subprocess call -- argv form, no shell, a fixed absolute path
+]
+# macos.py is Cocoa: the delegate's method names are Objective-C selectors and
+# cannot be renamed, AppKit is imported lazily because this module is imported
+# on every platform, and the captured document list is module state because the
+# delegate is instantiated by the runtime and cannot be handed anything.
+"src/libera/macos.py" = [
+    "N802",    # applicationDidFinishLaunching_ and friends are selectors
+    "PLC0415", # AppKit only exists on macOS
+    "PLR6301", # delegate methods are called by AppKit, not by us
+    "PLW0603", # the delegate has nowhere else to put what it caught
+]
+# build/ scripts are tools, not shipped code: they run system utilities and
+# talk to Cocoa, and one pyobjc selector is simply longer than the line limit.
+"build/**/*.py" = [
+    "INP001", # not a package
+    "S404",   # subprocess import -- running iconutil is the job
+    "S603",   # subprocess call -- argv form, no shell
+    "S607",   # iconutil comes from the system, by name, like every other tool
+    "E501",   # initWithBitmapDataPlanes_pixelsWide_... is 170 characters long
+    "N802",
+    "PLC0415",
+]
+"tests/**/*.py" = [
+    "SLF001", # reaching into a module to check its wiring is the point
+    "ARG001", # pytest matches hook parameters by name; they cannot be renamed
+    "BLE001", #  blind-except
+    "D",
+    "DOC",
+    "ANN",
+    "PLR2004",
+    "INP001",
+    "PLC0415", # runtime imports for optional dependencies
+    "E501", # line too long in test assertions
+    "N802", # naming
+    "S310", # urlopen on a loopback URL the fixture just built is the point
+]
+# test_launcher.py runs desktop-file-validate over the entry it just wrote,
+# because a faulty desktop file is ignored in silence and that tool is the only
+# thing that says why. It comes from the Linux test image, by name, and the
+# test skips where `which` does not find it.
+"tests/a_unit/test_launcher.py" = [
+    "S404", # subprocess import
+    "S603", # subprocess call -- argv form, no shell
+    "S607", # desktop-file-validate comes from the image, by name
+]
+# c_e2e runs the shipped CLI and a real browser as subprocesses, which is the
+# whole point of an end-to-end test: argv form, no shell, fixed executables.
+"tests/c_e2e/**/*.py" = [
+    "S404", # subprocess import
+    "S603", # subprocess call
+]
+# test_gui_prereq.py runs this interpreter against a script gui.py generated,
+# to check that the probe and the in-process check ask the same question. That
+# is the comparison that was missing when the two disagreed, and it can only be
+# made by running one of them somewhere else.
+"tests/a_unit/test_gui_prereq.py" = [
+    "S404", # subprocess import
+    "S603", # sys.executable, argv form, no shell
+]
+# test_icon.py parses src/libera/icon.svg, which is a file in this repository
+# and the same one three build steps read. defusedxml hardens a parser against
+# hostile input; the input here is ours, and swapping the parser would change
+# what the test measures -- it exists to reject what a *strict* parser rejects,
+# because NSImage is one and librsvg is not.
+"tests/a_unit/test_icon.py" = [
+    "S314", # ElementTree.fromstring on our own committed artwork
+    "S405", # the xml.etree import that goes with it
+]
+
+[lint.isort]
+combine-as-imports = true
+required-imports = ["from __future__ import annotations"]
+known-first-party = ["libera"]

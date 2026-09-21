@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 80 80" width="1024" height="1024" role="img" aria-label="Libera Suite">
+  <!-- The application icon: the Libera Suite mark. Terracotta tile, the L
+       carved out of it in paper, the suite's dot in the crook.
+
+       The only copy in the repository, and it lives in the package because one
+       of its three readers is the running application. The host sets it as the
+       Dock icon at startup (host/menu/build.py), because outside the .app
+       bundle the process wears the interpreter's identity and the Dock shows
+       Python's rocket. build/macos-icon.py rasterises it into Libera.icns, and
+       build/flatpak.sh copies it next to the Flatpak manifest, which exports it
+       as the desktop icon. So the three platforms cannot drift.
+
+       The geometry is the brand's, on a tile of 80 units: corner radius 18,
+       the L from x 20 to 64 with every corner at radius 3, the dot 16 square
+       at (46, 18), all offset by the viewBox's origin of 10. Copied from
+       brand/svg/mark-suite.svg in the branding repository, which is where it
+       is drawn. Do not edit it here.
+
+       Two things about this file are load-bearing and neither announces
+       itself. The XML declaration has to be on line 1: flatpak-builder
+       validates every exported icon through gdk-pixbuf, and with a comment
+       where that line is it refuses the file with "not a valid icon: Format
+       not recognized" at the very end of an otherwise clean build. And no
+       comment here may contain a double hyphen, which XML forbids inside one:
+       librsvg accepts it anyway, NSImage does not, so the symptom is the
+       .icns build failing on a file the Flatpak was perfectly happy with. -->
+  <rect x="10" y="10" width="80" height="80" rx="18" fill="#B5462B"/>
+  <path fill="#F6F1E9"
+        d="M33 24 H43 A3 3 0 0 1 46 27 V57 A3 3 0 0 0 49 60 H71 A3 3 0 0 1 74 63 V73 A3 3 0 0 1 71 76 H33 A3 3 0 0 1 30 73 V27 A3 3 0 0 1 33 24 Z"/>
+  <rect x="56" y="28" width="16" height="16" rx="4" fill="#F6F1E9"/>
+</svg>
