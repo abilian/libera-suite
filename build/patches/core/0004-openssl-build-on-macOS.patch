@@ -1,0 +1,25 @@
+From 71bda0ed9670f3df6ad0948086bb387b959e65b8 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 13:53:04 +0200
+Subject: [PATCH 04/21] openssl: build on macOS
+
+OpenSSL's ./config detects the host itself and picks darwin64-*-cc, so
+macOS needs the same invocation as Linux; no-shared and no-asm carry over
+unchanged.
+---
+ Common/3dParty/openssl/nc-build.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Common/3dParty/openssl/nc-build.py b/Common/3dParty/openssl/nc-build.py
+index d6e187e9e7..da890a7a9e 100644
+--- a/Common/3dParty/openssl/nc-build.py
++++ b/Common/3dParty/openssl/nc-build.py
+@@ -50,7 +50,7 @@ def openssl_windows_target() -> str:
+ def build_and_install():
+     nc.create_install_dir()
+     
+-    if nc.is_linux():
++    if nc.is_linux() or nc.is_macos():
+         nc.run_command(
+             [   "./config",
+                 f"--prefix={nc.install_dir}",

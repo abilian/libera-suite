@@ -1,0 +1,7 @@
+# The image's build context is build/, so that the Dockerfile and build.sh can
+# COPY and run the same toolchain.sh. Everything below is build *output* and
+# would otherwise be uploaded to the daemon on every image build: flatpak/ is
+# 1.3 GB of flatpak-builder cache and out/ is the payload.
+*
+!docker/
+!toolchain.sh

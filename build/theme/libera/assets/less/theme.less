@@ -1,0 +1,38 @@
+// Libera Suite.
+//
+// This file is imported *last* by every editor's app.less (through the
+// _theme-main.less stub build/theme.config.mjs writes), so a variable set here
+// wins over the one upstream declared -- LESS resolves a variable to its last
+// definition in scope, not the one nearest the use. Anything that can be a
+// variable should therefore be one: a variable survives an upstream edit, a
+// selector copied out of an upstream file survives until that file moves.
+//
+// The rules these implement are in the brand guide; the numbers are copied
+// from it, not derived here. The wordmarks are vendored into ../img from the
+// same place -- see ../../../README.md.
+
+// ==========================================================================
+// The palette
+// ==========================================================================
+// Brand palette A has seven tile colours; these are the four this suite uses.
+// Paper and ink are not here because nothing in this theme draws with them:
+// they are in the artwork, and the brand's rule is that only a tile carries
+// colour, so there is nothing to recolour from LESS.
+
+@libera-suite:  #B5462B; // the family, and Diagrams, which has no tile of its own
+@libera-words:  #6F6BAD;
+@libera-tables: #00877C;
+@libera-slides: #A28137;
+
+// Bootstrap's primary, which in this build reaches only `a`, `.btn-primary`,
+// `.text-primary` and `.bg-primary` -- six declarations in app.css. The
+// editor's own chrome is driven by the custom properties in
+// overrides/header.less, not by this.
+@brand-primary: @libera-suite;
+
+// There is no logo variable here on purpose. Upstream's own defaults, in
+// about.less and header.less, name five files by hand; payload.sh puts our
+// artwork at those five names, so every logo in the editor is ours with
+// nothing to override. See ../../../README.md.
+
+@import "overrides.less";

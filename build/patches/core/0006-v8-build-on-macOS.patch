@@ -1,0 +1,111 @@
+From 32e4fee5d5f8027e31b48331ec0132aecf71ec41 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 14:32:35 +0200
+Subject: [PATCH 06/21] v8: build on macOS
+
+Adds the missing Darwin path: host tool prerequisites, a gn args set, and
+the build branch. The gn args mirror the linux ones without the ELF-only
+settings -- use_sysroot is a linux notion (mac builds against the SDK) and
+gold/lld are ELF linkers.
+
+Also fixes build_gn(), which tested is_linux() and therefore handed macOS
+the MSVC /FI flags from the else branch.
+---
+ Common/3dParty/v8/nc-build.py | 63 ++++++++++++++++++++++++++++++++---
+ 1 file changed, 59 insertions(+), 4 deletions(-)
+
+diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
+index 2b39328e72..61d270833f 100644
+--- a/Common/3dParty/v8/nc-build.py
++++ b/Common/3dParty/v8/nc-build.py
+@@ -29,7 +29,7 @@ gn_source_path = nc.work_dir / "gn-source"
+ 
+ def check_prequisites():
+     tools_needed = [ "git", "python3" ]
+-    if nc.is_linux():
++    if nc.is_linux() or nc.is_macos():
+         tools_needed.append( "clang" )
+         tools_needed.append( "ninja" )
+     for tool in tools_needed:
+@@ -162,7 +162,7 @@ def build_gn() -> Path:
+     env = {
+         "CC": "clang",
+         "CXX": "clang++"
+-    } if nc.is_linux() else {
++    } if ( nc.is_linux() or nc.is_macos() ) else {
+         "CXXFLAGS": "/FIstring",
+         "CFLAGS": "/FIstring",
+     }
+@@ -338,6 +338,61 @@ v8_enable_handle_zapping=false
+ """
+         return gn_args
+     
++    elif nc.is_macos():
++        # As linux, minus the ELF-only settings: use_sysroot is a linux notion
++        # (mac builds against the SDK) and gold/lld are ELF linkers.
++        gn_args=f"""
++target_os="mac"
++target_cpu="{targetarch}"
++v8_target_cpu="{targetarch}"
++
++is_debug=false
++is_component_build=false
++is_official_build=false
++
++is_clang=true
++clang_use_chrome_plugins=false
++
++use_custom_libcxx=false
++
++# Symbol and debug settings
++symbol_level=0
++strip_debug_info=true
++treat_warnings_as_errors=false
++
++# V8 core settings
++v8_monolithic=true
++v8_use_external_startup_data=false
++v8_enable_i18n_support=false
++v8_enable_webassembly=false
++v8_enable_pointer_compression=true
++v8_enable_sandbox=false
++
++# Disable cppgc to avoid build issues
++cppgc_enable_caged_heap=false
++v8_enable_conservative_stack_scanning=false
++cppgc_is_standalone=false
++
++# Disable all testing infrastructure
++v8_enable_test_features=false
++v8_enable_verify_heap=false
++v8_enable_verify_predictable=false
++build_with_chromium=false
++
++# Explicitly disable test targets
++v8_enable_backtrace=false
++v8_enable_disassembler=false
++v8_enable_object_print=false
++
++# Additional stability flags
++v8_use_snapshot=true
++v8_enable_lazy_source_positions=false
++v8_enable_gdbjit=false
++v8_enable_vtunejit=false
++v8_enable_handle_zapping=false
++"""
++        return gn_args
++
+     else:
+         nc.abort_op( "No gn args prepared for os." )
+         return "No gn args prepared for os."
+@@ -492,8 +547,8 @@ solutions = [
+             v8_src_path / "build"
+         )
+ 
+-    if nc.is_linux() or nc.is_windows():
+-        if nc.is_linux():
++    if nc.is_linux() or nc.is_macos() or nc.is_windows():
++        if nc.is_linux() or nc.is_macos():
+             nc.run_command(
+                 [ "gclient", "sync", "--no-history", "--shallow" ],
+                 "GClient sync",

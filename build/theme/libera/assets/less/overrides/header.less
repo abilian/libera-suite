@@ -1,0 +1,63 @@
+// The colour of the editor's header bar, per editor.
+//
+// Upstream: apps/common/main/resources/less/colors-table.less:14-24 and
+// colors-table-ie-fix.less:2-12.
+//
+// There is no logo rule here and that is the finding, not an omission. The
+// header's logo slot is `<div class="extra">` and in a desktop build it stays
+// empty: nothing creates #header-logo unless the page is given a
+// customization.logo, and this host gives the editor no config object at all
+// -- it drives it through AscDesktopEditor and the query string. Measured in
+// the running editor, not reasoned: the div is there, the child never is.
+// Euro-Office's theme carried five per-editor icon rules for that same slot,
+// so they had never rendered either. The tile lives on the start window and on
+// the application icon instead, and the colour below does the telling here.
+
+// --toolbar-header-* is the editor's header background (documenteditor/main/
+// resources/less/variables.less:5 and its three siblings). Upstream gives each
+// editor its own colour; this is the largest block of colour in the window.
+//
+// Only the two light themes. .theme-white, .theme-dark, .theme-night and
+// .theme-contrast-dark deliberately run a neutral header, and their selectors
+// are more specific than the bare `:root` here, so they keep it.
+//
+// --text-toolbar-header-on-background-* is the same colour used as *text*, on
+// #f7f7f7. Three of the four fall short of 4.5:1 as drawn (Words 4.47, Tables
+// 4.12, Slides 3.42), so each is darkened by the least that clears it:
+// measured 4.66, 4.69 and 4.65:1. Suite is 5.06:1 and is left alone.
+@words-text:  darken(@libera-words, 1%);
+@tables-text: darken(@libera-tables, 2%);
+@slides-text: darken(@libera-slides, 7%);
+
+:root,
+:root .theme-classic-light {
+  --toolbar-header-document: @libera-words;
+  --toolbar-header-spreadsheet: @libera-tables;
+  --toolbar-header-presentation: @libera-slides;
+  // Diagrams and the PDF editor have no tile of their own -- the brand has
+  // seven marks and neither is one of them -- so both wear the family's.
+  --toolbar-header-visio: @libera-suite;
+  --toolbar-header-pdf: @libera-suite;
+
+  --text-toolbar-header-on-background-document: @words-text;
+  --text-toolbar-header-on-background-spreadsheet: @tables-text;
+  --text-toolbar-header-on-background-presentation: @slides-text;
+  --text-toolbar-header-on-background-visio: @libera-suite;
+  --text-toolbar-header-on-background-pdf: @libera-suite;
+}
+
+// The hex written immediately before each var() above, as the IE fallback. A
+// modern browser never reads them, but they are emitted either way, and a
+// stylesheet carrying upstream's blue beside our purple is the kind of thing
+// that turns up in a screenshot a year later with nobody able to say why.
+@toolbar-header-document-ie: @libera-words;
+@toolbar-header-spreadsheet-ie: @libera-tables;
+@toolbar-header-presentation-ie: @libera-slides;
+@toolbar-header-visio-ie: @libera-suite;
+@toolbar-header-pdf-ie: @libera-suite;
+
+@text-toolbar-header-on-background-document-ie: @words-text;
+@text-toolbar-header-on-background-spreadsheet-ie: @tables-text;
+@text-toolbar-header-on-background-presentation-ie: @slides-text;
+@text-toolbar-header-on-background-visio-ie: @libera-suite;
+@text-toolbar-header-on-background-pdf-ie: @libera-suite;

@@ -1,0 +1,29 @@
+From 9b8d258a5761770be73d1d0cc6dbbd108d1379e5 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Thu, 10 Sep 2026 17:24:21 +0200
+Subject: [PATCH 16/21] cmake: keep the C++17-removed unary_function on libc++
+
+The pinned boost still derives from std::unary_function and
+std::binary_function in functional.hpp and container_hash/hash.hpp. C++17
+removed both. libstdc++ keeps them as deprecated, so Linux never noticed;
+libc++ provides them only behind this macro.
+---
+ common.cmake | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/common.cmake b/common.cmake
+index 6ddb59bb70..5372e1fd5a 100644
+--- a/common.cmake
++++ b/common.cmake
+@@ -270,6 +270,11 @@ elseif( APPLE )
+         CRYPTOPP_DISABLE_ASM
+         INTVER=${VERSION_TXT_CONTENT}
+ 
++        # boost/functional.hpp still derives from std::unary_function and
++        # std::binary_function, removed in C++17. libstdc++ keeps them anyway;
++        # libc++ only provides them behind this opt-in.
++        _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
++
+         # Not sure about these:
+         _UNICODE
+         DONT_WRITE_EMBEDDED_FONTS

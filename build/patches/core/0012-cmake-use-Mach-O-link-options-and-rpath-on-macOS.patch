@@ -1,0 +1,53 @@
+From 1da797c329bdbdb9a5056cd0d928ff0d472946a2 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 17:08:06 +0200
+Subject: [PATCH 12/21] cmake: use Mach-O link options and rpath on macOS
+
+Two ELF assumptions break linking on Darwin: --disable-new-dtags is a GNU
+ld option that Apple's ld rejects outright, and $ORIGIN has no meaning in
+Mach-O, where the equivalent is @loader_path.
+---
+ common.cmake | 23 +++++++++++++++++------
+ 1 file changed, 17 insertions(+), 6 deletions(-)
+
+diff --git a/common.cmake b/common.cmake
+index 3e2da99614..90a703fb24 100644
+--- a/common.cmake
++++ b/common.cmake
+@@ -335,9 +335,15 @@ else()
+         -O2 #Remove for debugging
+     )
+ 
+-    set(COMMON_LINK_OPTIONS
+-        "-Wl,--disable-new-dtags"
+-    )
++    if( APPLE )
++        # --disable-new-dtags is a GNU ld option; Apple's ld rejects it
++        # outright ("ld: unknown options").
++        set(COMMON_LINK_OPTIONS "")
++    else()
++        set(COMMON_LINK_OPTIONS
++            "-Wl,--disable-new-dtags"
++        )
++    endif()
+ 
+ endif()
+ 
+@@ -348,9 +354,14 @@ function(set_default_options target)
+     endif()
+ 
+     if( NOT MSVC )
+-        # Base RPATHs
+-        set_property(TARGET ${target} PROPERTY BUILD_RPATH "\$ORIGIN;\$ORIGIN/system")
+-        set_property(TARGET ${target} PROPERTY INSTALL_RPATH "\$ORIGIN;\$ORIGIN/system")
++        # Base RPATHs. $ORIGIN is ELF; the Mach-O equivalent is @loader_path.
++        if( APPLE )
++            set(BASE_RPATH "@loader_path;@loader_path/system")
++        else()
++            set(BASE_RPATH "\$ORIGIN;\$ORIGIN/system")
++        endif()
++        set_property(TARGET ${target} PROPERTY BUILD_RPATH "${BASE_RPATH}")
++        set_property(TARGET ${target} PROPERTY INSTALL_RPATH "${BASE_RPATH}")
+ 
+         # Optional: additional runtime paths from env variable RUN_PATH_ADDON
+         if(DEFINED ENV{RUN_PATH_ADDON})

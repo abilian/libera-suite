@@ -1,0 +1,32 @@
+From 152ac82f63029e68307bf6300f720524181fe09f Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Thu, 10 Sep 2026 17:28:49 +0200
+Subject: [PATCH 18/21] openjpeg: use posix_memalign on macOS
+
+memalign() is a glibc/SVID extension that macOS does not provide, so
+libPdfFile failed to link on an undefined _memalign. macOS does have
+posix_memalign, which opj_malloc.c prefers when it is available.
+
+The file already carries a `#ifndef _MAC` for malloc.h.
+---
+ DesktopEditor/raster/Jp2/openjpeg/opj_config_private.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/DesktopEditor/raster/Jp2/openjpeg/opj_config_private.h b/DesktopEditor/raster/Jp2/openjpeg/opj_config_private.h
+index 20fee4d58c..8b32856b5f 100644
+--- a/DesktopEditor/raster/Jp2/openjpeg/opj_config_private.h
++++ b/DesktopEditor/raster/Jp2/openjpeg/opj_config_private.h
+@@ -12,11 +12,11 @@
+ /* check if function `_aligned_malloc` exists */
+ #define OPJ_HAVE__ALIGNED_MALLOC
+ /* check if function `memalign` exists */
+-#ifndef _WIN32
++#if !defined(_WIN32) && !defined(_MAC)
+ #define OPJ_HAVE_MEMALIGN
+ #endif
+ /* check if function `posix_memalign` exists */
+-#ifdef _LINUX
++#if defined(_LINUX) || defined(_MAC)
+ #define OPJ_HAVE_POSIX_MEMALIGN
+ #endif
+ 

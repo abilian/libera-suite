@@ -1,0 +1,31 @@
+From b510862de1b1a52ea524ac3a3658d0c40cb6265a Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 15:27:28 +0200
+Subject: [PATCH 09/21] v8: allow the build job count to be overridden
+
+The job count is fixed at one per core with a floor of four and no way to
+lower it. Linking v8_monolith is memory-hungry, so eight parallel clang
+processes on a 16 GB machine get the build OOM-killed. Honour
+V8_BUILD_JOBS when set.
+---
+ Common/3dParty/v8/nc-build.py | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
+index 80fbb7e215..e842821012 100644
+--- a/Common/3dParty/v8/nc-build.py
++++ b/Common/3dParty/v8/nc-build.py
+@@ -655,7 +655,13 @@ solutions = [
+             if shutil.which( tool ) is None:
+                 nc.abort_op( f"Tool not found: {tool}" )
+ 
++        # One job per core exhausts memory on smaller machines -- linking
++        # v8_monolith is heavy, and eight parallel clang processes on a 16 GB
++        # laptop gets the build OOM-killed. Allow an override.
+         job_count = max( os.cpu_count() or 1, 4 ) # at least 4 jobs
++        job_override = os.environ.get( "V8_BUILD_JOBS" )
++        if job_override:
++            job_count = int( job_override )
+         if nc.is_windows():
+             # On Windows, MSVC is more likely to run out of memory if it uses too many workers. TODO: Maybe we could set an optimal job count based on free memory and cpu core count.
+             job_count = 4

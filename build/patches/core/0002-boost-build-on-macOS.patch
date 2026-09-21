@@ -1,0 +1,25 @@
+From e4f59384fd3dec21bd05078bfd06526f5c079af7 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 13:44:24 +0200
+Subject: [PATCH 02/21] boost: build on macOS
+
+Boost's bootstrap.sh and b2 work on Darwin unchanged, so macOS takes the
+same path as Linux. The rest of the function already branches on
+is_windows(), so -fPIC and ./b2 are picked up without further changes.
+---
+ Common/3dParty/boost/nc-build.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Common/3dParty/boost/nc-build.py b/Common/3dParty/boost/nc-build.py
+index 61ecc022fb..91e0f90ff2 100644
+--- a/Common/3dParty/boost/nc-build.py
++++ b/Common/3dParty/boost/nc-build.py
+@@ -75,7 +75,7 @@ def build_and_install():
+     nc.create_install_dir()
+     
+     print( "Running bootstrap..." )
+-    if nc.is_linux():
++    if nc.is_linux() or nc.is_macos():
+         nc.run_command(
+             [ "./bootstrap.sh", f"--prefix={ nc.install_dir }" ],
+             "Running bootstrap",

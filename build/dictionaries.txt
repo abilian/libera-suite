@@ -1,0 +1,20 @@
+# Spell-check dictionaries to ship, by the names used in the dictionaries
+# repository (which are also the names sdkjs asks for -- see
+# AscCommon.spellcheckGetLanguages(), an LCID -> name table).
+#
+# Only <name>.aff and <name>.dic are copied. The repository also holds
+# thesauri (*_thes.*) and hyphenation (hyph_*), which the spell checker never
+# reads and which are most of its 327 MB: en_US alone is 15 MB on disk and
+# 544 KB once reduced to the two files that matter.
+#
+# Adding a language is one line here plus a payload rebuild. A language that
+# is absent is not an error at runtime: the editor asks about every language
+# it meets, and the engine reports words in a language it has no dictionary
+# for as correct, which is what upstream's own host does.
+
+en_US
+en_GB
+fr_FR
+de_DE
+es_ES
+it_IT

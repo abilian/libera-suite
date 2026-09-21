@@ -1,0 +1,49 @@
+From b08d89c99a6ea66f8e061c66f2cd8989dca863d0 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Thu, 10 Sep 2026 17:27:50 +0200
+Subject: [PATCH 17/21] graphics: link the Core Text font enumeration on macOS
+
+fontengine.pri compiles ApplicationFonts_mac.mm on mac; the CMake port
+never did, so ApplicationFonts.cpp called an undefined
+CApplicationFonts::GetInstalledFontsMac().
+
+tif_config.h maps lfind to the MSVC spelling _lfind for everything that is
+not _LINUX. macOS has plain lfind, so exclude _MAC too.
+---
+ DesktopEditor/cximage/tiff/tif_config.h     | 2 +-
+ DesktopEditor/graphics/cmake/CMakeLists.txt | 9 +++++++++
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/DesktopEditor/cximage/tiff/tif_config.h b/DesktopEditor/cximage/tiff/tif_config.h
+index 76e55df816..51f12eb345 100644
+--- a/DesktopEditor/cximage/tiff/tif_config.h
++++ b/DesktopEditor/cximage/tiff/tif_config.h
+@@ -69,7 +69,7 @@
+ //# endif
+ //#endif
+ 
+-#ifndef _LINUX
++#if !defined(_LINUX) && !defined(_MAC)
+ #define lfind _lfind
+ #endif
+ /*
+diff --git a/DesktopEditor/graphics/cmake/CMakeLists.txt b/DesktopEditor/graphics/cmake/CMakeLists.txt
+index 9a7df2c3f7..274a71cb19 100644
+--- a/DesktopEditor/graphics/cmake/CMakeLists.txt
++++ b/DesktopEditor/graphics/cmake/CMakeLists.txt
+@@ -1005,6 +1005,15 @@ elseif(APPLE)
+         HAVE_UNISTD_H
+         HAVE_FCNTL_H
+     )
++
++    # fontengine.pri: enumerating the installed fonts is Core Text on mac.
++    target_sources(graphics PRIVATE
++        ${FONT_ENGINE_SOURCES_DIR}/ApplicationFonts_mac.mm
++    )
++    target_link_libraries(graphics PRIVATE
++        "-framework Foundation"
++        "-framework CoreText"
++    )
+ endif()
+ 
+ if( MSVC )

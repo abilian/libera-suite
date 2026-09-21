@@ -1,0 +1,64 @@
+From d49f7d82f8b11ba96f9a68722f9f86472611405e Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Thu, 10 Sep 2026 17:15:47 +0200
+Subject: [PATCH 14/21] cmake: drop UNICODE for the graphics target on macOS
+ too
+
+raster.pri does `DEFINES -= UNICODE` for cximage; the CMake port only does
+it under if(LINUX). Without it, cximage compiles its `#ifdef UNICODE`
+branches while TCHAR is `char`, so ximaenc.cpp calls wcslen() on a
+`const char*` and ximainfo.cpp calls an undeclared wcscasecmp().
+
+Also carry over raster.pri`s core_mac HAVE_UNISTD_H / HAVE_FCNTL_H.
+-fpermissive stays Linux-only: it is a GCC flag.
+---
+ DesktopEditor/graphics/cmake/CMakeLists.txt | 18 ++++++++++++++++--
+ 1 file changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/DesktopEditor/graphics/cmake/CMakeLists.txt b/DesktopEditor/graphics/cmake/CMakeLists.txt
+index 98ce1dfc7b..9a7df2c3f7 100644
+--- a/DesktopEditor/graphics/cmake/CMakeLists.txt
++++ b/DesktopEditor/graphics/cmake/CMakeLists.txt
+@@ -1000,6 +1000,11 @@ if(LINUX)
+         HAVE_FCNTL_H
+         _LINUX
+     )
++elseif(APPLE)
++    target_compile_definitions(graphics PRIVATE
++        HAVE_UNISTD_H
++        HAVE_FCNTL_H
++    )
+ endif()
+ 
+ if( MSVC )
+@@ -1046,12 +1051,15 @@ target_precompile_headers(graphics PRIVATE
+     ${CORE_ROOT_DIR}/msvc_fix.h
+ )
+ 
+-if(LINUX)
++if(LINUX OR APPLE)
++    # cximage predates the commented-out `typedef wchar_t TCHAR` in xiofile.h:
++    # its `#ifdef UNICODE` branches pass a `const TCHAR*` -- now always
++    # `char` -- to wcslen()/wcscasecmp(). raster.pri drops UNICODE for exactly
++    # this target, so drop it here too, on macOS as well as Linux.
+     target_compile_options(graphics PRIVATE
+         -Wno-narrowing
+         -UUNICODE
+         -U_UNICODE
+-        -fpermissive
+         -UHAVE_IO_H
+     )
+ 
+@@ -1062,6 +1070,12 @@ if(LINUX)
+     )
+ endif()
+ 
++if(LINUX)
++    target_compile_options(graphics PRIVATE
++        -fpermissive
++    )
++endif()
++
+ # dynamic libs
+ target_link_libraries(graphics PUBLIC
+     Boost::system

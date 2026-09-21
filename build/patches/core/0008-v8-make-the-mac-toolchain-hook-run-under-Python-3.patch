@@ -1,0 +1,96 @@
+From 9413c186b7e8c67cb46349bb98e00715d0d6688b Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 14:40:47 +0200
+Subject: [PATCH 08/21] v8: make the mac toolchain hook run under Python 3
+
+build/mac_toolchain.py fails twice on a modern interpreter: it imports
+pkg_resources at module scope, though only the hermetic-Xcode licence path
+uses it and setuptools is no longer present by default on Python 3.12+;
+and _UseHermeticToolchain() compares a str against Popen bytes output.
+Either one also breaks should_use_hermetic_xcode.py, which gn calls to
+decide use_system_xcode, so a system-Xcode build cannot even configure.
+
+The hook runs during gclient sync but the fix lives in v8/build, which the
+sync itself fetches, so macOS syncs with --nohooks, patches, then runs
+runhooks.
+---
+ Common/3dParty/v8/nc-build.py                 | 23 +++++++++++-
+ .../8.9/arm64-osx/mac-toolchain-py3.patch     | 35 +++++++++++++++++++
+ 2 files changed, 57 insertions(+), 1 deletion(-)
+ create mode 100644 Common/3dParty/v8/tools/8.9/arm64-osx/mac-toolchain-py3.patch
+
+diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
+index f3795818da..80fbb7e215 100644
+--- a/Common/3dParty/v8/nc-build.py
++++ b/Common/3dParty/v8/nc-build.py
+@@ -566,7 +566,28 @@ solutions = [
+     if nc.is_linux() or nc.is_macos() or nc.is_windows():
+         apply_pre_sync_patches()
+ 
+-        if nc.is_linux() or nc.is_macos():
++        if nc.is_macos():
++            # Split the sync from the hooks: the mac_toolchain hook needs a fix
++            # in v8/build, and v8/build does not exist until the sync has run.
++            nc.run_command(
++                [ "gclient", "sync", "--no-history", "--shallow", "--nohooks" ],
++                "GClient sync (no hooks)",
++                v8_root_path,
++                env = depot_env,
++            )
++            nc.run_command(
++                [ "git", "apply",
++                  script_dir / "tools" / "8.9" / "arm64-osx" / "mac-toolchain-py3.patch" ],
++                "Applying patch: mac-toolchain-py3.patch",
++                v8_src_path / "build"
++            )
++            nc.run_command(
++                [ "gclient", "runhooks" ],
++                "GClient runhooks",
++                v8_root_path,
++                env = depot_env,
++            )
++        elif nc.is_linux():
+             nc.run_command(
+                 [ "gclient", "sync", "--no-history", "--shallow" ],
+                 "GClient sync",
+diff --git a/Common/3dParty/v8/tools/8.9/arm64-osx/mac-toolchain-py3.patch b/Common/3dParty/v8/tools/8.9/arm64-osx/mac-toolchain-py3.patch
+new file mode 100644
+index 0000000000..27af0a270e
+--- /dev/null
++++ b/Common/3dParty/v8/tools/8.9/arm64-osx/mac-toolchain-py3.patch
+@@ -0,0 +1,35 @@
++diff --git a/mac_toolchain.py b/mac_toolchain.py
++index ad8713f..ab354b5 100755
++--- a/mac_toolchain.py
+++++ b/mac_toolchain.py
++@@ -22,7 +22,6 @@ from __future__ import print_function
++ 
++ import argparse
++ import os
++-import pkg_resources
++ import platform
++ import plistlib
++ import shutil
++@@ -63,7 +62,9 @@ def _UseHermeticToolchain():
++   current_dir = os.path.dirname(os.path.realpath(__file__))
++   script_path = os.path.join(current_dir, 'mac/should_use_hermetic_xcode.py')
++   proc = subprocess.Popen([script_path, 'mac'], stdout=subprocess.PIPE)
++-  return '1' in proc.stdout.readline()
+++  # Popen without text=True yields bytes; comparing a str against it raises
+++  # TypeError on Python 3.
+++  return b'1' in proc.stdout.readline()
++ 
++ 
++ def RequestCipdAuthentication():
++@@ -144,6 +145,11 @@ def InstallXcodeBinaries(binaries_root=None):
++     current_license_plist = plistlib.readPlist(current_license_path)
++     xcode_version = current_license_plist.get(
++         'IDEXcodeVersionForAgreedToGMLicense')
+++    # Imported lazily: this is the only user, and pkg_resources ships with
+++    # setuptools, which is no longer present by default on Python 3.12+.
+++        # Imported lazily: this is its only user, and pkg_resources ships with
+++    # setuptools, absent by default on Python 3.12+.
+++    import pkg_resources
++     if (xcode_version is not None and pkg_resources.parse_version(xcode_version)
++         >= pkg_resources.parse_version(cipd_xcode_version)):
++       should_overwrite_license = False

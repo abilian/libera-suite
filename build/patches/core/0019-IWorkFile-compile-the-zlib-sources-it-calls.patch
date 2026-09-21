@@ -1,0 +1,43 @@
+From 01a8b1b56bee351df09db607a38335d52b18aa42 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Thu, 10 Sep 2026 17:44:49 +0200
+Subject: [PATCH 19/21] IWorkFile: compile the zlib sources it calls
+
+zlib_addon.c calls inflate(), inflateInit2_() and inflateEnd(). kernel
+compiles zlib with -fvisibility=hidden, so libkernel exports the C++
+CInflate/CDeflate wrappers and none of the C entry points.
+
+ELF lets libIWorkFile.so keep those undefined and resolve them at load
+time; Mach-O requires them at link time, so the mac build failed. The same
+zlib source list is already spelled out in the graphics target, and
+IWork.pro builds all of zlib into this target via OfficeUtils.pri.
+---
+ Apple/CMakeLists.txt | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/Apple/CMakeLists.txt b/Apple/CMakeLists.txt
+index 5a16948f19..fe98d9ff37 100644
+--- a/Apple/CMakeLists.txt
++++ b/Apple/CMakeLists.txt
+@@ -39,7 +39,21 @@ add_library(IWorkFile SHARED
+     ${CMAKE_CURRENT_SOURCE_DIR}/IWork.h
+ 
+     # Hack: The zlib addon functions are not exported by kernel, so we need to have them here as well.
++    # Same for zlib itself, which zlib_addon.c calls: kernel builds it with
++    # hidden visibility, so libkernel exports CInflate/CDeflate but not
++    # inflate(). ELF lets a shared library keep those undefined and hope the
++    # executable has them; Mach-O resolves at link time and rejects it.
+     ${OFFICE_UTILS_ROOT_DIR}/src/zlib_addon.c
++    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/crc32.c
++    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/adler32.c
++    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/deflate.c
++    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/inffast.c
++    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/inflate.c
++    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/inftrees.c
++    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/trees.c
++    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/zutil.c
++    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/uncompr.c
++    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/compress.c
+ 
+     ${ODF_LIB_ROOT}/src/DocumentElement.cxx
+     ${ODF_LIB_ROOT}/src/FilterInternal.cxx

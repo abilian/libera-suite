@@ -1,0 +1,37 @@
+From da88b5a56c81268eb688df86223151f52dceee7b Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Thu, 10 Sep 2026 17:48:25 +0200
+Subject: [PATCH 20/21] cmake: match base.pri mac defines (LINUX, _LINUX, MAC)
+
+core_mac in Common/base.pri is `DEFINES += LINUX _LINUX MAC _MAC`.
+Upstream spells "POSIX-ish" _LINUX/LINUX and real Linux __linux__, so a mac
+build wants all four; defining only _MAC leaves platform branches with no
+arm to take.
+
+Directory.cpp is where this bites: NSDirectory::GetFiles has a __linux__
+branch and a `#if defined(MAC) || defined(_IOS)` branch, and we matched
+neither. allfontsgen exited 0 having found no fonts at all.
+---
+ common.cmake | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/common.cmake b/common.cmake
+index 5372e1fd5a..764237d40c 100644
+--- a/common.cmake
++++ b/common.cmake
+@@ -264,7 +264,15 @@ if( LINUX )
+         UNICODE
+     )
+ elseif( APPLE )
++    # base.pri's core_mac is `DEFINES += LINUX _LINUX MAC _MAC`: upstream uses
++    # _LINUX/LINUX to mean "POSIX-ish" and __linux__ for actual Linux, so a mac
++    # build gets all four. Directory.cpp is the reason this is not optional --
++    # its mac branch tests bare MAC, and with neither MAC nor __linux__ set,
++    # NSDirectory::GetFiles has no implementation and silently returns nothing.
+     set(COMMON_DEFINES
++        LINUX
++        _LINUX
++        MAC
+         _MAC
+         _REENTRANT
+         CRYPTOPP_DISABLE_ASM

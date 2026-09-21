@@ -1,0 +1,41 @@
+From cf16ba7eba966799c9d110740ba252fbf1244b1a Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 17:08:21 +0200
+Subject: [PATCH 13/21] cmake: define _MAC on macOS
+
+The platform defines are chosen by 'if(LINUX) ... else() # Assume win+msvc',
+so a Darwin build silently took the MSVC branch: it got NOMINMAX and
+neither _LINUX nor _MAC.
+
+47 source files test _MAC, and they are the files that already carry the
+Darwin handling -- transport_external.h, for instance, guards its
+'#include <signal.h>' with '#ifdef _MAC', so kill() failed to compile for
+want of a define rather than for want of the include. Give macOS its own
+branch.
+---
+ common.cmake | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/common.cmake b/common.cmake
+index 90a703fb24..6ddb59bb70 100644
+--- a/common.cmake
++++ b/common.cmake
+@@ -258,6 +258,18 @@ if( LINUX )
+         INTVER=${VERSION_TXT_CONTENT}
+         LINUX
+ 
++        # Not sure about these:
++        _UNICODE
++        DONT_WRITE_EMBEDDED_FONTS
++        UNICODE
++    )
++elseif( APPLE )
++    set(COMMON_DEFINES
++        _MAC
++        _REENTRANT
++        CRYPTOPP_DISABLE_ASM
++        INTVER=${VERSION_TXT_CONTENT}
++
+         # Not sure about these:
+         _UNICODE
+         DONT_WRITE_EMBEDDED_FONTS

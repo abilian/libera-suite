@@ -1,0 +1,79 @@
+From 2970ccb4c97ad051a4c5f700b3b56a7615845a01 Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Mon, 14 Sep 2026 18:38:07 +0200
+Subject: [PATCH] build: let BUILD_JOBS cap how many tasks a phase runs at once
+
+The same change as sdkjs carries, for the same reason and in the same
+shape: this pipeline has two parallel phases, each webpack wants close
+to a gigabyte of V8 heap, and a 4 GB machine is killed by the OOM killer
+before a bundle is written.
+
+BUILD_JOBS=0, the default, means "all of them" and is byte-for-byte the
+previous behaviour: one batch, the same abort-the-siblings semantics.
+---
+ build/scripts/build-pipeline.js | 33 +++++++++++++++++++++++++++------
+ 1 file changed, 27 insertions(+), 6 deletions(-)
+
+diff --git a/build/scripts/build-pipeline.js b/build/scripts/build-pipeline.js
+index 3599f31d04..98da5bec8a 100755
+--- a/build/scripts/build-pipeline.js
++++ b/build/scripts/build-pipeline.js
+@@ -74,6 +74,13 @@ const THEME = process.env.THEME || 'default';
+ // 'development') and desktop (defaults to 'production') agree — without this the
+ // pipeline could silently emit a dev mobile bundle. Overridable: NODE_ENV=development.
+ const NODE_ENV = process.env.NODE_ENV || 'production';
++// How many tasks a phase may run at once. 0 (the default) means "all of them",
++// which is what a build machine wants. It exists for the machines that are not
++// one: a webpack here needs close to a gigabyte of V8 heap, so a phase of them
++// is killed by the OOM killer on anything with 4 GB. Capping the heap instead
++// does not help -- below ~1 GB webpack fails on its own heap limit, and four
++// at 1 GB do not fit either.
++const BUILD_JOBS = Math.max(0, parseInt(process.env.BUILD_JOBS || '0', 10) || 0);
+ 
+ // Env passed to every child process
+ const CHILD_ENV = {
+@@ -183,14 +190,10 @@ function formatTaskList(labels, maxWidth = 80) {
+ // Run a set of task specs in parallel; kills siblings on first failure.
+ // Prints the banner and task list BEFORE spawning, so output order is always correct.
+ // Returns results array (code=-1 entries are killed tasks, not counted as failures).
+-async function phase(title, taskSpecs) {
+-    const count = taskSpecs.length;
+-    banner(`${title} — ${count} task${count !== 1 ? 's' : ''}`);
+-    process.stdout.write(DIM(formatTaskList(taskSpecs.map(t => t.label))) + '\n\n');
+-
++async function batch(taskSpecs) {
+     const running = taskSpecs.map(runTask);
+     let aborted = false;
+-    const results = await Promise.all(
++    return Promise.all(
+         running.map(t =>
+             t.promise.then(r => {
+                 if (r.code > 0 && !aborted) {
+@@ -201,6 +204,24 @@ async function phase(title, taskSpecs) {
+             })
+         )
+     );
++}
++
++async function phase(title, taskSpecs) {
++    const count = taskSpecs.length;
++    banner(`${title} — ${count} task${count !== 1 ? 's' : ''}`);
++    process.stdout.write(DIM(formatTaskList(taskSpecs.map(t => t.label))) + '\n\n');
++
++    // Batches rather than a work pool: a batch is the whole of the previous
++    // behaviour, so the abort-the-siblings semantics above are unchanged and
++    // BUILD_JOBS=0 runs exactly one batch, exactly as before.
++    const size = BUILD_JOBS || count;
++    const results = [];
++    for (let i = 0; i < count; i += size) {
++        const done = await batch(taskSpecs.slice(i, i + size));
++        results.push(...done);
++        // Don't start the next batch after a failure: phase() exits below.
++        if (done.some(r => r.code > 0)) break;
++    }
+     const failed = results.filter(r => r.code > 0);
+     if (failed.length) {
+         process.stderr.write(RED(`\n✗ ${failed.map(r => r.label).join(', ')} failed — aborting\n`));
+-- 
+2.55.0
+

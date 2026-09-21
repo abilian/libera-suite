@@ -1,0 +1,21 @@
+# Upstream Euro-Office revisions we build against.
+#
+# Pinned by SHA, never by branch or tag: a patch queue is only meaningful
+# against a fixed base, and "it built last week" has to stay reproducible.
+# Bumping a pin is a deliberate act that may require rebasing patches/.
+
+[repos]
+core       = "8d41aaa1dd296e08a5360d336752df01db7b1512"  # 2026-08-31
+sdkjs      = "2b0986e7f29c9875bfb85a8f503735d61f780cae"
+web-apps   = "1d7a82e1b5a026fa2ce473649712e0b0ae759224"
+core-fonts = "2de90688e07e2442a5fffc434fdf0a3d212c1f42"
+# Blank and sample documents, per locale. core/Common/empty/*.bin looks like
+# it would do instead and does not: see build/README.md.
+document-templates = "d697ab3d75dbec104e4a99f47852398752cb2ace"  # 2025-05-19
+# Hunspell dictionaries. Only the languages in build/dictionaries.txt ship;
+# the repository is 327 MB because it also carries thesauri and hyphenation,
+# neither of which the spell checker reads.
+dictionaries = "08d46f8631b82af00f83b28657c54ed1aaf9e3fc"  # 2026-03-27
+
+[remote]
+base = "https://github.com/Euro-Office"

@@ -1,0 +1,125 @@
+From 874d22615f8199b76992284d342a36055f1779ba Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Thu, 10 Sep 2026 20:09:19 +0200
+Subject: [PATCH] build: substitute theme tokens when deploying HTML
+
+deploy-html.js says it replaces grunt copy:indexhtml + replace:indexhtml,
+but it only ever did @@SRC_ROOT@@. The {{TOKEN}} placeholders reached the
+deployed pages verbatim: a literal "{{APP_TITLE_TEXT}}" in every <title>, a
+broken splash image from {{LOADER_LOGO}}, and dead {{PUBLISHER_URL}} /
+{{HELP_URL}} links in the embed pages.
+
+webpack substitutes them via string-replace-loader, which only sees files it
+bundles -- *.html.deploy is copied, not bundled.
+
+themeHtmlReplacements() lives in theme.config.mjs so the token table stays in
+one place, as build/README.md asks. It is the {{TOKEN}} subset only: the
+JS-idiom entries in themeReplacements() must not touch HTML. It also carries
+loader_logo/loader_logo_dark, which exist only in HTML and stay
+config-file-only.
+---
+ build/scripts/deploy-html.js | 26 ++++++++++++++++++++++++--
+ build/theme.config.mjs       | 27 ++++++++++++++++++++++++++-
+ 2 files changed, 50 insertions(+), 3 deletions(-)
+
+diff --git a/build/scripts/deploy-html.js b/build/scripts/deploy-html.js
+index ea85265cda..54cd7616a5 100644
+--- a/build/scripts/deploy-html.js
++++ b/build/scripts/deploy-html.js
+@@ -17,7 +17,8 @@
+ 'use strict';
+ 
+ // Gap 1: replaces grunt's copy:indexhtml + replace:indexhtml steps.
+-// Copies *.html.deploy → *.html for each editor and substitutes @@SRC_ROOT@@.
++// Copies *.html.deploy → *.html for each editor and substitutes @@SRC_ROOT@@
++// plus the active theme's {{TOKEN}} placeholders.
+ // Does NOT clean destination dirs — those dirs contain webpack bundles, locale
+ // files, and CSS that other pipeline steps own.
+ //
+@@ -50,6 +51,17 @@ const DIRS = [
+     { editor: 'documenteditor',     subpath: 'forms' },
+ ];
+ 
++// theme.config.mjs is ESM; this script is CommonJS, hence the dynamic import.
++async function main() {
++
++const { themeHtmlReplacements } = await import('../theme.config.mjs');
++// The copy step used to drop these on the floor: string-replace-loader only
++// sees files webpack bundles, so every {{TOKEN}} in *.html.deploy reached the
++// deployed page verbatim -- a literal "{{APP_TITLE_TEXT}}" in <title> and a
++// broken splash logo from "{{LOADER_LOGO}}".
++const themePairs = themeHtmlReplacements(process.env.PRODUCT_VERSION || '0.0.0')
++    .map(({ search, replace, flags }) => [new RegExp(search, flags || 'g'), replace]);
++
+ let totalCopied = 0;
+ 
+ for (const { editor, subpath } of DIRS) {
+@@ -73,7 +85,10 @@ for (const { editor, subpath } of DIRS) {
+ 
+     for (const filename of deploys) {
+         const content  = fs.readFileSync(path.join(srcDir, filename), 'utf8');
+-        const replaced = content.replace(/@@SRC_ROOT@@/g, SRC_ROOT);
++        let replaced   = content.replace(/@@SRC_ROOT@@/g, SRC_ROOT);
++        for (const [re, value] of themePairs) {
++            replaced = replaced.replace(re, value);
++        }
+         const destName = filename.replace('.html.deploy', '.html');
+         fs.writeFileSync(path.join(destDir, destName), replaced, 'utf8');
+     }
+@@ -87,3 +102,10 @@ if (process.exitCode === 1) {
+ }
+ 
+ console.log(`deploy-html: done — ${totalCopied} file${totalCopied !== 1 ? 's' : ''} total`);
++
++}
++
++main().catch((err) => {
++    console.error('deploy-html:', err);
++    process.exit(1);
++});
+diff --git a/build/theme.config.mjs b/build/theme.config.mjs
+index f507e2f360..d25f0764b8 100644
+--- a/build/theme.config.mjs
++++ b/build/theme.config.mjs
+@@ -105,8 +105,9 @@ export function themeGlobalVars(env, editor) {
+  * bare AST identifiers). productVersion is passed in because BUILD_NUMBER is already
+  * computed in each webpack config alongside BannerPlugin.
+  */
++function tok(name) { return `\\{\\{${name}\\}\\}`; }
++
+ export function themeReplacements(productVersion) {
+-  function tok(name) { return `\\{\\{${name}\\}\\}`; }
+   function tv(envVal, metaKey, def) { return themeVal(envVal, metaKey, def); }
+   function lb(id) {
+     const e = LOAD_BEARING.find(x => x.id === id);
+@@ -184,6 +185,30 @@ export function themeReplacements(productVersion) {
+   ];
+ }
+ 
++/**
++ * The {{TOKEN}} pairs from themeReplacements(), plus the two loader-logo tokens
++ * that only ever appear in HTML.
++ *
++ * webpack gets the full themeReplacements() list through string-replace-loader,
++ * which only sees files it bundles -- so *.html.deploy, copied by
++ * deploy-html.js, never had its tokens substituted at all. This is the subset
++ * that applies to plain text: the JS-idiom entries in themeReplacements() must
++ * not be let anywhere near HTML.
++ *
++ * Defined here rather than in deploy-html.js so the token table stays in one
++ * place. loader_logo/loader_logo_dark are config-file-only by design, so unlike
++ * the rest they get no environment override.
++ */
++export function themeHtmlReplacements(productVersion) {
++  const isToken = (e) =>
++    typeof e.search === 'string' && e.search.startsWith('\\{\\{') && e.search.endsWith('\\}\\}');
++  return [
++    ...themeReplacements(productVersion).filter(isToken),
++    { search: tok('LOADER_LOGO'),      replace: themeVal(undefined, 'loader_logo',      'dark-logo_s.svg'),   flags: 'g' },
++    { search: tok('LOADER_LOGO_DARK'), replace: themeVal(undefined, 'loader_logo_dark', 'header-logo_s.svg'), flags: 'g' },
++  ];
++}
++
+ /**
+  * Returns LESS globalVars for the forms logo — only set when the theme provides
+  * forms_logo_light in meta/config.json. Uses absolute source paths so that

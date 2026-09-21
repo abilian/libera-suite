@@ -1,0 +1,53 @@
+From f654d3ff273a2b39f79ed73e5f25127eb98e800b Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 13:48:50 +0200
+Subject: [PATCH 03/21] icu: build on macOS
+
+The Linux configure line is GCC/ELF-specific: -static-libstdc++ and
+-static-libgcc are not Apple clang options, and $ORIGIN has no meaning in
+Mach-O, where the equivalent is @loader_path. Split the toolchain flags per
+platform and share the make/install steps.
+---
+ Common/3dParty/icu/nc-build.py | 24 ++++++++++++++++++------
+ 1 file changed, 18 insertions(+), 6 deletions(-)
+
+diff --git a/Common/3dParty/icu/nc-build.py b/Common/3dParty/icu/nc-build.py
+index 78a00e6327..5830d1468c 100644
+--- a/Common/3dParty/icu/nc-build.py
++++ b/Common/3dParty/icu/nc-build.py
+@@ -59,17 +59,29 @@ def fetch_and_patch():
+ def build_and_install():
+     nc.create_install_dir()
+ 
+-    if nc.is_linux():
+-        nc.run_command(
+-            [   "./configure",
+-                f"--prefix={nc.install_dir}",
+-                "--enable-rpath",
++    if nc.is_linux() or nc.is_macos():
++        if nc.is_macos():
++            # Apple clang has no -static-libstdc++/-static-libgcc, and $ORIGIN
++            # is an ELF notion; the Mach-O equivalent is @loader_path.
++            toolchain = [
++                "CXXFLAGS=-std=c++11",
++                "LDFLAGS=-Wl,-rpath,@loader_path",
++            ]
++        else:
++            toolchain = [
+                 "CC=gcc",
+                 "CXX=g++",
+                 "AR=ar",
+                 "RANLIB=ranlib",
+                 "CXXFLAGS=-static-libstdc++ -static-libgcc -std=c++11",
+-                "LDFLAGS=-Wl,-rpath,$ORIGIN"
++                "LDFLAGS=-Wl,-rpath,$ORIGIN",
++            ]
++
++        nc.run_command(
++            [   "./configure",
++                f"--prefix={nc.install_dir}",
++                "--enable-rpath",
++                *toolchain
+             ],
+             "Configure",
+             nc.work_dir / "icu" / "source"

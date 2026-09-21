@@ -1,0 +1,36 @@
+From 05a9c042ff01a9238a83433afd3211dde207a4db Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 15:57:06 +0200
+Subject: [PATCH 10/21] v8: allow keeping the build directory between runs
+
+The output directory is wiped unconditionally, so every invocation is a
+full rebuild from scratch. That is expensive for a multi-hour build that
+may be interrupted. Honour V8_KEEP_BUILD_DIR=1 to keep it; ninja is
+incremental and gn gen still re-runs.
+---
+ Common/3dParty/v8/nc-build.py | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
+index e842821012..d1276799c3 100644
+--- a/Common/3dParty/v8/nc-build.py
++++ b/Common/3dParty/v8/nc-build.py
+@@ -612,10 +612,14 @@ solutions = [
+         output_path = v8_src_path / "out.gn"/ f"{targetarch}.release"
+ 
+         # ensure out dir is clean
+-        try:
+-            shutil.rmtree( output_path )
+-        except FileNotFoundError:
+-            pass
++        # Wiping forces a full rebuild on every invocation, which is painful on
++        # a machine where a multi-hour build may be interrupted. Keep it when
++        # asked; ninja is incremental and gn re-runs below anyway.
++        if os.environ.get( "V8_KEEP_BUILD_DIR" ) != "1":
++            try:
++                shutil.rmtree( output_path )
++            except FileNotFoundError:
++                pass
+ 
+         gn_args = get_gn_args_file_content()
+ 

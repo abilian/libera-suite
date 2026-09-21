@@ -1,0 +1,40 @@
+From f6b6b0d89c186aecfb66459752f9ed034771a65b Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Fri, 11 Sep 2026 13:21:26 +0200
+Subject: [PATCH] config: no upstream tips, helpdesk or go-back in the desktop
+ editor
+
+The desktop index.html hardcodes ONLYOFFICE's own deployment: a feedback
+button pointing at helpdesk.onlyoffice.com, a go-back button aimed at
+onlyoffice.com, and featuresTips, which pops "New feature!" callouts linking
+to upstream release-notes blog posts. None of the three belong in a fork's
+product.
+---
+ apps/api/documents/index.html.desktop | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/apps/api/documents/index.html.desktop b/apps/api/documents/index.html.desktop
+index 76aa66c3a8..09e2389707 100644
+--- a/apps/api/documents/index.html.desktop
++++ b/apps/api/documents/index.html.desktop
+@@ -104,10 +104,13 @@
+             function getEditorConfig(urlParams) {
+                 return {
+                     customization   : {
+-                        goback: { url: "onlyoffice.com" }
+-                        , feedback: {
+-                            url: "https://helpdesk.onlyoffice.com/?desktop=true"
+-                        }
++                        // featuresTips are "New feature!" callouts advertising
++                        // an upstream release cadence, linking to an upstream
++                        // blog. A fork ships neither. The feedback button opened
++                        // ONLYOFFICE's helpdesk, and goback offered to return to
++                        // a folder a desktop app does not have.
++                        features: { featuresTips: false }
++                        , feedback: false
+                         , uiTheme: urlParams["uitheme"]
+                     },
+                     mode            : urlParams["mode"] || 'edit',
+-- 
+2.55.0
+

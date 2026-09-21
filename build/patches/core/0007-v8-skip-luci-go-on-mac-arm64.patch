@@ -1,0 +1,78 @@
+From d44c33d525a63ee7d2adae529b80490b417a1427 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 14:35:31 +0200
+Subject: [PATCH 07/21] v8: skip luci-go on mac-arm64
+
+V8 8.9 pins the LUCI tools at a 2021 revision that has no mac-arm64 CIPD
+package, so gclient sync fails outright:
+
+  failed to resolve infra/tools/luci/isolate/mac-arm64@git_revision:6cbe3f56
+  ... no such tag
+
+They are test-infrastructure tools (isolate, isolated, swarming), unused
+when building V8 as a library. Narrow the DEPS condition to exclude
+mac-arm64.
+
+The patch has to be applied before gclient sync reads DEPS, which is why
+it needs its own hook rather than joining apply_patches().
+---
+ Common/3dParty/v8/nc-build.py                  | 18 ++++++++++++++++++
+ .../v8/tools/8.9/arm64-osx/deps-luci-go.patch  | 13 +++++++++++++
+ 2 files changed, 31 insertions(+)
+ create mode 100644 Common/3dParty/v8/tools/8.9/arm64-osx/deps-luci-go.patch
+
+diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
+index 61d270833f..f3795818da 100644
+--- a/Common/3dParty/v8/nc-build.py
++++ b/Common/3dParty/v8/nc-build.py
+@@ -63,6 +63,22 @@ def apply_patches():
+                 v8_src_path / "build"
+             )
+ 
++def apply_pre_sync_patches():
++    """Patches that must land before gclient sync, i.e. anything in DEPS.
++
++    apply_patches() runs after the sync, which is too late for a dep list the
++    sync itself reads.
++    """
++    if not nc.is_macos():
++        return
++
++    patch = script_dir / "tools" / "8.9" / "arm64-osx" / "deps-luci-go.patch"
++    nc.run_command(
++        [ "git", "apply", patch ],
++        "Applying patch: deps-luci-go.patch",
++        v8_src_path
++    )
++
+ def disable_gmock():
+     gmock_gn_file_path = v8_src_path / "testing" / "gmock" / "BUILD.gn"
+     content = """
+@@ -548,6 +564,8 @@ solutions = [
+         )
+ 
+     if nc.is_linux() or nc.is_macos() or nc.is_windows():
++        apply_pre_sync_patches()
++
+         if nc.is_linux() or nc.is_macos():
+             nc.run_command(
+                 [ "gclient", "sync", "--no-history", "--shallow" ],
+diff --git a/Common/3dParty/v8/tools/8.9/arm64-osx/deps-luci-go.patch b/Common/3dParty/v8/tools/8.9/arm64-osx/deps-luci-go.patch
+new file mode 100644
+index 0000000000..339d41ad7c
+--- /dev/null
++++ b/Common/3dParty/v8/tools/8.9/arm64-osx/deps-luci-go.patch
+@@ -0,0 +1,13 @@
++diff --git a/DEPS b/DEPS
++index 1d515ce7cba..6828182ad42 100644
++--- a/DEPS
+++++ b/DEPS
++@@ -272,7 +272,7 @@ deps = {
++           'version': Var('luci_go'),
++         },
++       ],
++-      'condition': 'host_cpu != "s390" and host_os != "aix"',
+++      'condition': 'host_cpu != "s390" and host_os != "aix" and not (host_os == "mac" and host_cpu == "arm64")',
++       'dep_type': 'cipd',
++   },
++   'tools/clang/dsymutil': {

@@ -1,0 +1,477 @@
+From fbc5bb53c049899a75f3db97c33fccc7bf796698 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Tue, 15 Sep 2026 09:48:46 +0200
+Subject: [PATCH] brand: drop the ONLYOFFICE favicon
+
+favicon.ico is ONLYOFFICE's stacked-sheets device -- the trademark itself,
+not a wordmark -- and the same file five times over. It is the last piece of
+their artwork that reaches a built payload: everything else is either written
+over by the theme (the About and header logos in apps/common/main) or lives
+under a directory build/dist.sh does not ship.
+
+Deleted rather than replaced. The page it belongs to is loaded in a webview
+with no tab, no bookmark bar and no history entry, so there is nowhere for a
+favicon to appear; the application icon is the host's job and is set from the
+desktop entry, the bundle, or at runtime. The <link> goes with it, in all
+twenty-one pages that carry one, source and .deploy alike -- leaving it would
+turn a shipped trademark into a shipped 404.
+
+The theme mechanism cannot reach these. deploy-theme-images.js writes to
+apps/common/{main,mobile} and apps/<editor>/mobile only; nothing it does lands
+in apps/<editor>/main/resources/img/, which is where these are.
+
+This patch is not for upstream.
+---
+ apps/documenteditor/main/index.html              |   1 -
+ apps/documenteditor/main/index.html.deploy       |   1 -
+ apps/documenteditor/main/index_loader.html       |   1 -
+ .../documenteditor/main/index_loader.html.deploy |   1 -
+ .../main/resources/img/favicon.ico               | Bin 5430 -> 0 bytes
+ apps/pdfeditor/main/index.html                   |   1 -
+ apps/pdfeditor/main/index.html.deploy            |   1 -
+ apps/pdfeditor/main/index_loader.html            |   1 -
+ apps/pdfeditor/main/index_loader.html.deploy     |   1 -
+ apps/pdfeditor/main/resources/img/favicon.ico    | Bin 5430 -> 0 bytes
+ apps/presentationeditor/main/index.html          |   1 -
+ apps/presentationeditor/main/index.html.deploy   |   1 -
+ apps/presentationeditor/main/index.reporter.html |   1 -
+ .../main/index.reporter.html.deploy              |   1 -
+ apps/presentationeditor/main/index_loader.html   |   1 -
+ .../main/index_loader.html.deploy                |   1 -
+ .../main/resources/img/favicon.ico               | Bin 5430 -> 0 bytes
+ apps/spreadsheeteditor/main/index.html.deploy    |   1 -
+ .../main/index_internal.html.deploy              |   1 -
+ .../main/index_loader.html.deploy                |   1 -
+ .../main/resources/img/favicon.ico               | Bin 5430 -> 0 bytes
+ apps/visioeditor/main/index.html                 |   1 -
+ apps/visioeditor/main/index.html.deploy          |   1 -
+ apps/visioeditor/main/index_loader.html          |   1 -
+ apps/visioeditor/main/index_loader.html.deploy   |   1 -
+ apps/visioeditor/main/resources/img/favicon.ico  | Bin 5430 -> 0 bytes
+ 26 files changed, 21 deletions(-)
+ delete mode 100644 apps/documenteditor/main/resources/img/favicon.ico
+ delete mode 100644 apps/pdfeditor/main/resources/img/favicon.ico
+ delete mode 100644 apps/presentationeditor/main/resources/img/favicon.ico
+ delete mode 100644 apps/spreadsheeteditor/main/resources/img/favicon.ico
+ delete mode 100644 apps/visioeditor/main/resources/img/favicon.ico
+
+diff --git a/apps/documenteditor/main/index.html b/apps/documenteditor/main/index.html
+index abe2f499a0..53d249926d 100644
+--- a/apps/documenteditor/main/index.html
++++ b/apps/documenteditor/main/index.html
+@@ -5,7 +5,6 @@
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon">
+ 
+     <!-- splash -->
+ 
+diff --git a/apps/documenteditor/main/index.html.deploy b/apps/documenteditor/main/index.html.deploy
+index 7fa1eb3115..7279f0ee05 100644
+--- a/apps/documenteditor/main/index.html.deploy
++++ b/apps/documenteditor/main/index.html.deploy
+@@ -7,7 +7,6 @@
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+ 
+diff --git a/apps/documenteditor/main/index_loader.html b/apps/documenteditor/main/index_loader.html
+index 34026fb33f..b73cf43a7f 100644
+--- a/apps/documenteditor/main/index_loader.html
++++ b/apps/documenteditor/main/index_loader.html
+@@ -5,7 +5,6 @@
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon">
+ 
+     <!-- splash -->
+ 
+diff --git a/apps/documenteditor/main/index_loader.html.deploy b/apps/documenteditor/main/index_loader.html.deploy
+index 91963c88ea..62f6a7d31a 100644
+--- a/apps/documenteditor/main/index_loader.html.deploy
++++ b/apps/documenteditor/main/index_loader.html.deploy
+@@ -7,7 +7,6 @@
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+ 
+diff --git a/apps/documenteditor/main/resources/img/favicon.ico b/apps/documenteditor/main/resources/img/favicon.ico
+deleted file mode 100644
+index 96d08b595b7f3d262b52f12a2885e2b3cdab88a9..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 5430
+zcmeI$ZA_JA7{Kuh0cjjqWaL)Hz&?cNp_hr1MkBtYVr_kJF&ERVR(OP>nj2Wm(&Y=m
+zlo}&}C9!;&Sk?!ZyyWsN5e0I|6l`t2AmJoDM>t0m=-mD9v*$24oJS9#bFH53x9fhc
+z`?|0Dz=!AD=Mf2#DH0ba#5ma<CGw<*L=pA9EkxuO#<R##B5BZh&qdz%QcB7H?%)4l
+zeYH#eWh{JN8;-$YI84k!I41P>eDtMD0u)1CA$p-q^pM|(83?Fv-WN`}gJkAwFa#B#
+zLF#s49&X$J?UH`+Bb3}yG(k;LBkMB|f^mDjzUjJ*@-XAo=!7!iBwvQ-5P?WzTtys&
+z*}99&<>4WW?3wYgLy&-SxS&j2BA<sS=r#Vtk*~llnDucoSB7}VOZoO4a6_3mPCf%6
+zkdm`MMIZ-_aH8KB+lUrjgU3;d0hsmGdw!Mn-nAMiAA{WQ#(apjp{+g^#jrz}xJJGZ
+zF~+(_iJRes?;iU8>-pKef<$b=?<hnJbY4C<wJ!zVU>GVuL)6tE+2}K!sQdQ8jqi~J
+zc{c0MadKMrh9VQqP?OZe`lSeEuW6X=Z%>_Dc6?Vf3eW{*qK|wj<{=ywB%=&Yn62w%
+zZZ-6082OuDIa)2Sq7pZtOq?gb3Q^E&{LyoHxCpa8F6PRS0D0kH`A)c@OdKV@1i=vJ
+zZ)K6l#Yx<N3n!2Ri>^TkUd1t(_0@Y;B^@Z;4&~#Pk)KNxt-oW-Ol*b&%7mSK5n{dT
+zi1V-$gYey_dUkz@;CUR!b$p7)p!3pqW@9S$Vi+nwx^@pzynTo>unAYN9nV0Xs4eyi
+zVr<d(j<z*Zu^g>Xlhn-mOoWcw%e&{8Xg{@TI@X{Y>MrY|Ujd>=e~#Xkm4c_R4L70g
+zu>ty5!V2j*vAi1UK5(;V)z!u&JD~0ZH+xoHIkHHQh;0~vy2ozNzY=pG-3L=gdxZNn
+z=!Uw>y6E>IqA{{(*MTJQV=B32Xn~rfX4b!kP>kE_azmorK`Qg#Vi+nwL)7g-3U1rK
+zvo2l&G?Ti`a6p-`lP^Ln0_uBdf1FHEB=xyC374UXm;(zY+V4MI&u{;+m*YXD4h8d8
+zK-5i<*b5?IYr`%CNz?-(ho;CUBJ0S9jm-z^{NW~Vy?*6jTx%KYTHQ<c^z_zy7?*xe
+zp<heHVdOmp?=XBX$|v=nVxqrGee3hLI>nC!a^?5~UD%3Q7+0HB)F*}@;v&?+4dp}U
+zYOw&i*0XL&fx`kD+Mx_*iCLItc!$`D(eo>~4^PXz)&>PPYO!$ruRmHhv^7+K-wht+
+z1wS8onz@xY4_&Xda%PP{X3~nD**VSMrK28hC?7gkXFIm<<)o~hH(8U9NY0uTtV9RA
+zXVW&uZ$Y11wJe;0cfOsm4dI;KP8;X9zlcBJMSJ__iTxd)Rf2P$M+G@6a|^H^Zs;>#
+z3ulffyl<^5p5tg+w-^m@gY(rGI#-YM_`2c**1Q2rZ_B${HqL=FN<ccOv%zw;G4nL|
+zp8rQ$yALk3ARFhvcVj?0sI$RxxnVBf10GX|i_ri#_)Zx^=jxG;Ab8f9JXfvcD`7WO
+f5a-~oKT|yqBpx6)V|fe(`#v4~-|ISEuh;$!sVj;D
+
+diff --git a/apps/pdfeditor/main/index.html b/apps/pdfeditor/main/index.html
+index a25021cee9..91496d9d13 100644
+--- a/apps/pdfeditor/main/index.html
++++ b/apps/pdfeditor/main/index.html
+@@ -5,7 +5,6 @@
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon">
+ 
+     <!-- splash -->
+ 
+diff --git a/apps/pdfeditor/main/index.html.deploy b/apps/pdfeditor/main/index.html.deploy
+index f69986079c..7578e0d59f 100644
+--- a/apps/pdfeditor/main/index.html.deploy
++++ b/apps/pdfeditor/main/index.html.deploy
+@@ -6,7 +6,6 @@
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+ 
+diff --git a/apps/pdfeditor/main/index_loader.html b/apps/pdfeditor/main/index_loader.html
+index fbf5e2ae42..56c258891a 100644
+--- a/apps/pdfeditor/main/index_loader.html
++++ b/apps/pdfeditor/main/index_loader.html
+@@ -5,7 +5,6 @@
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon">
+ 
+     <!-- splash -->
+ 
+diff --git a/apps/pdfeditor/main/index_loader.html.deploy b/apps/pdfeditor/main/index_loader.html.deploy
+index 340c1702db..245868305c 100644
+--- a/apps/pdfeditor/main/index_loader.html.deploy
++++ b/apps/pdfeditor/main/index_loader.html.deploy
+@@ -6,7 +6,6 @@
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+ 
+diff --git a/apps/pdfeditor/main/resources/img/favicon.ico b/apps/pdfeditor/main/resources/img/favicon.ico
+deleted file mode 100644
+index 96d08b595b7f3d262b52f12a2885e2b3cdab88a9..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 5430
+zcmeI$ZA_JA7{Kuh0cjjqWaL)Hz&?cNp_hr1MkBtYVr_kJF&ERVR(OP>nj2Wm(&Y=m
+zlo}&}C9!;&Sk?!ZyyWsN5e0I|6l`t2AmJoDM>t0m=-mD9v*$24oJS9#bFH53x9fhc
+z`?|0Dz=!AD=Mf2#DH0ba#5ma<CGw<*L=pA9EkxuO#<R##B5BZh&qdz%QcB7H?%)4l
+zeYH#eWh{JN8;-$YI84k!I41P>eDtMD0u)1CA$p-q^pM|(83?Fv-WN`}gJkAwFa#B#
+zLF#s49&X$J?UH`+Bb3}yG(k;LBkMB|f^mDjzUjJ*@-XAo=!7!iBwvQ-5P?WzTtys&
+z*}99&<>4WW?3wYgLy&-SxS&j2BA<sS=r#Vtk*~llnDucoSB7}VOZoO4a6_3mPCf%6
+zkdm`MMIZ-_aH8KB+lUrjgU3;d0hsmGdw!Mn-nAMiAA{WQ#(apjp{+g^#jrz}xJJGZ
+zF~+(_iJRes?;iU8>-pKef<$b=?<hnJbY4C<wJ!zVU>GVuL)6tE+2}K!sQdQ8jqi~J
+zc{c0MadKMrh9VQqP?OZe`lSeEuW6X=Z%>_Dc6?Vf3eW{*qK|wj<{=ywB%=&Yn62w%
+zZZ-6082OuDIa)2Sq7pZtOq?gb3Q^E&{LyoHxCpa8F6PRS0D0kH`A)c@OdKV@1i=vJ
+zZ)K6l#Yx<N3n!2Ri>^TkUd1t(_0@Y;B^@Z;4&~#Pk)KNxt-oW-Ol*b&%7mSK5n{dT
+zi1V-$gYey_dUkz@;CUR!b$p7)p!3pqW@9S$Vi+nwx^@pzynTo>unAYN9nV0Xs4eyi
+zVr<d(j<z*Zu^g>Xlhn-mOoWcw%e&{8Xg{@TI@X{Y>MrY|Ujd>=e~#Xkm4c_R4L70g
+zu>ty5!V2j*vAi1UK5(;V)z!u&JD~0ZH+xoHIkHHQh;0~vy2ozNzY=pG-3L=gdxZNn
+z=!Uw>y6E>IqA{{(*MTJQV=B32Xn~rfX4b!kP>kE_azmorK`Qg#Vi+nwL)7g-3U1rK
+zvo2l&G?Ti`a6p-`lP^Ln0_uBdf1FHEB=xyC374UXm;(zY+V4MI&u{;+m*YXD4h8d8
+zK-5i<*b5?IYr`%CNz?-(ho;CUBJ0S9jm-z^{NW~Vy?*6jTx%KYTHQ<c^z_zy7?*xe
+zp<heHVdOmp?=XBX$|v=nVxqrGee3hLI>nC!a^?5~UD%3Q7+0HB)F*}@;v&?+4dp}U
+zYOw&i*0XL&fx`kD+Mx_*iCLItc!$`D(eo>~4^PXz)&>PPYO!$ruRmHhv^7+K-wht+
+z1wS8onz@xY4_&Xda%PP{X3~nD**VSMrK28hC?7gkXFIm<<)o~hH(8U9NY0uTtV9RA
+zXVW&uZ$Y11wJe;0cfOsm4dI;KP8;X9zlcBJMSJ__iTxd)Rf2P$M+G@6a|^H^Zs;>#
+z3ulffyl<^5p5tg+w-^m@gY(rGI#-YM_`2c**1Q2rZ_B${HqL=FN<ccOv%zw;G4nL|
+zp8rQ$yALk3ARFhvcVj?0sI$RxxnVBf10GX|i_ri#_)Zx^=jxG;Ab8f9JXfvcD`7WO
+f5a-~oKT|yqBpx6)V|fe(`#v4~-|ISEuh;$!sVj;D
+
+diff --git a/apps/presentationeditor/main/index.html b/apps/presentationeditor/main/index.html
+index 8729e998c8..6cf41b6f3d 100644
+--- a/apps/presentationeditor/main/index.html
++++ b/apps/presentationeditor/main/index.html
+@@ -5,7 +5,6 @@
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+     <style type="text/css">
+diff --git a/apps/presentationeditor/main/index.html.deploy b/apps/presentationeditor/main/index.html.deploy
+index 7d5d3a612f..92653b9c1c 100644
+--- a/apps/presentationeditor/main/index.html.deploy
++++ b/apps/presentationeditor/main/index.html.deploy
+@@ -6,7 +6,6 @@
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->        
+ 
+diff --git a/apps/presentationeditor/main/index.reporter.html b/apps/presentationeditor/main/index.reporter.html
+index 8e405cc822..fce694e647 100644
+--- a/apps/presentationeditor/main/index.reporter.html
++++ b/apps/presentationeditor/main/index.reporter.html
+@@ -6,7 +6,6 @@
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->        
+ 
+diff --git a/apps/presentationeditor/main/index.reporter.html.deploy b/apps/presentationeditor/main/index.reporter.html.deploy
+index 4c892b758f..25c61f03d2 100644
+--- a/apps/presentationeditor/main/index.reporter.html.deploy
++++ b/apps/presentationeditor/main/index.reporter.html.deploy
+@@ -6,7 +6,6 @@
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->        
+ 
+diff --git a/apps/presentationeditor/main/index_loader.html b/apps/presentationeditor/main/index_loader.html
+index ba00e89b16..e9eb8c7e00 100644
+--- a/apps/presentationeditor/main/index_loader.html
++++ b/apps/presentationeditor/main/index_loader.html
+@@ -5,7 +5,6 @@
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+     <style type="text/css">
+diff --git a/apps/presentationeditor/main/index_loader.html.deploy b/apps/presentationeditor/main/index_loader.html.deploy
+index 79757f32d1..b267f0dc39 100644
+--- a/apps/presentationeditor/main/index_loader.html.deploy
++++ b/apps/presentationeditor/main/index_loader.html.deploy
+@@ -6,7 +6,6 @@
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->        
+ 
+diff --git a/apps/presentationeditor/main/resources/img/favicon.ico b/apps/presentationeditor/main/resources/img/favicon.ico
+deleted file mode 100644
+index 96d08b595b7f3d262b52f12a2885e2b3cdab88a9..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 5430
+zcmeI$ZA_JA7{Kuh0cjjqWaL)Hz&?cNp_hr1MkBtYVr_kJF&ERVR(OP>nj2Wm(&Y=m
+zlo}&}C9!;&Sk?!ZyyWsN5e0I|6l`t2AmJoDM>t0m=-mD9v*$24oJS9#bFH53x9fhc
+z`?|0Dz=!AD=Mf2#DH0ba#5ma<CGw<*L=pA9EkxuO#<R##B5BZh&qdz%QcB7H?%)4l
+zeYH#eWh{JN8;-$YI84k!I41P>eDtMD0u)1CA$p-q^pM|(83?Fv-WN`}gJkAwFa#B#
+zLF#s49&X$J?UH`+Bb3}yG(k;LBkMB|f^mDjzUjJ*@-XAo=!7!iBwvQ-5P?WzTtys&
+z*}99&<>4WW?3wYgLy&-SxS&j2BA<sS=r#Vtk*~llnDucoSB7}VOZoO4a6_3mPCf%6
+zkdm`MMIZ-_aH8KB+lUrjgU3;d0hsmGdw!Mn-nAMiAA{WQ#(apjp{+g^#jrz}xJJGZ
+zF~+(_iJRes?;iU8>-pKef<$b=?<hnJbY4C<wJ!zVU>GVuL)6tE+2}K!sQdQ8jqi~J
+zc{c0MadKMrh9VQqP?OZe`lSeEuW6X=Z%>_Dc6?Vf3eW{*qK|wj<{=ywB%=&Yn62w%
+zZZ-6082OuDIa)2Sq7pZtOq?gb3Q^E&{LyoHxCpa8F6PRS0D0kH`A)c@OdKV@1i=vJ
+zZ)K6l#Yx<N3n!2Ri>^TkUd1t(_0@Y;B^@Z;4&~#Pk)KNxt-oW-Ol*b&%7mSK5n{dT
+zi1V-$gYey_dUkz@;CUR!b$p7)p!3pqW@9S$Vi+nwx^@pzynTo>unAYN9nV0Xs4eyi
+zVr<d(j<z*Zu^g>Xlhn-mOoWcw%e&{8Xg{@TI@X{Y>MrY|Ujd>=e~#Xkm4c_R4L70g
+zu>ty5!V2j*vAi1UK5(;V)z!u&JD~0ZH+xoHIkHHQh;0~vy2ozNzY=pG-3L=gdxZNn
+z=!Uw>y6E>IqA{{(*MTJQV=B32Xn~rfX4b!kP>kE_azmorK`Qg#Vi+nwL)7g-3U1rK
+zvo2l&G?Ti`a6p-`lP^Ln0_uBdf1FHEB=xyC374UXm;(zY+V4MI&u{;+m*YXD4h8d8
+zK-5i<*b5?IYr`%CNz?-(ho;CUBJ0S9jm-z^{NW~Vy?*6jTx%KYTHQ<c^z_zy7?*xe
+zp<heHVdOmp?=XBX$|v=nVxqrGee3hLI>nC!a^?5~UD%3Q7+0HB)F*}@;v&?+4dp}U
+zYOw&i*0XL&fx`kD+Mx_*iCLItc!$`D(eo>~4^PXz)&>PPYO!$ruRmHhv^7+K-wht+
+z1wS8onz@xY4_&Xda%PP{X3~nD**VSMrK28hC?7gkXFIm<<)o~hH(8U9NY0uTtV9RA
+zXVW&uZ$Y11wJe;0cfOsm4dI;KP8;X9zlcBJMSJ__iTxd)Rf2P$M+G@6a|^H^Zs;>#
+z3ulffyl<^5p5tg+w-^m@gY(rGI#-YM_`2c**1Q2rZ_B${HqL=FN<ccOv%zw;G4nL|
+zp8rQ$yALk3ARFhvcVj?0sI$RxxnVBf10GX|i_ri#_)Zx^=jxG;Ab8f9JXfvcD`7WO
+f5a-~oKT|yqBpx6)V|fe(`#v4~-|ISEuh;$!sVj;D
+
+diff --git a/apps/spreadsheeteditor/main/index.html.deploy b/apps/spreadsheeteditor/main/index.html.deploy
+index f3dc13b998..d7d2dd5f9a 100644
+--- a/apps/spreadsheeteditor/main/index.html.deploy
++++ b/apps/spreadsheeteditor/main/index.html.deploy
+@@ -7,7 +7,6 @@
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+     <style type="text/css">
+diff --git a/apps/spreadsheeteditor/main/index_internal.html.deploy b/apps/spreadsheeteditor/main/index_internal.html.deploy
+index 3b20ae69f6..47b081622e 100644
+--- a/apps/spreadsheeteditor/main/index_internal.html.deploy
++++ b/apps/spreadsheeteditor/main/index_internal.html.deploy
+@@ -7,7 +7,6 @@
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+     <style type="text/css">
+diff --git a/apps/spreadsheeteditor/main/index_loader.html.deploy b/apps/spreadsheeteditor/main/index_loader.html.deploy
+index 67fd54dfc2..adfd3b32e4 100644
+--- a/apps/spreadsheeteditor/main/index_loader.html.deploy
++++ b/apps/spreadsheeteditor/main/index_loader.html.deploy
+@@ -7,7 +7,6 @@
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+     <style type="text/css">
+diff --git a/apps/spreadsheeteditor/main/resources/img/favicon.ico b/apps/spreadsheeteditor/main/resources/img/favicon.ico
+deleted file mode 100644
+index 96d08b595b7f3d262b52f12a2885e2b3cdab88a9..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 5430
+zcmeI$ZA_JA7{Kuh0cjjqWaL)Hz&?cNp_hr1MkBtYVr_kJF&ERVR(OP>nj2Wm(&Y=m
+zlo}&}C9!;&Sk?!ZyyWsN5e0I|6l`t2AmJoDM>t0m=-mD9v*$24oJS9#bFH53x9fhc
+z`?|0Dz=!AD=Mf2#DH0ba#5ma<CGw<*L=pA9EkxuO#<R##B5BZh&qdz%QcB7H?%)4l
+zeYH#eWh{JN8;-$YI84k!I41P>eDtMD0u)1CA$p-q^pM|(83?Fv-WN`}gJkAwFa#B#
+zLF#s49&X$J?UH`+Bb3}yG(k;LBkMB|f^mDjzUjJ*@-XAo=!7!iBwvQ-5P?WzTtys&
+z*}99&<>4WW?3wYgLy&-SxS&j2BA<sS=r#Vtk*~llnDucoSB7}VOZoO4a6_3mPCf%6
+zkdm`MMIZ-_aH8KB+lUrjgU3;d0hsmGdw!Mn-nAMiAA{WQ#(apjp{+g^#jrz}xJJGZ
+zF~+(_iJRes?;iU8>-pKef<$b=?<hnJbY4C<wJ!zVU>GVuL)6tE+2}K!sQdQ8jqi~J
+zc{c0MadKMrh9VQqP?OZe`lSeEuW6X=Z%>_Dc6?Vf3eW{*qK|wj<{=ywB%=&Yn62w%
+zZZ-6082OuDIa)2Sq7pZtOq?gb3Q^E&{LyoHxCpa8F6PRS0D0kH`A)c@OdKV@1i=vJ
+zZ)K6l#Yx<N3n!2Ri>^TkUd1t(_0@Y;B^@Z;4&~#Pk)KNxt-oW-Ol*b&%7mSK5n{dT
+zi1V-$gYey_dUkz@;CUR!b$p7)p!3pqW@9S$Vi+nwx^@pzynTo>unAYN9nV0Xs4eyi
+zVr<d(j<z*Zu^g>Xlhn-mOoWcw%e&{8Xg{@TI@X{Y>MrY|Ujd>=e~#Xkm4c_R4L70g
+zu>ty5!V2j*vAi1UK5(;V)z!u&JD~0ZH+xoHIkHHQh;0~vy2ozNzY=pG-3L=gdxZNn
+z=!Uw>y6E>IqA{{(*MTJQV=B32Xn~rfX4b!kP>kE_azmorK`Qg#Vi+nwL)7g-3U1rK
+zvo2l&G?Ti`a6p-`lP^Ln0_uBdf1FHEB=xyC374UXm;(zY+V4MI&u{;+m*YXD4h8d8
+zK-5i<*b5?IYr`%CNz?-(ho;CUBJ0S9jm-z^{NW~Vy?*6jTx%KYTHQ<c^z_zy7?*xe
+zp<heHVdOmp?=XBX$|v=nVxqrGee3hLI>nC!a^?5~UD%3Q7+0HB)F*}@;v&?+4dp}U
+zYOw&i*0XL&fx`kD+Mx_*iCLItc!$`D(eo>~4^PXz)&>PPYO!$ruRmHhv^7+K-wht+
+z1wS8onz@xY4_&Xda%PP{X3~nD**VSMrK28hC?7gkXFIm<<)o~hH(8U9NY0uTtV9RA
+zXVW&uZ$Y11wJe;0cfOsm4dI;KP8;X9zlcBJMSJ__iTxd)Rf2P$M+G@6a|^H^Zs;>#
+z3ulffyl<^5p5tg+w-^m@gY(rGI#-YM_`2c**1Q2rZ_B${HqL=FN<ccOv%zw;G4nL|
+zp8rQ$yALk3ARFhvcVj?0sI$RxxnVBf10GX|i_ri#_)Zx^=jxG;Ab8f9JXfvcD`7WO
+f5a-~oKT|yqBpx6)V|fe(`#v4~-|ISEuh;$!sVj;D
+
+diff --git a/apps/visioeditor/main/index.html b/apps/visioeditor/main/index.html
+index eb6afc94da..d26edbd26a 100644
+--- a/apps/visioeditor/main/index.html
++++ b/apps/visioeditor/main/index.html
+@@ -5,7 +5,6 @@
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+     <style type="text/css">
+diff --git a/apps/visioeditor/main/index.html.deploy b/apps/visioeditor/main/index.html.deploy
+index 7d55f62704..be207818a7 100644
+--- a/apps/visioeditor/main/index.html.deploy
++++ b/apps/visioeditor/main/index.html.deploy
+@@ -6,7 +6,6 @@
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->        
+ 
+diff --git a/apps/visioeditor/main/index_loader.html b/apps/visioeditor/main/index_loader.html
+index 577f1f4712..6905bce839 100644
+--- a/apps/visioeditor/main/index_loader.html
++++ b/apps/visioeditor/main/index_loader.html
+@@ -5,7 +5,6 @@
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->
+     <style type="text/css">
+diff --git a/apps/visioeditor/main/index_loader.html.deploy b/apps/visioeditor/main/index_loader.html.deploy
+index fdd717c211..30cb3fdf12 100644
+--- a/apps/visioeditor/main/index_loader.html.deploy
++++ b/apps/visioeditor/main/index_loader.html.deploy
+@@ -6,7 +6,6 @@
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="description" content="" />
+     <meta name="keywords" content="" />
+-    <link rel="icon" href="resources/img/favicon.ico" type="image/x-icon" />
+ 
+     <!-- splash -->        
+ 
+diff --git a/apps/visioeditor/main/resources/img/favicon.ico b/apps/visioeditor/main/resources/img/favicon.ico
+deleted file mode 100644
+index 96d08b595b7f3d262b52f12a2885e2b3cdab88a9..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 5430
+zcmeI$ZA_JA7{Kuh0cjjqWaL)Hz&?cNp_hr1MkBtYVr_kJF&ERVR(OP>nj2Wm(&Y=m
+zlo}&}C9!;&Sk?!ZyyWsN5e0I|6l`t2AmJoDM>t0m=-mD9v*$24oJS9#bFH53x9fhc
+z`?|0Dz=!AD=Mf2#DH0ba#5ma<CGw<*L=pA9EkxuO#<R##B5BZh&qdz%QcB7H?%)4l
+zeYH#eWh{JN8;-$YI84k!I41P>eDtMD0u)1CA$p-q^pM|(83?Fv-WN`}gJkAwFa#B#
+zLF#s49&X$J?UH`+Bb3}yG(k;LBkMB|f^mDjzUjJ*@-XAo=!7!iBwvQ-5P?WzTtys&
+z*}99&<>4WW?3wYgLy&-SxS&j2BA<sS=r#Vtk*~llnDucoSB7}VOZoO4a6_3mPCf%6
+zkdm`MMIZ-_aH8KB+lUrjgU3;d0hsmGdw!Mn-nAMiAA{WQ#(apjp{+g^#jrz}xJJGZ
+zF~+(_iJRes?;iU8>-pKef<$b=?<hnJbY4C<wJ!zVU>GVuL)6tE+2}K!sQdQ8jqi~J
+zc{c0MadKMrh9VQqP?OZe`lSeEuW6X=Z%>_Dc6?Vf3eW{*qK|wj<{=ywB%=&Yn62w%
+zZZ-6082OuDIa)2Sq7pZtOq?gb3Q^E&{LyoHxCpa8F6PRS0D0kH`A)c@OdKV@1i=vJ
+zZ)K6l#Yx<N3n!2Ri>^TkUd1t(_0@Y;B^@Z;4&~#Pk)KNxt-oW-Ol*b&%7mSK5n{dT
+zi1V-$gYey_dUkz@;CUR!b$p7)p!3pqW@9S$Vi+nwx^@pzynTo>unAYN9nV0Xs4eyi
+zVr<d(j<z*Zu^g>Xlhn-mOoWcw%e&{8Xg{@TI@X{Y>MrY|Ujd>=e~#Xkm4c_R4L70g
+zu>ty5!V2j*vAi1UK5(;V)z!u&JD~0ZH+xoHIkHHQh;0~vy2ozNzY=pG-3L=gdxZNn
+z=!Uw>y6E>IqA{{(*MTJQV=B32Xn~rfX4b!kP>kE_azmorK`Qg#Vi+nwL)7g-3U1rK
+zvo2l&G?Ti`a6p-`lP^Ln0_uBdf1FHEB=xyC374UXm;(zY+V4MI&u{;+m*YXD4h8d8
+zK-5i<*b5?IYr`%CNz?-(ho;CUBJ0S9jm-z^{NW~Vy?*6jTx%KYTHQ<c^z_zy7?*xe
+zp<heHVdOmp?=XBX$|v=nVxqrGee3hLI>nC!a^?5~UD%3Q7+0HB)F*}@;v&?+4dp}U
+zYOw&i*0XL&fx`kD+Mx_*iCLItc!$`D(eo>~4^PXz)&>PPYO!$ruRmHhv^7+K-wht+
+z1wS8onz@xY4_&Xda%PP{X3~nD**VSMrK28hC?7gkXFIm<<)o~hH(8U9NY0uTtV9RA
+zXVW&uZ$Y11wJe;0cfOsm4dI;KP8;X9zlcBJMSJ__iTxd)Rf2P$M+G@6a|^H^Zs;>#
+z3ulffyl<^5p5tg+w-^m@gY(rGI#-YM_`2c**1Q2rZ_B${HqL=FN<ccOv%zw;G4nL|
+zp8rQ$yALk3ARFhvcVj?0sI$RxxnVBf10GX|i_ri#_)Zx^=jxG;Ab8f9JXfvcD`7WO
+f5a-~oKT|yqBpx6)V|fe(`#v4~-|ISEuh;$!sVj;D
+
+-- 
+2.55.0
+

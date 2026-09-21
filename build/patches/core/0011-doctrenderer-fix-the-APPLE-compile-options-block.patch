@@ -1,0 +1,41 @@
+From 9f02811412df162ef738c083d19d71da17304303 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 17:04:11 +0200
+Subject: [PATCH 11/21] doctrenderer: fix the APPLE compile options block
+
+The block has never been configured -- nothing builds core for Darwin --
+and it is wrong three ways. target_compile_options() is called without the
+mandatory INTERFACE|PUBLIC|PRIVATE keyword, which is a hard error; the
+options are one space-joined string, so they would reach the compiler as a
+single argument; and -framework is a link flag, not a compile option.
+
+The ObjC++ sources only exist under USE_JAVASCRIPT_CORE (default 0, where
+the V8 backend is used instead), so guard the whole block on it and move
+the frameworks to target_link_libraries.
+---
+ DesktopEditor/doctrenderer/CMakeLists.txt | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/DesktopEditor/doctrenderer/CMakeLists.txt b/DesktopEditor/doctrenderer/CMakeLists.txt
+index 3ee99ff5d1..afb7cbe0c2 100644
+--- a/DesktopEditor/doctrenderer/CMakeLists.txt
++++ b/DesktopEditor/doctrenderer/CMakeLists.txt
+@@ -261,10 +261,14 @@ if(DRAWINGFILE_SUPPORT)
+     )
+ endif()
+ 
+-if(APPLE)
+-    target_compile_options(doctrenderer
+-        $<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc -fobjc-weak -framework Foundation -framework JavaScriptCore>
+-        $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc -fobjc-weak -framework Foundation -framework JavaScriptCore>
++if(APPLE AND USE_JAVASCRIPT_CORE)
++    target_compile_options(doctrenderer PRIVATE
++        $<$<COMPILE_LANGUAGE:OBJC,OBJCXX>:-fobjc-arc>
++        $<$<COMPILE_LANGUAGE:OBJC,OBJCXX>:-fobjc-weak>
++    )
++    target_link_libraries(doctrenderer PRIVATE
++        "-framework Foundation"
++        "-framework JavaScriptCore"
+     )
+ endif()
+ 

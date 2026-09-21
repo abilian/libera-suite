@@ -1,0 +1,15 @@
+# The default font set: Latin metric-compatible substitutes plus what the
+# editor itself needs. ~10 MB against core-fonts' 248 MB.
+#
+# CJK is deliberately absent -- noto alone is 32 MB, nanum 27, takao-gothic 18,
+# wqy-zenhei 17, arphic-ukai 17. Users who need it take fonts-full, or the
+# system fonts via allfontsgen --use-system.
+#
+# One name per line, relative to the core-fonts checkout.
+ASC.ttf
+liberation
+crosextra
+caladea
+opensans
+openoffice
+asana

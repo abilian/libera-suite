@@ -1,0 +1,63 @@
+From 784b4cb3b9b6e74fa342f5c42b8a948eca157efa Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Thu, 10 Sep 2026 17:21:39 +0200
+Subject: [PATCH 15/21] cmake: build the Cocoa file transporter on macOS
+
+The CMake port picks FileTransporter_curl.cpp for every non-MSVC target,
+but filetransporter.pri uses FileTransporter_mac.mm on mac and ios. With
+USE_EXTERNAL_TRANSPORT (already set for UNIX) curl.cpp compiles to almost
+nothing, and Session.cpp excludes its CreateSession() under _MAC, so
+kernel_network failed to link on an undefined CreateSession().
+
+The two files are alternatives, not additions: both define
+CFileTransporter_private constructors.
+
+.mm also needs OBJCXX enabled -- project(core) defaults to C and CXX, and
+CMake silently drops sources in a language it has no compiler for.
+---
+ CMakeLists.txt                |  8 ++++++++
+ Common/Network/CMakeLists.txt | 12 ++++++++++++
+ 2 files changed, 20 insertions(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ca498cfeab..2ff6afc20a 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -2,6 +2,14 @@ cmake_minimum_required(VERSION 3.10)
+ 
+ project(core)
+ 
++if(APPLE)
++    # The mac-only sources (FileTransporter_mac.mm) are Objective-C++. Without
++    # this CMake recognises the .mm extension but has no OBJCXX toolchain, so it
++    # drops the file from the target and the failure only shows up as an
++    # undefined symbol at link time.
++    enable_language(OBJCXX)
++endif()
++
+ set(CORE_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}")
+ 
+ include(${CORE_ROOT_DIR}/common.cmake)
+diff --git a/Common/Network/CMakeLists.txt b/Common/Network/CMakeLists.txt
+index 5dd20fc33b..6f355b7b2f 100644
+--- a/Common/Network/CMakeLists.txt
++++ b/Common/Network/CMakeLists.txt
+@@ -59,6 +59,18 @@ if( MSVC )
+     target_sources( kernel_network PRIVATE
+         ${CMAKE_CURRENT_SOURCE_DIR}/FileTransporter/src/FileTransporter_win.cpp
+     )
++elseif( APPLE )
++    # Not additive: both files define CFileTransporter_private's constructors,
++    # so the Cocoa transporter replaces the curl one, as filetransporter.pri
++    # has it. USE_EXTERNAL_TRANSPORT (set below for UNIX) also guts curl.cpp,
++    # which is why leaving it in linked but supplied no CreateSession().
++    target_sources( kernel_network PRIVATE
++        ${CMAKE_CURRENT_SOURCE_DIR}/FileTransporter/src/FileTransporter_mac.mm
++    )
++    target_link_libraries( kernel_network PRIVATE
++        "-framework AppKit"
++        "-framework Foundation"
++    )
+ else()
+     target_sources( kernel_network PRIVATE
+         ${CMAKE_CURRENT_SOURCE_DIR}/FileTransporter/src/FileTransporter_curl.cpp

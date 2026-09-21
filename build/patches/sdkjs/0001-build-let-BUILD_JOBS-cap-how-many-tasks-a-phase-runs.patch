@@ -1,0 +1,90 @@
+From d5641288b2c28fb469de92acd3d162628849c46c Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Mon, 14 Sep 2026 18:37:46 +0200
+Subject: [PATCH] build: let BUILD_JOBS cap how many tasks a phase runs at once
+
+Phase 1 runs deploy-assets plus four webpacks together, and each webpack
+wants close to a gigabyte of V8 heap. On a 4 GB machine the OOM killer
+takes one before any bundle is written -- measured on arm64: SIGKILL at
+33s with the peak pinned to the 4 GB ceiling.
+
+Capping the heap instead does not work. --max-old-space-size=512 and
+=768 both die on their own heap limit (cell, then visio), and at =1024
+four of them exceed 4 GB anyway. The window between "enough for one" and
+"four fit" is empty, so the concurrency is what has to give.
+
+BUILD_JOBS=0, the default, means "all of them" and is byte-for-byte the
+previous behaviour: one batch, the same abort-the-siblings semantics.
+BUILD_JOBS=1 builds the same bundles in 112s instead of dying, with a
+peak of 3.4 GB.
+
+Batches rather than a work pool, because a batch *is* the previous
+implementation and the tasks in a phase are of comparable length, which
+is the only place a pool would win.
+---
+ build/scripts/build-pipeline.cjs | 32 +++++++++++++++++++++++++++-----
+ 1 file changed, 27 insertions(+), 5 deletions(-)
+
+diff --git a/build/scripts/build-pipeline.cjs b/build/scripts/build-pipeline.cjs
+index bc04ca179a..3a58be5017 100644
+--- a/build/scripts/build-pipeline.cjs
++++ b/build/scripts/build-pipeline.cjs
+@@ -118,6 +118,13 @@ const PRODUCT_VERSION = process.env.PRODUCT_VERSION || '0.0.0';
+ const BUILD_NUMBER    = String(process.env.BUILD_NUMBER || process.env.GITHUB_RUN_NUMBER || '0');
+ const SKIP_DEVELOP    = process.env.SKIP_DEVELOP === '1';
+ const SKIP_BUNDLE     = process.env.SKIP_BUNDLE === '1';
++// How many tasks a phase may run at once. 0 (the default) means "all of them",
++// which is what a build machine wants. It exists for the machines that are not
++// one: each webpack needs close to a gigabyte of V8 heap, so four at once is
++// killed by the OOM killer on anything with 4 GB, before a single bundle is
++// written. Capping the heap instead does not help -- below ~1 GB a webpack
++// fails on its own heap limit, and four at 1 GB do not fit either.
++const BUILD_JOBS      = Math.max(0, parseInt(process.env.BUILD_JOBS || '0', 10) || 0);
+ 
+ // Only pass BUILD_ROOT through when the user actually set it — build-develop.cjs
+ // branches on process.env.BUILD_ROOT's presence to decide between a relative and
+@@ -208,14 +215,11 @@ function runTask({ label, cmd, args, opts = {} }) {
+     return { promise, kill: () => { killedByUs = true; child && child.kill('SIGTERM'); }, label };
+ }
+ 
+-async function phase(title, taskSpecs) {
+-    const count = taskSpecs.length;
+-    banner(`${title} — ${count} task${count !== 1 ? 's' : ''}`);
+-
++async function batch(taskSpecs) {
+     const running = taskSpecs.map(runTask);
+     let aborted = false;
+ 
+-    const results = await Promise.all(
++    return Promise.all(
+         running.map(t =>
+             t.promise.then(r => {
+                 if (r.code > 0 && !aborted) {
+@@ -226,6 +230,24 @@ async function phase(title, taskSpecs) {
+             })
+         )
+     );
++}
++
++async function phase(title, taskSpecs) {
++    const count = taskSpecs.length;
++    banner(`${title} — ${count} task${count !== 1 ? 's' : ''}`);
++
++    // Batches rather than a work pool: a batch is the whole of the previous
++    // behaviour, so the abort-the-siblings semantics above are unchanged and
++    // BUILD_JOBS=0 runs exactly one batch, exactly as before. The tasks in a
++    // phase are of comparable length, which is where a pool would win.
++    const size = BUILD_JOBS || count;
++    const results = [];
++    for (let i = 0; i < count; i += size) {
++        const done = await batch(taskSpecs.slice(i, i + size));
++        results.push(...done);
++        // Don't start the next batch after a failure: phase() exits below.
++        if (done.some(r => r.code > 0)) break;
++    }
+ 
+     const failed = results.filter(r => r.code > 0);
+     if (failed.length) {
+-- 
+2.55.0
+

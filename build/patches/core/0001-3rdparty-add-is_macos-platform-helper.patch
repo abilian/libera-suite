@@ -1,0 +1,26 @@
+From 565abe1683893cf1179cbf95021f2a348950d7c8 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 10 Sep 2026 13:44:12 +0200
+Subject: [PATCH 01/21] 3rdparty: add is_macos() platform helper
+
+The dependency scripts branch on is_linux()/is_windows() and abort on
+anything else, so there is no way to express a macOS path. Add the
+missing predicate; callers follow.
+---
+ Common/3dParty/build_3rdparty_common.py | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Common/3dParty/build_3rdparty_common.py b/Common/3dParty/build_3rdparty_common.py
+index c6ecc7d0e9..e819dd6b96 100644
+--- a/Common/3dParty/build_3rdparty_common.py
++++ b/Common/3dParty/build_3rdparty_common.py
+@@ -73,6 +73,9 @@ def is_linux() -> bool:
+ def is_windows() -> bool:
+     return sys.platform == "win32"
+ 
++def is_macos() -> bool:
++    return sys.platform == "darwin"
++
+ def target_arch() -> str:
+     """Canonical arch we are building for: "x64", "arm64" or "x86"."""
+     if is_windows():

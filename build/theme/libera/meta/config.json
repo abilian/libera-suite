@@ -1,0 +1,22 @@
+{
+  "company_name": "Libera Suite",
+  "publisher_name": "Abilian",
+  "publisher_url": "https://abilian.com/",
+  "publisher_address": "",
+  "publisher_phone": "",
+  "sales_email": "",
+  "support_email": "",
+  "support_url": "https://docs.liberasuite.eu/",
+  "help_url": "https://docs.liberasuite.eu/",
+  "app_title": "Libera Suite",
+  "attribution": "Libera Suite is based on Euro-Office, itself based on ONLYOFFICE by Ascensio System SIA. Free software under the GNU AGPL v3. Source, and the exact revisions this build came from: https://github.com/abilian/libera-suite",
+  "mobile_logo_light": "wordmark-ink.svg",
+  "mobile_logo_dark": "wordmark-paper.svg",
+  "about_logo_light": "logo_s.svg",
+  "about_logo_dark": "logo-white_s.svg",
+  "forms_logo_light": "wordmark-ink.svg",
+  "forms_logo_dark": "wordmark-paper.svg",
+  "loader_logo": "../../common/main/resources/img/header/wordmark-ink.svg",
+  "loader_logo_dark": "../../common/main/resources/img/header/wordmark-paper.svg",
+  "suggest_url": "https://github.com/abilian/libera-suite/issues"
+}

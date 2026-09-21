@@ -1,0 +1,47 @@
+From 0aa79cbb9bb27776ee7f6e5a31f111fd87a2b5c3 Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Fri, 11 Sep 2026 13:36:04 +0200
+Subject: [PATCH] fix(ui): stop unsized language icons rendering at 300x150
+
+The v2 icon migration turned <i class="icon"> into <svg class="icon"> in the
+language picker -- the Set document language dialog and the statusbar menu --
+but only .spellcheck-lang gives those icons a size, and that class is present
+only for languages that have a spellcheck dictionary. An <i> with no styling
+occupies nothing; an <svg> with no width or height is 300x150, the CSS default
+for a replaced element with no intrinsic size.
+
+So every language without a dictionary drew a 300x150 box: list rows 244px
+tall instead of 106, a list forced to 481px wide, and, once such a language was
+selected, a 300x150 spellcheck glyph over the combo box.
+
+Measured in a browser against the built app.css, before and after.
+---
+ .../main/resources/less/language-dialog.less      | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/apps/common/main/resources/less/language-dialog.less b/apps/common/main/resources/less/language-dialog.less
+index 03cc093ca2..b05ef02d82 100644
+--- a/apps/common/main/resources/less/language-dialog.less
++++ b/apps/common/main/resources/less/language-dialog.less
+@@ -1,3 +1,18 @@
++// The v2 icon migration replaced <i class="icon"> with <svg class="icon">, and
++// the two behave differently when unstyled: an empty <i> occupies nothing, while
++// an <svg> with no width or height is 300x150 -- the CSS default for a replaced
++// element with no intrinsic size. .spellcheck-lang below is the only rule that
++// sizes these icons, and it is absent exactly when the language has no
++// dictionary, so every such language drew a 300x150 icon: list rows 244px tall
++// instead of 106, and a giant glyph over the combo box once one was chosen.
++// Nothing to show, so show nothing.
++svg.icon.uni-scale:empty {          // list items: the <use> is omitted too
++  display: none;
++}
++.combo-langs .input-icon:not(.spellcheck-lang) {  // the field's own indicator
++  display: none;
++}
++
+ // spell check indicator
+ .icon.spellcheck-lang {
+   width: @x-small-btn-icon-size-ie;
+-- 
+2.55.0
+

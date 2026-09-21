@@ -1,0 +1,34 @@
+From d61424fddb9c0808f8a975579d0c15e51c11708f Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Thu, 10 Sep 2026 17:49:50 +0200
+Subject: [PATCH 21/21] cryptopp: drop the MAC define on macOS
+
+cryptopp.pro already carries `core_mac:DEFINES -= MAC` -- cryptopp uses
+MAC as a template parameter name, so the platform macro rewrites
+`template <class BC, class H, class MAC, class Info>` into `class 1`.
+
+Rendered the same way the port already renders core_linux:DEFINES -= NDEBUG
+for this target. It is the only place in the tree that uses MAC as an
+identifier.
+---
+ Common/3dParty/cryptopp/project/CMakeLists.txt | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/Common/3dParty/cryptopp/project/CMakeLists.txt b/Common/3dParty/cryptopp/project/CMakeLists.txt
+index e183e2ca2f..6fe369c6c7 100644
+--- a/Common/3dParty/cryptopp/project/CMakeLists.txt
++++ b/Common/3dParty/cryptopp/project/CMakeLists.txt
+@@ -412,4 +412,13 @@ if(LINUX)
+     )
+ endif()
+ 
++if(APPLE)
++    # cryptopp.pro: `core_mac:DEFINES -= MAC`. cryptopp declares
++    # `template <class BC, class H, class MAC, class Info>`, and base.pri's mac
++    # build defines MAC, which turns that into `class 1`.
++    target_compile_options(CryptoPPLib PRIVATE
++        -UMAC
++    )
++endif()
++
+ declare_victory( CryptoPPLib )

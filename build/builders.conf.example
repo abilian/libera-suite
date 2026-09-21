@@ -1,0 +1,35 @@
+# The machines that build a core, one per line. Copy to build/builders.conf.
+#
+#   <platform>  <ssh target>  [dist directory]  [neutral]
+#
+# <platform> is the one in the filename the build writes, core-<platform>.tar.gz:
+# macos-arm64, macos-x86_64, linux-x86_64, linux-arm64, windows-x86_64.
+# It is what decides which file is fetched from that machine, so a wrong one
+# here fetches nothing rather than fetching the wrong thing.
+#
+# <ssh target> is anything scp takes, or the word `local` for this machine.
+# Give it a Host in ~/.ssh/config and put the alias here: a key, a port and a
+# jump host belong in ssh's own configuration, not in a build script's.
+#
+# [dist directory] is the directory holding the per-version directories --
+# the parent of `0.1/`, not `0.1/` itself, so a version bump changes nothing
+# here. Default: the same path this machine uses.
+#
+#   a native build      $BUILD_ROOT/out/dist
+#   a container build   $BUILD_ROOT/linux-<amd64|arm64>/out/dist
+#
+# [neutral] on exactly one line says which machine the shared artifacts come
+# from -- editors.tar.gz and fonts-core.tar.gz, which every builder produces
+# and which are *not* byte-identical between them. Without it the first line
+# is used and collect says so.
+#
+# This file is gitignored: it is an inventory of build hosts, and a public
+# repository is the wrong place for one.
+
+macos-arm64     local                                                  neutral
+linux-x86_64    libera-amd64   ~/euro-office-build/linux-amd64/out/dist
+linux-arm64     libera-arm64   ~/euro-office-build/linux-arm64/out/dist
+
+# Later:
+# macos-x86_64    libera-intel
+# windows-x86_64  libera-win     C:/euro-office-build/out/dist

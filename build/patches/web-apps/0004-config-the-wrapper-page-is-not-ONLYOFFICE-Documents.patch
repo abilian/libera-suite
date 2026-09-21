@@ -1,0 +1,27 @@
+From e70afc985d91f9e6b5ae10ca3e8ab5df9b1402c2 Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Fri, 11 Sep 2026 14:37:12 +0200
+Subject: [PATCH] config: the wrapper page is not ONLYOFFICE Documents
+
+Nothing shows this title in our window -- the host sets the native one -- but
+it is the document title all the same.
+---
+ apps/api/documents/index.html.desktop | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/apps/api/documents/index.html.desktop b/apps/api/documents/index.html.desktop
+index 09e2389707..fdcad30103 100644
+--- a/apps/api/documents/index.html.desktop
++++ b/apps/api/documents/index.html.desktop
+@@ -1,7 +1,7 @@
+ <!DOCTYPE html>
+ <html>
+ <head>
+-    <title>ONLYOFFICE Documents</title>
++    <title>Libera Suite</title>
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=IE8"/>
+     <meta name="description" content="" />
+-- 
+2.55.0
+
