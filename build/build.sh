@@ -250,7 +250,19 @@ failing_rule() {
     [ -f "$mk" ] || return 0
     echo >&2
     echo "--- where $mk mentions $want ---" >&2
-    grep -n -F "$want" "$mk" 2>/dev/null | head -5 | sed 's/^/    /' >&2
+    # Tabs and carriage returns made visible. nmake tells a recipe line from a
+    # dependency line by the leading tab, so a rule indented with spaces turns
+    # its own command into more dependencies -- which is exactly what "don't
+    # know how to make <a file that is right there>" looks like.
+    grep -n -F "$want" "$mk" 2>/dev/null | head -5 |
+        sed 's/\t/<TAB>/g; s/\r/<CR>/g; s/^/    /' >&2
+
+    # And the file itself. A dependency nmake cannot make is either a rule it
+    # misread or a file that is not there, and those want opposite fixes.
+    f="$(printf '%s' "$want" | tr '\\' '/')"
+    echo >&2
+    echo "--- $name's $f ---" >&2
+    ls -l "$OUT/core/third_party/work/$name/$f" 2>&1 | sed 's/^/    /' >&2
 }
 
 # The log the failure named, and only that one.
