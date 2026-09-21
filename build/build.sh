@@ -260,7 +260,7 @@ failing_rule() {
     # strips the CR before sed can see one, so a perfectly normal CRLF makefile
     # read as Unix line endings and sent a whole round of debugging the wrong
     # way. A byte count cannot lie the same way.
-    echo "    ($(tr -cd '\r' < "$mk" | wc -c | tr -d ' ') CR bytes in the file)" >&2
+    echo "    ($(tr -cd '\r' < "$mk" | wc -c | tr -d ' ') CR bytes in $(wc -l < "$mk" | tr -d ' ') lines)" >&2
 
     # And the file itself. A dependency nmake cannot make is either a rule it
     # misread or a file that is not there, and those want opposite fixes.
