@@ -263,6 +263,35 @@ failing_rule() {
     echo >&2
     echo "--- $name's $f ---" >&2
     ls -l "$OUT/core/third_party/work/$name/$f" 2>&1 | sed 's/^/    /' >&2
+
+    # With both of those answered -- real tabs in the rule, the file on disk --
+    # the remaining explanation is that nmake never stripped the quotes and
+    # went looking for a file literally called "apps\apps.c". Its own error
+    # says as much: U1073 prints the name it wanted inside single quotes, and
+    # the double quotes are *within* them.
+    #
+    # That is one question with a two-line answer, so ask nmake instead of
+    # arguing about it: same directory, same nmake, same file, once quoted and
+    # once not. Two OKs and the quoting is innocent. One OK and it is not, and
+    # the fix is a toolset rather than a patch -- 14.29 is VS2019's nmake
+    # living inside a VS18 install, which is not a combination upstream tests.
+    command -v nmake >/dev/null 2>&1 || return 0
+    echo >&2
+    echo "--- does this nmake accept a quoted dependency? ---" >&2
+    (
+        cd "$OUT/core/third_party/work/$name" || exit 0
+        {
+            printf 'quoted: "%s"\n' "$want"
+            printf '\t@echo REACHED\n'
+            printf 'bare: %s\n' "$want"
+            printf '\t@echo REACHED\n'
+        } > .quote-probe.mak
+        for t in quoted bare; do
+            printf '    %-7s ' "$t"
+            nmake /NOLOGO /F .quote-probe.mak "$t" 2>&1 | tr -d '\r' | tail -1
+        done
+        rm -f .quote-probe.mak
+    ) >&2
 }
 
 # The log the failure named, and only that one.
