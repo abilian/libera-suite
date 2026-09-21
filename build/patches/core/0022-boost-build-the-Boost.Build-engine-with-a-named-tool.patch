@@ -1,0 +1,78 @@
+From 249be1cf013cd5f10e14cc3e286eb5bde631cd17 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 21 Sep 2026 10:35:08 +0200
+Subject: [PATCH] boost: build the Boost.Build engine with a named toolset on
+ Windows
+
+bootstrap.bat calls build.bat with no arguments, and build.bat then guesses
+the toolset from the Visual Studio *installation* it finds with vswhere. On
+anything newer than it knows that guess is "vcunk" and it stops, whatever
+cl.exe is on PATH and whatever was passed to bootstrap.bat, which forwards
+nothing. Its own comment says so: "it uses setlocal at the start and does
+not export BOOST_JAM_TOOLSET, and I don't know how to do that properly".
+
+Measured on Visual Studio 18 with the 14.29 toolset active: the compiler was
+right and boost never looked at it.
+
+So call build.bat directly with `msvc`, a name config_toolset.bat recognises,
+whose Config_MSVC means exactly "the cl on PATH" -- `if not defined CXX ( set
+"CXX=cl" )`. What is left of bootstrap.bat is three lines: drop a stale
+engine, build one, copy b2.exe to the root where the build step looks for it.
+project-config.jam it would also write is overwritten a few lines below
+anyway.
+---
+ Common/3dParty/boost/nc-build.py | 36 +++++++++++++++++++++++++++++---
+ 1 file changed, 33 insertions(+), 3 deletions(-)
+
+diff --git a/Common/3dParty/boost/nc-build.py b/Common/3dParty/boost/nc-build.py
+index 91e0f90ff2..229ec0678d 100644
+--- a/Common/3dParty/boost/nc-build.py
++++ b/Common/3dParty/boost/nc-build.py
+@@ -84,11 +84,41 @@ def build_and_install():
+     elif nc.is_windows():
+         boost_arch, host_subdir = boost_msvc_arch()
+ 
++        # bootstrap.bat, unrolled, so that the toolset can be named.
++        #
++        # bootstrap.bat calls `build.bat` with no arguments, and build.bat then
++        # guesses the toolset from the Visual Studio *installation* it finds
++        # with vswhere. On anything newer than it knows that guess is "vcunk"
++        # and it stops -- whatever cl.exe is on PATH, and whatever was passed
++        # to bootstrap.bat, which forwards nothing. Its own comment says as
++        # much: "it uses setlocal at the start and does not export
++        # BOOST_JAM_TOOLSET, and I don't know how to do that properly".
++        #
++        # Measured on Visual Studio 18 with the 14.29 toolset active: the
++        # compiler was right and boost never looked at it.
++        #
++        # `msvc` is a name config_toolset.bat recognises, and Config_MSVC means
++        # exactly "the cl on PATH" -- `if not defined CXX ( set "CXX=cl" )`.
++        # That is the compiler the caller has already selected.
++        #
++        # What is left of bootstrap.bat: drop a stale engine, build one, and
++        # copy b2.exe to the root where the build step below looks for it. It
++        # also writes project-config.jam, which the block further down
++        # overwrites regardless.
++        engine = Path( nc.work_dir ) / "tools" / "build" / "src" / "engine"
++        for stale in ( engine / "b2.exe", Path( nc.work_dir ) / "b2.exe" ):
++            stale.unlink( missing_ok = True )
++
+         nc.run_command(
+-            [ "cmd.exe", "/c" "bootstrap.bat", f"--prefix={ nc.install_dir }" ],
+-            "Running bootstrap",
+-            nc.work_dir
++            [ "cmd.exe", "/c", str( engine / "build.bat" ), "msvc" ],
++            "Building Boost.Build engine",
++            engine
+         )
++
++        built = engine / "b2.exe"
++        if not built.exists():
++            nc.abort_op( "Boost.Build engine did not build: no b2.exe" )
++        shutil.copy2( built, Path( nc.work_dir ) / "b2.exe" )
+     else:
+         nc.abort_op( f"Unkown target platform: {sys.platform}" )
+ 
+-- 
+2.55.0
+
