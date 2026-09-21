@@ -75,6 +75,11 @@ jobs:
           # commit it came from. A runner has none.
           git config --global user.name 'windows probe'
           git config --global user.email 'probe@localhost'
+          # core's tree is deep -- Common/3dParty/v8 and the rest -- and Git for
+          # Windows still defaults to the 260-character limit. Without this a
+          # clone fails partway through with "Filename too long", which reads
+          # like a corrupt repository rather than a Windows setting.
+          git config --global core.longpaths true
 
       - uses: actions/checkout@v4
 
@@ -125,9 +130,15 @@ jobs:
 
       # The patch queue is the reason the fetch stage is worth running on its
       # own: if the series applied, Windows has not mangled it.
+      # `|| true` here would have shown a green tick for a queue that does not
+      # apply, which is the one thing this stage exists to find out.
+      # continue-on-error says the same thing honestly: red step, live job.
       - name: what the patch queue did
         if: inputs.stage != 'toolchain'
-        run: sh build/check-patches.sh || true
+        continue-on-error: true
+        run: |
+          export PATH="$PERL_BIN:$PATH"
+          sh build/check-patches.sh
 
       - name: configure
         if: inputs.stage == 'configure'
