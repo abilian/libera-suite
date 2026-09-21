@@ -38,6 +38,10 @@ on:
         description: 'also run configure (hours: boost, ICU, OpenSSL, V8)'
         type: boolean
         default: false
+      except:
+        description: 'third-party components to skip, comma separated (e.g. openssl)'
+        type: string
+        default: ''
 
 # A second push should replace the first run, not queue behind twenty minutes
 # of it.
@@ -201,6 +205,28 @@ jobs:
         run: |
           export PATH="$PERL_BIN:$PATH"
           sh build/check-patches.sh
+
+      # The third-party builder on its own, so one stuck component does not
+      # hide the answer about the ones behind it.
+      #
+      # common.cmake hardcodes `--except=openssl-hash,icu-wasm` (plus cef,qt off
+      # the desktop build) with no way to extend it. The builder itself takes
+      # the list as an argument and is idempotent: each component writes an
+      # ok_marker and is skipped next time. So calling it directly costs
+      # nothing and skips what you name.
+      #
+      # `except: openssl` is what reaches V8 while OpenSSL is unsolved, and V8
+      # is the question that decides whether Windows is a project or an
+      # afternoon.
+      - name: third party, skipping what you named
+        if: inputs.except != ''
+        run: |
+          export PATH="$PERL_BIN:$PATH"
+          . build/msvc-env.sh && msvc_env
+          python "$BUILD_ROOT/src/core/Common/3dParty/build_3rdparty.py" \
+            "--except=openssl-hash,icu-wasm,cef,qt,${{ inputs.except }}" \
+            "$BUILD_ROOT/out/core/third_party/work" \
+            "$BUILD_ROOT/out/core/third_party/install"
 
       - name: configure
         # if: inputs.configure
