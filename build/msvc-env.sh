@@ -23,16 +23,22 @@
 # Which MSVC to ask vcvarsall for, and why it is not simply "the newest".
 #
 # The third-party stack is 2021: boost 1.78, ICU 74, V8 8.9. boost's
-# bootstrap.bat knows toolsets up to vc143 -- MSVC 14.3x, which is VS 2022 --
-# and a runner's VS 18 gives cl 14.51, which it reports as "Unknown toolset:
-# vcunk" and stops. V8 8.9 is from the same December and is no more likely to
-# enjoy a compiler five years its junior: on Linux the same gap, clang 16
-# against V8 8.9, does not compile at all.
+# bootstrap.bat knows toolsets up to vc143 and matches on the version prefix,
+# so a runner's cl 14.51 comes back as "Unknown toolset: vcunk" and it stops.
+# V8 8.9 is from the same December and is no more likely to enjoy a compiler
+# five years its junior: on Linux the identical gap, clang 16 against V8 8.9,
+# does not compile at all.
 #
-# So pin it, the way build/toolchain.sh pins clang on Linux for exactly this
-# reason. An installation usually carries several toolsets and vcvarsall will
-# select one; MSVC_TOOLSET=14.4 or whatever else is there overrides.
-MSVC_TOOLSET="${MSVC_TOOLSET:-14.3}"
+# So pin it, the way build/toolchain.sh pins clang on Linux for the same
+# reason. A version rather than a number, because the right one differs per
+# machine: measured on a GitHub runner, VS 18 ships 14.29, 14.44 and 14.51, and
+# VS 2022's own toolset has moved from 14.3x to 14.4x -- so "the vc143 boost
+# knows" is not a stable thing to name.
+#
+# In order, most wanted first. 14.29 is v142, the compiler V8 8.9 was written
+# against and one boost 1.78 certainly recognises.
+MSVC_TOOLSET_PREFER="${MSVC_TOOLSET_PREFER:-14.29 14.3 14.4}"
+# MSVC_TOOLSET=<version> skips the preference and asks for exactly that.
 
 msvc_env() {
     case "$(uname -s)" in
@@ -57,7 +63,27 @@ msvc_env() {
         -property installationPath 2>/dev/null | tr -d '\r')"
     [ -n "$vsdir" ] || { echo "FATAL: Visual Studio has no C++ toolset." >&2; exit 1; }
 
-    echo "==> MSVC environment ($vsdir, toolset $MSVC_TOOLSET)"
+    # Pick a toolset that is actually installed, in preference order.
+    tools="$(cygpath -u "$vsdir")/VC/Tools/MSVC"
+    toolset="${MSVC_TOOLSET:-}"
+    if [ -z "$toolset" ]; then
+        for want in $MSVC_TOOLSET_PREFER; do
+            for dir in "$tools/$want"*; do
+                [ -d "$dir" ] && { toolset="$want"; break; }
+            done
+            [ -n "$toolset" ] && break
+        done
+    fi
+    if [ -z "$toolset" ]; then
+        # None of the ones we know about. Take the newest and say so, rather
+        # than refusing: the preference list is what has been measured, not a
+        # statement about everything that could work.
+        toolset="$(ls -1 "$tools" 2>/dev/null | sort -V | tail -1)"
+        echo "    none of [$MSVC_TOOLSET_PREFER] is installed; trying $toolset"
+    fi
+    [ -n "$toolset" ] || { echo "FATAL: no MSVC toolset in $tools" >&2; exit 1; }
+
+    echo "==> MSVC environment ($vsdir, toolset $toolset)"
 
     # The VS 2017-2022 layout. A new major may have moved it, so look before
     # calling, and say what is there instead of guessing.
@@ -78,19 +104,19 @@ msvc_env() {
     work="$(mktemp -d)"
     {
         echo "@echo off"
-        echo "call \"$vcvarsall\" x64 -vcvars_ver=$MSVC_TOOLSET"
+        echo "call \"$vcvarsall\" x64 -vcvars_ver=$toolset"
         echo "if errorlevel 1 exit /b 1"
         echo "set"
     } > "$work/vcvars.bat"
 
     # `cmd //c`, with the doubled slash, or MSYS rewrites /c into a path.
     if ! cmd //c "$(cygpath -w "$work/vcvars.bat")" > "$work/out" 2> "$work/err"; then
-        echo "FATAL: vcvarsall.bat x64 -vcvars_ver=$MSVC_TOOLSET failed. It said:" >&2
+        echo "FATAL: vcvarsall.bat x64 -vcvars_ver=$toolset failed. It said:" >&2
         cat "$work/out" "$work/err" 2>/dev/null | tail -30 | sed 's/^/    /' >&2
         echo "       Toolsets this installation has:" >&2
         ls -1 "$(cygpath -u "$vsdir")/VC/Tools/MSVC" 2>/dev/null |
             sed 's/^/         /' >&2 || echo "         none found" >&2
-        echo "       MSVC_TOOLSET=<major.minor> picks another." >&2
+        echo "       MSVC_TOOLSET=<version> picks another." >&2
         rm -rf "$work"
         exit 1
     fi
