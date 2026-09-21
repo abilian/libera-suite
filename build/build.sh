@@ -193,7 +193,36 @@ cmd_configure() {
         -DCMAKE_BUILD_TYPE=Release \
         -DEO_CORE_OUTPUT_DIR="$OUT/core/bin" \
         -DEO_CORE_TOOLS_DIR="$OUT/core/tools" \
-        "$SRC/core"
+        "$SRC/core" || { third_party_logs; exit 1; }
+}
+
+# What the third-party build actually said.
+#
+# common.cmake runs build_3rdparty.py through execute_process and prints its
+# output when it finishes, so a failure arrives as "Aborting ICU: Configuration
+# failed (see .../icu-build.log)" -- a path, on a machine you may not be
+# sitting at. Each recipe writes its own log somewhere under third_party, and
+# going to find it is a step nobody should have to take twice.
+#
+# The newest two, tail only: a configure log is thousands of lines of feature
+# probes and the answer is at the end.
+third_party_logs() {
+    tp="$OUT/core/third_party"
+    [ -d "$tp" ] || return 0
+    found="$(find "$tp" -name '*.log' -type f 2>/dev/null |
+        while read -r f; do printf '%s\t%s\n' "$(mtime "$f")" "$f"; done |
+        sort -rn | cut -f2 | head -2)"
+    [ -n "$found" ] || return 0
+    for f in $found; do
+        echo
+        echo "--- the last 40 lines of $f ---" >&2
+        tail -40 "$f" >&2
+    done
+}
+
+# stat's spelling differs between GNU and BSD, and this runs on both.
+mtime() {
+    stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0
 }
 
 cmd_build() {

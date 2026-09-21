@@ -203,6 +203,9 @@ jobs:
           name: windows-probe-logs
           if-no-files-found: ignore
           retention-days: 14
+          # Every log anywhere under the build tree, not the two directories
+          # somebody guessed at: ICU's lands in
+          # third_party/install/icu/icu-build.log, which the old two globs
+          # missed entirely.
           path: |
-            ${{ env.BUILD_ROOT }}/out/*.log
-            ${{ env.BUILD_ROOT }}/out/core/third_party/*.log
+            ${{ env.BUILD_ROOT }}/out/**/*.log
