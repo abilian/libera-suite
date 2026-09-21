@@ -39,7 +39,7 @@ on:
         type: boolean
         default: false
       except:
-        description: 'third-party components to skip, comma separated (e.g. openssl)'
+        description: 'components to skip, comma separated. Empty means openssl; say none to skip nothing'
         type: string
         default: ''
 
@@ -227,13 +227,26 @@ jobs:
       # `except: openssl` is what reaches V8 while OpenSSL is unsolved, and V8
       # is the question that decides whether Windows is a project or an
       # afternoon.
-      - name: third party, skipping what you named
-        if: inputs.except != ''
+      # OpenSSL is skipped by DEFAULT, including on a push.
+      #
+      # It has taken nine rounds and answered none of them, and it is one
+      # library. V8 8.9 is the question that decides whether Windows is worth a
+      # machine, it sits directly behind OpenSSL in the build order, and it has
+      # never once been reached. Waiting for a hand-dispatched run to ask it
+      # has not worked, so the default asks it.
+      #
+      # `except: none` builds everything (no component is called that). The
+      # configure step still runs afterwards and still walks into OpenSSL, so
+      # its diagnostics keep arriving -- this reorders the questions, it does
+      # not drop one.
+      - name: third party, minus OpenSSL
         run: |
           export PATH="$PERL_BIN:$PATH"
           . build/msvc-env.sh && msvc_env
+          skip="${{ inputs.except || 'openssl' }}"
+          echo "==> building third party, skipping: $skip"
           python "$BUILD_ROOT/src/core/Common/3dParty/build_3rdparty.py" \
-            "--except=openssl-hash,icu-wasm,cef,qt,${{ inputs.except }}" \
+            "--except=openssl-hash,icu-wasm,cef,qt,$skip" \
             "$BUILD_ROOT/out/core/third_party/work" \
             "$BUILD_ROOT/out/core/third_party/install"
 

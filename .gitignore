@@ -35,6 +35,3 @@ src/libera/manifest.json
 
 # An inventory of build hosts (build/builders.conf.example is the template).
 build/builders.conf
-
-# ODF round-trip runs (tools/odf-roundtrip)
-tools/odf-roundtrip/out/
