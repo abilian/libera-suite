@@ -43,16 +43,40 @@ msvc_env() {
         -property installationPath 2>/dev/null | tr -d '\r')"
     [ -n "$vsdir" ] || { echo "FATAL: Visual Studio has no C++ toolset." >&2; exit 1; }
 
-    vcvarsall="$vsdir\\VC\\Auxiliary\\Build\\vcvarsall.bat"
     echo "==> MSVC environment ($vsdir)"
 
-    # `cmd //c`, with the doubled slash, or MSYS rewrites /c into a path.
-    dump="$(mktemp)"
-    cmd //c "call \"$vcvarsall\" x64 >nul && set" > "$dump" 2>/dev/null || {
-        rm -f "$dump"
-        echo "FATAL: vcvarsall.bat x64 failed." >&2
+    # The VS 2017-2022 layout. A new major may have moved it, so look before
+    # calling, and say what is there instead of guessing.
+    vcvarsall="$vsdir\\VC\\Auxiliary\\Build\\vcvarsall.bat"
+    vcvarsall_u="$(cygpath -u "$vcvarsall" 2>/dev/null || echo "$vcvarsall")"
+    if [ ! -f "$vcvarsall_u" ]; then
+        echo "FATAL: no vcvarsall.bat at" >&2
+        echo "         $vcvarsall" >&2
+        echo "       What that directory holds:" >&2
+        ls -1 "$(dirname "$vcvarsall_u")" 2>/dev/null | sed 's/^/         /' >&2 ||
+            echo "         nothing -- the directory is not there either" >&2
         exit 1
-    }
+    fi
+
+    # Through a .bat file rather than a quoted -c string. The path has spaces
+    # and backslashes in it, and nesting quotes through bash into cmd is a
+    # guessing game; a file has no quoting at all.
+    work="$(mktemp -d)"
+    {
+        echo "@echo off"
+        echo "call \"$vcvarsall\" x64"
+        echo "if errorlevel 1 exit /b 1"
+        echo "set"
+    } > "$work/vcvars.bat"
+
+    # `cmd //c`, with the doubled slash, or MSYS rewrites /c into a path.
+    if ! cmd //c "$(cygpath -w "$work/vcvars.bat")" > "$work/out" 2> "$work/err"; then
+        echo "FATAL: vcvarsall.bat x64 failed. It said:" >&2
+        cat "$work/out" "$work/err" 2>/dev/null | tail -30 | sed 's/^/    /' >&2
+        rm -rf "$work"
+        exit 1
+    fi
+    dump="$work/out"
 
     # Case-insensitively, because Windows is about the case of these names and
     # the shell is not.
@@ -68,7 +92,7 @@ msvc_env() {
             export "$var=$value"
         fi
     done
-    rm -f "$dump"
+    rm -rf "$work"
 
     command -v cl.exe >/dev/null 2>&1 || {
         echo "FATAL: vcvarsall ran and cl.exe is still not on PATH." >&2
