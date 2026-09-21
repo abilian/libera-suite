@@ -265,32 +265,38 @@ failing_rule() {
     ls -l "$OUT/core/third_party/work/$name/$f" 2>&1 | sed 's/^/    /' >&2
 
     # With both of those answered -- real tabs in the rule, the file on disk --
-    # the remaining explanation is that nmake never stripped the quotes and
-    # went looking for a file literally called "apps\apps.c". Its own error
-    # says as much: U1073 prints the name it wanted inside single quotes, and
-    # the double quotes are *within* them.
+    # what is left is how nmake reads the makefile rather than what is in it.
     #
-    # That is one question with a two-line answer, so ask nmake instead of
-    # arguing about it: same directory, same nmake, same file, once quoted and
-    # once not. Two OKs and the quoting is innocent. One OK and it is not, and
-    # the fix is a toolset rather than a patch -- 14.29 is VS2019's nmake
-    # living inside a VS18 install, which is not a combination upstream tests.
+    # Two candidates, and the output above narrows them. The rule prints with
+    # <TAB> and no <CR>, so Configure wrote this makefile with Unix line
+    # endings; nmake is a 1989 tool and may or may not read one. The other is
+    # the quoting, since U1073 prints the wanted name in single quotes with the
+    # double quotes inside them.
+    #
+    # So ask nmake, in its own directory, with both line endings and all three
+    # spellings. `none` is the control and the point of the exercise: a probe
+    # that fails on a rule with no dependency at all is a broken probe, and
+    # this project has been wrong about its probes more often than about its
+    # code. The first version of this one was -- it piped through `tail -1`,
+    # so every outcome read as "Stop." and said nothing.
     command -v nmake >/dev/null 2>&1 || return 0
+    crs="$(head -50 "$mk" | tr -cd '\r' | wc -c | tr -d ' ')"
     echo >&2
-    echo "--- does this nmake accept a quoted dependency? ---" >&2
+    echo "--- how nmake reads this makefile ---" >&2
+    echo "    CR bytes in the first 50 lines of makefile: $crs (0 means LF-only)" >&2
     (
         cd "$OUT/core/third_party/work/$name" || exit 0
-        {
-            printf 'quoted: "%s"\n' "$want"
-            printf '\t@echo REACHED\n'
-            printf 'bare: %s\n' "$want"
-            printf '\t@echo REACHED\n'
-        } > .quote-probe.mak
-        for t in quoted bare; do
-            printf '    %-7s ' "$t"
-            nmake /NOLOGO /F .quote-probe.mak "$t" 2>&1 | tr -d '\r' | tail -1
+        printf 'none:\n\t@echo REACHED\nbare: %s\n\t@echo REACHED\nquoted: "%s"\n\t@echo REACHED\n' \
+            "$want" "$want" > .probe-lf.mak
+        printf 'none:\r\n\t@echo REACHED\r\nbare: %s\r\n\t@echo REACHED\r\nquoted: "%s"\r\n\t@echo REACHED\r\n' \
+            "$want" "$want" > .probe-crlf.mak
+        for e in lf crlf; do
+            for t in none bare quoted; do
+                echo "    $e/$t:"
+                nmake /NOLOGO /F ".probe-$e.mak" "$t" 2>&1 | tr -d '\r' | sed 's/^/        /'
+            done
         done
-        rm -f .quote-probe.mak
+        rm -f .probe-lf.mak .probe-crlf.mak
     ) >&2
 }
 
