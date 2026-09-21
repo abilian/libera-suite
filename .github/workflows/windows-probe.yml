@@ -127,6 +127,25 @@ jobs:
           echo "PERL_BIN=$(dirname "$found")" >> "$GITHUB_ENV"
           echo "using $found  ($("$found" -e 'print $^V'))"
 
+      # ICU is built as Cygwin/MSVC -- upstream's design, not a workaround: the
+      # shell and make come from Cygwin, the compiler is still MSVC. choco puts
+      # it in C:\tools\cygwin rather than the C:\cygwin64 that nc-build.bat
+      # defaults to, so CYGWIN_ROOT says where. `make` is a separate package;
+      # a base Cygwin passes the path check and fails inside configure.
+      - name: Cygwin, for ICU
+        run: |
+          choco install --yes --no-progress cygwin
+          choco install --yes --no-progress cyg-get
+          cyg-get make
+          root='C:\tools\cygwin'
+          [ -x "$(cygpath -u "$root")/bin/make.exe" ] || {
+            echo "FATAL: cygwin installed without make" >&2
+            ls -1 "$(cygpath -u "$root")/bin" | head -20 >&2
+            exit 1
+          }
+          echo "CYGWIN_ROOT=$root" >> "$GITHUB_ENV"
+          echo "cygwin: $root"
+
       # $PERL_BIN first, explicitly, in every step that runs the build scripts.
       # Repetitive on purpose: it is the only spelling that is deterministic
       # here, and one of these silently not applying is a perl fault twenty

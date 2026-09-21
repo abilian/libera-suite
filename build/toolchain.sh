@@ -236,6 +236,7 @@ cmd_check() {
 
     if [ "$FAMILY" = windows ]; then
         check_visual_studio || return 1
+        check_cygwin || return 1
     fi
 
     # The three below are Linux's: the Mac builds ICU and V8 against what Xcode
@@ -318,6 +319,43 @@ check_visual_studio() {
         echo "       > Modify > Change > tick 'Debugging Tools for Windows'." >&2
         return 1
     fi
+    return 0
+}
+
+# ICU is built through Cygwin on Windows, and that is upstream's design rather
+# than a workaround: icu/nc-build.bat hands icu/nc-build-cygwin.sh to Cygwin's
+# bash, which runs `runConfigureICU Cygwin/MSVC` and then make. MSVC is still
+# the compiler; Cygwin supplies the shell and the build system ICU's configure
+# expects.
+#
+# Checked here because it fails five minutes in, after boost has built, and the
+# message is about a path rather than about a thing to install.
+#
+# CYGWIN_ROOT moves it: nc-build.bat reads that before falling back to
+# C:\cygwin64. `make` is checked separately because Cygwin's base install does
+# not include it, and a Cygwin without make gets past the path test and fails
+# in configure.
+check_cygwin() {
+    root="${CYGWIN_ROOT:-C:\\cygwin64}"
+    root_u="$(cygpath -u "$root" 2>/dev/null || echo "$root")"
+
+    if [ ! -x "$root_u/bin/bash.exe" ]; then
+        echo "FATAL: no Cygwin at $root, which is where ICU is built." >&2
+        echo "       Upstream builds ICU as Cygwin/MSVC: Cygwin supplies the" >&2
+        echo "       shell and make, MSVC is still the compiler." >&2
+        echo >&2
+        echo "         winget install --exact Cygwin.Cygwin" >&2
+        echo "       then add the 'make' package with Cygwin's setup, and if it" >&2
+        echo "       is not at C:\\cygwin64 set CYGWIN_ROOT to where it is." >&2
+        return 1
+    fi
+    if [ ! -x "$root_u/bin/make.exe" ]; then
+        echo "FATAL: Cygwin at $root has no make." >&2
+        echo "       ICU's configure runs it; a base Cygwin does not ship it." >&2
+        echo "       Re-run Cygwin's setup and select the 'make' package." >&2
+        return 1
+    fi
+    echo "    Cygwin: $root"
     return 0
 }
 
