@@ -82,29 +82,46 @@ jobs:
         with:
           python-version: '3.12'
 
-      # Git for Windows ships a trimmed perl and puts it first, and OpenSSL's
-      # Configure wants a full one. The runner images carry Strawberry Perl, so
-      # this is usually a reorder rather than an install.
+      # Git for Windows ships a trimmed perl, puts it first, and OpenSSL's
+      # Configure needs a full one. Two things measured on the first run: the
+      # runner has no Strawberry Perl to reorder to, and GITHUB_PATH does not
+      # win against Git Bash anyway -- MSYS2 puts /usr/bin early whatever the
+      # environment says. So install one and record where it is, rather than
+      # arguing with PATH.
+      #
+      # choco, not winget: the images ship Chocolatey, and winget is usually
+      # unusable in a non-interactive runner session. toolchain.sh still says
+      # winget, which is the right answer for a person at a desktop.
       - name: A perl OpenSSL can use
         run: |
-          if [ -x /c/Strawberry/perl/bin/perl.exe ]; then
-            echo 'C:\Strawberry\perl\bin' >> "$GITHUB_PATH"
-          else
-            echo "no Strawberry Perl on this image; installing"
-            winget install --exact --silent --accept-package-agreements \
-              StrawberryPerl.StrawberryPerl || true
-            echo 'C:\Strawberry\perl\bin' >> "$GITHUB_PATH"
+          usable() { [ -x "$1" ] && "$1" -MFindBin -MIPC::Cmd -e 'exit 0' 2>/dev/null; }
+          found=""
+          for p in /c/Strawberry/perl/bin/perl.exe /c/Perl64/bin/perl.exe; do
+            usable "$p" && { found="$p"; break; }
+          done
+          if [ -z "$found" ]; then
+            choco install strawberryperl -y --no-progress
+            usable /c/Strawberry/perl/bin/perl.exe && found=/c/Strawberry/perl/bin/perl.exe
           fi
+          [ -n "$found" ] || { echo "FATAL: no perl with FindBin and IPC::Cmd" >&2; exit 1; }
+          echo "PERL_BIN=$(dirname "$found")" >> "$GITHUB_ENV"
+          echo "using $found  ($("$found" -e 'print $^V'))"
 
+      # $PERL_BIN first, explicitly, in every step that runs the build scripts.
+      # Repetitive on purpose: it is the only spelling that is deterministic
+      # here, and one of these silently not applying is a perl fault twenty
+      # minutes into OpenSSL.
       - name: toolchain
         run: |
+          export PATH="$PERL_BIN:$PATH"
           echo "perl in use: $(command -v perl)"
-          perl -V:version 2>/dev/null || true
           sh build/toolchain.sh check
 
       - name: fetch
         if: inputs.stage != 'toolchain'
-        run: sh build/build.sh fetch
+        run: |
+          export PATH="$PERL_BIN:$PATH"
+          sh build/build.sh fetch
 
       # The patch queue is the reason the fetch stage is worth running on its
       # own: if the series applied, Windows has not mangled it.
@@ -114,7 +131,9 @@ jobs:
 
       - name: configure
         if: inputs.stage == 'configure'
-        run: sh build/build.sh configure
+        run: |
+          export PATH="$PERL_BIN:$PATH"
+          sh build/build.sh configure
 
       - name: Keep the logs either way
         if: always()
