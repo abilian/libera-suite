@@ -194,16 +194,23 @@ cmd_configure() {
     # a file because a pipeline's exit status is the last command's, and POSIX
     # sh has no pipefail.
     cmake_log="$OUT/core/cmake-configure.log"
+    # `if cmake`, not `cmake; echo $?`: under set -e a failing cmake kills the
+    # subshell before the echo runs, and the status file is never written. It
+    # took the failure path anyway, because cat of a missing file is empty and
+    # empty is not 0 -- right answer, wrong reason.
     {
-        cmake -G Ninja \
+        if cmake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DEO_CORE_OUTPUT_DIR="$OUT/core/bin" \
             -DEO_CORE_TOOLS_DIR="$OUT/core/tools" \
             "$SRC/core" 2>&1
-        echo "$?" > "$OUT/core/.cmake-status"
+        then echo 0 > "$OUT/core/.cmake-status"
+        else echo 1 > "$OUT/core/.cmake-status"
+        fi
     } | tee "$cmake_log"
-    [ "$(cat "$OUT/core/.cmake-status")" = 0 ] || {
+    [ "$(cat "$OUT/core/.cmake-status" 2>/dev/null)" = 0 ] || {
         failed_tree "$cmake_log"
+        failing_rule "$cmake_log"
         named_logs "$cmake_log"
         exit 1
     }
@@ -227,6 +234,23 @@ failed_tree() {
     else
         echo "    the directory does not exist" >&2
     fi
+}
+
+# The makefile rule a build tool could not satisfy.
+#
+# nmake says `don't know how to make '"apps\apps.c"'` and the file is right
+# there, 18300 of them. The makefile is the missing half, and OpenSSL rewrites
+# its own -- `depend` runs util/add-depends.pl before the real build -- so the
+# one on disk is not the one Configure wrote. Print where the name occurs.
+failing_rule() {
+    want="$(sed -n "s/.*don't know how to make '\"*\([^'\"]*\)\"*'.*/\1/p" "$1" | tail -1)"
+    [ -n "$want" ] || return 0
+    name="$(sed -n 's/.*[^a-z]\([a-z0-9_-]*\) failed with code.*/\1/p' "$1" | tail -1)"
+    mk="$OUT/core/third_party/work/$name/makefile"
+    [ -f "$mk" ] || return 0
+    echo >&2
+    echo "--- where $mk mentions $want ---" >&2
+    grep -n -F "$want" "$mk" 2>/dev/null | head -5 | sed 's/^/    /' >&2
 }
 
 # The log the failure named, and only that one.
