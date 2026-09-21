@@ -20,6 +20,20 @@
 # no shell can export -- `PROGRAMFILES(X86)` has parentheses in it -- so
 # re-exporting everything is not an option.
 
+# Which MSVC to ask vcvarsall for, and why it is not simply "the newest".
+#
+# The third-party stack is 2021: boost 1.78, ICU 74, V8 8.9. boost's
+# bootstrap.bat knows toolsets up to vc143 -- MSVC 14.3x, which is VS 2022 --
+# and a runner's VS 18 gives cl 14.51, which it reports as "Unknown toolset:
+# vcunk" and stops. V8 8.9 is from the same December and is no more likely to
+# enjoy a compiler five years its junior: on Linux the same gap, clang 16
+# against V8 8.9, does not compile at all.
+#
+# So pin it, the way build/toolchain.sh pins clang on Linux for exactly this
+# reason. An installation usually carries several toolsets and vcvarsall will
+# select one; MSVC_TOOLSET=14.4 or whatever else is there overrides.
+MSVC_TOOLSET="${MSVC_TOOLSET:-14.3}"
+
 msvc_env() {
     case "$(uname -s)" in
     MINGW* | MSYS* | CYGWIN*) ;;
@@ -43,7 +57,7 @@ msvc_env() {
         -property installationPath 2>/dev/null | tr -d '\r')"
     [ -n "$vsdir" ] || { echo "FATAL: Visual Studio has no C++ toolset." >&2; exit 1; }
 
-    echo "==> MSVC environment ($vsdir)"
+    echo "==> MSVC environment ($vsdir, toolset $MSVC_TOOLSET)"
 
     # The VS 2017-2022 layout. A new major may have moved it, so look before
     # calling, and say what is there instead of guessing.
@@ -64,15 +78,19 @@ msvc_env() {
     work="$(mktemp -d)"
     {
         echo "@echo off"
-        echo "call \"$vcvarsall\" x64"
+        echo "call \"$vcvarsall\" x64 -vcvars_ver=$MSVC_TOOLSET"
         echo "if errorlevel 1 exit /b 1"
         echo "set"
     } > "$work/vcvars.bat"
 
     # `cmd //c`, with the doubled slash, or MSYS rewrites /c into a path.
     if ! cmd //c "$(cygpath -w "$work/vcvars.bat")" > "$work/out" 2> "$work/err"; then
-        echo "FATAL: vcvarsall.bat x64 failed. It said:" >&2
+        echo "FATAL: vcvarsall.bat x64 -vcvars_ver=$MSVC_TOOLSET failed. It said:" >&2
         cat "$work/out" "$work/err" 2>/dev/null | tail -30 | sed 's/^/    /' >&2
+        echo "       Toolsets this installation has:" >&2
+        ls -1 "$(cygpath -u "$vsdir")/VC/Tools/MSVC" 2>/dev/null |
+            sed 's/^/         /' >&2 || echo "         none found" >&2
+        echo "       MSVC_TOOLSET=<major.minor> picks another." >&2
         rm -rf "$work"
         exit 1
     fi
