@@ -182,6 +182,32 @@ jobs:
           echo "CYGWIN_ROOT=$root" >> "$GITHUB_ENV"
           echo "cygwin: $root, $("$root_u/bin/make.exe" --version | head -1)"
 
+      # Windows SDK 10.0.19041.0, because V8 8.9 pins it.
+      #
+      # build/toolchain/win/setup_toolchain.py:176 appends the version to its
+      # own vcvarsall call, with a comment saying it does so "to avoid
+      # accidentally building with a new and untested SDK". vcvarsall does not
+      # object to a version that is absent: it emits LIB entries for it anyway,
+      # so the failure surfaces 383 seconds later as `user32.lib is not found`
+      # with a LIB list mixing 26100's ucrt and 19041's um.
+      #
+      # 2004 is the release name for build 19041.
+      - name: The Windows SDK V8 pins
+        run: |
+          lib='C:/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/um/x64/user32.lib'
+          if [ ! -f "$lib" ]; then
+            choco install --yes --no-progress windows-sdk-10-version-2004-all
+          fi
+          # Asserted on the file V8 actually looks for, not on choco's exit
+          # code: the package can install and leave this absent, and then the
+          # next three hundred seconds are wasted.
+          [ -f "$lib" ] || {
+            echo "FATAL: SDK 10.0.19041.0 has no um/x64/user32.lib" >&2
+            ls -1 'C:/Program Files (x86)/Windows Kits/10/Lib' 2>&1 | sed 's/^/    /' >&2
+            exit 1
+          }
+          echo "have $lib"
+
       # $PERL_BIN first, explicitly, in every step that runs the build scripts.
       # Repetitive on purpose: it is the only spelling that is deterministic
       # here, and one of these silently not applying is a perl fault twenty

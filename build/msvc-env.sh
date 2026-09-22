@@ -37,7 +37,15 @@
 #
 # In order, most wanted first. 14.29 is v142, the compiler V8 8.9 was written
 # against and one boost 1.78 certainly recognises.
-MSVC_TOOLSET_PREFER="${MSVC_TOOLSET_PREFER:-14.29 14.3 14.4}"
+# Newest first, which is the opposite of the original guess.
+#
+# The order used to start at 14.29, on the theory that V8 8.9 is from 2021 and
+# wants a toolset of its age. V8 does not take the pin: setup_toolchain.py
+# deletes INCLUDE, LIB, LIBPATH and VSINSTALLDIR and runs its own vcvarsall with
+# no -vcvars_ver, so it built with 14.51 while everything around it used 14.29.
+# One build, two toolsets, and the pin only ever applied to the half that was
+# failing.
+MSVC_TOOLSET_PREFER="${MSVC_TOOLSET_PREFER:-14.5 14.4 14.3 14.29}"
 # MSVC_TOOLSET=<version> skips the preference and asks for exactly that.
 
 msvc_env() {
