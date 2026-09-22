@@ -1,0 +1,69 @@
+From 901ac17e28efb221afeada6ae426d010ea14bc28 Mon Sep 17 00:00:00 2001
+From: Libera Suite <dev@liberasuite.eu>
+Date: Tue, 22 Sep 2026 22:10:24 +0200
+Subject: [PATCH] IWorkFile: do not duplicate the zlib kernel.dll already
+ exports
+
+---
+ Apple/CMakeLists.txt | 41 +++++++++++++++++++++++++++--------------
+ 1 file changed, 27 insertions(+), 14 deletions(-)
+
+diff --git a/Apple/CMakeLists.txt b/Apple/CMakeLists.txt
+index fe98d9ff37..84d9ef435f 100644
+--- a/Apple/CMakeLists.txt
++++ b/Apple/CMakeLists.txt
+@@ -33,27 +33,40 @@ set(ETONYEK_LIB_ROOT "${APPLE_INSTALL_DIR}/libetonyek")
+ set(MDDS_LIB_ROOT "${APPLE_INSTALL_DIR}/mdds")
+ set(GLM_LIB_ROOT "${APPLE_INSTALL_DIR}/glm")
+ 
++# zlib itself, which zlib_addon.c calls, but only where kernel does not already
++# provide it.
++#
++# kernel builds zlib with -fvisibility=hidden, so libkernel exports
++# CInflate/CDeflate and none of the C entry points. ELF lets a shared library
++# leave them undefined and hope the executable has them; Mach-O resolves at
++# link time and rejects that, so the mac build needs its own copy.
++#
++# A Windows DLL is the third case and wants the opposite. kernel.dll exports
++# inflate, inflateEnd and inflateInit2_, so a second copy here is
++# `LNK2005: inflate already defined in inflate.c.obj` and then LNK1169.
++if(NOT WIN32)
++    set(IWORK_ZLIB_SOURCES
++        ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/crc32.c
++        ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/adler32.c
++        ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/deflate.c
++        ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/inffast.c
++        ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/inflate.c
++        ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/inftrees.c
++        ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/trees.c
++        ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/zutil.c
++        ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/uncompr.c
++        ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/compress.c
++    )
++endif()
++
+ add_library(IWorkFile SHARED
+     ${CMAKE_CURRENT_SOURCE_DIR}/IWork.cpp
+     
+     ${CMAKE_CURRENT_SOURCE_DIR}/IWork.h
+ 
+     # Hack: The zlib addon functions are not exported by kernel, so we need to have them here as well.
+-    # Same for zlib itself, which zlib_addon.c calls: kernel builds it with
+-    # hidden visibility, so libkernel exports CInflate/CDeflate but not
+-    # inflate(). ELF lets a shared library keep those undefined and hope the
+-    # executable has them; Mach-O resolves at link time and rejects it.
+     ${OFFICE_UTILS_ROOT_DIR}/src/zlib_addon.c
+-    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/crc32.c
+-    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/adler32.c
+-    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/deflate.c
+-    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/inffast.c
+-    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/inflate.c
+-    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/inftrees.c
+-    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/trees.c
+-    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/zutil.c
+-    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/uncompr.c
+-    ${OFFICE_UTILS_ROOT_DIR}/src/zlib-1.2.11/compress.c
++    ${IWORK_ZLIB_SOURCES}
+ 
+     ${ODF_LIB_ROOT}/src/DocumentElement.cxx
+     ${ODF_LIB_ROOT}/src/FilterInternal.cxx
