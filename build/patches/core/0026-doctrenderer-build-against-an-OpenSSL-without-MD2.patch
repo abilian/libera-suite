@@ -1,0 +1,74 @@
+From 26be4e2adb8dbf682606ae8fca06ce81e17a7da0 Mon Sep 17 00:00:00 2001
+From: Libera Suite <dev@liberasuite.eu>
+Date: Tue, 22 Sep 2026 19:09:25 +0200
+Subject: [PATCH] doctrenderer: build against an OpenSSL without MD2
+
+---
+ DesktopEditor/doctrenderer/hash.cpp | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/DesktopEditor/doctrenderer/hash.cpp b/DesktopEditor/doctrenderer/hash.cpp
+index c7ea04d812..ed62f806f4 100644
+--- a/DesktopEditor/doctrenderer/hash.cpp
++++ b/DesktopEditor/doctrenderer/hash.cpp
+@@ -37,6 +37,7 @@ unsigned char* CHash::hash(const unsigned char* data, int size, int alg)
+ 
+ 	switch (alg)
+ 	{
++#ifndef OPENSSL_NO_MD2
+ 	case haMD2:
+ 	{
+ 		nBufLen = 16;
+@@ -44,6 +45,7 @@ unsigned char* CHash::hash(const unsigned char* data, int size, int alg)
+ 		MD2(data, d, pBufData);
+ 		break;
+ 	}
++#endif
+ 	case haMD4:
+ 	{
+ 		nBufLen = 16;
+@@ -246,11 +248,13 @@ void hash_iteration(unsigned char*& input, int iter, unsigned char*& tmp, int al
+ 
+ 	switch (alg)
+ 	{
++#ifndef OPENSSL_NO_MD2
+ 	case CHash::haMD2:
+ 	{
+ 		MD2(input, alg_size + 4, tmp);
+ 		break;
+ 	}
++#endif
+ 	case CHash::haMD4:
+ 	{
+ 		MD4(input, alg_size + 4, tmp);
+@@ -319,6 +323,7 @@ unsigned char* CHash::hash2(const char* password, const char* salt, int spinCoun
+ 	unsigned char* pBuffer1 = NULL;
+ 	switch (alg)
+ 	{
++#ifndef OPENSSL_NO_MD2
+ 	case haMD2:
+ 	{
+ 		alg_size = 16;
+@@ -326,6 +331,7 @@ unsigned char* CHash::hash2(const char* password, const char* salt, int spinCoun
+ 		MD2(inputData, inputDataLen, pBuffer1);
+ 		break;
+ 	}
++#endif
+ 	case haMD4:
+ 	{
+ 		alg_size = 16;
+@@ -388,6 +394,14 @@ unsigned char* CHash::hash2(const char* password, const char* salt, int spinCoun
+ 
+ 	free(inputData);
+ 
++	// An algorithm the switch above did not recognise leaves pBuffer1 null and
++	// alg_size zero, and hash_iteration below writes input[alg_size] without
++	// checking either. That was already reachable for any unknown alg, and
++	// becomes reachable for haMD2 against an OpenSSL built without MD2.
++	// hash() above already answers an unsupported algorithm with NULL.
++	if (NULL == pBuffer1)
++		return NULL;
++
+ 	if (0 == spinCount)
+ 		return pBuffer1;
+ 
