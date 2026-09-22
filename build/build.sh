@@ -40,6 +40,28 @@ remote_base() {
 # effect. Point it at an empty config so it uses the anonymous path. This is a
 # local environment problem, not something to patch into V8.
 setup_env() {
+    # UTF-8 mode, because the builders print emoji and Windows does not default
+    # to a codec that has them.
+    #
+    # build_3rdparty.py reconfigures its own stdout to UTF-8, so the parent's
+    # messages are safe. Each component's nc-build.py runs as a separate
+    # process and does not, and one of its lines -- the check mark on "already
+    # present locally, skipping" -- reaches cp1252 and raises
+    # UnicodeEncodeError. It fires only on the *second* pass over a component,
+    # which is how an hour of successful building ended in a traceback about a
+    # character.
+    #
+    # PYTHONUTF8 rather than PYTHONIOENCODING: it covers the files the builders
+    # read as well as what they print, and every python cmake spawns inherits
+    # it -- including the 3.14 out of hostedtoolcache that cmake finds rather
+    # than the 3.12 on PATH.
+    case "$(uname -s)" in
+    MINGW* | MSYS* | CYGWIN*) export PYTHONUTF8=1 ;;
+    # An `if` and not `[ ... ] && export`: the && list returns the test's
+    # status, which is the case statement's status, which under set -e ends
+    # setup_env on every machine that is not Windows.
+    *) if [ "${OS:-}" = "Windows_NT" ]; then export PYTHONUTF8=1; fi ;;
+    esac
     # V8 defaults to one compile job per core, and linking v8_monolith takes
     # roughly 2 GB a job, so a machine with fewer gigabytes than twice its cores
     # gets the build OOM-killed.
