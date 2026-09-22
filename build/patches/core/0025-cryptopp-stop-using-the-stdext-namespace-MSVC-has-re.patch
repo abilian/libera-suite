@@ -1,0 +1,53 @@
+From e1ceca4f0d345087cb44c66fe5cc76f9dba7e32b Mon Sep 17 00:00:00 2001
+From: Libera Suite <dev@liberasuite.eu>
+Date: Tue, 22 Sep 2026 16:27:50 +0200
+Subject: [PATCH] cryptopp: stop using the stdext namespace MSVC has removed
+
+---
+ Common/3dParty/cryptopp/integer.cpp  | 10 +++++-----
+ Common/3dParty/cryptopp/zdeflate.cpp |  8 --------
+ 2 files changed, 5 insertions(+), 13 deletions(-)
+
+diff --git a/Common/3dParty/cryptopp/integer.cpp b/Common/3dParty/cryptopp/integer.cpp
+index eae3350db7..68ed565a34 100644
+--- a/Common/3dParty/cryptopp/integer.cpp
++++ b/Common/3dParty/cryptopp/integer.cpp
+@@ -3056,12 +3056,12 @@ Integer::Integer(const byte *encodedInteger, size_t byteCount, Signedness s, Byt
+ 	else
+ 	{
+ 		SecByteBlock block(byteCount);
+-#if (_MSC_VER >= 1500)
+-		std::reverse_copy(encodedInteger, encodedInteger+byteCount,
+-			stdext::make_checked_array_iterator(block.begin(), block.size()));
+-#else
++		// The stdext branch that used to be here is gone: MSVC 14.51 removed
++		// the namespace, and the error is `'stdext': is not a class or
++		// namespace name` rather than a missing member. It only ever existed
++		// to quiet C4996 on a raw destination pointer, which is what every
++		// other compiler has always been given here.
+ 		std::reverse_copy(encodedInteger, encodedInteger+byteCount, block.begin());
+-#endif
+ 		Decode(block.begin(), block.size(), s);
+ 		return;
+ 	}
+diff --git a/Common/3dParty/cryptopp/zdeflate.cpp b/Common/3dParty/cryptopp/zdeflate.cpp
+index 44413ab5e8..764ae73643 100644
+--- a/Common/3dParty/cryptopp/zdeflate.cpp
++++ b/Common/3dParty/cryptopp/zdeflate.cpp
+@@ -413,16 +413,8 @@ unsigned int Deflator::LongestMatch(unsigned int &bestMatch) const
+ 		{
+ 			CRYPTOPP_ASSERT(scan[2] == match[2]);
+ 			unsigned int len = (unsigned int)(
+-#if defined(_STDEXT_BEGIN) && !(defined(_MSC_VER) && (_MSC_VER < 1400 || _MSC_VER >= 1600)) && !defined(_STLPORT_VERSION)
+-				stdext::unchecked_mismatch
+-#else
+ 				std::mismatch
+-#endif
+-#if _MSC_VER >= 1600
+-				(stdext::make_unchecked_array_iterator(scan)+3, stdext::make_unchecked_array_iterator(scanEnd), stdext::make_unchecked_array_iterator(match)+3).first - stdext::make_unchecked_array_iterator(scan));
+-#else
+ 				(scan+3, scanEnd, match+3).first - scan);
+-#endif
+ 			CRYPTOPP_ASSERT(len != bestLength);
+ 			if (len > bestLength)
+ 			{
