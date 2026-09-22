@@ -241,6 +241,32 @@ jobs:
           export PATH="$PERL_BIN:$PATH"
           sh build/check-patches.sh
 
+      # An hour of V8, kept between runs.
+      #
+      # The runner throws its disk away, so every push rebuilt V8 from source:
+      # 59 minutes before anything specific to this project was even attempted.
+      # `install/` is the whole hour, because that is the tree ensure_dep reads
+      # -- one empty ok_marker per component -- and also where core takes
+      # harfbuzz, brotli and hunspell from as *source*. The work/ trees are
+      # only needed to build them again.
+      #
+      # **Exact key, no restore-keys.** A near-match would hand the build a
+      # tree from different pins or a different patch queue, and nothing
+      # downstream checks: upstream's own cache key is the directory name plus
+      # the platform, with no toolchain and no SHA in it, which is the same
+      # shape as the payload.version fault behind the 0.1.0 release. A miss
+      # costs an hour. A silent wrong answer costs a day.
+      - name: Cache the third-party tree
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.BUILD_ROOT }}/out/core/third_party/install
+          # msvc-env.sh is in the hash because it carries the toolset
+          # preference, and a tree built with one toolset must not be restored
+          # into a build using another. The workflow file is deliberately NOT
+          # in it: every edit here would then cost an hour of V8, which is the
+          # thing this exists to avoid.
+          key: 3rdparty-${{ runner.os }}-${{ hashFiles('build/pins.toml', 'build/patches/**', 'build/msvc-env.sh') }}
+
       # The third-party builder on its own, so one stuck component does not
       # hide the answer about the ones behind it.
       #
@@ -281,6 +307,17 @@ jobs:
         run: |
           export PATH="$PERL_BIN:$PATH"
           sh build/build.sh configure
+
+      # The question configure cannot answer.
+      #
+      # A green configure says every dependency resolved. It compiles nothing,
+      # so it says nothing about vcpkg's OpenSSL 3.x against code written for
+      # 1.1.1w. If that is going to break it breaks here, in xmlsec,
+      # Common/Network or doctrenderer.
+      - name: build
+        run: |
+          export PATH="$PERL_BIN:$PATH"
+          sh build/build.sh build
 
       - name: Keep the logs either way
         if: always()
