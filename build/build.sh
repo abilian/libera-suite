@@ -39,6 +39,15 @@ remote_base() {
 # stale credentials even for public buckets -- and --no_auth no longer has any
 # effect. Point it at an empty config so it uses the anonymous path. This is a
 # local environment problem, not something to patch into V8.
+# Windows, asked the two ways that answer it: MSYS2's uname under Git Bash,
+# and the variable Windows itself sets.
+on_windows() {
+    case "$(uname -s)" in
+    MINGW* | MSYS* | CYGWIN*) return 0 ;;
+    esac
+    [ "${OS:-}" = "Windows_NT" ]
+}
+
 setup_env() {
     # UTF-8 mode, because the builders print emoji and Windows does not default
     # to a codec that has them.
@@ -209,6 +218,36 @@ cmd_configure() {
     echo "==> toolchain"
     sh "$HERE/toolchain.sh" check
     mkdir -p "$OUT/core"
+    # OpenSSL comes from vcpkg on Windows, because it does not build here.
+    #
+    # `U1073: don't know how to make '"apps\apps.c"'` for a file that is
+    # present and complete, from a rule byte-identical to its working
+    # neighbour. notes/14-windows.md lists the ten things it is not, so that
+    # nobody spends the day on it again. Everything else on Windows builds,
+    # including V8, and one library should not hold that.
+    #
+    # EO_OPENSSL_FROM_SOURCE=1 goes back to building it, which is what anyone
+    # trying to fix the real fault will want.
+    # Positional parameters rather than a string, so a prefix containing a
+    # space survives and the empty case adds no argument at all. cmd_configure
+    # takes none of its own, so there is nothing to clobber.
+    set --
+    if [ "${EO_OPENSSL_FROM_SOURCE:-}" != 1 ] && on_windows; then
+        # Assigned first, and checked. `set -- "-DX=$(failing_command)"` keeps
+        # the status of `set`, which is 0, so a vcpkg that failed would hand
+        # cmake `-DEO_CORE_OPENSSL_DIR=` -- defined, empty, openssl skipped and
+        # then not found, surfacing as link errors in doctrenderer. An
+        # assignment propagates the failure under set -e; -n catches the script
+        # that exits 0 having printed nothing.
+        openssl_prefix="$(sh "$HERE/vcpkg.sh" openssl)"
+        [ -n "$openssl_prefix" ] || {
+            echo "FATAL: vcpkg.sh openssl printed no prefix" >&2
+            exit 1
+        }
+        set -- "-DEO_CORE_OPENSSL_DIR=$openssl_prefix"
+        echo "==> $1"
+    fi
+
     echo "==> cmake configure (no vcpkg toolchain: surface the plain-CMake gaps first)"
     cd "$OUT/core"
     # Teed rather than redirected: a configure that prints nothing for minutes
@@ -225,6 +264,7 @@ cmd_configure() {
             -DCMAKE_BUILD_TYPE=Release \
             -DEO_CORE_OUTPUT_DIR="$OUT/core/bin" \
             -DEO_CORE_TOOLS_DIR="$OUT/core/tools" \
+            "$@" \
             "$SRC/core" 2>&1
         then echo 0 > "$OUT/core/.cmake-status"
         else echo 1 > "$OUT/core/.cmake-status"

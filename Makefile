@@ -6,7 +6,8 @@
 .PHONY: help all verify clean tidy build publish \
 	lint lint-py lint-js format \
 	test test-unit test-integration test-e2e test-cov test-browser \
-	smoke patches payload-status toolchain-check toolchain-install doctrenderer-jsc doctrenderer-jsc-check \
+	smoke patches payload-status toolchain-check toolchain-install \
+    doctrenderer-jsc doctrenderer-jsc-check \
 	payload-fetch payload-configure payload-core payload-assemble \
 	payload-dist payload-all release release-check \
 	payload-container payload-export payload-install payload-linux \
@@ -159,7 +160,7 @@ payload-all: payload-fetch payload-configure payload-core payload-assemble smoke
 doctrenderer-jsc: ## build doctrenderer against macOS's JavaScriptCore
 	sh build/doctrenderer-jsc.sh build
 
-doctrenderer-jsc-check: ## convert with each engine and compare the PDF
+doctrenderer-jsc-check: doctrenderer-jsc ## convert with each engine and compare the PDF
 	sh build/doctrenderer-jsc.sh check
 
 ##@ The payload, in the container
