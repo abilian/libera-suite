@@ -18,7 +18,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 
 BIN="$OUT/core/bin"
 PAYLOAD="${PAYLOAD:-$OUT/payload}"
-[ -x "$BIN/x2t" ] || { echo "FAIL: no x2t at $BIN -- run build.sh build" >&2; exit 1; }
+[ -x "$BIN/x2t$EXE" ] || { echo "FAIL: no x2t at $BIN -- run build.sh build" >&2; exit 1; }
 
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT INT TERM
@@ -31,13 +31,13 @@ echo "==> x2t docx -> odt -> docx"
 # The sample is built on the pinned blank, not on core/Common/empty/*.bin --
 # see notes/08-build.md on why that .bin is not a blank document.
 LIBERA_BLANK="$SRC/document-templates/new/${BLANK_LOCALE:-en-US}/new.docx" \
-    python3 "$HERE/../tests/support/make_sample_docx.py" "$W/in.docx" >/dev/null
+    py "$HERE/../tests/support/make_sample_docx.py" "$W/in.docx" >/dev/null
 built x2t "$W/in.docx" "$W/mid.odt"  "$SEL" >"$W/x2t.log" 2>&1 || fail "docx -> odt failed; see $W/x2t.log"
 built x2t "$W/mid.odt" "$W/out.docx" "$SEL" >>"$W/x2t.log" 2>&1 || fail "odt -> docx failed; see $W/x2t.log"
 
 # Both files exist and both still hold the text: a converter that writes a
 # valid-but-empty package passes every check that only stats the output.
-python3 - "$W/mid.odt" "$W/out.docx" <<'PY' || fail "converted documents lost their text"
+py - "$W/mid.odt" "$W/out.docx" <<'PY' || fail "converted documents lost their text"
 import re, sys, zipfile
 
 NEEDLE = "Second paragraph"
@@ -59,21 +59,23 @@ echo "==> x2t docx -> pdf (doctrenderer: sdkjs inside V8)"
 # The params XML, not the three-argument CLI form: only <m_sFontDir> gives x2t's
 # native font manager a font directory. Without it GetFontInfoByParams returns
 # NULL and CPdfWriter::GetFontPath dereferences it -- a segfault, not an error.
+# Every path through winpath: these are contents, not arguments, so nothing
+# rewrites them on the way to a native x2t.
 cat > "$W/job.xml" <<XML
 <?xml version="1.0" encoding="utf-8"?>
 <TaskQueueDataConvert>
-  <m_sFileFrom>$W/in.docx</m_sFileFrom>
-  <m_sFileTo>$W/out.pdf</m_sFileTo>
-  <m_sAllFontsPath>$PAYLOAD/AllFonts.js</m_sAllFontsPath>
-  <m_sFontDir>$CORE_FONTS</m_sFontDir>
-  <m_sThemeDir>$PAYLOAD/sdkjs/slide/themes</m_sThemeDir>
+  <m_sFileFrom>$(winpath "$W/in.docx")</m_sFileFrom>
+  <m_sFileTo>$(winpath "$W/out.pdf")</m_sFileTo>
+  <m_sAllFontsPath>$(winpath "$PAYLOAD/AllFonts.js")</m_sAllFontsPath>
+  <m_sFontDir>$(winpath "$CORE_FONTS")</m_sFontDir>
+  <m_sThemeDir>$(winpath "$PAYLOAD/sdkjs/slide/themes")</m_sThemeDir>
 </TaskQueueDataConvert>
 XML
 built x2t "$W/job.xml" >"$W/pdf.log" 2>&1 || fail "docx -> pdf failed; see $W/pdf.log"
 
 # A PDF of the right size with no glyphs in it is the failure that looks like
 # success, so check for an embedded font and for text-showing operators.
-python3 - "$W/out.pdf" <<'PY' || fail "pdf has no rendered text"
+py - "$W/out.pdf" <<'PY' || fail "pdf has no rendered text"
 import re, sys, zlib
 raw = open(sys.argv[1], "rb").read()
 pages = len(re.findall(rb"/Type\s*/Page[^s]", raw))

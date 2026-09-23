@@ -319,6 +319,23 @@ jobs:
           export PATH="$PERL_BIN:$PATH"
           sh build/build.sh build
 
+      # Whether the binaries convert a document, which is a different question
+      # from whether they linked.
+      #
+      # This project's house rule, and it has been earned: allfontsgen exits 0
+      # having found zero fonts and writes a well-formed AllFonts.js, and x2t
+      # infers its output format from the extension, so a wrong one writes a
+      # blank document and exits 0. smoke.sh asserts on content -- text still
+      # present after docx -> odt -> docx.
+      #
+      # The pdf stage, which is the one that exercises doctrenderer and sdkjs
+      # inside V8, skips itself until a payload has been assembled and reports
+      # `PASS (core only)`. That is the next thing to wire up, not a failure.
+      - name: smoke
+        run: |
+          export PATH="$PERL_BIN:$PATH"
+          sh build/smoke.sh
+
       - name: Keep the logs either way
         if: always()
         uses: actions/upload-artifact@v4

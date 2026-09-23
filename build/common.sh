@@ -152,12 +152,61 @@ build_jobs() {
 # APPLICATION_NAME is what core stamps into the <Application> field of every
 # document it writes. It defaults to ONLYOFFICE, so anything that runs x2t has
 # to set it -- the host does the same in convert.py.
+# .exe where the platform wants one.
+#
+# There is no third library-path variable beside the two below: Windows looks
+# for a DLL next to the executable that needs it, and cmake copies core's DLLs
+# into this same bin directory as it links them. Putting bin on PATH would mean
+# a `D:/...` entry in a colon-separated list, which MSYS2 mangles.
+if [ "${OS:-}" = "Windows_NT" ]; then
+    EXE=".exe"
+else
+    case "$(uname -s)" in
+    MINGW* | MSYS* | CYGWIN*) EXE=".exe" ;;
+    *) EXE="" ;;
+    esac
+fi
+
 built() {
     exe="$1"
     shift
     APPLICATION_NAME="${APPLICATION_NAME:-Libera Suite}" \
     DYLD_LIBRARY_PATH="$OUT/core/bin" LD_LIBRARY_PATH="$OUT/core/bin" \
-        "$OUT/core/bin/$exe" "$@"
+        "$OUT/core/bin/$exe$EXE" "$@"
+}
+
+# A path a native Windows program will accept.
+#
+# MSYS2 rewrites command-line arguments that look like paths, so passing
+# "$W/in.docx" to x2t.exe works without help. It does not rewrite file
+# *contents*, so a path written into a params XML or a config file reaches the
+# program as `/tmp/tmp.XYZ/in.docx` and is simply not found. Mixed form (`C:/`)
+# rather than `cygpath -w`, because forward slashes survive being embedded in
+# XML and in JSON without escaping.
+winpath() {
+    if [ -n "$EXE" ]; then
+        cygpath -m "$1"
+    else
+        echo "$1"
+    fi
+}
+
+# The interpreter, resolved once and only when something wants it.
+#
+# Windows CPython installs python.exe and, depending on how it was installed,
+# no python3 at all, so a bare `python3` in a build script is a Windows-only
+# "command not found" several minutes into a run. Resolving it at first use
+# rather than at source time keeps the scripts that need no python working on a
+# machine that has none.
+py() {
+    if [ -z "${PYTHON:-}" ]; then
+        PYTHON="$(command -v python3 || command -v python || true)"
+        [ -n "$PYTHON" ] || {
+            echo "FATAL: neither python3 nor python is on PATH" >&2
+            return 1
+        }
+    fi
+    "$PYTHON" "$@"
 }
 
 # core-fonts is a pinned repo, but fetching it costs 248 MB and a clone is

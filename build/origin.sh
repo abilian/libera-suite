@@ -66,37 +66,25 @@ MANIFEST="$REPO/src/libera/manifest.json"
 
 # --- who builds what ----------------------------------------------------------
 
-BUILDERS="${BUILDERS:-$HERE/builders.conf}"
+BUILDERS="${BUILDERS:-$HERE/builders.toml}"
 
-# Read as `platform target [dist-dir] [neutral]`, one per line. Kept out of git
-# because it names machines, and a public repository is no place for an
-# inventory of somebody's build hosts. builders.conf.example is the template.
+# The inventory, as `platform<TAB>target<TAB>dist<TAB>flag` lines.
+#
+# The file is TOML and build/remote.py parses it, because two readers of one
+# inventory is two chances to disagree about it -- and the positional text
+# format this used to read had a trap in it: an omitted directory column made
+# `neutral` the directory, and the error was three missing files rather than a
+# bad line. remote.py reports a missing key, an unknown key and a second
+# neutral builder by name.
+#
+# Kept out of git because it names machines. builders.toml.example is the
+# template.
 read_builders() {
     [ -f "$BUILDERS" ] || die \
         "no builder list at $BUILDERS
-       copy build/builders.conf.example to build/builders.conf and fill it in."
-    stripped="$(mktemp)"
-    sed 's/#.*//' "$BUILDERS" > "$stripped"
-    # Read with a redirect rather than down a pipe, so a bad line can stop the
-    # script instead of quietly shortening the list from inside a subshell.
-    while read -r platform target dir flag extra; do
-        [ -n "${platform:-}" ] || continue
-        case "${dir:-}" in
-        # Columns are positional, so an omitted directory silently makes
-        # `neutral` the directory. Say so rather than fetch from a path called
-        # neutral/ and report three missing files.
-        neutral) die "in $BUILDERS, line for $platform: no directory column.
-       Write - for the default:   $platform  ${target:-local}  -  neutral" ;;
-        "" | "-") dir="$OUT/dist" ;;
-        esac
-        [ -z "${extra:-}" ] || die "in $BUILDERS, line for $platform: too many columns ($extra)"
-        case "${flag:-}" in
-        "" | neutral) ;;
-        *) die "in $BUILDERS, line for $platform: unknown flag '$flag' (only 'neutral')" ;;
-        esac
-        printf '%s\t%s\t%s\t%s\n' "$platform" "${target:-local}" "$dir" "${flag:-}"
-    done < "$stripped"
-    rm -f "$stripped"
+       copy build/builders.toml.example to build/builders.toml and fill it in."
+    python3 "$REPO/build/remote.py" --print-builders "$OUT/dist" || die \
+        "could not read $BUILDERS"
 }
 
 # --- collect ------------------------------------------------------------------
@@ -351,11 +339,18 @@ cmd_check() {
         wheel_manifest "$WHEEL" "$manifest"
     fi
     [ -f "$manifest" ] || die "no $manifest to check against"
-    step "reading $CDN_URL/$ZONE/$VERSION/ as a stranger"
     # The directory comes out of the manifest being checked rather than out of
     # the tree: a wheel naming payload 0.1 has to be checked against 0.1/, even
     # when this checkout has moved on.
+    #
+    # Worked out before the banner is printed, not after. The banner used to
+    # interpolate $VERSION -- the tree's -- while the fetch below used $want,
+    # so a checkout on 0.2 checking a 0.1 wheel announced it was reading 0.2/
+    # and then passed. 0.2/ was a 404 at the time. A check that names the wrong
+    # directory and reports success is the failure mode this whole script
+    # exists to catch.
     want="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["payload_version"])' "$manifest")"
+    step "reading $CDN_URL/$ZONE/$want/ as a stranger"
     QUICK="${QUICK:-}" BASE="$CDN_URL/$ZONE/$want" \
         python3 - "$manifest" <<'PY'
 import hashlib

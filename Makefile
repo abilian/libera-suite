@@ -11,6 +11,7 @@
 	payload-fetch payload-configure payload-core payload-assemble \
 	payload-dist payload-all release release-check \
 	payload-container payload-export payload-install payload-linux \
+	remote remote-plan \
 	release-status origin-collect origin-push origin-check \
 	flatpak flatpak-wheels flatpak-check flatpak-smoke flatpak-shell \
 	test-linux gui-linux lint-linux dialog-linux \
@@ -298,7 +299,7 @@ release: ## the whole release, in order
 # A release is built on several machines -- this one, a Linux box per
 # architecture, and later a second Mac and a Windows box -- and the payload
 # origin is one directory that has to hold all of their cores at once. The
-# builders are listed in build/builders.conf (gitignored; see the .example).
+# builders are listed in build/builders.toml (gitignored; see the .example).
 #
 #   make origin-collect            scp each builder's core here, restamp the manifest
 #   make origin-push               upload what the manifest names
@@ -312,6 +313,12 @@ release: ## the whole release, in order
 # Where a release has got to, measured rather than remembered: the tree, the
 # artifacts on this disk, the origin and PyPI, then the next command. Read-only,
 # needs no token, and it is the thing to run after a weekend.
+remote: ## update, build on the remote builders, then collect, push, check
+	python3 build/remote.py $(ARGS)
+
+remote-plan: ## what `make remote` would do, running nothing
+	python3 build/remote.py --dry-run
+
 release-status: ## where this release has got to, and the next command
 	@sh build/origin.sh status
 

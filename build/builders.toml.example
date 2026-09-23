@@ -1,0 +1,40 @@
+# The machines that build a core. Copy to build/builders.toml.
+#
+# That copy is gitignored: it is an inventory of build hosts, and a public
+# repository is the wrong place for one.
+
+[defaults]
+# The checkout on each builder, and the branch it builds. Either can be
+# overridden per builder below.
+repo = "~/liberasuite"
+branch = "main"
+
+[[builders]]
+# platform is the one in the filename the build writes, core-<platform>.tar.gz:
+# macos-arm64, macos-x86_64, linux-x86_64, linux-arm64, windows-x86_64. It is
+# what decides which file is fetched from that machine, so a wrong one here
+# fetches nothing rather than fetching the wrong thing.
+platform = "macos-arm64"
+# target is anything scp takes, or "local" for this machine. Give it a Host in
+# ~/.ssh/config and put the alias here: a key, a port and a jump host belong in
+# ssh's own configuration, not in a build script's.
+target = "local"
+# neutral, on exactly one builder, says where the shared artifacts come from --
+# editors.tar.gz and fonts-core.tar.gz, which every builder produces and which
+# are *not* byte-identical between them.
+neutral = true
+
+[[builders]]
+platform = "linux-x86_64"
+target = "builder-amd64"
+# dist is the directory holding the per-version directories: the parent of
+# `0.2/`, not `0.2/` itself, so a version bump changes nothing here.
+#   a native build      $BUILD_ROOT/out/dist
+#   a container build   $BUILD_ROOT/linux-<amd64|arm64>/out/dist
+# Omit it for the same path this machine uses.
+dist = "~/euro-office-build/linux-amd64/out/dist"
+
+[[builders]]
+platform = "linux-arm64"
+target = "builder-arm64"
+dist = "~/euro-office-build/linux-arm64/out/dist"

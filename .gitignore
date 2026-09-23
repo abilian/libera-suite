@@ -33,5 +33,5 @@ src/libera/manifest.json
 # Written by `make test-cov`, and committed once by accident.
 .coverage
 
-# An inventory of build hosts (build/builders.conf.example is the template).
-build/builders.conf
+# An inventory of build hosts (build/builders.toml.example is the template).
+build/builders.toml
