@@ -1,0 +1,13 @@
+wheels/
+payload/
+payload.tmp/
+# Copied from src/libera/ by flatpak.sh: flatpak-builder resolves a source
+# against the manifest's directory, and both of these live in the package --
+# the drawing because it is also the macOS icon, the entry because `libera
+# --launcher-install` writes the same one on an ordinary Linux install.
+eu.liberasuite.Libera.svg
+eu.liberasuite.Libera.desktop
+builddir/
+repo/
+.flatpak-builder/
+*.flatpak

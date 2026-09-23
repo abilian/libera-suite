@@ -12,9 +12,24 @@ shadowed by the function.
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 
 from libera import logs
 from libera.cli import commands
+from libera.payload import locate
+
+
+def version_string() -> str:
+    """What `--version` prints: the application, and the payload it wants.
+
+    Both, because the two move independently -- a host fix should not force a
+    170 MB re-download, and a payload rebuilt from new upstream pins should not
+    need a host release. A bug report that names only one of them does not say
+    which halves were in play. `--diagnose` prints these and much more; this is
+    the line somebody pastes into an issue.
+    """
+    installed = importlib.metadata.version("libera")
+    return f"libera {installed} (payload {locate.PAYLOAD_VERSION})"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,6 +43,13 @@ def main(argv: list[str] | None = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("file", nargs="*", help="documents to open, one window each")
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version=version_string(),
+        help="print the version and exit",
+    )
     parser.add_argument(
         "-v",
         "--verbose",

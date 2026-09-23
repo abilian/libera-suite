@@ -552,6 +552,12 @@ def main() -> None:
         help="the make target to run on each builder (default: %(default)s)",
     )
     parser.add_argument(
+        "--only",
+        action="append",
+        metavar="PLATFORM",
+        help="just this builder; repeatable. Default: all of them",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true", help="print the plan and run nothing"
     )
     parser.add_argument(
@@ -565,6 +571,17 @@ def main() -> None:
 
     phases = args.phases or list(PHASES)
     builders = read_builders()
+
+    # One platform at a time, because the reasons to build them differ: an
+    # arm64 flatpak can only be built on an arm64 machine, and a machine short
+    # of disk should not be handed a build just because its neighbour is free.
+    if args.only:
+        known = {b.platform for b in builders}
+        if unknown := sorted(set(args.only) - known):
+            die(
+                f"no such builder: {', '.join(unknown)}\n  have: {', '.join(sorted(known))}"
+            )
+        builders = [b for b in builders if b.platform in args.only]
 
     if args.dry_run:
         step("the plan")

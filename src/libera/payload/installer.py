@@ -160,6 +160,31 @@ def _finish(dest: Path, log) -> None:
         raise PayloadError(msg)
 
 
+def _check_room(where: Path, artifacts: list[dict]) -> None:
+    """Refuse before downloading if the disk cannot hold the result.
+
+    `No space left on device` arrives a hundred megabytes in, from inside
+    copytree, as six tracebacks about individual files. The sizes are in the
+    manifest, so the answer is knowable first.
+
+    Twice the compressed total: the tarballs are deleted as they are extracted,
+    so the peak is the unpacked payload (about 1.5x compressed) plus the one
+    tarball being unpacked. Approximate, and deliberately on the generous side
+    of a number that is cheap to check and expensive to get wrong.
+    """
+    need = 2 * sum(int(a["size"]) for a in artifacts)
+    free = shutil.disk_usage(where).free
+    if free >= need:
+        return
+    msg = (
+        f"not enough room in {where}\n"
+        f"  needs about {need / 1e6:.0f} MB free, has {free / 1e6:.0f} MB\n"
+        f"  the payload unpacks to roughly "
+        f"{sum(int(a['size']) for a in artifacts) * 1.5 / 1e6:.0f} MB"
+    )
+    raise PayloadError(msg)
+
+
 def install(
     *,
     source: Path | str | None = None,
@@ -199,7 +224,26 @@ def install(
             )
             raise PayloadError(msg)
 
-    with tempfile.TemporaryDirectory(prefix="libera-payload-") as tmp:
+    # Staged beside the destination, not in /tmp.
+    #
+    # The move at the end has to be a rename, and a rename cannot cross a
+    # filesystem. On a machine where /tmp is its own mount -- tmpfs, or a small
+    # partition, which is most Linux boxes -- shutil.move silently degrades to
+    # copytree, and three things follow: the payload needs its own size twice,
+    # the install stops being atomic, and a copy that runs out of room leaves a
+    # half-populated payload where a working one used to be. All three were
+    # measured on an arm64 box with a small /tmp:
+    #
+    #   OSError: [Errno 18] Invalid cross-device link:
+    #     '/tmp/libera-payload-4i926s5m/payload' -> '~/.local/share/.../0.2'
+    #   ... [Errno 28] No space left on device
+    #
+    # Here the rename is within one directory, so it is atomic and free, and
+    # the downloads land on the filesystem that has to hold them anyway.
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    _check_room(dest.parent, artifacts)
+
+    with tempfile.TemporaryDirectory(prefix=".libera-staging-", dir=dest.parent) as tmp:
         tmpdir = Path(tmp)
         staged = tmpdir / "payload"
         staged.mkdir()
@@ -245,14 +289,16 @@ def install(
         # where the payload will actually live -- generating in the staging
         # directory bakes in a temporary path that is gone a moment later.
         # Hence: move first, generate second, and roll back if that fails.
-        dest.parent.mkdir(parents=True, exist_ok=True)
         previous = dest.with_name(dest.name + ".previous")
         shutil.rmtree(previous, ignore_errors=True)
         if dest.exists():
             dest.rename(previous)
-        shutil.move(str(staged), str(dest))
 
+        # The rename and the generation share one rollback. They used to be
+        # separate, so a failed move left dest broken and the working payload
+        # stranded at .previous -- the one outcome worse than not installing.
         try:
+            staged.rename(dest)
             _finish(dest, log)
         except Exception:
             shutil.rmtree(dest, ignore_errors=True)

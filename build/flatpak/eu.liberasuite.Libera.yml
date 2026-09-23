@@ -1,0 +1,108 @@
+# Libera Suite as a Flatpak.
+#
+# The runtime is the point. org.gnome.Platform carries GTK 3, WebKit2 4.1,
+# libsoup 3 and PyGObject -- exactly the four things `pip install libera`
+# cannot bring and src/libera/gui.py exists to explain the absence of. Inside
+# this, gui.why_no_window() has nothing to say.
+#
+# Measured in the runtime, not assumed (flatpak run --command=... or
+# build/flatpak.sh shell):
+#
+#   bin/python3.13
+#   lib/python3.13/site-packages/gi
+#   Gtk-3.0.typelib  Gdk-3.0.typelib  WebKit2-4.1.typelib  Soup-3.0.typelib
+#
+# The payload IS in here, at /app/share/libera/payload.
+#
+# It used not to be, on the grounds that a 120 MB editor moving on its own
+# schedule would mean a full application update every time. That reasoning is
+# right for a tarball and wrong for this: OSTree is content-addressed per
+# object, so an update transfers the objects that changed and no others. A
+# host-only release moves a few hundred KB of Python whether or not the
+# editors sit beside it.
+#
+# What the old arrangement cost was paid on first run instead. A bundle that
+# fetches its own editors has to ask a question in a window, reach the network
+# from a sandbox, and fail in front of somebody who has just double-clicked --
+# and it failed silently, because everything it had to say went to a terminal
+# that a desktop launcher does not have. Bundling deletes that whole path, and
+# makes the bundle installable offline, which is what a Flatpak is for.
+#
+# PyPI is the one channel that genuinely cannot carry this, and it keeps the
+# fetch-and-verify installer. See locate.bundled_dir().
+app-id: eu.liberasuite.Libera
+runtime: org.gnome.Platform
+runtime-version: '49'
+sdk: org.gnome.Sdk
+command: libera
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Two reasons, and the second is the one people forget: the payload is
+  # fetched from cdn.abilian.com on first run, and the editor talks to the
+  # host's own HTTP server on 127.0.0.1. Without this the sandbox has no
+  # loopback either and nothing loads at all.
+  - --share=network
+  # Documents, and the sessions directory alongside them. The portal would be
+  # the better answer and is what this should become -- but the host's open
+  # and save dialogs are Cocoa today (hooks.SAVE_PATH_CHOOSER is installed by
+  # the macOS window layer and by nothing else), so on Linux the paths come
+  # from the command line and the start window's recent list, and both are
+  # real paths that have to resolve.
+  - --filesystem=home
+
+modules:
+  - name: libera
+    buildsystem: simple
+    # flatpak-builder strips every ELF binary it finds under /app and splits
+    # the symbols into a .Debug extension. Until the payload moved in there
+    # were no ELF binaries here at all, so this never ran; the first build that
+    # bundled one died on `Failed to execute child process "eu-strip"`, which
+    # the GNOME SDK does not carry.
+    #
+    # Turned off rather than installing elfutils, for two reasons. The payload
+    # is built Release and has little to strip. And the binaries were just
+    # verified against the manifest by the step below -- rewriting them
+    # afterwards would leave a bundle whose editors no longer match the hashes
+    # that admitted them.
+    build-options:
+      no-debuginfo: true
+    build-commands:
+      # Offline: build/flatpak.sh fills wheels/ before flatpak-builder runs,
+      # because flatpak-builder gives the build no network -- which is the
+      # property that makes the result reproducible, so it is worth the step.
+      - pip3 install --no-index --find-links=wheels --prefix=/app libera
+      # The payload, through the installer the CLI uses rather than a tar
+      # command beside it: that is what verifies every artifact against the
+      # manifest, extracts without trusting the member paths, and then
+      # regenerates AllFonts.js and DoctRenderer.config -- both of which record
+      # absolute paths. Those come out right here by construction, because
+      # flatpak-builder builds into /app and /app is where it is mounted at run
+      # time. On an ordinary install the same step has to happen on the user's
+      # machine for exactly this reason.
+      - python3 -c "from pathlib import Path; from libera.payload import
+          installer; installer.install(source=Path('payload'),
+          dest=Path('/app/share/libera/payload'))"
+      - install -Dm644 eu.liberasuite.Libera.desktop
+          /app/share/applications/eu.liberasuite.Libera.desktop
+      - install -Dm644 eu.liberasuite.Libera.svg
+          /app/share/icons/hicolor/scalable/apps/eu.liberasuite.Libera.svg
+    sources:
+      # Named one by one rather than `path: .`, which would also copy
+      # flatpak-builder's own .flatpak-builder cache into the build.
+      - type: dir
+        path: wheels
+        dest: wheels
+      # The release artifacts and their manifest, staged by build/flatpak.sh.
+      # flatpak-builder gives the build no network, which is the property that
+      # makes it reproducible, so the tarballs have to arrive as a source.
+      - type: dir
+        path: payload
+        dest: payload
+      - type: file
+        path: eu.liberasuite.Libera.desktop
+      - type: file
+        path: eu.liberasuite.Libera.svg

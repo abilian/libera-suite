@@ -77,7 +77,7 @@ libera --payload-install
 
 > **macOS works today.** `libera` is on PyPI and the payload origin is serving, so the block above is the real thing on an Apple Silicon Mac running macOS 14 or later.
 >
-> **Linux is mid-flight.** The Flatpak works. The PyPI route works on arm64, and the x86_64 payload is being rebuilt against an older glibc, because the one published needs Ubuntu 24.04 or newer. [Release 0.2](notes/plans/release-0.2.md) is where that stands.
+> **Linux works on both architectures.** Payload 0.2 is built on Ubuntu 22.04, and `x2t` from it runs on Ubuntu 22.04 and Debian 12, x86_64 and arm64 -- measured in a clean container of each. Payload 0.1 needed Ubuntu 24.04. [Release 0.2](notes/plans/release-0.2.md) is what remains.
 
 ## Building it
 
