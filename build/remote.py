@@ -40,7 +40,26 @@ LOGS = REPO / "tmp" / "remote"
 
 # Non-interactive, and it should say so quickly rather than sit at a password
 # prompt inside a thread whose output nobody is watching.
-SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10"]
+#
+# ServerAlive* because a build is hours and the connection carries it: a NAT or
+# a firewall that drops an idle session takes the build with it, and the
+# symptom is a log that stops mid-compile with no error in it. Six missed
+# thirty-second probes is three minutes of genuine silence before giving up.
+#
+# It does not survive the *local* process ending -- a closed terminal or a
+# sleeping laptop still kills the build. Run this under tmux or screen for
+# anything long.
+SSH = [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "-o",
+    "ServerAliveInterval=30",
+    "-o",
+    "ServerAliveCountMax=6",
+]
 
 PHASES = ("update", "build", "collect", "push", "check")
 
@@ -61,6 +80,17 @@ MIN_CORE_BYTES = 10 * 1024 * 1024
 
 KNOWN_KEYS = {"platform", "target", "dist", "neutral", "repo", "branch"}
 
+# docker.sh defaults ARCH to amd64 whatever the host is, deliberately: on a Mac
+# you want the amd64 core under Rosetta and pass ARCH=arm64 for the native one.
+# On a builder whose whole job is its own architecture that default is wrong,
+# and it fails late and obscurely -- `image ... does not provide the specified
+# platform (linux/amd64)` at a COPY step, after several minutes of installing
+# arm64 packages. So the platform each builder is *for* decides the flag.
+DOCKER_ARCH = {"x86_64": "amd64", "arm64": "arm64", "aarch64": "arm64"}
+
+# What `uname -m` says on a machine of that architecture.
+UNAME_ARCH = {"amd64": {"x86_64", "amd64"}, "arm64": {"arm64", "aarch64"}}
+
 
 @dataclass(frozen=True)
 class Builder:
@@ -74,6 +104,11 @@ class Builder:
     @property
     def remote(self) -> bool:
         return self.target != "local"
+
+    @property
+    def arch(self) -> str | None:
+        """The docker arch this builder builds, from the tail of its platform."""
+        return DOCKER_ARCH.get(self.platform.rsplit("-", 1)[-1])
 
 
 def read_builders(path: Path = BUILDERS) -> list[Builder]:
@@ -222,46 +257,60 @@ def precheck(builders: list[Builder], phases: list[str]) -> None:
         say(f"    note: {len(dirty)} uncommitted file(s) here, which no builder sees")
 
     for b in builders:
-        if not b.remote:
+        if b.remote:
+            problems.extend(check_builder(b))
+        else:
             say(f"    {b.platform:<14} local, left alone")
-            continue
-        out = ssh_capture(
-            b.target,
-            f"""
-            echo "ARCH=$(uname -m)"
-            if cd {remote_path(b.repo)} 2>/dev/null; then
-                echo "DIRTY=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
-                echo "HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo '?')"
-            else
-                echo "NOREPO=1"
-            fi
-            """,
-        )
-        facts = facts_from(out)
-        if "ARCH" not in facts:
-            problems.append(f"{b.platform}: no answer from {b.target}\n       {out}")
-            continue
-        if "NOREPO" in facts:
-            problems.append(missing_repo(b, out))
-            continue
-        say(
-            f"    {b.platform:<14} {b.target} "
-            f"({facts['ARCH']}, {b.repo} at {facts.get('HEAD', '?')})"
-        )
-        # Before the pull, not after. A pull into a dirty tree either refuses
-        # or merges over somebody's edits, and neither belongs in a script that
-        # is about to run for two hours.
-        if facts.get("DIRTY", "0") != "0":
-            problems.append(
-                f"{b.platform}: {facts['DIRTY']} uncommitted file(s) in "
-                f"{b.repo} on {b.target}. Clean it before building."
-            )
 
     if problems:
         say()
         for p in problems:
             say(f"    - {p}")
         die("nothing was started.")
+
+
+def check_builder(b: Builder) -> list[str]:
+    """Ask one builder about itself, and report what is wrong with the answer."""
+    out = ssh_capture(
+        b.target,
+        f"""
+        echo "ARCH=$(uname -m)"
+        if cd {remote_path(b.repo)} 2>/dev/null; then
+            echo "DIRTY=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+            echo "HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo '?')"
+        else
+            echo "NOREPO=1"
+        fi
+        """,
+    )
+    facts = facts_from(out)
+    if "ARCH" not in facts:
+        return [f"{b.platform}: no answer from {b.target}\n       {out}"]
+    if "NOREPO" in facts:
+        return [missing_repo(b, out)]
+
+    say(
+        f"    {b.platform:<14} {b.target} "
+        f"({facts['ARCH']}, {b.repo} at {facts.get('HEAD', '?')})"
+    )
+    problems = []
+    # Cross-building is not what these machines are for: a container built for
+    # the other architecture either runs under emulation for hours or fails
+    # partway through with a platform mismatch.
+    if b.arch and facts["ARCH"] not in UNAME_ARCH[b.arch]:
+        problems.append(
+            f"{b.platform}: wants {b.arch} and {b.target} reports "
+            f"{facts['ARCH']}. Assign it a machine of that architecture."
+        )
+    # Before the pull, not after. A pull into a dirty tree either refuses or
+    # merges over somebody's edits, and neither belongs in a script that is
+    # about to run for two hours.
+    if facts.get("DIRTY", "0") != "0":
+        problems.append(
+            f"{b.platform}: {facts['DIRTY']} uncommitted file(s) in "
+            f"{b.repo} on {b.target}. Clean it before building."
+        )
+    return problems
 
 
 def missing_repo(b: Builder, out: str) -> str:
@@ -336,14 +385,16 @@ def build_one(b: Builder, target: str, version: str) -> str | None:
     LOGS.mkdir(parents=True, exist_ok=True)
     log = LOGS / f"{b.platform}.log"
 
+    arch_arg = f" ARCH={b.arch}" if b.arch else ""
+
     # No `set -e`, and the verdict comes back as a printed line: over ssh an
     # exit status describes the shell rather than the work.
     script = f"""
     cd {remote_path(b.repo)} || {{ echo "{MARK}=no such directory"; exit; }}
     echo "== $(hostname) $(uname -m), {b.branch} at $(git rev-parse --short HEAD)"
-    if make {target}
+    if make {target}{arch_arg}
     then echo "{MARK}=ok"
-    else echo "{MARK}=make {target} failed ($?)"
+    else echo "{MARK}=make {target}{arch_arg} failed ($?)"
     fi
     """
 
@@ -426,7 +477,11 @@ def cmd_build(builders: list[Builder], target: str) -> None:
     version = payload_version()
     step(f"building on {len(remotes)} machine(s), in parallel")
     for b in remotes:
-        say(f"    {b.platform:<14} {b.target}  ->  tmp/remote/{b.platform}.log")
+        arch = f" ARCH={b.arch}" if b.arch else ""
+        say(
+            f"    {b.platform:<14} {b.target}  make {target}{arch}"
+            f"  ->  tmp/remote/{b.platform}.log"
+        )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(remotes)) as pool:
         results = list(pool.map(lambda b: build_one(b, target, version), remotes))
