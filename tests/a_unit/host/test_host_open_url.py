@@ -3,16 +3,18 @@
 The editor asks the host to open external links because WKWebView drops
 script-opened windows. That hands page content a lever on the desktop, and the
 only thing between the two is this check.
+
+`desktop.open_url` is stubbed here rather than `subprocess`: the endpoint's job
+is to decide *whether* a URL reaches the desktop, and that is the boundary
+worth pinning. How the desktop is asked, and whether it agreed, belongs to
+test_desktop_open_url.py beside it.
 """
 
 from __future__ import annotations
 
-import logging
-from types import SimpleNamespace
-
 import pytest
 
-from libera.host import server
+from libera.host import desktop, server
 
 
 class FakeHandler:
@@ -33,27 +35,12 @@ class FakeHandler:
         self.status = 204
 
 
-def desktop_answering(monkeypatch, returncode: int) -> list:
-    """Stand in for the desktop, recording what it was asked to open.
-
-    The stub answers with a `returncode`, because `post_open_url` reads one.
-    A stub returning None passed for as long as the status was ignored, and
-    became an AttributeError the moment it stopped being.
-    """
-    calls: list = []
-
-    def fake_run(cmd, **_):
-        calls.append(cmd)
-        return SimpleNamespace(returncode=returncode)
-
-    monkeypatch.setattr(server.post.subprocess, "run", fake_run)
-    return calls
-
-
 @pytest.fixture
 def launched(monkeypatch):
-    """A desktop that opens what it is given."""
-    return desktop_answering(monkeypatch, 0)
+    """Every URL that reached the desktop."""
+    urls: list[str] = []
+    monkeypatch.setattr(desktop, "open_url", lambda url: urls.append(url) or True)
+    return urls
 
 
 @pytest.mark.parametrize(
@@ -79,24 +66,18 @@ def test_opens_http(url, launched):
     h = FakeHandler(url.encode())
     server.post_open_url(h)
     assert h.status == 204
-    assert len(launched) == 1
-    assert launched[0][-1] == url
+    assert launched == [url]
 
 
-def test_a_desktop_with_no_handler_is_logged_rather_than_hidden(monkeypatch, caplog):
-    """xdg-open exits non-zero when nothing will take the link.
+def test_the_page_is_told_nothing_when_the_desktop_refuses(monkeypatch):
+    """A desktop with no handler is the desktop's business, not the page's.
 
-    That happened for real: a Flatpak on a machine with no browser reached the
-    portal, the portal found no handler, and the log said `open-url -> …` as
-    though the link had opened. The page still gets its 204, because there is
-    nothing useful for it to do about the desktop's configuration.
+    There is nothing useful a page can do about it, and telling it would hand
+    page content a way to probe what the machine has installed.
     """
-    desktop_answering(monkeypatch, 3)
+    monkeypatch.setattr(desktop, "open_url", lambda _url: False)
     h = FakeHandler(b"https://example.com/x")
 
-    with caplog.at_level(logging.WARNING, logger="libera.host.server.post"):
-        server.post_open_url(h)
+    server.post_open_url(h)
 
-    assert h.status == 204, "the page is told nothing either way"
-    assert caplog.records, "a link that opened nothing was reported as success"
-    assert "3" in caplog.text, f"the status is not in the log line: {caplog.text!r}"
+    assert h.status == 204

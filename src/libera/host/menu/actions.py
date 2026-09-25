@@ -26,10 +26,9 @@ from __future__ import annotations
 import functools
 import logging
 import threading
-import webbrowser
 from pathlib import Path
 
-from libera.host import hooks, recents, session
+from libera.host import desktop, hooks, recents, session
 
 logger = logging.getLogger(__name__)
 
@@ -226,18 +225,17 @@ def show_help() -> None:
 def _open_help() -> None:
     """Help: the documentation, in the user's browser, or the URL if not.
 
-    `webbrowser.open` returns False when it could find nothing to run, and
-    dropping that was a menu item that did nothing at all on a machine with no
-    browser. It happens: a Flatpak on a minimal desktop reaches the portal, the
-    portal finds no handler, and the user is left guessing.
+    `desktop.open_url` and not `webbrowser.open`. The latter reports success
+    for a browser it merely spawned, so on a machine where opening the link
+    fails -- a Flatpak whose portal finds no handler, a desktop with nothing
+    registered for https -- Help did nothing at all and said nothing either.
+    `open_url` waits for the opener and returns its verdict.
 
-    Reporting the URL is the honest fallback, and it is all we can do. What
-    opens a link is the desktop's business, and a sandbox makes that more true
-    rather than less.
+    Reporting the URL is the fallback, and it is all we can do. What opens a
+    link is the desktop's business, and a sandbox makes that more so.
     """
-    if webbrowser.open(HELP_URL):
+    if desktop.open_url(HELP_URL):
         return
-    logger.warning("nothing on this machine could open %s", HELP_URL)
 
     from libera.host.window import dialogs
 

@@ -12,6 +12,53 @@ import sys
 
 logger = logging.getLogger(__name__)
 
+# Long enough to be sure a fast failure has happened (0.03s on the desktop this
+# was measured on), short enough that a caller is not held up by a browser that
+# will outlive it.
+OPEN_TIMEOUT = 5.0
+
+
+def opener() -> list[str]:
+    """The command this desktop opens things with."""
+    return ["/usr/bin/open"] if sys.platform == "darwin" else ["xdg-open"]
+
+
+def open_url(url: str) -> bool:
+    """Hand a URL to the desktop, and say whether the desktop took it.
+
+    **Not `webbrowser.open`**, whose return value does not mean what it looks
+    like. On Linux it ends in `BackgroundBrowser.open`, which spawns the
+    command and returns `p.poll() is None` -- true whenever the process has not
+    exited in the instant since it started, which is always. So it reported
+    success for `xdg-open` exiting 3 with no handler, and Help appeared to do
+    nothing at all rather than saying so.
+
+    Waiting is the point, and it has to be a bounded wait. Measured on a Fedora
+    desktop:
+
+        nothing can open it   exit 3, in 0.03s
+        it opens              never exits -- xdg-open stays attached to the
+                              browser it started, still running at 25s
+
+    So a plain `subprocess.run` blocks for as long as the browser lives, which
+    is why the bridge's open-url endpoint used to hang its request thread. A
+    short wait separates the two cleanly: a failure is immediate, and anything
+    still running has been taken. The child is left alone on timeout, because
+    killing it would close the browser that was just opened.
+    """
+    cmd = [*opener(), url]
+    proc = subprocess.Popen(cmd)  # our own argv; callers check the url
+    try:
+        status = proc.wait(timeout=OPEN_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        logger.info("open-url -> %s (the opener is still running)", url)
+        return True
+    if status == 0:
+        logger.info("open-url -> %s", url)
+        return True
+    logger.warning("open-url: %s exited %d for %s", cmd[0], status, url)
+    return False
+
 
 def reveal(path: pathlib.Path) -> bool:
     """Show a file in the platform's file manager.

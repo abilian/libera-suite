@@ -12,11 +12,9 @@ import logging
 import pathlib
 import re
 import shutil
-import subprocess
-import sys
 from typing import TYPE_CHECKING
 
-from libera.host import apps, hooks
+from libera.host import apps, desktop, hooks
 from libera.host.convert import convert_to_editor_bin, save_changes, save_document
 from libera.host.desktop import reveal
 from libera.host.recents import read_recents, remember_recent
@@ -137,16 +135,9 @@ def post_open_url(h: Handler) -> None:
         logger.warning("open-url refused: %r", url[:80])
         h.send_error(400)
         return
-    cmd = ["/usr/bin/open", url] if sys.platform == "darwin" else ["xdg-open", url]
-    # check=False and then look at the status. A non-zero one means the desktop
-    # found nothing to hand the link to, which is worth a line in the log
-    # rather than an `open-url -> ...` that reads as success. The page is told
-    # nothing either way: there is nothing useful for it to do about it.
-    done = subprocess.run(cmd, check=False)
-    if done.returncode == 0:
-        logger.info("open-url -> %s", url)
-    else:
-        logger.warning("open-url: %s exited %d for %s", cmd[0], done.returncode, url)
+    # The page is told nothing either way: there is nothing useful for it to do
+    # about the desktop's configuration. desktop.open_url logs the verdict.
+    desktop.open_url(url)
     h.no_content()
 
 

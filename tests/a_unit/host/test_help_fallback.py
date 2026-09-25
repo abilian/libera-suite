@@ -1,9 +1,13 @@
 """Help says where the documentation is when it cannot open a browser.
 
-`show_help` asked `webbrowser` to open the docs and threw away the False it
-gets back when there is nothing to run. On a machine with no browser -- a
-Flatpak on a minimal desktop, a headless box -- the menu item did nothing at
-all, which is the hardest kind of bug for a user to report.
+`show_help` asked the desktop to open the docs and threw away the answer. On a
+machine where opening fails -- a Flatpak whose portal finds no handler, a
+desktop with nothing registered for https -- the menu item did nothing at all,
+which is the hardest kind of bug for a user to report.
+
+It went through `webbrowser.open` at first, which made the fallback
+unreachable: that reports success for a browser it merely spawned. See
+test_desktop_open_url.py.
 
 Both directions matter. Saying nothing when the browser opened would be noise
 on every machine that works.
@@ -13,6 +17,7 @@ from __future__ import annotations
 
 import pytest
 
+from libera.host import desktop
 from libera.host.menu import actions
 from libera.host.window import dialogs
 
@@ -26,13 +31,14 @@ def messages(monkeypatch):
 
 
 def browser(monkeypatch, *, works: bool):
+    """A desktop that does or does not open what it is given."""
     opened: list[str] = []
 
     def fake_open(url: str) -> bool:
         opened.append(url)
         return works
 
-    monkeypatch.setattr(actions.webbrowser, "open", fake_open)
+    monkeypatch.setattr(desktop, "open_url", fake_open)
     return opened
 
 
