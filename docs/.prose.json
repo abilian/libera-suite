@@ -1,0 +1,15 @@
+{
+  "_why": {
+    "R15-no-chain": "guide/index.md lists what the application does not do, and the three-item chain is the claim.",
+    "R27-aphorism": "Counted closers that are not aphorisms. Masking a markdown link leaves 'md).' or 'svg)' as the whole of a sentence, and a one-token sentence reads to rule 27 as a short generalisation. install.md ends four paragraphs on a cross-reference and architecture.md counts two image alt texts among its paragraphs; instrumenting the linter showed every counted close on those two pages is one of those. The snippets are the tails."
+  },
+  "allowlist": {
+    "R15-no-chain": [
+      "no collaboration, no"
+    ],
+    "R27-aphorism": [
+      "svg)",
+      "md)"
+    ]
+  }
+}

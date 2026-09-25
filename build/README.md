@@ -15,10 +15,13 @@ Everything that turns pinned upstream sources into a payload Libera Suite can ru
 | `payload.sh` | build the JS half: sdkjs, web-apps, fonts, blanks, dictionaries, branding |
 | `dist.sh` | the distributable tarballs and the manifest the wheel verifies them against |
 | `smoke.sh` | prove the result converts documents, by looking inside what it wrote |
-| `docker.sh`, `docker/` | the same scripts in a pinned Ubuntu 24.04 container — the reproducible Linux build, and the only way to build Linux from the Mac |
+| `docker.sh`, `docker/` | the same scripts in a pinned Ubuntu 22.04 container — the reproducible Linux build, and the only way to build Linux from the Mac |
 | `macos-app.sh`, `macos-icon.py`, `macos/` | the `.app` bundle |
 | `flatpak.sh`, `flatpak/` | the Flatpak, built in its own pinned container — the Linux install channel |
 | `test-linux.sh`, `test-linux/` | the repository's own tests, on Linux — the only place they run there |
+| `install.sh` | what `curl … | sh` runs on a user's machine; published at the origin root |
+| `released-gui.sh` | open a window from the *published* artifact and prove it drew something |
+| `remote.py`, `builders.toml` | the release, driven from here onto the build machines |
 | `release.sh` | the whole release in order, or a refusal — `--dry-run` first |
 | `common.sh` | sourced by the rest: paths, `built()`, `generate_fonts()`, `relocate()` |
 | `theme/` | our branding: config, LESS and artwork, copied into `web-apps/theme/` at payload time |
@@ -43,6 +46,9 @@ Everything that turns pinned upstream sources into a payload Libera Suite can ru
     build/test-linux.sh lint         ruff, ty, pyrefly and mypy, on Linux
     build/test-linux.sh test         the repository's tests, on Linux
     build/test-linux.sh gui          a real GTK window under Xvfb, screenshotted
+
+    build/released-gui.sh --all      the same window, from what users download,
+                                     on every Linux builder in builders.toml
     build/release.sh --dry-run       what a release would do, and what would stop it
     build/release.sh                 all of it, or nothing — `make release`
 

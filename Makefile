@@ -11,9 +11,10 @@
 	payload-fetch payload-configure payload-core payload-assemble \
 	payload-dist payload-all release release-check \
 	payload-container payload-export payload-install payload-linux \
-	remote remote-plan \
-	release-status origin-collect origin-push origin-check \
+	ship ship-plan \
+	release-status origin-collect origin-push origin-check origin-extras \
 	flatpak flatpak-wheels flatpak-check flatpak-smoke flatpak-shell \
+	released-gui \
 	test-linux gui-linux lint-linux dialog-linux \
 	docs-serve docs-check
 
@@ -254,13 +255,25 @@ flatpak-wheels:
 flatpak-check: ## install the built bundle and run --diagnose in it
 	sh build/flatpak.sh check
 
-# And have it convert a document: x2t is compiled against Ubuntu 24.04 and runs
+# And have it convert a document: x2t is compiled against Ubuntu 22.04 and runs
 # here under the GNOME runtime's newer glibc, which nothing else checks.
 flatpak-smoke: ## and have it convert a document
 	sh build/flatpak.sh smoke
 
 flatpak-shell: # a shell inside the Flatpak's container
 	sh build/flatpak.sh shell
+
+# --- does the *released* artifact draw a window -------------------------------
+#
+# `gui-linux` above opens a window from the build tree, in the test container.
+# This opens one from what a user downloads -- the published Flatpak, whose GTK
+# and WebKit come from the GNOME runtime rather than the distribution -- and it
+# runs on the Linux builders, because this Mac has no X server to draw into.
+# The screenshots land in build/out/released-gui-<platform>.png.
+#
+#   make released-gui ARGS="--on fedora.zt"   one machine
+released-gui: ## a real window from the *published* release, screenshotted
+	sh build/released-gui.sh $(if $(ARGS),$(ARGS),--all)
 
 ##@ Releasing
 # --- the one command ----------------------------------------------------------
@@ -271,7 +284,7 @@ flatpak-shell: # a shell inside the Flatpak's container
 # than into Docker volumes on the VM's internal disk.
 #
 #   core-macos-arm64.tar.gz     native
-#   core-linux-x86_64.tar.gz    container, noble + clang 14
+#   core-linux-x86_64.tar.gz    container, jammy + clang 14
 #   core-linux-arm64.tar.gz     container, jammy + clang 13
 #   editors / fonts / manifest  platform-neutral, manifest over all of it
 #   the wheel                   with the manifest stamped in
@@ -281,6 +294,13 @@ flatpak-shell: # a shell inside the Flatpak's container
 # Hours. `make release-check` first: it verifies the preconditions -- clean
 # tree, docker, uv, iconutil, and enough disk on $BUILD_ROOT -- and prints the
 # plan without building anything.
+#
+# **`make ship` is the one to reach for.** This target compiles the Linux cores
+# in containers on this Mac, arm64 natively and amd64 under emulation, and it
+# cannot produce the Flatpak bundles at all (bubblewrap's seccomp filter does
+# not cross architectures). `ship` sends that work to the Linux builders, which
+# is both faster and the only way the bundles get built. This one stays for a
+# machine with no builders to reach.
 #
 #   make release ARCHES=amd64        skip Linux arm64
 #   make release FORCE_NATIVE=1      rebuild the native core even if it is there
@@ -310,15 +330,42 @@ release: ## the whole release, in order
 #   WHEEL=...  origin-check: take the manifest from a wheel rather than from this
 #              tree. WHEEL=pypi asks whether what PyPI serves and what the origin
 #              serves agree, which is the question nothing asked before 0.1.0.
+##@ Shipping
+# --- the one command ----------------------------------------------------------
+#
+# `make ship` is a whole release, driven from here and compiled on the machines
+# that can compile it. Ten phases, in the only order they work in:
+#
+#   update   git pull each builder, and refuse a dirty one
+#   native   the macOS core, here, because there is nowhere else for it
+#   build    the Linux cores, on their own machines, in parallel
+#   collect  scp every core here, restamp the manifest over all of them
+#   push     upload the payload to the origin
+#   check    fetch it back with no token and verify every hash
+#   bundles  the two .flatpak bundles, each on a machine of its architecture
+#   wheel    make verify, then the wheel
+#   publish  the wheel to PyPI, the bundles and install.sh to the origin
+#   verify   read the *published* wheel back and check it against the origin
+#
+# Hours, most of it unattended. `make ship-plan` first: it prints the plan and
+# runs nothing. Every phase asserts on what the machine printed rather than on
+# an exit status, because over ssh an exit status describes the shell.
+#
+#   make ship ARGS="build bundles"        two phases, not all ten
+#   make ship ARGS="--only linux-arm64"   one builder
+#   make ship ARGS="--yes"                do not stop to confirm PyPI
+#
+# It does not survive this terminal closing or this laptop sleeping. Run it
+# under tmux.
+ship: ## the whole release: build on the builders, publish everything
+	python3 build/remote.py $(ARGS)
+
+ship-plan: ## what `make ship` would do, running nothing
+	python3 build/remote.py --dry-run
+
 # Where a release has got to, measured rather than remembered: the tree, the
 # artifacts on this disk, the origin and PyPI, then the next command. Read-only,
 # needs no token, and it is the thing to run after a weekend.
-remote: ## update, build on the remote builders, then collect, push, check
-	python3 build/remote.py $(ARGS)
-
-remote-plan: ## what `make remote` would do, running nothing
-	python3 build/remote.py --dry-run
-
 release-status: ## where this release has got to, and the next command
 	@sh build/origin.sh status
 
@@ -330,6 +377,11 @@ origin-push: ## upload the collected artifacts to the payload origin
 
 origin-check: ## read the origin back as a stranger and verify every hash
 	sh build/origin.sh check
+
+# The bundles and install.sh, which the payload manifest does not name: they
+# carry the *application* version and it moves independently of the payload's.
+origin-extras: ## upload the Flatpak bundles and install.sh
+	sh build/origin.sh extras
 
 ##@ Checking what was built
 # --- checking the payload and the queue --------------------------------------

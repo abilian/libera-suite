@@ -5,13 +5,14 @@
 #   build/origin.sh collect   gather each builder's core here, restamp the manifest
 #   build/origin.sh push      upload what the manifest names
 #   build/origin.sh check     fetch it all back and verify, with no token
+#   build/origin.sh extras    upload the bundles and install.sh, outside the version
 #
 #   DRY=1      say what would happen and change nothing
 #   QUICK=1    check: ask for sizes only, skipping the hashing
 #   WHEEL=...  check: take the manifest from a wheel instead of from the tree.
 #              A path, or `pypi` for the newest unyanked wheel published there.
 #
-# Three verbs, because they fail differently and cost differently. Collecting
+# Separate verbs, because they fail differently and cost differently. Collecting
 # is a quarter of a gigabyte over ssh, pushing is the same again upward, and
 # checking is a read. A failed upload is then retried on its own, without
 # pulling everything across the network again first.
@@ -63,6 +64,12 @@ ZONE="${ZONE:-$(echo "$ORIGIN" | sed 's|https\{0,1\}://[^/]*/||')}"
 
 DIST="$OUT/dist/$VERSION"
 MANIFEST="$REPO/src/libera/manifest.json"
+
+# Where the Flatpak bundles are gathered. build/flatpak.sh writes its own into
+# build/out/ on whichever machine built it; build/remote.py fetches the
+# builders' into build/out/bundles/ so that one directory holds both
+# architectures. Gitignored, like the rest of build/out/.
+OUT_BUNDLES="$REPO/build/out/bundles"
 
 # --- who builds what ----------------------------------------------------------
 
@@ -244,14 +251,18 @@ cmd_push() {
 # and five named files need none of what `cdn sync` adds -- its skip-if-matching
 # compares MD5, and the manifest beside them already carries SHA-256.
 put() {
-    src=$1 name=$2
-    url="$CDN_URL/_/api/v1/zones/$ZONE/objects/$VERSION/$name"
+    src=$1 name=$2 prefix=${3-$VERSION}
+    # An empty prefix is the zone root, where install.sh goes. Joining it with a
+    # slash anyway would store the object under a directory called "", which the
+    # CDN accepts and nothing then finds.
+    [ -n "$prefix" ] && key="$prefix/$name" || key="$name"
+    url="$CDN_URL/_/api/v1/zones/$ZONE/objects/$key"
     size=$(wc -c < "$src" | tr -d ' ')
     if [ "${DRY:-}" = "1" ]; then
-        say "    would PUT $name ($((size / 1000000)) MB) -> $url"
+        say "    would PUT $key ($((size / 1000000)) MB) -> $url"
         return 0
     fi
-    printf '    %-28s %6s MB  ' "$name" "$((size / 1000000))"
+    printf '    %-40s %6s MB  ' "$key" "$((size / 1000000))"
     body="$(curl -sS -T "$src" \
         -H "Authorization: Bearer $CDN_TOKEN" \
         -H "Content-Type: $(content_type "$name")" \
@@ -282,9 +293,14 @@ put() {
 
 content_type() {
     case "$1" in
-    *.tar.gz) echo "application/gzip" ;;
-    *.json)   echo "application/json" ;;
-    *)        echo "application/octet-stream" ;;
+    *.tar.gz)  echo "application/gzip" ;;
+    *.json)    echo "application/json" ;;
+    # text/plain and not application/x-sh: the install script is read before it
+    # is run, and a browser that offers to download it instead of showing it
+    # has made `curl URL | sh` harder to audit than it needed to be.
+    *.sh)      echo "text/plain; charset=utf-8" ;;
+    *.flatpak) echo "application/vnd.flatpak" ;;
+    *)         echo "application/octet-stream" ;;
     esac
 }
 
@@ -401,13 +417,23 @@ for art in wanted:
         print(f"    WRONG    {art['name']:28} {'; '.join(problems)}")
         bad += 1
     else:
-        note = "size ok" if quick else "size and sha256 ok"
+        # Say what was compared, not what the run was capable of comparing.
+        # manifest.json carries no size or hash of its own here -- it is the
+        # thing the others are checked against -- so it was only fetched, and
+        # printing "size and sha256 ok" beside it claimed two checks that had
+        # not happened. That is the exact shape this script exists to catch.
+        if art["sha256"] is None:
+            note = "present"
+        else:
+            note = "size ok" if quick else "size and sha256 ok"
         print(f"    ok       {art['name']:28} {note}")
 
 if bad:
     print(f"\nFATAL: {bad} of {len(wanted)} are not what the wheel will ask for.")
     sys.exit(1)
-print(f"\n    all {len(wanted)} match the manifest the wheel ships.")
+hashed = sum(1 for a in wanted if a["sha256"] is not None)
+print(f"\n    all {hashed} artifacts match the manifest the wheel ships,")
+print("    and manifest.json is there beside them.")
 if quick:
     print("    sizes only -- drop QUICK=1 to hash the bytes.")
 PY
@@ -530,13 +556,77 @@ PY
     say "      make publish && WHEEL=pypi make origin-check"
 }
 
+# --- extras -------------------------------------------------------------------
+#
+# What a release ships that the payload manifest does not name: the two Flatpak
+# bundles and the installer script. They are versioned differently on purpose.
+#
+# The payload version and the application version move independently -- that is
+# the whole reason `libera --version` prints both. So the bundles carry the
+# application version in their filename and sit in `bundles/`, outside the
+# payload's directory, and `install.sh` sits at the zone root because the URL in
+# the README cannot move every release.
+#
+# `latest` is a copy rather than a redirect: the CDN serves objects and this is
+# one PUT instead of a rule to maintain.
+cmd_extras() {
+    [ -n "${CDN_TOKEN:-}" ] || [ "${DRY:-}" = "1" ] || die \
+        "CDN_TOKEN is not set. See: build/origin.sh push"
+
+    app="$(sed -n 's/^version *= *//p' "$REPO/pyproject.toml" | head -1 | tr -d '"')"
+    [ -n "$app" ] || die "no version in pyproject.toml"
+
+    installer="$REPO/build/install.sh"
+    [ -f "$installer" ] || die "no $installer"
+
+    step "publishing the extras for $app to $CDN_URL/$ZONE/"
+
+    # The bundles are optional, because an arm64 builder short of disk is a
+    # normal state of the world and should not stop install.sh being published.
+    found=
+    for arch in amd64 arm64; do
+        bundle="$OUT_BUNDLES/libera-$app-$arch.flatpak"
+        if [ -f "$bundle" ]; then
+            put "$bundle" "libera-$app-$arch.flatpak" bundles
+            found="$found $arch"
+        else
+            say "    no bundle for $arch ($bundle)"
+        fi
+    done
+
+    put "$installer" "install.sh" ""
+
+    # What install.sh reads to learn which bundle to fetch. One line, so that
+    # the script does not have to be re-stamped and re-published every release
+    # just to carry a version number -- the URL in the README never moves.
+    tmp="$(mktemp)"
+    printf '%s\n' "$app" > "$tmp"
+    put "$tmp" "latest" bundles
+    rm -f "$tmp"
+
+    if [ "${DRY:-}" = "1" ]; then
+        step "nothing was uploaded (DRY=1)"
+        return 0
+    fi
+
+    step "published"
+    for arch in $found; do
+        say "    $CDN_URL/$ZONE/bundles/libera-$app-$arch.flatpak"
+    done
+    say "    $CDN_URL/$ZONE/bundles/latest            ($app)"
+    say "    $CDN_URL/$ZONE/install.sh"
+    say ""
+    say "    check it:  curl -fsS $CDN_URL/$ZONE/install.sh | head -5"
+}
+
 case "${1:-}" in
 status)  cmd_status ;;
 collect) cmd_collect ;;
 push)    cmd_push ;;
 check)   cmd_check ;;
+extras)  cmd_extras ;;
 *)
-    sed -n '2,10p' "$0" | sed 's/^#\{1,\} \{0,1\}//'
+    sed -n '2,13p' "$0" | sed 's/^#\{1,\} \{0,1\}//'
     exit 2
     ;;
 esac

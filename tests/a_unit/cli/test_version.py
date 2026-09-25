@@ -17,7 +17,7 @@ from libera.payload import locate
 def test_version_names_the_application_and_the_payload():
     """Both, because they move independently.
 
-    A host fix should not force a 170 MB re-download, and a payload rebuilt
+    A host fix should not force a 120 MB re-download, and a payload rebuilt
     from new upstream pins should not need a host release -- so a bug report
     naming only one of them does not say which halves were in play.
     """

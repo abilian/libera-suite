@@ -460,6 +460,40 @@ def _gtk_save_path(suggested: str) -> str | None:
     )
 
 
+def _mac_message(heading: str, detail: str) -> None:
+    import AppKit
+
+    def show() -> None:
+        alert = AppKit.NSAlert.alloc().init()
+        alert.setMessageText_(heading)
+        alert.setInformativeText_(detail)
+        alert.runModal()
+
+    on_gui_thread(show)
+
+
+def _gtk_message(heading: str, detail: str) -> None:
+    _gtk_ask(heading, detail, ["OK"])
+
+
+def say(heading: str, detail: str) -> None:
+    """Tell the user something, with one button, on whichever toolkit is here.
+
+    A menu item that silently does nothing is the hardest kind of bug to
+    report, and `show_help` was one: it asked `webbrowser` to open the
+    documentation, ignored the False it got back on a machine with no browser,
+    and left the user looking at a menu that had apparently done nothing.
+
+    Falls back to a log line rather than raising, because `libera --serve` runs
+    with no toolkit at all and nothing here is worth failing a command over.
+    """
+    show = _mac_message if sys.platform == "darwin" else _gtk_message
+    try:
+        show(heading, detail)
+    except (ImportError, ValueError):
+        logger.warning("%s: %s", heading, detail)
+
+
 def ask_save_path(suggested: str) -> str | None:
     """Where to save. Installed as hooks.SAVE_PATH_CHOOSER by run()."""
     if sys.platform == "darwin":

@@ -12,7 +12,7 @@
 # What comes out, given a Mac with Docker:
 #
 #   $DIST/core-macos-arm64.tar.gz      native
-#   $DIST/core-linux-x86_64.tar.gz     container, noble + clang 14
+#   $DIST/core-linux-x86_64.tar.gz     container, jammy + clang 14
 #   $DIST/core-linux-arm64.tar.gz      container, jammy + clang 13
 #   $DIST/editors.tar.gz               platform-neutral
 #   $DIST/fonts-core.tar.gz            platform-neutral
@@ -437,7 +437,7 @@ for platform in macos-arm64 macos-x86_64 linux-x86_64 linux-arm64; do
         note "$platform: build natively here" ;;
     linux-x86_64-*)
         case " $ARCHES " in
-        *" amd64 "*) note "$platform: build in the container (noble, clang 14)" ;;
+        *" amd64 "*) note "$platform: build in the container (jammy, clang 14)" ;;
         *) note "$platform: not in ARCHES" ;;
         esac ;;
     linux-arm64-*)
@@ -552,8 +552,8 @@ fi
 
 # Each architecture separately, and a failure in one is recorded rather than
 # fatal. Linux arm64 in particular has never been built end to end: V8 8.9
-# demands clang exactly 13 there, which is why that container is jammy and not
-# noble, and whether the rest of core likes gcc 11 is not yet known.
+# demands clang exactly 13 there, which is the older of the two reasons both
+# containers are jammy; the other is the glibc floor build/docker.sh explains.
 for arch in $ARCHES; do
     platform="$(linux_platform "$arch")"
     step "linux $arch"

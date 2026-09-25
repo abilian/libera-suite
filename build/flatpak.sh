@@ -118,8 +118,37 @@ run() {
     "$ENGINE" run "$@"
 }
 
+# The wheel decides which payload the bundle will accept, and until this
+# existed nothing made it agree with the payload being staged beside it.
+#
+# `installer._manifest_for` prefers the manifest *baked into the wheel* over
+# the one in the directory it is installing from, deliberately: that is what
+# makes the origin untrusted storage. src/libera/manifest.json is gitignored,
+# so on a builder it is whatever some earlier run left there -- and the two
+# machines had drifted in opposite directions. builder-arm64 carried one from
+# 15 September naming payload 0.1, so the in-sandbox install refused with
+# "manifest is for payload 0.1, this libera needs 0.2". fedora.zt had none at
+# all, so the build passed by falling through to $DIST -- and shipped a wheel
+# with no provenance in it, which is the shape of the 0.1.0 failure.
+#
+# Stamping it from $DIST makes the wheel and the payload one release, which is
+# the rule notes/plans/release-0.2.md is built on.
+stamp_bundled_manifest() {
+    src="$DIST/manifest.json"
+    [ -f "$src" ] || { say "FATAL: no manifest.json in $DIST" >&2; exit 1; }
+
+    got="$(sed -n 's/.*"payload_version": *"\([^"]*\)".*/\1/p' "$src" | head -1)"
+    [ "$got" = "$PAYLOAD_VERSION" ] || { say \
+        "FATAL: $src is for payload $got and this tree wants $PAYLOAD_VERSION.
+       The bundle would carry editors the application refuses to load." >&2; exit 1; }
+
+    cp "$src" "$REPO/src/libera/manifest.json"
+    say "    manifest  payload $got, from $DIST"
+}
+
 cmd_wheels() {
     step "wheels, for a build with no network"
+    stamp_bundled_manifest
     # Assembled somewhere else and moved into place at the end. A wheel set that
     # is present but half-filled is worse than one that is absent -- cmd_build
     # would take it, and the failure would surface as pip resolving libera's

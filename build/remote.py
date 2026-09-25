@@ -1,23 +1,40 @@
 #!/usr/bin/env python3
-"""Build the payload on the remote builders, then publish it.
+"""Build and publish a whole release, from here, using the remote builders.
 
-    python3 build/remote.py                  update, build, collect, push, check
+    python3 build/remote.py                  every phase, in order: a release
     python3 build/remote.py build            just the remote builds
     python3 build/remote.py collect push     skip the building
     python3 build/remote.py --dry-run        print the plan, run nothing
+    python3 build/remote.py --only linux-arm64 bundles     one builder, one phase
+
+The phases, in the order they have to happen:
+
+    update    git pull each builder onto its branch, and check it is clean
+    native    the macOS core and its tarballs, here
+    build     the Linux cores, on their own machines, in parallel
+    collect   scp every core here and restamp the manifest over all of them
+    push      upload the payload to the origin
+    check     fetch it all back with no token and verify every hash
+    bundles   the two .flatpak bundles, each on a machine of its architecture
+    wheel     the test suite, then the wheel
+    publish   the wheel to PyPI, the bundles and install.sh to the origin
+    verify    read the *published* wheel back and check it against the origin
 
 The builders come from build/builders.toml. `origin.sh` reads the same file
 through `--print-builders` below, so there is one inventory of machines and one
 parser for it rather than two of each.
 
-Why a script at all. A payload release is several commands on three machines,
-two of which take hours, and the failure that costs the most is the quiet one:
-a builder that built the wrong commit, or wrote an artifact that is there and
+Why a script at all. A release is a dozen commands on three machines, several
+of which take hours, and the failure that costs the most is the quiet one: a
+builder that built the wrong commit, or wrote an artifact that is there and
 empty. So each stage asserts on what the machine printed, and says which
 machine it is talking about.
 
 The builds run in parallel. Two builders of two hours each, one after the
 other, is an afternoon that did not need to be.
+
+`publish` is the one phase that cannot be undone: PyPI does not accept a
+version twice. It stops and asks unless --yes says otherwise.
 """
 
 from __future__ import annotations
@@ -29,6 +46,7 @@ import shlex
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -61,7 +79,23 @@ SSH = [
     "ServerAliveCountMax=6",
 ]
 
-PHASES = ("update", "build", "collect", "push", "check")
+PHASES = (
+    "update",
+    "native",
+    "build",
+    "collect",
+    "push",
+    "check",
+    "bundles",
+    "wheel",
+    "publish",
+    "verify",
+)
+
+# The phases that reach outside this machine and cannot be taken back. PyPI
+# refuses a version it has already seen, so a mistaken `publish` costs a
+# version number rather than a retry.
+IRREVERSIBLE = ("publish",)
 
 # What the remote scripts print instead of relying on an exit status. A login
 # bash returns 1 from `set -eu; exit 0`, because ~/.bash_logout runs with -u
@@ -77,6 +111,10 @@ HEARTBEAT_WIDTH = 60
 # produced a file rather than a payload, which is the failure this project
 # keeps meeting: the artifact exists, so every check that only stats it passes.
 MIN_CORE_BYTES = 10 * 1024 * 1024
+
+# A bundle carries the application, the payload and the wheels; the amd64 one
+# measured 81 MB. The same argument as MIN_CORE_BYTES, one order down.
+MIN_BUNDLE_BYTES = 20 * 1024 * 1024
 
 KNOWN_KEYS = {"platform", "target", "dist", "neutral", "repo", "branch"}
 
@@ -109,6 +147,14 @@ class Builder:
     def arch(self) -> str | None:
         """The docker arch this builder builds, from the tail of its platform."""
         return DOCKER_ARCH.get(self.platform.rsplit("-", 1)[-1])
+
+
+# What each phase brings to run_builds: the make target for a given builder,
+# and the check that says whether it produced anything. Plain assignments and
+# not `type` statements: ruff.toml targets py310, because build/ also runs on
+# builders whose python3 is whatever the distribution gave them.
+TargetFor = Callable[[Builder], str]
+Verify = Callable[[Builder, str, Path], "str | None"]
 
 
 def read_builders(path: Path = BUILDERS) -> list[Builder]:
@@ -238,6 +284,34 @@ def payload_version() -> str:
     raise AssertionError  # die() exits; this is for the type checker
 
 
+def app_version() -> str:
+    """The application version, which is not the payload's.
+
+    They move independently on purpose -- a host fix should not force a 120 MB
+    re-download -- so the wheel and the Flatpak bundles are named for this one
+    and the payload directory on the origin for the other.
+    """
+    doc = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
+    return str(doc["project"]["version"])
+
+
+def make(target: str, what: str, env: dict[str, str] | None = None) -> None:
+    """Run a make target here, streaming it, and die naming the phase if it fails.
+
+    Unlike a builder over ssh, a local process's exit status means what it
+    says, so this one is allowed to believe it.
+    """
+    say(f"    make {target}")
+    done = subprocess.run(
+        ["make", *target.split()],
+        cwd=REPO,
+        env={**os.environ, **(env or {})},
+        check=False,
+    )
+    if done.returncode != 0:
+        die(f"{what}: `make {target}` failed ({done.returncode}).")
+
+
 # --- prechecks ---------------------------------------------------------------
 #
 # All of them before any of the long work. A missing CDN token is a one-second
@@ -249,12 +323,40 @@ def precheck(builders: list[Builder], phases: list[str]) -> None:
     step("before anything long")
     problems: list[str] = []
 
-    if "push" in phases and not os.environ.get("CDN_TOKEN"):
-        problems.append("push needs CDN_TOKEN in the environment")
+    needs_token = {"push", "publish"} & set(phases)
+    if needs_token and not os.environ.get("CDN_TOKEN"):
+        problems.append(
+            f"{'/'.join(sorted(needs_token))} needs CDN_TOKEN in the environment"
+        )
 
-    say(f"    payload {payload_version()}, here at {local_head()[:9]}")
+    say(f"    libera {app_version()}, payload {payload_version()}")
+    say(f"    here at {local_head()[:9]} on {local_branch()}")
     if dirty := local_dirty():
-        say(f"    note: {len(dirty)} uncommitted file(s) here, which no builder sees")
+        # Not fatal for a build -- the builders pull from the remote and never
+        # see this tree -- and fatal for anything published, because the
+        # manifest records the commit it was stamped from and a dirty tree
+        # names nothing anyone could check.
+        published = {"collect", "push", "publish"} & set(phases)
+        if published and os.environ.get("ALLOW_DIRTY") != "1":
+            # origin.sh push refuses the same thing, and honours the same
+            # escape. Both checks exist because they happen at different times:
+            # this one costs a second, that one costs the hours in between.
+            problems.append(
+                f"{len(dirty)} uncommitted file(s) here, and "
+                f"{'/'.join(sorted(published))} would stamp a commit that "
+                f"describes none of them. Commit first, or ALLOW_DIRTY=1 to "
+                f"publish with no reproducible provenance."
+            )
+        else:
+            say(
+                f"    note: {len(dirty)} uncommitted file(s) here, which no builder sees"
+            )
+
+    if (
+        "publish" in phases
+        and not (REPO / "src" / "libera" / "manifest.json").is_file()
+    ):
+        problems.append("publish needs src/libera/manifest.json; run collect first")
 
     for b in builders:
         if b.remote:
@@ -380,21 +482,23 @@ def cmd_update(builders: list[Builder]) -> None:
 # --- the build ---------------------------------------------------------------
 
 
-def build_one(b: Builder, target: str, version: str) -> str | None:
+def build_one(b: Builder, target: str, verify: Verify) -> str | None:
     """Build on one machine. Returns a complaint, or None if it worked."""
     LOGS.mkdir(parents=True, exist_ok=True)
     log = LOGS / f"{b.platform}.log"
 
-    arch_arg = f" ARCH={b.arch}" if b.arch else ""
-
+    # `target` arrives complete, ARCH included: the caller knows what it is
+    # asking for. Appending ARCH here as well produced `ARCH=arm64 ARCH=arm64`,
+    # which make forgives and a reader does not.
+    #
     # No `set -e`, and the verdict comes back as a printed line: over ssh an
     # exit status describes the shell rather than the work.
     script = f"""
     cd {remote_path(b.repo)} || {{ echo "{MARK}=no such directory"; exit; }}
     echo "== $(hostname) $(uname -m), {b.branch} at $(git rev-parse --short HEAD)"
-    if make {target}{arch_arg}
+    if make {target}
     then echo "{MARK}=ok"
-    else echo "{MARK}=make {target}{arch_arg} failed ($?)"
+    else echo "{MARK}=make {target} failed ($?)"
     fi
     """
 
@@ -439,52 +543,78 @@ def build_one(b: Builder, target: str, version: str) -> str | None:
         )
     if verdict != "ok":
         return f"{b.platform}: {verdict} after {elapsed}\n       {log}\n{tail(log)}"
-    return verify_artifact(b, version, elapsed, log)
+    return verify(b, elapsed, log)
 
 
-def verify_artifact(b: Builder, version: str, elapsed: str, log: Path) -> str | None:
-    """Ask the builder whether the tarball is really there, and really a payload."""
+def verify_core(b: Builder, elapsed: str, log: Path) -> str | None:
+    """Ask the builder whether the core tarball is really there, and really one.
+
+    Each phase brings its own checker, because a checker that guesses from the
+    make target got it wrong: `bundles` once reported a pass after finding the
+    core tarball that the *payload* build had left behind, which was a pass
+    against something that run never produced.
+    """
+    version = payload_version()
     dist = remote_path(b.dist) if b.dist else f"{remote_path(b.repo)}/out/dist"
-    name = f"core-{b.platform}.tar.gz"
+    return check_remote_file(
+        b,
+        f"{dist}/{version}/core-{b.platform}.tar.gz",
+        MIN_CORE_BYTES,
+        elapsed,
+        log,
+    )
+
+
+def verify_bundle(b: Builder, elapsed: str, log: Path) -> str | None:
+    """The bundle is named for the *application* version, not the payload's."""
+    name = f"libera-{app_version()}-{b.arch}.flatpak"
+    return check_remote_file(
+        b,
+        f"{remote_path(b.repo)}/build/out/{name}",
+        MIN_BUNDLE_BYTES,
+        elapsed,
+        log,
+    )
+
+
+def check_remote_file(
+    b: Builder, path: str, minimum: int, elapsed: str, log: Path
+) -> str | None:
+    """One remote stat, asserted on the size it printed."""
     out = ssh_capture(
         b.target,
         f"""
-        f={dist}/{version}/{name}
+        f={path}
         if [ -f "$f" ]; then echo "BYTES=$(wc -c < "$f" | tr -d ' ')"
         else echo "MISSING=$f"; fi
         """,
     )
     facts = facts_from(out)
+    name = path.rsplit("/", 1)[-1]
     if "BYTES" not in facts:
         return (
             f"{b.platform}: make said it worked and {name} is not there.\n"
             f"       {out}\n       {log}"
         )
-    if (size := int(facts["BYTES"])) < MIN_CORE_BYTES:
-        return (
-            f"{b.platform}: {name} is {size} bytes, which is not a payload.\n"
-            f"       {log}"
-        )
+    if (size := int(facts["BYTES"])) < minimum:
+        return f"{b.platform}: {name} is {size} bytes, which is not an artifact.\n       {log}"
     say(f"    {b.platform:<14} done in {elapsed}, {size // 1048576} MB")
     return None
 
 
-def cmd_build(builders: list[Builder], target: str) -> None:
-    remotes = [b for b in builders if b.remote]
-    if not remotes:
-        say("    no remote builders; nothing to do")
-        return
-    version = payload_version()
-    step(f"building on {len(remotes)} machine(s), in parallel")
+def run_builds(
+    remotes: list[Builder], target_for: TargetFor, verify: Verify, what: str
+) -> None:
+    """Run one make target per builder, in parallel, and report every failure."""
+    step(f"{what} on {len(remotes)} machine(s), in parallel")
     for b in remotes:
-        arch = f" ARCH={b.arch}" if b.arch else ""
         say(
-            f"    {b.platform:<14} {b.target}  make {target}{arch}"
+            f"    {b.platform:<14} {b.target}  make {target_for(b)}"
             f"  ->  tmp/remote/{b.platform}.log"
         )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(remotes)) as pool:
-        results = list(pool.map(lambda b: build_one(b, target, version), remotes))
+        results = list(pool.map(lambda b: build_one(b, target_for(b), verify), remotes))
 
     if failures := [r for r in results if r]:
         say()
@@ -493,13 +623,170 @@ def cmd_build(builders: list[Builder], target: str) -> None:
         die(f"{len(failures)} of {len(remotes)} builder(s) failed.")
 
 
+def arch_suffix(b: Builder) -> str:
+    return f" ARCH={b.arch}" if b.arch else ""
+
+
+def cmd_build(builders: list[Builder], target: str) -> None:
+    remotes = [b for b in builders if b.remote]
+    if not remotes:
+        say("    no remote builders; nothing to do")
+        return
+    run_builds(remotes, lambda b: f"{target}{arch_suffix(b)}", verify_core, "building")
+
+
+# --- the Flatpak bundles ------------------------------------------------------
+#
+# One per architecture, each on a machine of that architecture. They cannot be
+# cross-built: flatpak-builder runs every module inside bubblewrap, whose
+# seccomp filter is built for the architecture it is running on, and qemu-user
+# does not carry one across. See notes/15-builders.md.
+
+
+def cmd_bundles(builders: list[Builder]) -> None:
+    remotes = [b for b in builders if b.remote and b.arch]
+    if not remotes:
+        say("    no remote builders that can hold a bundle; nothing to do")
+        return
+    version = payload_version()
+
+    def target_for(b: Builder) -> str:
+        dist = b.dist or f"{b.repo}/out/dist"
+        return f"flatpak DIST={dist.replace('~', '$HOME')}/{version}{arch_suffix(b)}"
+
+    run_builds(remotes, target_for, verify_bundle, "bundling")
+    fetch_bundles(remotes)
+
+
+def fetch_bundles(remotes: list[Builder]) -> None:
+    """Bring both bundles here, so that one directory holds the whole release."""
+    step("collecting the bundles")
+    app = app_version()
+    dest = REPO / "build" / "out" / "bundles"
+    dest.mkdir(parents=True, exist_ok=True)
+    problems = []
+    for b in remotes:
+        name = f"libera-{app}-{b.arch}.flatpak"
+        source = f"{b.target}:{b.repo}/build/out/{name}"
+        status, out = run_local(["scp", "-q", source, str(dest / name)])
+        landed = dest / name
+        # scp reports success for a transfer that wrote nothing often enough
+        # that the size is the thing to believe.
+        if (
+            status != 0
+            or not landed.is_file()
+            or landed.stat().st_size < MIN_BUNDLE_BYTES
+        ):
+            problems.append(
+                f"{b.platform}: {source} did not arrive\n       {out.strip()}"
+            )
+            continue
+        say(f"    {b.platform:<14} {name}  {landed.stat().st_size // 1048576} MB")
+    if problems:
+        say()
+        for problem in problems:
+            say(f"    - {problem}")
+        die("the bundles are not all here.")
+
+
+# --- the phases that run here -------------------------------------------------
+
+
+def cmd_native(builders: list[Builder]) -> None:
+    """The macOS core, on this machine, because there is nowhere else for it.
+
+    `payload-dist` re-tars a core that is already built and takes a minute;
+    building one takes an afternoon and is `make payload-all`. Which of the two
+    is wanted is decided by whether the core is there, and said out loud.
+    """
+    local = [b for b in builders if not b.remote]
+    if not local:
+        say("    no local builder in builders.toml; nothing to do here")
+        return
+    step("the native core, here")
+    if sys.platform != "darwin":
+        say(f"    this is {sys.platform}, not a Mac; skipping")
+        return
+    make("payload-dist", "native")
+
+
+def cmd_wheel() -> None:
+    """The suite, then the wheel -- in that order, and the order is the point.
+
+    The wheel carries the manifest, which `collect` has just restamped over
+    every core. Building it before the suite has run means publishing a wheel
+    nothing has exercised; running the suite before `collect` means testing
+    against the previous payload.
+    """
+    step("the suite, then the wheel")
+    make("verify", "wheel")
+    make("build", "wheel")
+
+    dist = REPO / "dist"
+    wheels = sorted(dist.glob(f"libera-{app_version()}-*.whl"))
+    if not wheels:
+        die(
+            f"make build reported success and there is no "
+            f"libera-{app_version()}-*.whl in {dist}."
+        )
+    for wheel in wheels:
+        say(f"    {wheel.name}  {wheel.stat().st_size // 1024} kB")
+
+
+def cmd_publish(yes: bool) -> None:
+    """PyPI, then the bundles and install.sh. The one phase with no undo.
+
+    PyPI refuses a version it has already seen, even after a yank, so a
+    mistaken publish costs a version number. It asks unless told not to, and it
+    asks on /dev/tty: this script is sometimes run under tmux with its output
+    redirected, and a prompt nobody can see is a hang.
+    """
+    step(f"publishing libera {app_version()}")
+    if not yes:
+        say("    PyPI accepts a version once. There is no undo, and a yank")
+        say("    does not free the number.")
+        try:
+            with Path("/dev/tty").open(encoding="utf-8") as tty:
+                say("")
+                print(
+                    f"    publish {app_version()} to PyPI? [y/N] ", end="", flush=True
+                )
+                answer = tty.readline().strip().lower()
+        except OSError:
+            die("no terminal to ask on. Re-run with --yes when you mean it.")
+        if answer not in {"y", "yes"}:
+            die("nothing was published.")
+
+    make("publish", "publish")
+    origin("extras")
+
+
+def cmd_verify() -> None:
+    """Read the *published* wheel back and check it against the origin.
+
+    Not the manifest in this tree, which is correct by construction. `libera`
+    0.1.0 went up naming a payload that was rebuilt two days later, and every
+    check that existed passed, because each read the copy that agreed with it.
+    """
+    step("the published wheel against the published payload")
+    argv = ["sh", str(REPO / "build" / "origin.sh"), "check"]
+    done = subprocess.run(
+        argv, cwd=REPO, env={**os.environ, "WHEEL": "pypi"}, check=False
+    )
+    if done.returncode != 0:
+        die(
+            "what PyPI serves and what the origin serves do not agree.\n"
+            "       This is the check 0.1.0 never had; believe it."
+        )
+
+
 # --- the rest, which origin.sh already does ----------------------------------
 
 
 def origin(command: str) -> None:
     step(f"origin.sh {command}")
     argv = ["sh", str(REPO / "build" / "origin.sh"), command]
-    if subprocess.run(argv, check=False).returncode != 0:
+    if subprocess.run(argv, cwd=REPO, check=False).returncode != 0:
         die(f"origin.sh {command} failed.")
 
 
@@ -536,6 +823,45 @@ def print_builders(default_dist: str) -> None:
         print("\t".join([b.platform, b.target, b.dist or default_dist, flag]))
 
 
+def run_phases(
+    phases: list[str], builders: list[Builder], args: argparse.Namespace
+) -> None:
+    """Every requested phase, in the one order they can happen in.
+
+    Driven off PHASES rather than off the order they were typed in: `remote.py
+    push collect` means the same as `remote.py collect push`, because there is
+    only one order in which they work and a command line is a poor place to
+    discover that.
+    """
+    started = time.monotonic()
+    actions: dict[str, Callable[[], None]] = {
+        "update": lambda: cmd_update(builders),
+        "native": lambda: cmd_native(builders),
+        "build": lambda: cmd_build(builders, args.target),
+        "collect": lambda: origin("collect"),
+        "push": lambda: origin("push"),
+        "check": lambda: origin("check"),
+        "bundles": lambda: cmd_bundles(builders),
+        "wheel": cmd_wheel,
+        "publish": lambda: cmd_publish(args.yes),
+        "verify": cmd_verify,
+    }
+    for phase in PHASES:
+        if phase in phases:
+            actions[phase]()
+
+    step(f"done in {mmss(time.monotonic() - started)}")
+    if "publish" in phases:
+        # A separate repository, so nothing here can keep it in step. Naming
+        # the command is the difference between a tap that lags one release
+        # and a tap that lags five.
+        say("    the Homebrew tap is a separate repository and does not follow:")
+        say("        cd ~/projects/homebrew-tap && make update FORMULA=libera")
+        say("")
+    say("    the last word belongs to a machine that never built it:")
+    say("        libera --payload-install")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -559,6 +885,11 @@ def main() -> None:
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="print the plan and run nothing"
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="do not stop to confirm the phases that cannot be undone",
     )
     parser.add_argument(
         "--print-builders", metavar="DEFAULT_DIST", help=argparse.SUPPRESS
@@ -586,25 +917,18 @@ def main() -> None:
     if args.dry_run:
         step("the plan")
         say(f"    phases   {', '.join(phases)}")
+        say(f"    libera   {app_version()}")
         say(f"    payload  {payload_version()}")
         say(f"    here     {local_branch()} at {local_head()[:9]}")
         for b in builders:
             where = f"{b.target}:{b.repo} ({b.branch})" if b.remote else "local"
             say(f"    {b.platform:<14} {where}{'  neutral' if b.neutral else ''}")
+        if irreversible := [p for p in IRREVERSIBLE if p in phases]:
+            say(f"    note     {', '.join(irreversible)} cannot be undone")
         return
 
     precheck(builders, phases)
-    if "update" in phases:
-        cmd_update(builders)
-    if "build" in phases:
-        cmd_build(builders, args.target)
-    for command in ("collect", "push", "check"):
-        if command in phases:
-            origin(command)
-
-    step("done")
-    say("    the last word belongs to a machine that never built it:")
-    say("        libera --payload-install")
+    run_phases(phases, builders, args)
 
 
 if __name__ == "__main__":

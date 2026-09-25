@@ -11,7 +11,9 @@ Four editors share one application. The file picks the editor, so there is nothi
 | **Libera Slides** | `.pptx` `.odp` |
 | **Libera Diagrams** | opens `.vsdx` to read |
 
-Abilian builds it as free software under the AGPL. The editors inside it are [Euro-Office](https://github.com/Euro-Office), an AGPL fork of ONLYOFFICE by Ascensio System SIA, running locally and unmodified.
+![Libera Words, with a document open: the editor's toolbar in the Libera Words purple, and a laid-out page below it.](https://docs.liberasuite.eu/assets/words.png)
+
+Abilian builds the host as free software under the Apache License 2.0. The editors inside it are [Euro-Office](https://github.com/Euro-Office) (itself an AGPL fork of ONLYOFFICE by Ascensio System SIA), running locally and unmodified.
 
 ## Using it
 
@@ -22,7 +24,9 @@ libera *.pptx             # one window each
 libera                    # the start window: new, open, recent
 ```
 
-[What works today](docs/src/guide/status.md) sets out the full list with its gaps: editing, saving and exporting (the Save As popup offers PDF), a blank document of any of the four kinds, images, printing, spell check in six languages, crash recovery and a Recent list.
+![The start window, carrying a New tile for each of Document, Spreadsheet and Presentation, an Open button, and a Recent list of three documents.](https://docs.liberasuite.eu/assets/start.png)
+
+[What works today](https://docs.liberasuite.eu/guide/status/) sets out the full list with its gaps. It covers editing, saving and exporting, with PDF in the Save As popup. It also covers blank documents of all four kinds, images, printing, spell check in six languages, crash recovery and a Recent list.
 
 ```sh
 libera -v FILE            # what it is doing; -vv how; -vvv every request
@@ -32,7 +36,7 @@ libera --payload-status   # which editors are in use, and the revisions they wer
 
 ## How it works
 
-The editors are a web application. Everything they cannot do in a browser (read a file from disk, convert it, save it, list the fonts, put a dialog on screen) they ask of one injected JavaScript object, `window.AscDesktopEditor`. That object is the whole of the integration.
+The editors are a web application. Everything they cannot do in a browser (read a file from disk, convert it, save it, list the fonts, put a dialog on screen) they ask of one injected JavaScript object, `window.AscDesktopEditor`, which the host exists to answer.
 
 We implement it in Python, behind the webview your system already ships. The host serves the editor over a loopback HTTP server and defines `AscDesktopEditor` before the editor's own code runs, so nothing about the editor itself changes.
 
@@ -50,34 +54,50 @@ Everything we ship, we build. [`build/`](build/README.md) compiles the editors a
 
 ## Where it stands
 
-**Early, and running.** All four editors work today on **macOS** (Apple Silicon) and **Linux** (x86_64 and arm64). Windows is not started.
+**Early, and running.** All four editors work today on **Linux** (x86_64 and arm64) and **macOS** (Apple Silicon). Windows is not started.
 
-Tabs, file locking, and signing and notarisation on macOS are still to come. Linux has a menu bar and a launcher entry; neither carries keyboard shortcuts, because pywebview's GTK menu has no way to attach them. [What works today](docs/src/guide/status.md) lists the known issues, so nobody need waste an evening reporting one. [The roadmap](docs/src/develop/roadmap.md) says what comes next and what we have decided against.
+Tabs, file locking, and signing and notarisation on macOS are still to come. Linux has a menu bar and a launcher entry; neither carries keyboard shortcuts, because pywebview's GTK menu has no way to attach them. [What works today](https://docs.liberasuite.eu/guide/status/) lists the known issues, so an evening spent reporting one is an evening wasted. [The roadmap](https://docs.liberasuite.eu/develop/roadmap/) says what comes next and what we have decided against.
 
 The most useful thing you can send us is a document that renders wrongly, attached. The layout engine is upstream's and mature, so where output is wrong it is far more likely to be our packaging (a font we did not ship, a resource we failed to serve) than the engine.
 
 ## Installing it
 
-[Install](docs/src/guide/install.md) gives the full instructions for each platform.
+[Install](https://docs.liberasuite.eu/guide/install/) gives the full instructions for each platform. Four ways in; the first works on both.
+
+**One command, no root.** It picks the channel that suits the machine:
+
+```sh
+curl -fsSL https://cdn.abilian.com/libera/install.sh | sh
+```
+
+**Homebrew**, on Linux and macOS alike:
+
+```sh
+brew install abilian/tap/libera
+libera --payload-install
+```
 
 **Linux: the Flatpak.** The bundle carries the editors, GTK and WebKit, so there is nothing else to fetch and nothing to get wrong:
 
 ```sh
-flatpak install --user libera-0.1.0-amd64.flatpak     # or -arm64
+arch=amd64     # or arm64
+ver=$(curl -fsSL https://cdn.abilian.com/libera/bundles/latest)
+curl -fLO "https://cdn.abilian.com/libera/bundles/libera-$ver-$arch.flatpak"
+flatpak install --user "./libera-$ver-$arch.flatpak"
 flatpak run eu.liberasuite.Libera
 ```
 
-**macOS, and Linux without Flatpak.** The `libera` command comes from PyPI and fetches the editors on first run:
+**From PyPI**, where the `libera` command fetches the editors on first run:
 
 ```sh
-uv tool install libera                            # macOS
 pipx install --system-site-packages libera        # Linux: the flag is not optional
+uv tool install libera                            # macOS
 libera --payload-install
 ```
 
-> **macOS works today.** `libera` is on PyPI and the payload origin is serving, so the block above is the real thing on an Apple Silicon Mac running macOS 14 or later.
+> **Linux works on both architectures.** Payload 0.2 is built on Ubuntu 22.04, so the converter needs glibc 2.34 and GLIBCXX 3.4.26: Ubuntu 22.04, Debian 12 and anything newer, measured in a clean container of each. The Flatpak needs none of that, since the editors inside it run against the GNOME runtime.
 >
-> **Linux works on both architectures.** Payload 0.2 is built on Ubuntu 22.04, and `x2t` from it runs on Ubuntu 22.04 and Debian 12, x86_64 and arm64 -- measured in a clean container of each. Payload 0.1 needed Ubuntu 24.04. [Release 0.2](notes/plans/release-0.2.md) is what remains.
+> **macOS is Apple Silicon**, on macOS 14 or later. There is no Intel build.
 
 ## Building it
 
@@ -91,7 +111,7 @@ uv run libera document.docx
 
 ```sh
 make verify      # everything below, in the order that fails fastest
-make test        # 314 tests: unit, the host over HTTP, the editor in headless Chromium
+make test        # unit, the host over HTTP, the editor in headless Chromium
 make lint        # ruff, ty, pyrefly, mypy, biome — green, and expected to stay that way
 make smoke       # the converter: fonts, docx -> odt -> docx, docx -> pdf
 make patches     # does the patch queue still apply to the pinned SHAs?
@@ -101,11 +121,8 @@ The test suite enforces one house rule: **assert on content, never on exit codes
 
 | | |
 | :--- | :--- |
-| [`docs/`](docs/src/index.md) | The documentation site, at <https://docs.liberasuite.eu/>. Start at [Developers](docs/src/develop/index.md). |
-| [`notes/`](notes/01-vision.md) | Where the reasoning lives: vision, specs, architecture, packaging, and our relationship with upstream. |
-| [`notes/plans/`](notes/plans/release-0.2.md) | What a release still needs, with the state measured each time and the commands to finish it. |
-| [`notes/lessons-learned.md`](notes/lessons-learned.md) | Bugs that escaped to a user, and what each generalises to. Read before touching the host or the bridge. |
-| [`notes/euro-office-map.md`](notes/euro-office-map.md) | How Euro-Office is put together, and the `AscDesktopEditor` contract. The survey everything else is built on. |
+| `docs/` | The documentation site, published at <https://docs.liberasuite.eu/>. Start at [Developers](https://docs.liberasuite.eu/develop/). |
+| `notes/` | Where the reasoning lives: vision, specs, architecture, packaging, our relationship with upstream, the bugs that escaped to a user, a survey of how Euro-Office is put together. It stays in the development repository. |
 | [`build/`](build/README.md) | Building the editors and the native binaries from pinned source plus our patches. |
 | [`CLAUDE.md`](CLAUDE.md) | The orientation an agent gets, which happens to be the fastest one for a human too. |
 
@@ -119,6 +136,10 @@ The editors, the document engine and the format support are theirs. That is the 
 
 ## Licence
 
-Libera Suite is **AGPL-3.0**, as is the Euro-Office code it is built from (GUI assets are CC-BY-SA-4.0). The host loads upstream's JavaScript in-process and injects code into their runtime, which reads as a combined work. The whole of it is therefore AGPL, and stays that way.
+Libera Suite ships as two artifacts, and they carry different licences.
 
-[Licence and attribution](docs/src/licence.md) has the corresponding-source detail: what each release records, and where to fetch it.
+**The host is [Apache-2.0](LICENSE)**: everything in `src/libera/`, which is the whole of this package.
+
+**The editor payload is AGPL-3.0**: Euro-Office plus our patch queue against it (GUI assets are CC-BY-SA-4.0). It arrives as a separate download or inside a Flatpak, never vendored into the wheel.
+
+[Licence and attribution](https://docs.liberasuite.eu/licence/) has the corresponding-source detail: what each release records, and where to fetch it.

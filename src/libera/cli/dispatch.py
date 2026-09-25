@@ -23,7 +23,7 @@ def version_string() -> str:
     """What `--version` prints: the application, and the payload it wants.
 
     Both, because the two move independently -- a host fix should not force a
-    170 MB re-download, and a payload rebuilt from new upstream pins should not
+    120 MB re-download, and a payload rebuilt from new upstream pins should not
     need a host release. A bug report that names only one of them does not say
     which halves were in play. `--diagnose` prints these and much more; this is
     the line somebody pastes into an issue.

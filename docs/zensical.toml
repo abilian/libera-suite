@@ -1,0 +1,84 @@
+# Documentation site for Libera Suite, built with Zensical.
+#
+# Sources live in docs/src and the built site in docs/site, so everything the
+# documentation needs sits under one directory. Both paths resolve relative to
+# this file. `make serve` previews, `make check` fails on a broken link.
+
+[project]
+
+docs_dir = "src"
+site_dir = "site"
+
+site_name = "Libera Suite"
+site_description = "Libera Suite — Abilian's desktop office suite. Words, Tables, Slides and Diagrams, running locally on your own documents."
+site_author = "Abilian SAS"
+site_url = "https://docs.liberasuite.eu/"
+
+copyright = """
+Copyright &copy; 2026 Abilian SAS —
+Libera Suite is free software: the host is
+<a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a>,
+the editor payload
+<a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL v3</a>.
+"""
+
+# Top-level entries become the tab bar under the header, so keep the list
+# short: tabs stop being a menu once they wrap.
+nav = [
+    { "Home" = "index.md" },
+    { "Using Libera Suite" = [
+        { "Overview" = "guide/index.md" },
+        { "Install" = "guide/install.md" },
+        { "Work with documents" = "guide/documents.md" },
+        { "What works today" = "guide/status.md" },
+    ]},
+    { "Developers" = [
+        { "Overview" = "develop/index.md" },
+        { "Architecture" = "develop/architecture.md" },
+        { "Build the payload" = "develop/build.md" },
+        { "The patch queue" = "develop/patches.md" },
+        { "Cutting a release" = "develop/release.md" },
+        { "Roadmap" = "develop/roadmap.md" },
+    ]},
+    { "Feedback" = "feedback.md" },
+    { "Licence" = "licence.md" },
+]
+
+[project.theme]
+
+language = "en"
+
+# navigation.indexes is deliberately absent. It folds a section's index page
+# into the section's own title, which removes the row for it: "Using Libera
+# Suite" became the link to guide/index.md and the sidebar then listed Install,
+# Work with documents and What works today with no way to see there was an
+# overview at all. Without it each index page gets its own "Overview" entry,
+# under the section heading that navigation.sections draws.
+features = [
+    "announce.dismiss",
+    "content.code.annotate",
+    "content.code.copy",
+    "content.code.select",
+    "content.footnote.tooltips",
+    "content.tabs.link",
+    "content.tooltips",
+    "navigation.footer",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.path",
+    "navigation.sections",
+    "navigation.tabs",
+    "navigation.top",
+    "navigation.tracking",
+    "search.highlight",
+]
+
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"

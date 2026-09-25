@@ -270,12 +270,16 @@ manifest = {
         "libera_dirty": bool(git("status", "--porcelain")),
         # One host, because one host answers. 05-packaging.md wants two, so
         # that the AGPL obligation outlives our interest in any particular
-        # forge, and the SourceHut mirror is not up under this name yet:
-        # git.sr.ht/~sfermigier/libera-suite is a 404 and the repository that
-        # exists is still called muchado. A corresponding-source pointer that
-        # does not resolve reads as compliance without being it, which is
-        # worse than naming one host and meaning it. Add the second back when
-        # it is there.
+        # forge -- but the only other place this code lives is
+        # git.sr.ht/~sfermigier/muchado, which is *private*. A
+        # corresponding-source pointer that 404s for the reader reads as
+        # compliance without being it. Add the second host when there is a
+        # public one to name.
+        #
+        # `libera_commit` above has the same gap from the other side: it is a
+        # sourcehut SHA, and the GitHub mirror is a filtered push whose SHAs
+        # differ, so a stranger cannot resolve it. See "Where this lives" in
+        # CLAUDE.md.
         "repositories": [
             "https://github.com/abilian/libera-suite",
         ],

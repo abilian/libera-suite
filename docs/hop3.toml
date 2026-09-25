@@ -1,0 +1,12 @@
+[metadata]
+id = "libera-docs"
+title = "Libera Suite Documentation"
+description = "Official documentation for Libera Suite, Abilian's desktop office suite"
+
+[build]
+toolchain = "static"
+static-dir = "site"
+ignore = ["src"]
+
+[env]
+HOST_NAME = "docs.liberasuite.eu"

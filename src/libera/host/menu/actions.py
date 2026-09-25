@@ -220,7 +220,31 @@ def toggle_formatting_marks() -> None:
 
 
 def show_help() -> None:
-    _in_background(lambda: webbrowser.open(HELP_URL))
+    _in_background(_open_help)
+
+
+def _open_help() -> None:
+    """Help: the documentation, in the user's browser, or the URL if not.
+
+    `webbrowser.open` returns False when it could find nothing to run, and
+    dropping that was a menu item that did nothing at all on a machine with no
+    browser. It happens: a Flatpak on a minimal desktop reaches the portal, the
+    portal finds no handler, and the user is left guessing.
+
+    Reporting the URL is the honest fallback, and it is all we can do. What
+    opens a link is the desktop's business, and a sandbox makes that more true
+    rather than less.
+    """
+    if webbrowser.open(HELP_URL):
+        return
+    logger.warning("nothing on this machine could open %s", HELP_URL)
+
+    from libera.host.window import dialogs
+
+    dialogs.say(
+        "Nothing here could open a browser",
+        f"The documentation is at:\n\n{HELP_URL}",
+    )
 
 
 def recent_documents() -> list[str]:
