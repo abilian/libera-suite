@@ -57,8 +57,7 @@ Install Libera Suite, without root.
 
     curl -fsSL https://cdn.abilian.com/libera/install.sh | sh
 
-A pipe cannot pass options on its own: the shell needs `-s --` to know the
-rest of the line is for the script rather than for itself.
+With options:
 
     curl -fsSL https://cdn.abilian.com/libera/install.sh | bash -s -- --help
     curl -fsSL https://cdn.abilian.com/libera/install.sh | sh -s -- --prefix ~/apps
