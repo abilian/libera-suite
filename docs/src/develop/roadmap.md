@@ -4,9 +4,23 @@ This page says what we are doing next and what we have decided against. [What wo
 
 Nothing here has a date. The project is small; the things at the top are the things being worked on.
 
-## Now: what stands between here and a beta
+## Now: the first installs
 
-**Installing the payload without a terminal.** The origin is up and every channel that can carry the editors does: the Flatpak has them inside it, and `curl … | sh` fetches them without the user naming a directory. The one channel that cannot is PyPI, whose users are at a prompt already. A window that offers to download still has a place as a fallback, though it no longer gates a release.
+Nothing in the build stands in the way any more. The payload origin is up, both
+Flatpak bundles are published, the wheel is on PyPI, and one command installs
+it on either platform. People are the missing piece: Libera Suite has not yet
+been installed by anyone outside the project, on their own machine, against
+their own documents.
+
+That is the next piece of work, and none of it is engineering. The first few
+real installs will find things no amount of testing here would, because every
+check in this repository runs on a machine that built the thing.
+
+**Installing the payload without a terminal** is what used to be here. Every
+channel that can carry the editors now does: the Flatpak has them inside it,
+and `curl … | sh` fetches them without the user naming a directory. The one
+channel that cannot is PyPI, whose users are at a prompt already. A window that
+offers to download still has a place as a fallback, though it gates nothing.
 
 ## Next
 

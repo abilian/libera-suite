@@ -106,6 +106,15 @@ On Linux the choice has a consequence beyond taste. A bind mount passes uids thr
 
 Two things do not carry over. Rootless podman cannot run the `--privileged` container that registers binfmt handlers, so a cross-architecture build needs them from the distribution instead, as `qemu-user-static`. podman also refuses an unqualified image name, where docker reads one as `docker.io/library/…` without saying so. The scripts therefore qualify the images they build themselves as `localhost/…` under podman, and pass `--pull=never` everywhere, so a missing image fails outright; nothing goes looking in the registries.
 
+**That base is what sets the floor for everybody who installs the result.**
+Built on 22.04, the shipped `x2t` asks for glibc 2.34 and GLIBCXX 3.4.26, which
+is Ubuntu 22.04, Debian 12, Fedora 35, RHEL 9 and anything newer. Measured by
+unpacking the published core in a clean container of each and running it. Moving
+the base up moves that floor and strands users; amd64 was on noble once, needed
+glibc 2.38, and would not load on Debian 12 at all. musl is not glibc, so Alpine
+cannot run it whatever its version. The Flatpak sidesteps all of this, since the
+editors inside it run against the GNOME runtime's libraries.
+
 `build/docker.sh` runs the same scripts in an Ubuntu 22.04 image. It is how a Linux payload gets built from the Mac. It is also the reproducible way to build one anywhere: the host's toolchain stops being part of the answer.
 
 ```sh

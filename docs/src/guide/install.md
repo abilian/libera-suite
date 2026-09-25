@@ -2,33 +2,10 @@
 
 Libera Suite runs on **Linux (x86_64 and arm64)** and **macOS (Apple Silicon)**. Windows is planned; see [What works today](status.md).
 
-The Linux requirement is a **glibc version**, which cuts across distributions. The converter
-in payload 0.2 needs **glibc 2.34** and **GLIBCXX 3.4.26**, the latter from GCC
-9.1 or newer. Your machine answers the first question:
-
-```sh
-ldd --version | head -1
-```
-
-Anything from late 2021 onwards clears it. Ubuntu 22.04 and Debian 12 were
-measured, by unpacking the published core in a clean container of each and
-running `x2t`; Fedora 35, RHEL 9 and its rebuilds, and the rolling
-distributions are all above the line by their own glibc versions. Debian 11,
-RHEL 8 and openSUSE Leap 15.x are below it.
-
-**musl is not glibc**, so Alpine will not run the payload at all, whatever its
-version.
-
-If you are below the line, the Flatpak is the answer: the editors inside it run
-against the GNOME runtime's own libraries, so the host's glibc stops mattering.
-How far back that goes is set by Flatpak itself and we have not measured it.
-
-Payload 0.1 needed Ubuntu 24.04. If you installed it before, `libera
---payload-install` moves you on.
-
-!!! warning "Do not install 0.1.0"
-
-    `libera` 0.1.0 is on PyPI and cannot install its payload: it looks for the manifest that verifies downloads in the wrong directory. The hashes it carries describe artifacts that were rebuilt after it was published. It is **not yanked yet**, so `pipx install libera` can still choose it: ask for `libera>=0.1.1` until it is.
+On Linux it needs Ubuntu 22.04, Debian 12, Fedora 35, RHEL 9, or anything
+newer than those. On something older, use [the
+Flatpak](#or-on-linux-the-flatpak): it brings its own libraries and does not
+care what the rest of the machine has.
 
 ## The quickest way
 
@@ -39,17 +16,14 @@ channel suits the machine and takes that one:
 curl -fsSL https://cdn.abilian.com/libera/install.sh | sh
 ```
 
-On Linux that installs the Flatpak bundle when `flatpak` is present, which
-brings its own GTK and WebKit and skips every question below. Otherwise it
-builds a virtualenv against your system Python. On macOS it always does the
-latter.
+On Linux it installs the Flatpak bundle when `flatpak` is present, which
+brings its own GTK and WebKit and skips every question below. Without flatpak,
+and on macOS, it builds a virtualenv against your system Python instead.
 
-It writes to `~/.local/bin` and `~/.local/share` and nowhere else, and asks for
-no password. Read it first if you would rather: it is served as plain text, so
-opening the URL in a browser shows it.
+It writes to `~/.local/bin` and `~/.local/share`, and asks for no password.
+Open the URL in a browser to read it first.
 
-A pipe cannot pass options on its own, because the shell takes them for itself.
-`-s --` says the rest of the line belongs to the script:
+With options:
 
 ```sh
 curl -fsSL https://cdn.abilian.com/libera/install.sh | bash -s -- --help
@@ -80,17 +54,16 @@ On macOS, neither is needed:
 uv tool install libera      # or: pipx install libera
 ```
 
-Libera Suite's window is GTK and WebKit. The Python half of those (PyGObject) is not a wheel. It is a package your distribution installs at `/usr/lib/python3/dist-packages/gi`. An isolated virtualenv never has it on `sys.path`, however thoroughly you have installed it. Measured on a Debian box carrying every package below:
+Both flags are needed because the window is GTK. Its Python half is a
+distribution package built for one particular interpreter, which an isolated
+virtualenv cannot see. Without the flags, Libera Suite
+installs cleanly and then opens no window.
 
-| | |
-| :--- | :--- |
-| `pipx install libera` | no window |
-| `pipx install --system-site-packages libera` | works |
-| `uv tool install libera` | no window |
+**`uv tool` has no equivalent flag**, so on Linux it cannot be used. Use `pipx`,
+or the Flatpak below, which brings its own GTK and needs none of this.
 
-**`uv tool` has no equivalent flag**, so on Linux there is no spelling of it that opens a window. That leaves `pipx`, or the Flatpak, which brings its own GTK and WebKit and sidesteps the whole question. `--python` is there for the same reason: your distribution built PyGObject for one interpreter. `--system-site-packages` opens the virtualenv onto whichever interpreter it was made from. A pipx that defaults to a newer Python than your distribution ships installs cleanly and still cannot find `gi`. `libera` names both versions when that happens.
-
-You also need the system packages themselves. `libera` checks before it does anything else and prints the line for your distribution, so if you are unsure, just run it. It knows apt, dnf, pacman and zypper. On anything else it names the three components instead: four commands, none of which exists, are four wrong answers.
+You also need the GTK packages themselves. Run `libera` and it prints the exact
+line for your distribution; it knows apt, dnf, pacman and zypper.
 
 This gives you the `libera` command, which is small and cannot edit anything until it has the payload.
 
@@ -126,12 +99,12 @@ Homebrew runs on Linux and macOS alike. The line is the same on both:
 brew install abilian/tap/libera
 ```
 
-It builds in Homebrew's own prefix and brings its own GTK, WebKit and PyGObject
-on Linux, so none of the system-package question above applies there. On macOS nothing is signed or notarised; Gatekeeper has nothing to say about a formula. Step 2 still applies: the editors are fetched separately.
+On Linux it brings its own GTK and WebKit, so no system packages are needed.
+On macOS, Gatekeeper has nothing to object to. Step 2 still applies.
 
 ## 2. The payload
 
-**Not needed if you installed the Flatpak**, which carries its own. A 120 MB wheel per platform is not something to put on PyPI, so `pipx` is the one channel that has to fetch the payload separately.
+**Not needed if you installed the Flatpak**, which carries its own.
 
 The payload holds the editors, the document engine and the fonts. Ask for it explicitly:
 
@@ -139,7 +112,7 @@ The payload holds the editors, the document engine and the fonts. Ask for it exp
 libera --payload-install
 ```
 
-It downloads about 120 MB from `cdn.abilian.com` (107 MB on macOS), checks every artifact against hashes that shipped inside the wheel, and stops on the first that disagrees. The origin is therefore ordinary storage: a mirror needs no cooperation from us, because the hashes decide.
+It downloads about 120 MB from `cdn.abilian.com` (107 MB on macOS) and checks every file against hashes that shipped inside the application, stopping on the first that disagrees.
 
 If you have built the artifacts yourself, or been given them, install from a directory instead:
 
@@ -149,7 +122,7 @@ libera --payload-install --from /path/to/artifacts
 
 Building them yourself is documented in [Build the payload](../develop/build.md).
 
-The install unpacks the files and then runs a font indexer locally, because some of the payload's files record absolute paths and have to be generated on your machine.
+It then builds a font index on your machine, which takes a moment.
 
 ## Check what you have
 
@@ -166,7 +139,7 @@ libera --payload-status
 
 The payload sits under `payload/<version>/` there; nothing else on your system is touched.
 
-To point Libera Suite at a payload somewhere else (a local build, say), set `LIBERA_PAYLOAD` to its directory. That overrides everything else and lets you develop against a payload you have not installed.
+To use a payload from somewhere else, a local build say, set `LIBERA_PAYLOAD` to its directory. It overrides everything above.
 
 ## A double-clickable application
 

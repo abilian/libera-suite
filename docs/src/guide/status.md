@@ -40,17 +40,13 @@ If you hit something that is *not* on this list, [tell us about it](../feedback.
 
 ## Half-built
 
-**Nothing here, for the first time.** The payload origin is up: `libera --payload-install` fetches about 120 MB from `cdn.abilian.com` and verifies every artifact against hashes shipped inside the wheel.
+**Nothing, for the first time.** The payload origin is up, both Flatpak bundles are published, and one command installs Libera Suite on either platform.
 
-**Linux.** It is built and tested on x86_64 and arm64. The payload builds in a pinned container. The suite runs there (351 tests, including every editor loading in headless Chromium and x2t converting documents). A real GTK/WebKitGTK window opens under Xvfb with a document laid out in it. The Flatpak installs a payload inside its sandbox and converts with it.
-
-Linux has a menu bar: File, Edit, View and Help, with the same items macOS has. GTK draws it inside the window. The bar carries no keyboard shortcuts of its own (see the known issue below), so the keys you already use go to the editor, as they always did.
-
-`libera --launcher-install` puts Libera Suite in the launcher with its icon, and registers the formats it reads, so a document opens by double-clicking. The Flatpak does that for you.
+Linux has the same menu bar as macOS, drawn inside the window: File, Edit, View and Help. It carries no keyboard shortcuts of its own, so the keys you already use go to the editor. `libera --launcher-install` puts Libera Suite in the launcher with its icon and file associations; the Flatpak does that for you.
 
 ## Not started
 
-**No New shortcut on Linux.** ⌘N works on macOS because the menu bar owns it. The Linux bar has a New item and no key equivalent, because pywebview's GTK menu carries none. The web layer does not handle the key itself off a Mac either. Measured in the container: the keystroke reaches the editor and nothing follows, for either Ctrl-N or Super-N. `libera` on its own gives you the start window, which has a New button. The editor's own File tab works too. The test for it is a strict xfail on Linux, so we will be told if it ever starts working.
+**No New shortcut on Linux.** Ctrl-N and Super-N do nothing. File ▸ New on the menu bar works, as does the New button in the start window you get from `libera` on its own, and the editor's own File tab.
 
 **The application bundle is new and rough.** `build/macos-app.sh` builds `Libera.app`, which opens a document on a double-click, appears in *Open With*, and carries the Libera mark in the Dock. But the bundle is a launcher around the interpreter it was built with (nothing is embedded, signed or notarised), so it is not something you can hand to somebody else yet.
 
