@@ -9,7 +9,7 @@
   "support_url": "https://docs.liberasuite.eu/",
   "help_url": "https://docs.liberasuite.eu/",
   "app_title": "Libera Suite",
-  "attribution": "Libera Suite is based on Euro-Office, itself based on ONLYOFFICE by Ascensio System SIA. Free software under the GNU AGPL v3. Source, and the exact revisions this build came from: https://github.com/abilian/libera-suite",
+  "attribution": "Libera Suite includes components from Euro-Office, itself a fork of ONLYOFFICE by Ascensio System SIA. Those components are free software under the GNU AGPL v3 and are modified. The exact upstream revisions this build came from, and every change applied to them: https://github.com/abilian/libera-suite",
   "mobile_logo_light": "wordmark-ink.svg",
   "mobile_logo_dark": "wordmark-paper.svg",
   "about_logo_light": "logo_s.svg",

@@ -3,9 +3,33 @@
 # macOS: an external case-sensitive volume, because the internal disk is not
 # one and V8's checkout needs it. Linux: anywhere, since every normal Linux
 # filesystem is case-sensitive already. Override BUILD_ROOT on either.
+#
+# Windows: C:/b. Short, because V8's checkout is deep enough to meet the
+# 260-character limit from under a home directory, and in C:/ form rather than
+# /c/, because the path reaches cmake, Python and cmd as well as this shell.
 case "$(uname -s)" in
 Darwin) DEFAULT_BUILD_ROOT="/Volumes/T7-EXT-2T/euro-office-build" ;;
+MINGW* | MSYS* | CYGWIN*) DEFAULT_BUILD_ROOT="C:/b" ;;
 *)      DEFAULT_BUILD_ROOT="$HOME/euro-office-build" ;;
+esac
+
+# Git Bash puts its own /usr/bin ahead of everything Windows' PATH holds, and
+# its perl is a trimmed MSYS2 build without the modules OpenSSL's Configure
+# wants. Strawberry Perl, which build/windows-setup.ps1 installs, goes in front
+# of it here, so that nobody has to remember an export in every new shell. Its
+# perl\bin only: c\bin beside it carries a MinGW gcc, which is the compiler
+# msvc-env.sh exists to keep cmake away from.
+case "$(uname -s)" in
+MINGW* | MSYS* | CYGWIN*)
+    # First, not merely present: Strawberry's installer already puts perl\bin
+    # on the machine PATH, which Git Bash then appends behind its own /usr/bin.
+    if [ -x /c/Strawberry/perl/bin/perl.exe ]; then
+        case "$PATH" in
+        /c/Strawberry/perl/bin:*) ;;
+        *) PATH="/c/Strawberry/perl/bin:$PATH" ;;
+        esac
+    fi
+    ;;
 esac
 
 BUILD_ROOT="${BUILD_ROOT:-$DEFAULT_BUILD_ROOT}"
@@ -154,10 +178,12 @@ build_jobs() {
 # to set it -- the host does the same in convert.py.
 # .exe where the platform wants one.
 #
-# There is no third library-path variable beside the two below: Windows looks
-# for a DLL next to the executable that needs it, and cmake copies core's DLLs
-# into this same bin directory as it links them. Putting bin on PATH would mean
-# a `D:/...` entry in a colon-separated list, which MSYS2 mangles.
+# Windows' library path is PATH. It looks for a DLL beside the executable
+# first, which covers x2t, but tools/allfontsgen.exe sits one level below the
+# DLLs it links and Windows never searches a parent: it failed with
+# "kernel.dll: cannot open shared object file", the loader's words for a DLL
+# that is right there in bin. So bin goes on PATH, in MSYS form: a `C:/...`
+# entry in a colon-separated list is split at the drive letter.
 if [ "${OS:-}" = "Windows_NT" ]; then
     EXE=".exe"
 else
@@ -170,8 +196,11 @@ fi
 built() {
     exe="$1"
     shift
+    bin_path="$PATH"
+    [ -n "$EXE" ] && bin_path="$(cygpath -u "$OUT/core/bin"):$PATH"
     APPLICATION_NAME="${APPLICATION_NAME:-Libera Suite}" \
     DYLD_LIBRARY_PATH="$OUT/core/bin" LD_LIBRARY_PATH="$OUT/core/bin" \
+    PATH="$bin_path" \
         "$OUT/core/bin/$exe$EXE" "$@"
 }
 
@@ -198,10 +227,21 @@ winpath() {
 # "command not found" several minutes into a run. Resolving it at first use
 # rather than at source time keeps the scripts that need no python working on a
 # machine that has none.
+#
+# Each candidate is *run*, not just found. Windows ships python3 and python as
+# App Execution Aliases in WindowsApps, which `command -v` finds on a machine
+# with no Python at all: run non-interactively, they print "Python was not
+# found" and exit 9009. With python.org's Python installed, python.exe is real
+# and the python3 alias is still the stub, so python3-first picked the stub.
 py() {
     if [ -z "${PYTHON:-}" ]; then
-        PYTHON="$(command -v python3 || command -v python || true)"
-        [ -n "$PYTHON" ] || {
+        for candidate in python3 python; do
+            p="$(command -v "$candidate" 2>/dev/null)" || continue
+            "$p" -c '' >/dev/null 2>&1 || continue
+            PYTHON="$p"
+            break
+        done
+        [ -n "${PYTHON:-}" ] || {
             echo "FATAL: neither python3 nor python is on PATH" >&2
             return 1
         }
@@ -235,8 +275,12 @@ resolve_core_fonts() {
 generate_fonts() {
     payload="$1"
     resolve_core_fonts
+    # The thumbnails too: allfontsgen skips any scale whose PNG already exists
+    # (ApplicationFontsWorker.cpp, `if Exists(strThumbnailPath) continue`), so
+    # a changed font set would keep pictures of the old one.
     rm -rf "$payload/fonts" "$payload/AllFonts.js" \
-           "$payload/sdkjs/common/AllFonts.js" "$payload/sdkjs/common/font_selection.bin"
+           "$payload/sdkjs/common/AllFonts.js" "$payload/sdkjs/common/font_selection.bin" \
+           "$payload/sdkjs/common/Images"/fonts_thumbnail*
     mkdir -p "$payload/fonts" "$payload/sdkjs/common/Images"
 
     echo "==> allfontsgen ($CORE_FONTS)"
@@ -254,7 +298,12 @@ generate_fonts() {
     # renders every glyph as a box, and nothing else anywhere says so.
     n="$(ls "$payload/fonts" | wc -l | tr -d ' ')"
     [ "$n" -gt 100 ] || { echo "FATAL: allfontsgen produced $n web fonts" >&2; exit 1; }
-    echo "    $n web fonts"
+    # And the thumbnails, which it draws last: on Windows it once wrote every
+    # web font and then aborted on the second PNG, and the count above passed.
+    # Ten: five scales (1x to 2x), plain and East Asian, measured.
+    t="$(ls "$payload/sdkjs/common/Images"/fonts_thumbnail*.png 2>/dev/null | wc -l | tr -d ' ')"
+    [ "$t" -ge 10 ] || { echo "FATAL: allfontsgen drew $t of 10 font thumbnails" >&2; exit 1; }
+    echo "    $n web fonts, $t thumbnails"
 }
 
 # Make the built binaries relocatable, and prove it.

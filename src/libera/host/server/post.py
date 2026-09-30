@@ -14,7 +14,7 @@ import re
 import shutil
 from typing import TYPE_CHECKING
 
-from libera.host import apps, desktop, hooks
+from libera.host import apps, desktop, hooks, instance
 from libera.host.convert import convert_to_editor_bin, save_changes, save_document
 from libera.host.desktop import reveal
 from libera.host.recents import read_recents, remember_recent
@@ -90,6 +90,38 @@ def open_in_window(h: Handler, document: pathlib.Path) -> None:
     hooks.WINDOW_OPENER(document)
     logger.info("open in a new window: %s", document)
     h.send_bytes(b'{"opened": true, "here": false}', "application/json")
+
+
+def post_hand_off(h: Handler) -> None:
+    """A second launch giving its documents to this instance.
+
+    The token first: this server is on 127.0.0.1, where any page in any browser
+    can POST to it, and opening a file of the caller's choosing is not
+    something to do for a web page. See `instance`.
+    """
+    try:
+        body = json.loads(h.body() or b"{}")
+        token = str(body.get("token", ""))
+        documents = [pathlib.Path(d) for d in body.get("documents", [])]
+    except (ValueError, TypeError, AttributeError):
+        h.send_error(400)
+        return
+    if not instance.accepts(token):
+        logger.warning("hand-off refused: wrong token")
+        h.send_error(403)
+        return
+    if hooks.WINDOW_OPENER is None:
+        h.send_bytes(b'{"opened": false}', "application/json")
+        return
+    for document in documents:
+        if document.is_file():
+            logger.info("hand-off: %s", document)
+            hooks.WINDOW_OPENER(document)
+        else:
+            logger.warning("hand-off: no such file %s", document)
+    if not documents and hooks.START_OPENER is not None:
+        hooks.START_OPENER()
+    h.send_bytes(b'{"opened": true}', "application/json")
 
 
 def post_open_document(h: Handler) -> None:

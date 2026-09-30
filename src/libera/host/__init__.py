@@ -2,11 +2,13 @@
 
 The layers, innermost first, and nothing imports anything above it:
 
+    about      who wrote what: the attribution every surface has to say
     apps       the four editors, and the five things that differ between them
     shortcuts  the key equivalents the menu bar owns, and the page yields
     session    who is editing what, bound per request
     hooks      callbacks the window layer installs
     desktop    reveal a file, open a URL, whose account this is
+    instance   one running copy: a second launch hands its documents over
     convert    x2t: documents in, documents out
     recents    the Recent list
     opening    opening a document into a session

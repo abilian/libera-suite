@@ -1,0 +1,133 @@
+From daedf913e204ec6017278bce6c533db7dbb1aeed Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 28 Sep 2026 17:51:13 +0200
+Subject: [PATCH] brand: keep About reachable in the desktop build
+
+Two places switched the About panel off whenever the page found
+window.AscDesktopEditor, on the assumption that the native shell provides one
+instead. Upstream's CEF/Qt shell does. A host that does not supply its own is
+left with no About at all, and that is where this build keeps the attribution
+naming the original developer, the modified status and the licence: the theme's
+ATTRIBUTION token renders into that panel and nowhere else.
+
+  apps/api/documents/api.js       forced customization.about = false for
+                                  every desktop build, before the editor
+                                  started. This is the decisive one.
+  apps/*/main/app/controller/     hidePreloader forced it again per editor,
+    Main.js                       in all five.
+
+Measured before: #left-btn-about and #about-menu-panel both display:none, and
+no part of the attribution anywhere in the rendered text. Patching Main.js
+alone changes nothing, because api.js runs first and canBrandingExt is true in
+this fork, so the else-branch that would set it back never fires.
+
+AGPLv3 section 5(d) wants Appropriate Legal Notices displayed by each
+interactive interface, which is the reason to care beyond tidiness.
+
+Neither change touches the web build: about is left at its default rather than
+forced either way, and compactHeader is untouched.
+---
+ apps/api/documents/api.js                           | 7 ++++++-
+ apps/documenteditor/main/app/controller/Main.js     | 4 +---
+ apps/pdfeditor/main/app/controller/Main.js          | 4 +---
+ apps/presentationeditor/main/app/controller/Main.js | 4 +---
+ apps/spreadsheeteditor/main/app/controller/Main.js  | 4 +---
+ apps/visioeditor/main/app/controller/Main.js        | 4 +---
+ 6 files changed, 11 insertions(+), 16 deletions(-)
+
+diff --git a/apps/api/documents/api.js b/apps/api/documents/api.js
+index 392bbc4168..8f8308904e 100644
+--- a/apps/api/documents/api.js
++++ b/apps/api/documents/api.js
+@@ -565,7 +565,12 @@
+                 _config.editorConfig.targetApp = 'desktop';
+                 // _config.editorConfig.canBackToFolder = false;
+                 if (!_config.editorConfig.customization) _config.editorConfig.customization = {};
+-                _config.editorConfig.customization.about = false;
++                // customization.about is deliberately left alone. Forcing it
++                // false here hid the About panel in every desktop build, which
++                // is where this build keeps its Appropriate Legal Notices: the
++                // attribution naming the original developer and the licence.
++                // Upstream's own shell supplies an About of its own instead; a
++                // host that does not would leave the notice unreachable.
+                 _config.editorConfig.customization.compactHeader = false;
+             }
+         })();
+diff --git a/apps/documenteditor/main/app/controller/Main.js b/apps/documenteditor/main/app/controller/Main.js
+index d2d6069246..5ed90389a9 100644
+--- a/apps/documenteditor/main/app/controller/Main.js
++++ b/apps/documenteditor/main/app/controller/Main.js
+@@ -2602,9 +2602,7 @@ define([
+                 if (!this._state.customizationDone) {
+                     this._state.customizationDone = true;
+                     if (this.appOptions.customization) {
+-                        if (this.appOptions.isDesktopApp)
+-                            this.appOptions.customization.about = false;
+-                        else if (!this.appOptions.canBrandingExt)
++                        if (!this.appOptions.canBrandingExt)
+                             this.appOptions.customization.about = true;
+                     }
+                     Common.Utils.applyCustomization(this.appOptions.customization, mapCustomizationElements);
+diff --git a/apps/pdfeditor/main/app/controller/Main.js b/apps/pdfeditor/main/app/controller/Main.js
+index 181fa8c70c..7631d44fa0 100644
+--- a/apps/pdfeditor/main/app/controller/Main.js
++++ b/apps/pdfeditor/main/app/controller/Main.js
+@@ -2234,9 +2234,7 @@ define([
+                 if (!this._state.customizationDone) {
+                     this._state.customizationDone = true;
+                     if (this.appOptions.customization) {
+-                        if (this.appOptions.isDesktopApp)
+-                            this.appOptions.customization.about = false;
+-                        else if (!this.appOptions.canBrandingExt)
++                        if (!this.appOptions.canBrandingExt)
+                             this.appOptions.customization.about = true;
+                     }
+                     Common.Utils.applyCustomization(this.appOptions.customization, mapCustomizationElements);
+diff --git a/apps/presentationeditor/main/app/controller/Main.js b/apps/presentationeditor/main/app/controller/Main.js
+index f53b6b945e..7d0f756dff 100644
+--- a/apps/presentationeditor/main/app/controller/Main.js
++++ b/apps/presentationeditor/main/app/controller/Main.js
+@@ -2057,9 +2057,7 @@ define([
+                 if (!this._state.customizationDone) {
+                     this._state.customizationDone = true;
+                     if (this.appOptions.customization) {
+-                        if (this.appOptions.isDesktopApp)
+-                            this.appOptions.customization.about = false;
+-                        else if (!this.appOptions.canBrandingExt)
++                        if (!this.appOptions.canBrandingExt)
+                             this.appOptions.customization.about = true;
+                     }
+                     Common.Utils.applyCustomization(this.appOptions.customization, mapCustomizationElements);
+diff --git a/apps/spreadsheeteditor/main/app/controller/Main.js b/apps/spreadsheeteditor/main/app/controller/Main.js
+index 6e516f7eed..1676d2ca58 100644
+--- a/apps/spreadsheeteditor/main/app/controller/Main.js
++++ b/apps/spreadsheeteditor/main/app/controller/Main.js
+@@ -2513,9 +2513,7 @@ define([
+                 if (!this._state.customizationDone) {
+                     this._state.customizationDone = true;
+                     if (this.appOptions.customization) {
+-                        if (this.appOptions.isDesktopApp)
+-                            this.appOptions.customization.about = false;
+-                        else if (!this.appOptions.canBrandingExt)
++                        if (!this.appOptions.canBrandingExt)
+                             this.appOptions.customization.about = true;
+                     }
+                     Common.Utils.applyCustomization(this.appOptions.customization, mapCustomizationElements);
+diff --git a/apps/visioeditor/main/app/controller/Main.js b/apps/visioeditor/main/app/controller/Main.js
+index 05ad3de88b..366b2ce776 100644
+--- a/apps/visioeditor/main/app/controller/Main.js
++++ b/apps/visioeditor/main/app/controller/Main.js
+@@ -1689,9 +1689,7 @@ define([
+                 if (!this._state.customizationDone) {
+                     this._state.customizationDone = true;
+                     if (this.appOptions.customization) {
+-                        if (this.appOptions.isDesktopApp)
+-                            this.appOptions.customization.about = false;
+-                        else if (!this.appOptions.canBrandingExt)
++                        if (!this.appOptions.canBrandingExt)
+                             this.appOptions.customization.about = true;
+                     }
+                     Common.Utils.applyCustomization(this.appOptions.customization, mapCustomizationElements);
+-- 
+2.55.0
+

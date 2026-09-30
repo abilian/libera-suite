@@ -16,7 +16,7 @@
 	flatpak flatpak-wheels flatpak-check flatpak-smoke flatpak-shell \
 	released-gui \
 	test-linux gui-linux lint-linux dialog-linux \
-	docs-serve docs-check
+	docs-serve docs-check docs-publish
 
 # `make` on its own prints this. The default goal used to be `all`, which is
 # lint and the test suite -- useful, but not what an unfamiliar reader wants
@@ -47,12 +47,34 @@ verify: lint test docs-check patches smoke ## everything: lint, tests, docs link
 
 lint: lint-py lint-js ## ruff, ty, pyrefly, mypy on src, plus biome on the bridge JS
 
+# The type checkers run once per platform, wherever `make lint` runs.
+#
+# `sys.platform` is a fact at check time: a checker prunes the branches for
+# every other platform before looking at them, and reports an attribute that
+# only exists elsewhere -- `os.startfile`, `ctypes.windll`, `pwd` -- as missing.
+# So each machine used to lint clean on code that failed on the others. Three
+# rounds of it reached main from Windows (SO_EXCLUSIVEADDRUSE, then four
+# `startfile`/`windll` reads), and one went the other way unseen: `pwd` in a
+# path Windows reaches, which only ran because a swallowed ImportError hid it.
+#
+# Each checker spells the flag and the platform its own way, hence three lists.
+# About five seconds for all nine, against one for three.
+TY_PLATFORMS      := darwin linux win32
+PYREFLY_PLATFORMS := darwin linux windows
+MYPY_PLATFORMS    := darwin linux win32
+
 lint-py:
 	uv run --active ruff check
 	uv run --active ruff format --check
-	uv run --active ty check src
-	uv run --active pyrefly check src
-	uv run --active mypy src
+	@set -e; for p in $(TY_PLATFORMS); do \
+		echo "uv run --active ty check --python-platform $$p src"; \
+		uv run --active ty check --python-platform $$p src; done
+	@set -e; for p in $(PYREFLY_PLATFORMS); do \
+		echo "uv run --active pyrefly check --python-platform $$p src"; \
+		uv run --active pyrefly check --python-platform $$p src; done
+	@set -e; for p in $(MYPY_PLATFORMS); do \
+		echo "uv run --active mypy --platform $$p src"; \
+		uv run --active mypy --platform $$p src; done
 	# uv run --active mypy --strict src
 
 # The bridge is JavaScript and ruff has nothing to say about it.
@@ -407,6 +429,11 @@ docs-serve: ## preview the documentation site
 
 docs-check: ## build the docs, failing on a broken link
 	$(MAKE) -C docs check
+
+# The site is its own deployment and no part of `ship`: it carries no version,
+# refers to no artifact by hash, and a typo in it should not wait for a release.
+docs-publish: ## deploy the documentation site to docs.liberasuite.eu
+	$(MAKE) -C docs publish
 
 ##@ Packaging
 # --- packaging ---------------------------------------------------------------

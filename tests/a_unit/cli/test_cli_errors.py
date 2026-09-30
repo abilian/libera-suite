@@ -156,7 +156,8 @@ def test_a_missing_file_is_reported_even_when_no_window_can_be_opened(
     code, out = run(["/nope/missing.docx"], capsys)
 
     assert code == 1
-    assert "no such file: /nope/missing.docx" in out.err
+    # As the platform spells the path: backslashes on Windows.
+    assert f"no such file: {pathlib.Path('/nope/missing.docx')}" in out.err
     assert "GTK" not in out.err, "the environment buried the typo"
 
 

@@ -17,7 +17,7 @@ real installs will find things no amount of testing here would, because every
 check in this repository runs on a machine that built the thing.
 
 **Installing the payload without a terminal** is what used to be here. Every
-channel that can carry the editors now does: the Flatpak has them inside it,
+channel that can ship the editors now does: the Flatpak has them inside it,
 and `curl … | sh` fetches them without the user naming a directory. The one
 channel that cannot is PyPI, whose users are at a prompt already. A window that
 offers to download still has a place as a fallback, though it gates nothing.
@@ -28,7 +28,7 @@ offers to download still has a place as a fallback, though it gates nothing.
 
 **A `.flatpakref`.** Both bundles are built, hosted and installable today, and a document converts inside the sandbox on each. The one-URL install is still missing: a `.flatpakref` on a server, and Flathub after that.
 
-**Keyboard shortcuts on Linux.** The menu bar is there and every item on it works. None of them has a key equivalent, because pywebview's GTK menu carries none: giving the bar shortcuts means reaching past it to `Gtk.Application.set_accels_for_action`, and then deciding which keys the page has to stop handling.
+**Keyboard shortcuts on Linux.** The menu bar is there and every item on it works. None of them has a key equivalent, because pywebview's GTK menu has none: giving the bar shortcuts means reaching past it to `Gtk.Application.set_accels_for_action`, and then deciding which keys the page has to stop handling.
 
 **An update path.** Nothing tells a tester that a newer version exists. Saying so in the release notes is enough for a beta. A version check that mentions it once is better. Automatic updates are their own project.
 
@@ -52,7 +52,7 @@ offers to download still has a place as a fallback, though it gates nothing.
 
 **More fonts, particularly CJK.** The shipped set is 7 MB and renders ordinary documents faithfully; the full set is 248 MB. Where the line goes is an open decision, with CJK the case that most obviously argues for moving it.
 
-**In-application help.** Upstream ships a manual, but it documents ONLYOFFICE and weighs 84 MB in eight languages, so Libera Suite does not carry it. Help comes back when there is documentation of our own to point at; these pages are the substitute.
+**In-application help.** Upstream ships a manual, but it documents ONLYOFFICE and weighs 84 MB in eight languages, so Libera Suite does not ship it. Help comes back when there is documentation of our own to point at; these pages are the substitute.
 
 ## Not now
 
@@ -62,7 +62,7 @@ These are outside the current product. Each could arrive one day, in the shape d
 
 **Telemetry, analytics, crash reporting.** There is none today. The beta adds none. Anything of the kind would be opt-in and off until you turn it on. [What leaves your machine](../index.md#what-leaves-your-machine) would list it beside everything else the application does on the network.
 
-**Changing the document engine.** Not something we do today. The patch queue is 34 patches across three repositories. Twenty-one make it build on macOS and six on Windows. Five more are configuration, branding and build fixes, and one fixes an upstream UI bug. **None touches the editing engine** (see [the patch queue](patches.md)). That is what keeps a pin bump a rebase of build configuration. It is a discipline, so if we ever do need the engine to behave differently, the change is carried the same way: one reviewable patch, offered upstream first.
+**Changing the document engine.** Not something we do today. The patch queue is 34 patches across three repositories. Twenty-one make it build on macOS and six on Windows. Five more are configuration, branding and build fixes, and one fixes an upstream UI bug. **None touches the editing engine** (see [the patch queue](patches.md)). That is what keeps a pin bump a rebase of build configuration. It is a discipline, so if we ever do need the engine to behave differently, the change goes in the same way: one reviewable patch, offered upstream first.
 
 ## How to influence this
 

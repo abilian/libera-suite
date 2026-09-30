@@ -6,6 +6,8 @@ exits the way the shell expects and says why on stderr.
 
 from __future__ import annotations
 
+import pathlib
+
 from c_e2e.conftest import libera
 
 
@@ -16,7 +18,8 @@ def test_it_says_what_it_is():
 def test_it_refuses_a_file_that_is_not_there():
     run = libera("/nope/missing.docx")
     assert run.returncode == 1
-    assert "no such file: /nope/missing.docx" in run.stderr
+    # As the platform spells the path: backslashes on Windows.
+    assert f"no such file: {pathlib.Path('/nope/missing.docx')}" in run.stderr
 
 
 def test_it_takes_several_documents(tmp_path):

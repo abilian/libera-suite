@@ -75,7 +75,7 @@ else
     echo "==> JS build jobs: $BUILD_JOBS (from $(usable_gb) GB usable)"
 fi
 
-[ -x "$OUT/core/bin/x2t" ] || { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
+[ -x "$OUT/core/bin/x2t$EXE" ] || { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
 for repo in sdkjs web-apps; do
     [ -d "$SRC/$repo" ] || { echo "FATAL: no $SRC/$repo -- run build.sh fetch $repo" >&2; exit 1; }
 done
@@ -209,7 +209,7 @@ cp "$BLANK_SRC"/new.* "$PAYLOAD/empty/"
 
 # The defaults these carry are what every new document inherits, so check them
 # rather than trust them.
-python3 - "$PAYLOAD/empty/new.docx" <<'CHECK'
+py - "$PAYLOAD/empty/new.docx" <<'CHECK'
 import re, sys, zipfile
 d = re.search(r"<w:docDefaults>.*?</w:docDefaults>",
               zipfile.ZipFile(sys.argv[1]).read("word/styles.xml").decode("utf-8", "replace"), re.S)
@@ -222,7 +222,24 @@ CHECK
 # One payload root, as notes/05-packaging.md defines it: the binaries belong
 # under it, so LIBERA_PAYLOAD pointing here is a payload the host accepts.
 # A symlink rather than a copy, so a rebuilt core is picked up with no action.
-ln -sfn "$OUT/core/bin" "$PAYLOAD/bin"
+#
+# On Windows, a directory junction. Git Bash's `ln -s` makes a *copy* unless
+# MSYS=winsymlinks is set, and a native symlink wants Developer Mode or an
+# elevated shell, where a junction wants neither. Git Bash sees a junction as
+# a symlink (`[ -L ]` is true), and `rm -rf` on one removes the link and leaves
+# core/bin alone -- both measured, since the other outcome deletes the build.
+#
+# MSYS2_ARG_CONV_EXCL, because MSYS rewrites any argument that looks like a
+# path, and `/J` does: mklink then gets a drive path where its switch was and
+# answers `Invalid switch`. With conversion off, `/c` is spelled plainly too.
+if [ -n "$EXE" ]; then
+    rm -rf "$PAYLOAD/bin"
+    MSYS2_ARG_CONV_EXCL='*' cmd /c mklink /J \
+        "$(cygpath -w "$PAYLOAD/bin")" "$(cygpath -w "$OUT/core/bin")" >/dev/null
+else
+    ln -sfn "$OUT/core/bin" "$PAYLOAD/bin"
+fi
+[ -f "$PAYLOAD/bin/x2t$EXE" ] || { echo "FATAL: $PAYLOAD/bin does not reach x2t" >&2; exit 1; }
 
 generate_fonts "$PAYLOAD"
 
@@ -292,13 +309,16 @@ fi
 # x2t looks for DoctRenderer.config beside its own binary, and the one shipped
 # in upstream packages has relative paths for the DocumentServer tree.
 echo "==> DoctRenderer.config"
+# winpath, because x2t.exe reads this file and MSYS only rewrites arguments,
+# never file contents: /c/b/... in here is a path no Windows program can open.
+P="$(winpath "$PAYLOAD")"
 cat > "$OUT/core/bin/DoctRenderer.config" <<CONF
 <Settings>
-<file>$PAYLOAD/sdkjs/common/Native/native.js</file>
-<file>$PAYLOAD/sdkjs/common/Native/jquery_native.js</file>
-<allfonts>$PAYLOAD/AllFonts.js</allfonts>
-<file>$PAYLOAD/web-apps/vendor/xregexp/xregexp-all-min.js</file>
-<sdkjs>$PAYLOAD/sdkjs</sdkjs>
+<file>$P/sdkjs/common/Native/native.js</file>
+<file>$P/sdkjs/common/Native/jquery_native.js</file>
+<allfonts>$P/AllFonts.js</allfonts>
+<file>$P/web-apps/vendor/xregexp/xregexp-all-min.js</file>
+<sdkjs>$P/sdkjs</sdkjs>
 </Settings>
 CONF
 

@@ -16,6 +16,8 @@
 #
 #   ARCH=amd64   x86_64 instead of this machine's architecture
 #   DIST=DIR     payload artifacts to install from (default: the container build's)
+#   PAYLOAD=DIR  an unpacked payload to use as-is, when no DIST matches
+#                this checkout's PAYLOAD_VERSION
 #
 # `test` and `gui` cover different halves and neither subsumes the other. The
 # suite drives `libera --serve` with headless Chromium, which is the editor and
@@ -82,6 +84,26 @@ run() {
         -w /repo \
         "$@"
 
+    # PAYLOAD=DIR: an already-unpacked payload, instead of installing artifacts
+    # from $DIST. LIBERA_PAYLOAD is taken as given and its version is not
+    # checked -- deliberately, per payload/locate.py -- which is the only way in
+    # when the checkout's PAYLOAD_VERSION has moved ahead of every payload on
+    # the machine. Here that is 0.3 against a 0.1 and a 0.2, so
+    # `--payload-install --from /dist` refuses with "manifest is for payload
+    # 0.2, this libera needs 0.3" and no window check can run at all.
+    if [ -n "${PAYLOAD:-}" ]; then
+        set -- "$@" -v "$PAYLOAD:/payload:ro" -e LIBERA_PAYLOAD=/payload
+    fi
+
+    # And the artifacts, only when they are there. Every caller used to pass
+    # this mount itself, so a $DIST that does not exist -- which is the default
+    # now that PAYLOAD_VERSION is 0.3 and no 0.3 dist has been built here --
+    # made the engine refuse to start with "statfs .../dist/0.3: no such file
+    # or directory", before anything had a chance to say what it wanted.
+    if [ -d "$DIST" ]; then
+        set -- "$@" -v "${DIST}:/dist:ro"
+    fi
+
     # pytest's cache and __pycache__ would otherwise land in the bind-mounted
     # repository, owned by root on a Linux host and mixed in with the Mac's own.
     set -- "$@" -e PYTHONPYCACHEPREFIX=/tmp/pycache
@@ -103,7 +125,7 @@ run() {
 # Not `make payload-install`: that shells back out to build/docker.sh export,
 # which is the other container.
 prepare() {
-    [ -d "$DIST" ] || {
+    [ -n "${PAYLOAD:-}" ] || [ -d "$DIST" ] || {
         say "FATAL: no payload artifacts in $DIST" >&2
         say "       build them:  BUILD_DIR=... ARCH=$ARCH sh build/docker.sh all" >&2
         say "       then export: ARCH=$ARCH sh build/docker.sh export" >&2
@@ -128,6 +150,8 @@ prepare() {
             /venv/pyvenv.cfg
         uv run --no-sync python -c 'import gi' \
             || { echo 'FATAL: the venv still cannot import gi' >&2; exit 1; }
+        # With PAYLOAD=DIR this passes on the mounted payload and installs
+        # nothing; with DIST it installs, which is what a user does.
         uv run --no-sync libera --payload-status >/dev/null 2>&1 \
             || uv run --no-sync libera --payload-install --from /dist
         # Playwright's own Chromium, which is not the same browser as the
@@ -140,8 +164,7 @@ prepare() {
         # PLAYWRIGHT_BROWSERS_PATH points into the venv volume, so this is a
         # download once and a no-op after.
         uv run --no-sync playwright install chromium >/dev/null 2>&1 \
-            || { echo 'FATAL: playwright could not install a browser' >&2; exit 1; }" \
-        -v "$DIST:/dist:ro"
+            || { echo 'FATAL: playwright could not install a browser' >&2; exit 1; }"
 }
 
 # The type checkers, on Linux.
@@ -162,8 +185,7 @@ cmd_lint() {
         uv run --no-sync ruff format --check
         uv run --no-sync ty check src
         uv run --no-sync pyrefly check src
-        uv run --no-sync mypy src" \
-        -v "$DIST:/dist:ro"
+        uv run --no-sync mypy src"
 }
 
 cmd_test() {
@@ -171,7 +193,7 @@ cmd_test() {
     step "pytest"
     # -p no:cacheprovider for the same reason as PYTHONPYCACHEPREFIX: nothing
     # this run does should show up in `git status` on the host.
-    run "uv run --no-sync pytest -p no:cacheprovider $*" -v "$DIST:/dist:ro"
+    run "uv run --no-sync pytest -p no:cacheprovider $*"
 }
 
 # The three questions the host asks, on the platform where they were answered
@@ -181,8 +203,7 @@ cmd_dialog() {
     step "the GTK question, under Xvfb"
     run "set -e
         xvfb-run -a --server-args='-screen 0 1600x1000x24' \
-            uv run --no-sync python build/test-linux/dialog-smoke.py" \
-        -v "$DIST:/dist:ro"
+            uv run --no-sync python build/test-linux/dialog-smoke.py"
 }
 
 cmd_gui() {
@@ -198,12 +219,20 @@ cmd_gui() {
     # no GPU: without them WebKit tries an accelerated path, and what comes back
     # is a window that maps and never paints -- which is exactly the failure
     # gui-smoke.py is looking for, so it would report a real bug that is not one.
+    # Two documents, and of different types, because that is the shape a beta
+    # tester reported as impossible against the Flatpak -- and because the code
+    # that opens the second one is not the code that opens the first.
+    # app.py's _open_rest had a wait that waited for nothing; a harness with one
+    # document cannot tell. The payload ships a blank of each kind, so the
+    # presentation costs a copy.
     run "set -e
         uv run --no-sync python tests/support/make_sample_docx.py /tmp/sample.docx >/dev/null
+        root=\$(uv run --no-sync python -c 'from libera.payload import locate; print(locate.resolve().root)')
+        cp \"\$root/empty/new.pptx\" /tmp/sample.pptx
         export WEBKIT_DISABLE_COMPOSITING_MODE=1 LIBGL_ALWAYS_SOFTWARE=1
         xvfb-run -a --server-args='-screen 0 1600x1000x24' \
-            uv run --no-sync python build/test-linux/gui-smoke.py /tmp/sample.docx /repo/build/out/gui-linux.png" \
-        -v "$DIST:/dist:ro"
+            uv run --no-sync python build/test-linux/gui-smoke.py \
+                /tmp/sample.docx /tmp/sample.pptx /repo/build/out/gui-linux.png"
     say "    screenshot: build/out/gui-linux.png"
 }
 

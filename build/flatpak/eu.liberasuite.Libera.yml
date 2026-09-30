@@ -90,6 +90,10 @@ modules:
           /app/share/applications/eu.liberasuite.Libera.desktop
       - install -Dm644 eu.liberasuite.Libera.svg
           /app/share/icons/hicolor/scalable/apps/eu.liberasuite.Libera.svg
+      # AppStream: what a software centre shows before anything is installed,
+      # including the developer, the licence and the upstream attribution.
+      - install -Dm644 eu.liberasuite.Libera.metainfo.xml
+          /app/share/metainfo/eu.liberasuite.Libera.metainfo.xml
     sources:
       # Named one by one rather than `path: .`, which would also copy
       # flatpak-builder's own .flatpak-builder cache into the build.
@@ -106,3 +110,5 @@ modules:
         path: eu.liberasuite.Libera.desktop
       - type: file
         path: eu.liberasuite.Libera.svg
+      - type: file
+        path: eu.liberasuite.Libera.metainfo.xml

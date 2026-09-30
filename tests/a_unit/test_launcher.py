@@ -75,7 +75,10 @@ def test_a_path_with_a_space_is_quoted(data_home, monkeypatch, tmp_path):
     monkeypatch.setattr(sys, "argv", [str(odd)])
     launcher.install()
     command = entry(data_home)["Desktop Entry"]["Exec"]
-    assert command == f'"{odd}" %F'
+    # The spec escapes a backslash inside quotes, and a Windows path is full of
+    # them; on POSIX the replace is a no-op.
+    escaped = str(odd).replace("\\", "\\\\")
+    assert command == f'"{escaped}" %F'
 
 
 def test_nothing_but_exec_is_rewritten(data_home):

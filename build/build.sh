@@ -64,12 +64,29 @@ setup_env() {
     # read as well as what they print, and every python cmake spawns inherits
     # it -- including the 3.14 out of hostedtoolcache that cmake finds rather
     # than the 3.12 on PATH.
+    #
+    # NoDefaultCurrentDirectoryInExePath goes, on the same machines. It is a
+    # hardening switch that stops cmd.exe finding a program in its own current
+    # directory, and upstream's batch files are written against the default:
+    # boost's build.bat runs `call config_toolset.bat` from the directory the
+    # file sits in, and with the variable set that is "not recognized as an
+    # internal or external command" for a file that is right there. A shell
+    # that sets it -- an agent's, a locked-down CI's -- otherwise stops boost
+    # before anything has compiled. Unset for the build's children only.
     case "$(uname -s)" in
-    MINGW* | MSYS* | CYGWIN*) export PYTHONUTF8=1 ;;
+    MINGW* | MSYS* | CYGWIN*)
+        export PYTHONUTF8=1
+        unset NoDefaultCurrentDirectoryInExePath
+        ;;
     # An `if` and not `[ ... ] && export`: the && list returns the test's
     # status, which is the case statement's status, which under set -e ends
     # setup_env on every machine that is not Windows.
-    *) if [ "${OS:-}" = "Windows_NT" ]; then export PYTHONUTF8=1; fi ;;
+    *)
+        if [ "${OS:-}" = "Windows_NT" ]; then
+            export PYTHONUTF8=1
+            unset NoDefaultCurrentDirectoryInExePath
+        fi
+        ;;
     esac
     # V8 defaults to one compile job per core, and linking v8_monolith takes
     # roughly 2 GB a job, so a machine with fewer gigabytes than twice its cores
@@ -159,11 +176,29 @@ fetch_repo() {
         }
     fi
 
+    # In the clone's own config, before the checkout, and on every run so an
+    # older clone is corrected too. Git for Windows installs with
+    # core.autocrlf=true in its *system* config, which rewrites every text
+    # file on checkout, and the patch queue's context lines then match
+    # nothing. The GitHub runner got away with a --global override; a machine
+    # whose other checkouts want CRLF cannot. core.longpaths because V8's tree
+    # is deeper than Windows' 260 characters, and a clone that hits it reports
+    # "Filename too long", which reads like a corrupt repository.
+    git -C "$dst" config core.autocrlf false
+    git -C "$dst" config core.eol lf
+    git -C "$dst" config core.longpaths true
+
     echo "==> $repo @ $sha"
     git -C "$dst" fetch --quiet --all 2>/dev/null ||
         echo "    (fetch skipped: upstream unreachable or throttled)"
     # Hard reset, so a re-run starts from pristine upstream rather than from
     # whatever the last patch attempt left behind.
+    # A series that stopped halfway leaves git am's state behind, and the next
+    # am then refuses to start ("previous rebase directory still exists"),
+    # which is not the error that matters.
+    if [ -d "$dst/.git/rebase-apply" ]; then
+        git -C "$dst" am --abort 2>/dev/null || rm -rf "$dst/.git/rebase-apply"
+    fi
     git -C "$dst" checkout --quiet --force --detach "$sha"
     git -C "$dst" clean -qfdx
 
@@ -246,6 +281,23 @@ cmd_configure() {
         }
         set -- "-DEO_CORE_OPENSSL_DIR=$openssl_prefix"
         echo "==> $1"
+    fi
+
+    # Links get a ninja pool of their own on Windows, sized by memory, apart
+    # from the compile job count. Measured on a 4-core, 8 GB machine: link.exe
+    # peaks at 2.9 GB on x2tlib.dll, and x2tlib, docbuilder and x2t link at the
+    # end side by side. Three jobs compile comfortably and then three links ask
+    # for 9 GB; processes that can no longer start die with 0xC0000142
+    # (STATUS_DLL_INIT_FAILED), three steps from the end of a three-hour build.
+    # A cache variable, so it is set here and not at build time. Four gigabytes
+    # a link rather than three: the compile jobs still run beside the links,
+    # and at three an 8 GB machine gets two links plus a compiler, which is
+    # the edge it already fell off once.
+    if on_windows; then
+        link_jobs=$(( ($(usable_gb) - 1) / 4 ))
+        [ "$link_jobs" -lt 1 ] && link_jobs=1
+        set -- "$@" "-DCMAKE_JOB_POOLS=link=$link_jobs" "-DCMAKE_JOB_POOL_LINK=link"
+        echo "==> link jobs: $link_jobs (link.exe peaks near 3 GB)"
     fi
 
     echo "==> cmake configure (no vcpkg toolchain: surface the plain-CMake gaps first)"
@@ -374,6 +426,31 @@ mtime() {
     stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0
 }
 
+# The Visual C++ runtime, beside the binaries that import it.
+#
+# Core is built against the DLL CRT (core patch 0028), so every module imports
+# vcruntime140.dll, vcruntime140_1.dll and msvcp140.dll -- counted off the
+# built bin/ with dumpbin, and nothing else from the redistributable. The
+# api-ms-win-crt-* half is the Universal CRT, which Windows 10 and later carry
+# themselves. The three are Microsoft's to redistribute and this is their
+# documented app-local deployment: a user who never installed the VC++
+# redistributable still gets an x2t that starts. tools/ gets a copy as well,
+# because Windows looks beside the executable before it looks on PATH.
+copy_msvc_runtime() {
+    redist="$(ls -d "$(cygpath -u "${VCToolsRedistDir:-}")"/x64/Microsoft.VC*.CRT 2>/dev/null | tail -1)"
+    [ -n "$redist" ] || {
+        echo "FATAL: no x64 CRT under VCToolsRedistDir=${VCToolsRedistDir:-<unset>}" >&2
+        exit 1
+    }
+    for dll in vcruntime140.dll vcruntime140_1.dll msvcp140.dll; do
+        for dir in "$OUT/core/bin" "$OUT/core/bin/tools"; do
+            cp "$redist/$dll" "$dir/"
+            [ -s "$dir/$dll" ] || { echo "FATAL: $dll did not reach $dir" >&2; exit 1; }
+        done
+    done
+    echo "==> MSVC runtime from $redist"
+}
+
 cmd_build() {
     msvc_env
     setup_env
@@ -432,7 +509,8 @@ cmd_build() {
     # The installer runs allfontsgen out of the payload, so it has to sit with
     # the libraries it links and be relocated along with them.
     mkdir -p "$OUT/core/bin/tools"
-    cp "$OUT/core/tools/allfontsgen" "$OUT/core/bin/tools/"
+    cp "$OUT/core/tools/allfontsgen$EXE" "$OUT/core/bin/tools/"
+    if on_windows; then copy_msvc_runtime; fi
     echo "==> relocatable check"
     relocate "$OUT/core/bin"
 }

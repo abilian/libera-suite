@@ -15,13 +15,14 @@ Run specific test types:
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 
 import pytest
-from support import make_sample_docx
+from support import build_roots, make_sample_docx
 
 from libera import logs, payload
-from libera.host import session
+from libera.host import instance, session
 
 
 def _built_payload() -> Path | None:
@@ -41,12 +42,48 @@ def _built_payload() -> Path | None:
 
     The candidates are build/common.sh's, in its order, because a fallback
     that only fires on one platform is worse than none: it works on the box
-    you tried it on and skips silently on the other.
+    you tried it on and skips silently on the other. `support.build_roots`
+    holds that list, because the dist lookup in test_payload.py needs the same
+    one and two copies drift.
     """
-    roots = [os.environ["BUILD_ROOT"]] if os.environ.get("BUILD_ROOT") else []
-    roots += ["/Volumes/T7-EXT-2T/euro-office-build", Path.home() / "euro-office-build"]
-    for root in roots:
-        tree = Path(root) / "out" / "payload"
+    for root in build_roots():
+        tree = root / "out" / "payload"
+        if payload.looks_complete(tree):
+            return tree
+    return None
+
+
+def _installed_payload() -> Path | None:
+    """Any payload `libera --payload-install` has already put on this machine.
+
+    The same argument as `_built_payload`, one directory along, and the case it
+    does not cover: an installed payload is not a build tree, so the search
+    above walks past it. `resolve()` refuses these because it demands
+    PAYLOAD_VERSION exactly -- right for a user, friction here.
+
+    Measured on the Linux box: the checkout wanted 0.3, a complete 0.2 sat in
+    the data directory, and the whole suite finished in 0.86 seconds reporting
+    "222 passed" with every tier above a_unit skipped. A skip and a pass look
+    the same in that line, which is what made it worth automating rather than
+    documenting an `export`.
+
+    Newest first, and by number rather than by name: sorted() puts "0.10"
+    before "0.9".
+    """
+
+    def version(path: Path) -> tuple[int, ...]:
+        try:
+            return tuple(int(part) for part in path.name.split("."))
+        except ValueError:
+            return ()
+
+    root = payload.data_dir()
+    if not root.is_dir():
+        return None
+    installed = sorted(
+        (p for p in root.iterdir() if p.is_dir()), key=version, reverse=True
+    )
+    for tree in installed:
         if payload.looks_complete(tree):
             return tree
     return None
@@ -55,12 +92,38 @@ def _built_payload() -> Path | None:
 try:
     PAYLOAD = payload.resolve()
 except payload.PayloadError:
-    built = _built_payload()
-    if built is not None:
+    # The build tree first: it is what this checkout built, so it is the
+    # closest thing to the code under test.
+    found = _built_payload() or _installed_payload()
+    if found is not None:
         # Ahead of any import that resolves it, so the host under test agrees
         # with the fixtures about which payload this is.
-        os.environ["LIBERA_PAYLOAD"] = str(built)
-    PAYLOAD = payload.resolve() if built is not None else None
+        os.environ["LIBERA_PAYLOAD"] = str(found)
+    PAYLOAD = payload.resolve() if found is not None else None
+
+
+def pytest_report_header() -> list[str]:
+    """Name the payload before anything runs.
+
+    The summary line cannot distinguish a tier that skipped from one that
+    passed, and this suite has reported "222 passed" in 0.86 seconds on a
+    machine where nothing above a_unit ran. Whatever else is true, the run now
+    says which payload it found and whether it is the one this tree expects.
+    """
+    if PAYLOAD is None:
+        return [
+            "libera payload: NONE -- every tier above a_unit will skip",
+            (
+                f"  wanted {payload.PAYLOAD_VERSION}: `make payload-all`,"
+                " `libera --payload-install`, or LIBERA_PAYLOAD=DIR"
+            ),
+        ]
+    found = PAYLOAD.info().get("payload_version", "unknown")
+    line = f"libera payload: {PAYLOAD.root} (payload {found})"
+    if found != payload.PAYLOAD_VERSION:
+        line += f" -- this tree wants {payload.PAYLOAD_VERSION}"
+    return [line]
+
 
 NEEDS_PAYLOAD = pytest.mark.skip(
     reason=(
@@ -68,6 +131,25 @@ NEEDS_PAYLOAD = pytest.mark.skip(
         "`libera --payload-install` installs one, or set LIBERA_PAYLOAD"
     )
 )
+
+
+# Nowhere: a directory no test and no application ever creates.
+NO_INSTANCE = Path(tempfile.gettempdir()) / "libera-tests-no-instance" / "instance.json"
+
+
+def pytest_runtest_setup(item):
+    """Keep every test away from a Libera Suite running on this machine.
+
+    `libera FILE` hands its documents to a running instance before it does
+    anything else, and finds one through instance.json in the real state
+    directory. Run on a machine where Libera Suite was open, the CLI tests
+    handed their temporary documents to it -- measured: they opened as windows
+    on the desktop, and the tests failed because nothing reached their stubs.
+
+    A hook rather than an autouse fixture, like the teardown below. Tests of
+    the hand-off itself point it back at a directory of their own.
+    """
+    instance.path = lambda: NO_INSTANCE
 
 
 def pytest_runtest_teardown(item):

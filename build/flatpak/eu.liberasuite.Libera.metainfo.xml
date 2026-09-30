@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata, which is what a software centre reads.
+
+     It carries the attribution into a surface no menu reaches: GNOME Software
+     and KDE Discover show developer_name, project_license and the description
+     before anything is installed. `project_license` is AGPL-3.0-or-later and
+     not Apache-2.0 on purpose: this file describes the *bundle*, which carries
+     the editors, and the strictest licence in it is the one that governs
+     redistributing the whole.
+
+     Flathub requires this file, so it is also the first step of the listing on
+     the roadmap. Check it with `appstreamcli validate`. -->
+<component type="desktop-application">
+  <id>eu.liberasuite.Libera</id>
+  <name>Libera Suite</name>
+  <summary>Documents, spreadsheets, presentations and diagrams, on your own machine</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-or-later</project_license>
+  <developer id="com.abilian">
+    <name>Abilian SAS</name>
+  </developer>
+
+  <description>
+    <p>
+      Libera Suite is a desktop office suite: a word processor, a spreadsheet, a
+      presentation editor and a Visio viewer. It opens the documents other
+      people send you, edits them on your machine and saves them back. There is
+      no account to create, no document server, and nothing in it that reports
+      back.
+    </p>
+    <p>
+      Libera Suite includes components from Euro-Office, itself a fork of
+      ONLYOFFICE by Ascensio System SIA. Those components are free software
+      under the GNU AGPL v3 and are modified. The exact upstream revisions each
+      build came from, and every change applied to them, are published with the
+      source; the application prints them with
+      <code>libera --payload-status</code>.
+    </p>
+    <p>
+      The host around those components is written by Abilian and is
+      Apache-2.0. Both licences, and how to obtain the corresponding source,
+      are on the documentation site.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">eu.liberasuite.Libera.desktop</launchable>
+
+  <url type="homepage">https://docs.liberasuite.eu/</url>
+  <url type="help">https://docs.liberasuite.eu/guide/</url>
+  <url type="bugtracker">https://github.com/abilian/libera-suite/issues</url>
+  <url type="vcs-browser">https://github.com/abilian/libera-suite</url>
+
+  <categories>
+    <category>Office</category>
+    <category>WordProcessor</category>
+    <category>Spreadsheet</category>
+    <category>Presentation</category>
+  </categories>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.2.2" date="2026-09-28">
+      <description>
+        <p>
+          Help now says where the documentation is when no browser can be
+          opened, and About names the upstream components and their licence on
+          both platforms.
+        </p>
+      </description>
+    </release>
+  </releases>
+</component>

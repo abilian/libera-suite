@@ -7,6 +7,7 @@ wheels/
 
 # Virtual environments
 .venv
+.python-version
 
 # The pulled Euro-Office payload the POC used. Nothing reads it any more;
 # everything comes from build/ now.
@@ -26,6 +27,7 @@ src/libera/manifest.json
 # Built documentation (docs/Makefile)
 /docs/site/
 /docs/.cache/
+/notes/pdf/
 
 # The macOS application bundle (build/macos-app.sh)
 /build/out/

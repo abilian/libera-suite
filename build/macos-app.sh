@@ -60,6 +60,11 @@ fi
 : "${MIN_MACOS:=14.0}"
 
 echo "==> Info.plist (minimum macOS $MIN_MACOS)"
+# The heredoc below is unquoted, because $VERSION and $MIN_MACOS have to expand.
+# That means backticks inside it are command substitution, including inside an
+# XML comment: two identifiers written in markdown habit as `org.libre...` were
+# run as commands, printed "command not found", and were deleted from every
+# Info.plist this script has ever written. Use double quotes in the comments.
 # CFBundleDocumentTypes is what puts Libera Suite in Finder's "Open With" and lets a
 # double-click reach us. LSHandlerRank Alternate: we claim to handle these, not
 # to own them -- taking .docx away from whatever the user already uses would be
@@ -83,7 +88,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>$MIN_MACOS</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSHumanReadableCopyright</key>
-  <string>Copyright © 2026 Abilian SAS. Based on Euro-Office and ONLYOFFICE.</string>
+  <string>Copyright © 2026 Abilian SAS. Includes modified AGPL v3 components from Euro-Office, a fork of ONLYOFFICE by Ascensio System SIA.</string>
   <!-- The macOS half of src/libera/launcher.desktop, and the two are meant to
        stay the same set: one entry per format host/apps.py routes to an
        editor and the system has a name for. This declared Words alone, so
@@ -96,11 +101,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
        Every identifier here was read out of the system rather than
        remembered, by asking UTType.typeWithFilenameExtension_ for each
        extension in apps.py. Two of its answers are deliberately not used.
-       `org.libreoffice.visio-document` for .vsdx comes from LibreOffice being
+       "org.libreoffice.visio-document" for .vsdx comes from LibreOffice being
        installed on the machine that asked, not from macOS, so claiming it
        would be claiming another application's type; Visio is therefore the one
        format the .desktop declares and this does not. And
-       `com.microsoft.word.doc` is left out with it: .doc opens and cannot be
+       "com.microsoft.word.doc" is left out with it: .doc opens and cannot be
        saved, so offering to edit one leads somewhere Save does not go.
 
        One dict per editor rather than per format, because Open With shows

@@ -48,7 +48,7 @@ make doctrenderer-jsc          # build doctrenderer against macOS's JavaScriptCo
 make doctrenderer-jsc-check    # convert a document with each engine, and compare the PDF
 ```
 
-Upstream abstracts the JS engine behind `js_internal/js_base.h` and carries two implementations, `v8` and `jsc`. The second is Objective-C++ against Apple's JavaScriptCore framework, and upstream's own qmake build turns it on for macOS. The CMake port we use defaults it off, so we build V8 on the Mac too: half an hour, and five of the `core` patches.
+Upstream abstracts the JS engine behind `js_internal/js_base.h` and ships two implementations, `v8` and `jsc`. The second is Objective-C++ against Apple's JavaScriptCore framework, and upstream's own qmake build turns it on for macOS. The CMake port we use defaults it off, so we build V8 on the Mac too: half an hour, and five of the `core` patches.
 
 Measured so far: it compiles with no patches, links the system framework, and renders the smoke document to a PDF with the same page, font and text-operator counts as V8. That is one four-line document, so it says the integration holds. Whether every document renders identically is a separate question.
 
@@ -104,7 +104,7 @@ ENGINE=podman make payload-container
 
 On Linux the choice has a consequence beyond taste. A bind mount passes uids through unchanged there, so a container running as root writes a build tree you cannot then delete without `sudo`. That is why `$BUILD_ROOT/linux-amd64` comes out owned by root on Fedora and by you on a Mac, where the daemon lives in a VM that maps ownership across the share. Rootless podman maps container root to your own uid through a user namespace, so the same build writes files you own.
 
-Two things do not carry over. Rootless podman cannot run the `--privileged` container that registers binfmt handlers, so a cross-architecture build needs them from the distribution instead, as `qemu-user-static`. podman also refuses an unqualified image name, where docker reads one as `docker.io/library/…` without saying so. The scripts therefore qualify the images they build themselves as `localhost/…` under podman, and pass `--pull=never` everywhere, so a missing image fails outright; nothing goes looking in the registries.
+Two things do not transfer. Rootless podman cannot run the `--privileged` container that registers binfmt handlers, so a cross-architecture build needs them from the distribution instead, as `qemu-user-static`. podman also refuses an unqualified image name, where docker reads one as `docker.io/library/…` without saying so. The scripts therefore qualify the images they build themselves as `localhost/…` under podman, and pass `--pull=never` everywhere, so a missing image fails outright; nothing goes looking in the registries.
 
 **That base is what sets the floor for everybody who installs the result.**
 Built on 22.04, the shipped `x2t` asks for glibc 2.34 and GLIBCXX 3.4.26, which
@@ -151,7 +151,7 @@ Three things are pinned, as `ARG`s at the top of `build/docker/Dockerfile`, beca
 | `NODE_VERSION`, `NODE_SHA256_*` | the tarball from `nodejs.org`, by version and SHA-256 |
 | `CLANG_VERSION` | 14 on x86_64, 13 on arm64 (V8 8.9 demands exactly 13 there): see below |
 
-Node comes from a tarball, because NodeSource's `curl | bash` of `setup_20.x` adds a repository carrying whatever 20.x is current that week: the same Dockerfile built twice would get two different Nodes. The setup script itself is unpinned code fetched at build time.
+Node comes from a tarball, because NodeSource's `curl | bash` of `setup_20.x` adds a repository serving whatever 20.x is current that week: the same Dockerfile built twice would get two different Nodes. The setup script itself is unpinned code fetched at build time.
 
 **`CLANG_VERSION=14`** is the one pin that is not simply "the newest thing that works". V8 8.9 does not compile under clang 16 or later: `-Wenum-constexpr-conversion` became an error, which `src/base/bit-field.h:43` trips in every torque-generated file: about a hundred of them, a hundred files into a thirty-minute build. Clang is used for V8 and for nothing else, since `core` is a gcc build, so this pins one dependency's compiler and leaves the image's alone. `update-alternatives` puts the unversioned names where `nc-build.py` and gn look for them.
 
@@ -170,7 +170,25 @@ Two mounts:
 
 ## Windows
 
-Partly. There is no Windows machine here, so the work happens on a hosted runner: `.github/workflows/windows-probe.yml` checks the toolchain and the patch queue on every push, and builds `core` on request. That much works -- V8 compiles in about an hour, OpenSSL comes from vcpkg -- and `x2t` has never been run there. See `notes/14-windows.md` in the development repository.
+On a Windows machine, under Git Bash, after `build/windows-setup.ps1` has installed the tools (Inno Setup and the rest):
+
+```sh
+sh build/build.sh build && sh build/payload.sh && sh build/dist.sh   # the payload, core-windows-x86_64 included
+sh build/windows-app.sh                                              # the application and its installer
+```
+
+The first line takes hours, V8 alone about one, with OpenSSL from vcpkg. `windows-app.sh` refuses without its output: it wants the manifest and `core-windows-x86_64.tar.gz` under `$BUILD_ROOT/out/dist/<version>`. It writes the frozen application and `Libera-Suite-Setup-<version>.exe`, and copies the installer into `build/out/bundles/` with its SHA-256. Unlike the macOS `.app`, it embeds its own interpreter, because a Windows user has no Python.
+
+`make ship` does not build Windows, since no builder in `build/builders.toml` runs it. The installer is published from the Windows machine as well, before the release's `publish`:
+
+```sh
+read -rs CDN_TOKEN && export CDN_TOKEN
+sh build/origin.sh windows      # the installer, its .sha256, and Libera-Suite-Setup.exe
+```
+
+It checks the hash before uploading and each stored size after, and uploads nothing else. `install.ps1` installs the version named in `bundles/latest`, which the release's `publish` moves, so the installer is on the origin before any user is sent to it. On Windows, `windows` is the only publishing verb to run: `extras` also publishes `latest`, ahead of the Flatpak bundles it names, and `install.sh` from a Windows checkout, where Git for Windows once turned it to CRLF and broke `curl | sh` for everyone.
+
+`.github/workflows/windows-probe.yml` still checks the toolchain and the patch queue on every push. See `notes/14-windows.md` in the development repository.
 
 ## Notes
 

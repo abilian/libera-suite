@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 from importlib import resources
 
+from libera.host import about
 from libera.host.menu import actions
 from libera.host.shortcuts import COMMAND, NEW, SHIFT
 
@@ -141,6 +142,15 @@ def name_the_application() -> None:
     info = Foundation.NSBundle.mainBundle().infoDictionary()
     info["CFBundleName"] = "Libera"
     info["CFBundleDisplayName"] = "Libera Suite"
+
+    # And the attribution, for the same reason and out of the same dictionary.
+    # AppKit's standard About panel reads NSHumanReadableCopyright from the main
+    # bundle, which outside `Libera.app` is the interpreter's: "About Libera"
+    # showed *"(c) 2001-2023 Python Software Foundation"* and named neither
+    # upstream nor the licence. Measured on Homebrew's Python.app, which is what
+    # a pipx or uv install runs. Inside the bundle `macos-app.sh` already writes
+    # the same string, so this is a no-op there.
+    info["NSHumanReadableCopyright"] = about.COPYRIGHT
 
 
 def _wear_the_application_icon() -> None:

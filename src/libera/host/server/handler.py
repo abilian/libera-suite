@@ -6,10 +6,12 @@ and splices the bridge into every HTML page on the way out.
 
 from __future__ import annotations
 
+import hashlib
 import http.server
 import logging
 import pathlib
 import socket
+import sys
 import time
 import urllib.parse
 from typing import TYPE_CHECKING
@@ -24,6 +26,10 @@ if TYPE_CHECKING:
     from typing import Any, BinaryIO
 
 logger = logging.getLogger(__name__)
+
+# The editor registers a service worker at the origin root. This is the one it
+# gets: it caches nothing, and clears what upstream's cached.
+SERVICE_WORKER = pathlib.Path(__file__).with_name("service-worker.js")
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -84,6 +90,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             "open": post.post_open,
             "media-import": post.post_media_import,
             "open-document": post.post_open_document,
+            "hand-off": post.post_hand_off,
             "fullscreen": post.post_fullscreen,
             "reveal": post.post_reveal,
             "open-url": post.post_open_url,
@@ -115,7 +122,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.bind_session()
         try:
             if self.path == "/document_editor_service_worker.js":
-                self.send_bytes(H.service_worker.read_bytes(), "application/javascript")
+                # Ours, not the payload's: see service-worker.js for why.
+                self.send_bytes(SERVICE_WORKER.read_bytes(), "application/javascript")
                 return
             if self.path.startswith("/__host__/"):
                 self.serve_host(self.path[len("/__host__/") :].split("?")[0])
@@ -140,10 +148,57 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    # The ETag of the static file being served, if any; end_headers adds it.
+    _etag: str | None = None
+    _cache_control_sent = False
+
+    def send_response(self, code: int, message: str | None = None) -> None:
+        self._cache_control_sent = False
+        super().send_response(code, message)
+
+    def send_header(self, keyword: str, value: str) -> None:
+        if keyword.lower() == "cache-control":
+            self._cache_control_sent = True
+        super().send_header(keyword, value)
+
+    def end_headers(self) -> None:
+        """Every payload file revalidates, by ETag, before it is reused.
+
+        Without a Cache-Control, SimpleHTTPRequestHandler's Last-Modified is
+        all a browser has, and Chromium then reuses its copy on heuristic
+        freshness without asking. WebView2 keeps that cache for the origin,
+        127.0.0.1:43110, across payloads -- so a document opened against a
+        freshly installed payload ran sdkjs with the *previous* payload's
+        AllFonts.js: it asked for web fonts 075 and 154 of a set that has 32,
+        got 404s, and died in text shaping on a null m_pFaceInfo. A payload
+        update or a font regeneration would do the same to any user.
+        """
+        if self._etag is not None and self.command in {"GET", "HEAD"}:
+            self.send_header("ETag", self._etag)
+        if not self._cache_control_sent:
+            self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
     def send_head(self) -> io.BytesIO | BinaryIO | None:
-        """Splice the bridge into every HTML page, including the editor iframe."""
+        """Splice the bridge into every HTML page, including the editor iframe.
+
+        Any other file is the base class's, revalidated by ETag. Not by
+        modification time: files unpacked from the release archives keep the
+        archive's times, so two different payloads can hold the same name with
+        the same Last-Modified, and If-Modified-Since would answer 304 for the
+        wrong one. The tag is the file's full path, size and nanosecond mtime,
+        so a different payload root, or a regenerated file, is a different tag.
+        """
+        self._etag = None
         path = pathlib.Path(self.translate_path(self.path))
         if path.suffix != ".html" or not path.is_file():
+            if path.is_file():
+                self._etag = _etag(path)
+                if self._etag in self.headers.get("If-None-Match", ""):
+                    self.send_response(304)
+                    self.end_headers()
+                    return None
+                del self.headers["If-Modified-Since"]
             return super().send_head()
 
         body = path.read_bytes()
@@ -160,6 +215,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         return None if self.command == "HEAD" else __import__("io").BytesIO(body)
+
+
+def _etag(path: pathlib.Path) -> str:
+    st = path.stat()
+    identity = f"{path}|{st.st_size}|{st.st_mtime_ns}".encode()
+    return '"' + hashlib.sha256(identity).hexdigest()[:24] + '"'
 
 
 def check_ready() -> None:
@@ -188,6 +249,36 @@ class Server(http.server.ThreadingHTTPServer):
 
     payload: pathlib.Path
 
+    # On Windows SO_REUSEADDR is not about TIME_WAIT -- a listener rebinds
+    # through that without it -- but lets a second socket bind a port another
+    # is already listening on. Two instances would then share PREFERRED_PORT
+    # and split its requests between them.
+    allow_reuse_address = sys.platform != "win32"
+
+    def server_bind(self) -> None:
+        if sys.platform == "win32":
+            _exclusive(self.socket)
+        super().server_bind()
+
+
+def _exclusive(s: socket.socket) -> None:
+    """Refuse the port to every other socket while this one holds it.
+
+    **The `sys.platform` test belongs inside the function**, not only at the two
+    call sites that already have one. `SO_EXCLUSIVEADDRUSE` exists on Windows
+    alone, so a body that reads it unconditionally is an unresolved attribute to
+    every checker not running on Windows, and `make lint` on a Mac said so:
+    *"Module `socket` has no member `SO_EXCLUSIVEADDRUSE`"*. A checker narrows on
+    this comparison, so the guard here is the one it can see.
+
+    That is the mirror of the reason `make lint-linux` exists. `sys.platform` is
+    a fact at check time: a checker prunes the branches for other platforms,
+    which hides what is in them -- and reports what is *outside* a branch as
+    missing. Both halves want the platform test where the attribute is read.
+    """
+    if sys.platform == "win32":
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+
 
 def make_server(port: int) -> Server:
     check_ready()
@@ -211,7 +302,11 @@ def free_port() -> int:
         # TIME_WAIT for a couple of minutes after it closes, and without it a
         # relaunch inside that window silently lands on a different port --
         # which is to say, a different origin with none of the settings.
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Windows means something else by it: see Server.allow_reuse_address.
+        if sys.platform == "win32":
+            _exclusive(s)
+        else:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             s.bind(("127.0.0.1", PREFERRED_PORT))
         except OSError:

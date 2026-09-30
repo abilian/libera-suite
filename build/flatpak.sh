@@ -75,7 +75,16 @@ step() { printf '\n==> %s\n' "$*"; }
 
 [ $# -gt 0 ] || { sed -n '3,19p' "$0" | sed 's/^#\{1,\} \{0,1\}//'; exit 2; }
 
-build_image() { "$ENGINE" build --platform "linux/$ARCH" -t "$IMAGE" "$WORK"; }
+# The Dockerfile's checksum, as a label on the image. The name carries the
+# architecture and nothing else, so an image under it is not necessarily the one
+# the Dockerfile now describes: the builders kept a flatpak-builder 1.2.3 image
+# after the Dockerfile moved to 1.4, and would have built every bundle to its
+# last step and died there. build/docker.sh asks its image for the same reason.
+DOCKERFILE_SUM="$(cksum < "$WORK/Dockerfile" | cut -d' ' -f1)"
+build_image() {
+    "$ENGINE" build --platform "linux/$ARCH" \
+        --label "libera.dockerfile=$DOCKERFILE_SUM" -t "$IMAGE" "$WORK"
+}
 
 case "$1" in
 image) build_image; exit $? ;;
@@ -86,10 +95,13 @@ clean)
     ;;
 esac
 
-"$ENGINE" image inspect "$IMAGE" >/dev/null 2>&1 || {
+if ! had="$("$ENGINE" image inspect -f '{{index .Config.Labels "libera.dockerfile"}}' "$IMAGE" 2>/dev/null)"; then
     step "building the builder image first"
     build_image
-}
+elif [ "$had" != "$DOCKERFILE_SUM" ]; then
+    step "the builder image predates build/flatpak/Dockerfile; rebuilding it"
+    build_image
+fi
 
 # --privileged and /dev/fuse, because flatpak-builder runs each module inside a
 # bubblewrap user namespace and flatpak's installer mounts revokefs. Docker

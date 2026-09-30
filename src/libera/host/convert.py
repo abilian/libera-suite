@@ -10,7 +10,6 @@ from __future__ import annotations
 import dataclasses
 import functools
 import logging
-import os
 import pathlib
 import re
 import shutil
@@ -19,6 +18,7 @@ import subprocess
 from libera.host import apps, hooks
 from libera.host.desktop import open_externally
 from libera.host.session import H, NotReadyError, current_path, set_modified
+from libera.payload import locate
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +34,13 @@ def font_dir(index: pathlib.Path) -> pathlib.Path:
     x2t needs the directory as well as the index: given the wrong one,
     GetFontInfoByParams returns NULL and CPdfWriter::GetFontPath dereferences
     it, which is a segfault rather than an error.
+
+    The drive letter is optional because allfontsgen writes Windows paths as
+    `C:/...`, forward slashes and all.
     """
     m = re.search(
-        r'"(/(?:[^"]+))/[^/"]+\.(?:ttf|otf|ttc)"', index.read_text(encoding="utf-8")
+        r'"((?:[A-Za-z]:)?/[^"]+)/[^/"]+\.(?:ttf|otf|ttc)"',
+        index.read_text(encoding="utf-8"),
     )
     if not m:
         msg = f"no font paths in {index}; the payload was never generated"
@@ -50,18 +54,15 @@ def x2t_output(run: subprocess.CompletedProcess) -> str:
 
 
 def x2t(*args: str) -> subprocess.CompletedProcess:
-    """Run x2t out of the payload.
-
-    APPLICATION_NAME is what core writes into the <Application> field of saved
-    documents; it defaults to ONLYOFFICE, and it is not sdkjs's COMPANY_NAME.
-    """
-    env = dict(os.environ)
-    env.setdefault("APPLICATION_NAME", "Libera Suite")
-    env["DYLD_LIBRARY_PATH"] = str(H.payload / "bin")
-    env["LD_LIBRARY_PATH"] = str(H.payload / "bin")
+    """Run x2t out of the payload, in the environment `locate.tool_env` gives."""
     logger.debug("x2t %s", " ".join(args))
     return subprocess.run(
-        [str(H.x2t), *args], capture_output=True, text=True, check=False, env=env
+        [str(H.x2t), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=locate.tool_env(H.payload / "bin"),
+        creationflags=locate.NO_WINDOW,
     )
 
 

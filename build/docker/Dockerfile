@@ -201,7 +201,8 @@ RUN git config --system user.email "build@libera.invalid" \
 # The two assertions that stay here are the ones about *this image* rather than
 # about a toolchain: node and clang are pinned by ARG, so they are checked
 # against the ARG.
-COPY toolchain.sh /usr/local/bin/toolchain.sh
+# common.sh beside it, because toolchain.sh sources it from its own directory.
+COPY toolchain.sh common.sh /usr/local/bin/
 RUN set -eu; \
     sh /usr/local/bin/toolchain.sh check; \
     [ "v${NODE_VERSION}" = "$(node --version)" ] || { \

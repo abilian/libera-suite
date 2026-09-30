@@ -72,12 +72,14 @@ lint.extend-ignore = [
     "S607",   # xwininfo and scrot come from the image, by name
     "PLC0415", # PIL is imported where it is used: only this path needs it
 ]
-# desktop.py runs the system's own tools -- open, xdg-open -- and asks the OS
-# who you are, which on macOS means Foundation and elsewhere means pwd.
+# desktop.py runs the system's own tools -- open, xdg-open, explorer -- and asks
+# the OS who you are: Foundation on macOS, secur32/netapi32 on Windows, pwd
+# elsewhere.
 "src/libera/host/desktop.py" = [
     "S404",
     "S603",
-    "S607",    # open and xdg-open come from the system, by name
+    "S606",    # os.startfile is Windows' "open this with its handler", the job
+    "S607",    # open, xdg-open and explorer come from the system, by name
     "PLC0415", # Foundation is macOS-only, pwd is Unix-only
     "TC003",   # pathlib is used at runtime, not only in annotations
 ]
@@ -103,6 +105,10 @@ lint.extend-ignore = [
 "docs/figures/*.py" = [
     "INP001", # a directory of scripts, each run on its own, sharing theme.py
 ]
+# instance.py posts a second launch's documents to the first. The URL is built
+# here from 127.0.0.1 and an integer port read back from our own state file:
+# there is no scheme or host in it for anything else to choose.
+"src/libera/host/instance.py" = ["S310"]
 "src/libera/host/opening.py" = ["TC003"]
 "src/libera/host/recents.py" = ["TC003"]
 # session.py holds the registry and the thread binding, both module state by
@@ -231,6 +237,14 @@ lint.extend-ignore = [
     "N802",
     "PLC0415",
 ]
+# The Windows installer's file associations. "{app}" in these strings is Inno
+# Setup's constant for the install directory, written into an .iss file, not a
+# Python placeholder that lost its f.
+"build/windows/associations.py" = ["RUF027"]
+# The frozen application's entry point opens its log for the life of the
+# process: it becomes sys.stdout and sys.stderr, so there is no block to close
+# it at the end of.
+"build/windows/entry.py" = ["SIM115"]
 "tests/**/*.py" = [
     "SLF001", # reaching into a module to check its wiring is the point
     "ARG001", # pytest matches hook parameters by name; they cannot be renamed
@@ -275,6 +289,13 @@ lint.extend-ignore = [
 # because NSImage is one and librsvg is not.
 "tests/a_unit/test_icon.py" = [
     "S314", # ElementTree.fromstring on our own committed artwork
+    "S405", # the xml.etree import that goes with it
+]
+# test_attribution.py parses build/flatpak/*.metainfo.xml for the same reason:
+# it is a file in this repository, checked so that the attribution it shows a
+# software centre cannot drift from the one the application shows.
+"tests/a_unit/test_attribution.py" = [
+    "S314", # ElementTree.parse on our own committed metadata
     "S405", # the xml.etree import that goes with it
 ]
 

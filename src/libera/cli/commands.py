@@ -18,7 +18,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 from libera import gui, launcher, payload as payload_mod
-from libera.host import app, opening, server, session
+from libera.host import app, instance, opening, server, session
 from libera.host.session import NotReadyError
 from libera.payload import PayloadError
 
@@ -307,6 +307,13 @@ def cmd_open(args) -> int:
             print(f"libera: no such file: {document}", file=sys.stderr)
             return 1
         documents.append(document.resolve())
+
+    # A Libera Suite already running takes them, in a window of its own, and
+    # this process is done: see `host/instance.py` for why there is only ever
+    # one. Before the window and the payload checks, which the running one has
+    # already passed.
+    if instance.hand_off(documents):
+        return 0
 
     # Then the window, and only then the payload: a machine that cannot open
     # one has no use for 116 MB of editor.

@@ -46,6 +46,11 @@ def on_gui_thread(work):
     """
     if threading.current_thread() is threading.main_thread():
         return work()
+    # Only AppKit needs the hand-over. pywebview's GTK and WinForms backends
+    # marshal their own calls onto the GUI thread, and what Windows asks
+    # directly -- MessageBoxW -- runs its own message loop on any thread.
+    if sys.platform != "darwin":
+        return work()
 
     from PyObjCTools import AppHelper
 

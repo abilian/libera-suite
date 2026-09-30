@@ -51,8 +51,19 @@ Darwin-arm64)  PLATFORM="macos-arm64" ;;
 Darwin-x86_64) PLATFORM="macos-x86_64" ;;
 Linux-x86_64)  PLATFORM="linux-x86_64" ;;
 Linux-aarch64) PLATFORM="linux-arm64" ;;
+# Git Bash says MINGW64_NT-10.0-26100; the application names the same machine
+# windows-x86_64 (locate.current_platform), and the two have to agree or the
+# installer finds no core for it.
+MINGW*-x86_64 | MSYS*-x86_64) PLATFORM="windows-x86_64" ;;
 *) PLATFORM="" ;;
 esac
+
+# GNU tar reads `C:/b/out/...` as host C, path /b/out/..., and tries to reach
+# it over rsh: "Cannot connect to C: resolve failed". --force-local says a
+# colon is only a colon. BSD tar has no such flag and no such problem.
+tar() {
+    if [ -n "$EXE" ]; then command tar --force-local "$@"; else command tar "$@"; fi
+}
 # Only a build needs to know what this machine is. A manifest reads the
 # platform out of each filename, so it runs anywhere.
 if [ "$MANIFEST_ONLY" = "0" ] && [ -z "$PLATFORM" ]; then
@@ -67,7 +78,7 @@ mkdir -p "$DIST" "$STAGE"
 
 if [ "$MANIFEST_ONLY" = "0" ]; then
 
-[ -x "$OUT/core/bin/x2t" ] || { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
+[ -x "$OUT/core/bin/x2t$EXE" ] || { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
 [ -d "$PAYLOAD/sdkjs" ] || { echo "FATAL: no payload -- run payload.sh" >&2; exit 1; }
 
 # --- native, per platform -----------------------------------------------------
@@ -77,7 +88,7 @@ echo "==> core ($PLATFORM)"
 mkdir -p "$STAGE/bin/tools"
 cp -R "$OUT/core/bin/." "$STAGE/bin/"
 rm -f "$STAGE/bin/DoctRenderer.config"
-cp "$OUT/core/tools/allfontsgen" "$STAGE/bin/tools/"
+cp "$OUT/core/tools/allfontsgen$EXE" "$STAGE/bin/tools/"
 tar -czf "$DIST/core-$PLATFORM.tar.gz" -C "$STAGE" bin
 rm -rf "$STAGE/bin"
 
@@ -210,7 +221,7 @@ fi  # MANIFEST_ONLY
 # untrusted storage. Provenance is recorded here because a shipped binary has to
 # name the source it was built from -- see notes/05-packaging.md on licensing.
 echo "==> manifest"
-python3 - "$DIST" "$VERSION" "$PLATFORM" "$FONT_SET" "$HERE" <<'PY'
+py - "$DIST" "$VERSION" "$PLATFORM" "$FONT_SET" "$HERE" <<'PY'
 import hashlib, json, pathlib, subprocess, sys, time
 
 dist, version, platform, font_set, here = (pathlib.Path(sys.argv[1]), *sys.argv[2:5], pathlib.Path(sys.argv[5]))

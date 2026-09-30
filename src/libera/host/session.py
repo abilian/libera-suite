@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from libera.host import apps
+from libera.payload import locate
 
 logger = logging.getLogger(__name__)
 
@@ -54,14 +55,6 @@ class Host:
     @property
     def sdkjs_common(self) -> pathlib.Path:
         return self.payload / "sdkjs" / "common"
-
-    @property
-    def service_worker(self) -> pathlib.Path:
-        # The editor registers its worker at the *origin root* -- a worker's
-        # scope is capped by its own URL path, so it has to sit at "/" to see
-        # /web-apps and /sdkjs. The file lives under sdkjs. DocumentServer
-        # bridges the gap with an nginx alias; this is that alias.
-        return self.sdkjs_common / "serviceworker" / "document_editor_service_worker.js"
 
     @property
     def fonts(self) -> pathlib.Path:
@@ -130,7 +123,7 @@ class Host:
 
     @property
     def x2t(self) -> pathlib.Path:
-        return self.payload / "bin" / "x2t"
+        return self.payload / "bin" / f"x2t{locate.EXE}"
 
     # --- session state, written
     @property

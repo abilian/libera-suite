@@ -1,0 +1,98 @@
+From 06fb851146c95b2b3adb933be8e4382a5be76525 Mon Sep 17 00:00:00 2001
+From: SF on Windows <sf+windows@abilian.com>
+Date: Tue, 29 Sep 2026 05:30:10 +0000
+Subject: [PATCH] cmake: build every Windows module against the DLL CRT
+
+common.cmake sets CMAKE_MSVC_RUNTIME_LIBRARY to MultiThreadedDLL and
+then rewrites /MD to /MT in the flag strings. The rewrite wins: the
+projects declare cmake_minimum_required < 3.15, so policy CMP0091 is
+OLD, CMAKE_MSVC_RUNTIME_LIBRARY is ignored and the flags are what count.
+Every compile line came out /MT, and every DLL carried a static CRT of
+its own.
+
+Core's DLLs pass CRT objects between them. kernel.dll's CFileBinary
+opens a FILE* and hands it out through GetFileNative(), and graphics.dll
+reads and writes images through it, as do the zip, JPEG 2000, PICT and
+font converter code. Under separate static CRTs a FILE* from another
+module works while its data stays in the stdio buffer and fails the
+moment a write reaches the descriptor table, which that CRT has never
+seen: allfontsgen died with 0xC0000409 (fail-fast code 5, invalid
+parameter) writing the font thumbnails. A two-DLL test reproduces it
+with a 1 MB fwrite under /MT and not under /MD.
+
+So drop the rewrite and let the DLL CRT stand, and build V8 against it
+too: its build/config/win/BUILD.gn picks the static CRT for every
+non-component desktop build, and a /MT v8_monolith.lib cannot link into
+/MD doctrenderer. ICU and boost already use the DLL CRT.
+---
+ Common/3dParty/v8/nc-build.py                   |  4 +++-
+ .../v8/tools/8.9/x64-windows/dynamic_crt.patch  | 17 +++++++++++++++++
+ common.cmake                                    | 12 +++++++++---
+ 3 files changed, 29 insertions(+), 4 deletions(-)
+ create mode 100644 Common/3dParty/v8/tools/8.9/x64-windows/dynamic_crt.patch
+
+diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
+index d1276799c3..b95d167c6d 100644
+--- a/Common/3dParty/v8/nc-build.py
++++ b/Common/3dParty/v8/nc-build.py
+@@ -56,7 +56,9 @@ def apply_patches():
+             print( f"[WARNING] cannot apply patch ({ patch[ 'name' ] }) because dir doesn't exist!" )
+ 
+     if nc.is_windows():
+-        for name in ( "win_toolchain.patch", "vs_toolchain.patch" ):
++        # dynamic_crt.patch builds V8 against the DLL CRT (/MD), like the rest
++        # of core: see the MSVC block in common.cmake for why it must match.
++        for name in ( "win_toolchain.patch", "vs_toolchain.patch", "dynamic_crt.patch" ):
+             nc.run_command(
+                 [ "git", "apply", script_dir / "tools" / "8.9" / "x64-windows" / name ],
+                 f"Applying patch: {name}",
+diff --git a/Common/3dParty/v8/tools/8.9/x64-windows/dynamic_crt.patch b/Common/3dParty/v8/tools/8.9/x64-windows/dynamic_crt.patch
+new file mode 100644
+index 0000000000..548bcf1760
+--- /dev/null
++++ b/Common/3dParty/v8/tools/8.9/x64-windows/dynamic_crt.patch
+@@ -0,0 +1,17 @@
++diff --git a/config/win/BUILD.gn b/config/win/BUILD.gn
++index 51437c6..c1273d3 100644
++--- a/config/win/BUILD.gn
+++++ b/config/win/BUILD.gn
++@@ -485,8 +485,10 @@ config("default_crt") {
++       # CRT in Visual Studio releases related to Windows store applications.
++       configs = [ ":dynamic_crt" ]
++     } else {
++-      # Desktop Windows: static CRT.
++-      configs = [ ":static_crt" ]
+++      # Desktop Windows: dynamic CRT, for Euro-Office core. Its libraries are
+++      # DLLs that hand CRT objects (FILE*, heap blocks) to one another, which
+++      # only works when every module shares one CRT.
+++      configs = [ ":dynamic_crt" ]
++     }
++   }
++ }
+diff --git a/common.cmake b/common.cmake
+index 8b3b47f14c..06314438ab 100644
+--- a/common.cmake
++++ b/common.cmake
+@@ -126,10 +126,16 @@ else()
+     endif()
+ 
+     if(MSVC)
++        # One DLL CRT (/MD) for every module, which is what the line below asks
++        # for. The /MD -> /MT rewrite that followed it won instead: projects
++        # declaring cmake_minimum_required < 3.15 leave CMP0091 OLD, which
++        # ignores CMAKE_MSVC_RUNTIME_LIBRARY and honours the flag strings, so
++        # every module got a static CRT of its own. Core's DLLs hand CRT
++        # objects to one another -- kernel.dll opens a FILE* that graphics.dll
++        # writes a PNG into -- and a FILE* from another static CRT fails as
++        # soon as a write leaves the stdio buffer: allfontsgen died with
++        # 0xC0000409 (fail-fast, invalid parameter) writing font thumbnails.
+         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
+-        foreach(flag_var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE)
+-            string(REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+-        endforeach()
+     endif()
+ 
+     if(BUILD_DESKTOP)
+-- 
+2.55.0.windows.3
+

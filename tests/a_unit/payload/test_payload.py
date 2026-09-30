@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import tarfile
 from pathlib import Path, PurePath
 
 import pytest
-from support import repo_root
+from support import built_dist, repo_root
 
 from libera import payload
 from libera.payload import PayloadError, locate
@@ -27,7 +26,7 @@ REPO = repo_root()
 def make_payload(root: Path) -> Path:
     """A directory that satisfies looks_complete()."""
     (root / "bin" / "tools").mkdir(parents=True)
-    (root / "bin" / "x2t").write_text("#!/bin/sh\n")
+    (root / "bin" / f"x2t{locate.EXE}").write_text("#!/bin/sh\n")
     (root / "bin" / "DoctRenderer.config").write_text("<Settings/>")
     (root / "sdkjs").mkdir()
     (root / "web-apps").mkdir()
@@ -165,7 +164,7 @@ def test_unverifiable_download_is_refused(tmp_path: Path, monkeypatch) -> None:
         )
 
 
-def test_the_artifacts_carry_no_apple_metadata(tmp_path: Path) -> None:
+def test_the_artifacts_carry_no_apple_metadata() -> None:
     """macOS tar stores extended attributes as `._name` members beside every
     file that has any, and a build tree collects them just by living on an
     external volume.
@@ -173,14 +172,23 @@ def test_the_artifacts_carry_no_apple_metadata(tmp_path: Path) -> None:
     Half of editors.tar.gz was those, and every install unpacked 1548 stray
     files. dist.sh exports COPYFILE_DISABLE=1; this is what notices if that
     goes away.
+
+    The dist is **found**, not declared. This wanted `LIBERA_DIST` in the
+    environment, so it skipped on every machine that had a dist, including the
+    kind it was written for. `built_dist` looks where `build/dist.sh` writes.
     """
     import tarfile
 
-    dist = os.environ.get("LIBERA_DIST")
-    if not dist or not Path(dist).is_dir():
-        pytest.skip("needs a built dist: LIBERA_DIST=$BUILD_ROOT/out/dist/<version>")
+    dist = built_dist(payload.PAYLOAD_VERSION)
+    if dist is None:
+        pytest.skip("needs built artifacts: `make payload-dist`, or set LIBERA_DIST")
 
-    for archive in sorted(Path(dist).glob("*.tar.gz")):
+    archives = sorted(dist.glob("*.tar.gz"))
+    # An empty directory would make every assertion below vacuous, and a check
+    # that passes by having nothing to look at is the failure this file is about.
+    assert archives, f"{dist} holds no tarballs"
+
+    for archive in archives:
         with tarfile.open(archive, "r:gz") as tar:
             stray = [n for n in tar.getnames() if PurePath(n).name.startswith("._")]
         assert not stray, f"{archive.name} carries {len(stray)} AppleDouble members"
@@ -195,7 +203,12 @@ def test_the_artifacts_carry_no_apple_metadata(tmp_path: Path) -> None:
 
 def _complete_payload(root):
     """The files locate.looks_complete insists on, and nothing else."""
-    for rel in ("bin/x2t", "bin/DoctRenderer.config", "empty/new.docx", "AllFonts.js"):
+    for rel in (
+        f"bin/x2t{locate.EXE}",
+        "bin/DoctRenderer.config",
+        "empty/new.docx",
+        "AllFonts.js",
+    ):
         p = root / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text("x", encoding="utf-8")

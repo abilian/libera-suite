@@ -20,7 +20,7 @@ import threading
 from pathlib import Path
 
 from libera import payload as payload_mod
-from libera.host import apps, hooks, menu, opening, server
+from libera.host import apps, hooks, instance, menu, opening, server
 from libera.host.session import (
     SESSIONS,
     H,
@@ -48,6 +48,9 @@ from libera.host.window import (
 from libera.host.window.windows import START_WINDOW
 
 logger = logging.getLogger(__name__)
+
+# How long the later documents wait for the first window to be on screen.
+SHOWN_TIMEOUT = 30.0
 
 
 def _first_window(port: int, first: Path | None, title: str | None):
@@ -134,6 +137,13 @@ def run(
         opened.events.closed += lambda: drop_session(session)
 
     hooks.WINDOW_OPENER = open_window
+
+    def open_start_window() -> None:
+        # hooks.START_OPENER is `() -> None`, and the caller ignores any result;
+        # a lambda here returned the Window, which pyrefly rightly reported.
+        _first_window(port, None, None)
+
+    hooks.START_OPENER = open_start_window
     hooks.FULLSCREEN = set_fullscreen
 
     hooks.BROKEN = lambda session, message: offer_reload(session, message, port)
@@ -160,12 +170,12 @@ def run(
         # Before the menu bar is built, which is the only time these are read.
         menu.quieten_system_items()
 
-    _first_window(port, first, title)
+    window = _first_window(port, first, title)
     # The rest open once the GUI loop is running: pywebview can only create a
     # window after start() from a thread that is not the one running it.
     if len(documents) > 1:
         threading.Thread(
-            target=_open_rest, args=(documents[1:], open_window), daemon=True
+            target=_open_rest, args=(window, documents[1:], open_window), daemon=True
         ).start()
 
     # The editor keeps every preference it has in localStorage -- theme, units,
@@ -184,13 +194,22 @@ def run(
     # on the application's startup signal, and GTK has no way to add to a bar
     # afterwards. macOS is the other way round -- its bar is built from
     # _install_menu above, after start(), because there is no menu to extend
-    # until the application is running.
-    bar = menu.gtk_menubar() if sys.platform.startswith("linux") else []
-    webview.start(
-        private_mode=False,
-        storage_path=str(payload_mod.state_dir()),
-        menu=bar,
-    )
+    # until the application is running. Windows takes the same list: it is
+    # pywebview's own Menu objects, which its WinForms backend draws as each
+    # window's menu strip, and nothing in it is GTK but the name.
+    on_bar = sys.platform.startswith("linux") or sys.platform == "win32"
+    bar = menu.gtk_menubar() if on_bar else []
+    # From here a second `libera FILE` hands its documents to this process
+    # rather than starting another; see `instance`.
+    instance.announce(port)
+    try:
+        webview.start(
+            private_mode=False,
+            storage_path=str(payload_mod.state_dir()),
+            menu=bar,
+        )
+    finally:
+        instance.withdraw()
 
 
 def _install_menu() -> None:
@@ -221,17 +240,40 @@ def _install_menu() -> None:
     AppHelper.callAfter(attempt)
 
 
-def _open_rest(documents: list[Path], open_window) -> None:
-    """The second and later documents, once the GUI loop is up."""
-    import time
+def _open_rest(window, documents: list[Path], open_window) -> None:
+    """The second and later documents, once the GUI loop is really running.
 
-    import webview
+    **This waited for nothing.** The condition was `webview.windows`, and
+    `create_window` appends to that list *before* `start()` is called, so the
+    loop returned on its first iteration and every document after the first was
+    created while the GUI loop did not yet exist. The comment above it stated
+    the requirement it was failing to meet: a window created before `start()`
+    has run is never shown. Whether it appeared came down to a race against
+    `webview.start()` on the main thread, which `open_window` usually lost by a
+    conversion's worth of time -- which is why this mostly worked.
 
-    # Wait for the first window rather than guess at a delay: create_window
-    # before start() has run leaves the window unshown.
-    for _ in range(200):
-        if webview.windows:
-            break
-        time.sleep(0.05)
+    It is the same bug as `_install_menu`, from the same cause, and
+    `notes/lessons-learned.md` is about exactly this: a docstring is not a test,
+    so read the condition and the sentence next to each other and ask whether
+    one implies the other.
+
+    `shown` fires from the GUI loop with the window on screen, so unlike a list
+    that `create_window` fills, it cannot be set before `start()`. It is also
+    what pywebview waits on for the same job: `start()`'s own `_create_children`
+    blocks on `windows[0].events.shown` before creating the rest.
+
+    The cost of losing the race is not a slow window but a missing one.
+    `start()` runs `_initialize` over `windows`, then snapshots `windows[1:]`
+    for that thread, then enters the GUI loop; a window appended between the
+    snapshot and the loop is never created, and one appended between the two
+    earlier steps is created without being initialised. Waiting for `shown`
+    puts every later document after all three, which is the only state with one
+    outcome.
+    """
+    if not window.events.shown.wait(SHOWN_TIMEOUT):
+        # Opening them anyway: a window that is slow to appear is still better
+        # served by trying than by silently dropping the documents someone named
+        # on the command line.
+        logger.warning("the first window has not appeared; opening the rest anyway")
     for document in documents:
         open_window(document)

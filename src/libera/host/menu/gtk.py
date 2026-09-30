@@ -115,5 +115,15 @@ def menubar() -> list:
                 MenuAction("Formatting Marks", actions.toggle_formatting_marks),
             ],
         ),
-        Menu("Help", [MenuAction("Libera Help", actions.show_help)]),
+        Menu(
+            "Help",
+            [
+                MenuAction("Libera Help", actions.show_help),
+                MenuSeparator(),
+                # macOS gets this from the application menu, which reads
+                # NSHumanReadableCopyright out of the bundle. GTK has no
+                # equivalent, so the item is explicit here.
+                MenuAction("About Libera Suite", actions.show_about),
+            ],
+        ),
     ]

@@ -76,6 +76,10 @@ MACOS_TOOLS="clang clang++ make cmake ninja git curl python3 perl node npm"
 # exist at all.
 WINDOWS_TOOLS="cmake ninja git curl python perl node npm nasm"
 
+# common.sh for the PATH it arranges, so that this answers about the same perl
+# the build will run: on Windows it puts Strawberry's ahead of Git Bash's own.
+. "$(cd "$(dirname "$0")" && pwd)/common.sh"
+
 # ID first, then ID_LIKE, which is what a derivative sets.
 family() {
     [ "$(uname -s)" = "Darwin" ] && { echo macos; return; }

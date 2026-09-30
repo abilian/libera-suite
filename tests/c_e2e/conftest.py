@@ -19,7 +19,6 @@ import shutil
 import socket
 import subprocess
 import sys
-import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -137,11 +136,73 @@ def wait_until_ready(calls: str) -> bool:
     return False
 
 
+def _launch(url: str):
+    """A headless page at `url`, and the Playwright handles to close it with.
+
+    **Through Playwright, not as a bare subprocess.** The same binary, spawned
+    with the same flags by `subprocess.Popen`, starts on Linux and never
+    navigates: measured on an x86_64 Fedora builder against a plain
+    `python -m http.server`, zero requests arrived -- with `--no-sandbox`, with
+    `--headless` old and new, and with `--dump-dom` forcing a navigation.
+    `chrome --version` worked and a profile directory was created, so it was
+    starting and doing nothing. Playwright's own launch fetched the same URL on
+    the first try.
+
+    That cost the whole tier on Linux: every editor fixture timed out after 180
+    seconds with `calls: {}` and `routes: {}`, on the one platform where the
+    window layer is the thing under test. Nothing said why, because the
+    browser's output went to DEVNULL and the browser printed nothing anyway.
+    `test_keyboard.py` and `test_slideshow.py` already drove Playwright and
+    passed there throughout, which is what a second way of doing one job buys.
+
+    CHROMIUM still wins, as `find_browser` promises: Playwright is told to use
+    it rather than asked for its own.
+    """
+    from playwright.sync_api import Error as PlaywrightError, sync_playwright
+
+    chosen = find_browser()
+    launch: dict = {}
+    if chosen and chosen != _playwright_chromium():
+        launch["executable_path"] = chosen
+
+    play = sync_playwright().start()
+    try:
+        browser = play.chromium.launch(**launch)
+    except PlaywrightError:
+        play.stop()
+        raise
+    page = browser.new_page(viewport={"width": 1400, "height": 900})
+    # commit: return as soon as navigation starts. The editor is watched
+    # through the host's own report, not through the page.
+    page.goto(url, wait_until="commit")
+    return play, browser
+
+
 @contextlib.contextmanager
 def running_editor(document: Path, work: Path) -> Iterator[Editor]:
-    """Serve one document, load it in a headless browser, report what happened."""
-    browser_exe = find_browser()
-    if browser_exe is None:
+    """Serve one document, load it in a headless browser, report what happened.
+
+    **Everything is torn down before the tests run, and that is the point.**
+    An `Editor` is captured state: a URL string, the report the host had
+    collected, and a screenshot on disk. Nothing that asks for one touches the
+    live browser or the live server, so keeping them up buys nothing and costs
+    a great deal.
+
+    Three of the fixtures below are session-scoped and pytest finalises those
+    at the end of the session, so yielding while the processes ran meant they
+    piled up: `editor`, `illustrated_editor` and `blank_editor` were all alive
+    at once. Measured mid-run: **four** Chromium browsers, each with its own
+    renderer and helper processes, each beside a `libera --serve`. On a machine
+    already paging, one of them would stall past the 180s ready deadline and
+    take the fixture -- and every test depending on it -- with it. It read as a
+    flake because it depended on how much memory the earlier tiers had left:
+    `pytest tests/c_e2e` passed on its own and `pytest tests/` did not.
+
+    Capturing first and tearing down before the yield holds it to one editor at
+    a time whatever the fixture scopes, which is the property that makes this
+    robust rather than merely better tuned.
+    """
+    if find_browser() is None:
         pytest.skip(
             "needs Chromium or Chrome: uv run playwright install chromium,"
             " or set CHROMIUM=/path/to/browser"
@@ -178,23 +239,12 @@ def running_editor(document: Path, work: Path) -> Iterator[Editor]:
             f"libera --serve exited with {server.returncode} instead of serving"
         )
 
-    # Chromium leaves helper processes behind when the parent is killed, and a
-    # leftover editor starves the next run -- so the profile directory is
-    # unique and the whole tree is torn down by it.
-    profile = tempfile.mkdtemp(prefix="libera-e2e-")
-    browser = subprocess.Popen(
-        [
-            browser_exe,
-            "--headless=new",
-            "--disable-gpu",
-            "--hide-scrollbars",
-            f"--user-data-dir={profile}",
-            "--window-size=1400,900",
-            url,
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    try:
+        play, browser = _launch(url)
+    except Exception as e:
+        server.kill()
+        pytest.fail(f"could not launch a browser: {e}")
+
     calls = f"http://127.0.0.1:{port}/__host__/calls"
     try:
         if not wait_until_ready(calls):
@@ -225,13 +275,21 @@ def running_editor(document: Path, work: Path) -> Iterator[Editor]:
             time.sleep(1)
         time.sleep(2)
         with urllib.request.urlopen(calls, timeout=30) as r:
-            yield Editor(url, json.load(r), shot)
+            captured = Editor(url, json.load(r), shot)
     finally:
-        browser.kill()
-        subprocess.run(["/usr/bin/pkill", "-f", profile], check=False)
+        # close() rather than kill(): Playwright owns the process tree it made,
+        # including the helpers Chromium leaves behind when its parent is shot.
+        with contextlib.suppress(Exception):
+            browser.close()
+        with contextlib.suppress(Exception):
+            play.stop()
         server.kill()
         server.wait(timeout=10)
-        shutil.rmtree(profile, ignore_errors=True)
+
+    # Outside the try, so a failure above tears down and reports rather than
+    # yielding half a run. `shot` lives under `work`, not under the profile,
+    # so it outlives the browser that posted it.
+    yield captured
 
 
 @pytest.fixture(scope="session")

@@ -20,7 +20,37 @@ from pathlib import Path
 
 import tomllib
 
-PAYLOAD_VERSION = "0.2"
+PAYLOAD_VERSION = "0.3"
+
+# The payload's executables are x2t.exe and tools\allfontsgen.exe on Windows.
+EXE = ".exe" if os.name == "nt" else ""
+
+# A console program started from a windowed one gets a console window of its
+# own on Windows, which flashes up for every conversion: creationflags for
+# subprocess, CREATE_NO_WINDOW's value, spelt out so that this module -- which
+# runs nothing -- need not import subprocess for one constant.
+NO_WINDOW = 0x08000000 if os.name == "nt" else 0
+
+
+def tool_env(bin_dir: Path) -> dict[str, str]:
+    """The environment to run one of the payload's binaries in.
+
+    They link the libraries beside them in `bin`, and nothing in the binary
+    says where those are: Linux and macOS read the two library-path variables,
+    and Windows reads PATH. Windows looks beside the executable first, which
+    covers x2t, but tools\\allfontsgen.exe sits one level below its DLLs and
+    Windows never searches a parent.
+
+    APPLICATION_NAME is what core writes into the <Application> field of saved
+    documents; it defaults to ONLYOFFICE, and it is not sdkjs's COMPANY_NAME.
+    """
+    env = dict(os.environ)
+    env.setdefault("APPLICATION_NAME", "Libera Suite")
+    env["DYLD_LIBRARY_PATH"] = str(bin_dir)
+    env["LD_LIBRARY_PATH"] = str(bin_dir)
+    if os.name == "nt":
+        env["PATH"] = str(bin_dir) + os.pathsep + env.get("PATH", "")
+    return env
 
 
 class PayloadError(RuntimeError):
@@ -40,7 +70,7 @@ class Payload:
 
     @property
     def x2t(self) -> Path:
-        return self.bin / "x2t"
+        return self.bin / f"x2t{EXE}"
 
     def info(self) -> dict:
         f = self.root / "payload.json"
@@ -152,7 +182,7 @@ def bundled_dir() -> Path | None:
 def looks_complete(root: Path) -> bool:
     """Everything the host needs, including what install generates."""
     needed = [
-        root / "bin" / "x2t",
+        root / "bin" / f"x2t{EXE}",
         root / "bin" / "DoctRenderer.config",
         root / "sdkjs",
         root / "web-apps",

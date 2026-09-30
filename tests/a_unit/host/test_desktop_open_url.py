@@ -32,7 +32,12 @@ def opener(monkeypatch):
     Models `Popen`, not `run`: the code waits with a timeout and leaves the
     child alone when it expires, because on a desktop that succeeds the opener
     never exits -- it stays attached to the browser it started.
+
+    Not on Windows, which has no opener to spawn and wait for: see the
+    `startfile` tests at the end.
     """
+    if sys.platform == "win32":
+        pytest.skip("Windows opens through os.startfile, not a spawned opener")
     calls: list[list[str]] = []
     answer: dict = {"code": 0, "killed": False}
 
@@ -102,3 +107,52 @@ def test_an_opener_still_running_has_taken_it(opener, caplog):
 def test_macos_uses_an_absolute_path():
     """`open` is a common enough word to shadow; the system one is meant."""
     assert desktop.opener() == ["/usr/bin/open"]
+
+
+@pytest.fixture
+def startfile(monkeypatch):
+    """Windows' ShellExecute, recorded; `fail` makes it raise as it does when
+    nothing is registered for the target."""
+    calls: list[str] = []
+    state = {"fail": False}
+
+    def fake(target):
+        calls.append(target)
+        if state["fail"]:
+            raise OSError(1155, "No application is associated", target)
+
+    monkeypatch.setattr(desktop.sys, "platform", "win32")
+    monkeypatch.setattr(desktop.os, "startfile", fake, raising=False)
+    return SimpleNamespace(calls=calls, state=state)
+
+
+def test_windows_hands_the_url_to_the_shell(startfile):
+    assert desktop.open_url(URL) is True
+    assert startfile.calls == [URL]
+
+
+def test_windows_reports_a_url_nothing_can_open(startfile, caplog):
+    """ShellExecute raises at once when there is no handler, so there is no
+    five-second wait to read the answer out of."""
+    startfile.state["fail"] = True
+    with caplog.at_level(logging.WARNING, logger="libera.host.desktop"):
+        assert desktop.open_url(URL) is False
+    assert URL in caplog.text
+
+
+def test_windows_reveals_a_file_with_one_explorer_argument(
+    startfile, monkeypatch, tmp_path
+):
+    """`/select,` and the path are one word: Explorer parses its own command
+    line, and split in two it opens the folder and selects nothing."""
+    doc = tmp_path / "report.docx"
+    doc.write_bytes(b"PK")
+    ran: list[list[str]] = []
+    monkeypatch.setattr(desktop.subprocess, "run", lambda cmd, **_: ran.append(cmd))
+    assert desktop.reveal(doc) is True
+    assert ran == [["explorer", f"/select,{doc}"]]
+
+
+def test_windows_opens_the_folder_of_a_document_not_yet_saved(startfile, tmp_path):
+    assert desktop.reveal(tmp_path / "never-saved.docx") is True
+    assert startfile.calls == [str(tmp_path)]

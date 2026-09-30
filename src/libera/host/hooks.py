@@ -87,3 +87,11 @@ BROKEN: Broken | None = None
 # None means never recover, which is what the harness wants: a check that
 # sometimes resumes the previous run is not a check.
 RECOVERY_CHOOSER: RecoveryChooser | None = None
+
+
+# Put the start window up. A second launch with no document -- the icon
+# clicked while Libera Suite is already open -- hands off to the running
+# instance, and this is what that instance does with it. None means there is no
+# window to put up, which is `libera --serve`.
+#   START_OPENER() -> None
+START_OPENER: Callable[[], None] | None = None

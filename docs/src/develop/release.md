@@ -2,7 +2,7 @@
 
 A release is one set of artifacts that agree with each other. No single machine can produce all of them.
 
-**`make ship` is how a release is cut now.** One command from the Mac drives ten phases: the Linux cores and both Flatpak bundles are built on the Linux builders in parallel, the macOS core and the wheel here, then the origin and PyPI. `make ship-plan` prints the plan and runs nothing. See [`make ship`](#make-ship) below.
+**`make ship` is how a release is cut now.** One command drives ten phases: the Linux cores and both Flatpak bundles are built on the Linux builders in parallel, the macOS core and the wheel here, then the origin and PyPI. `make ship-plan` prints the plan and runs nothing. See [`make ship`](#make-ship) below.
 
 Read [Build the payload](build.md) first if you have never built one. This page assumes you have.
 
@@ -19,7 +19,7 @@ make ship ARGS="--only linux-arm64"   # one builder
 update  native  build  collect  push  check  bundles  wheel  publish  verify
 ```
 
-The order is forced. `wheel` follows `collect`, because the wheel carries the manifest `collect` stamps over every core; `verify` follows `publish`, because what it checks is the *published* wheel against the *published* payload. The phases run in that order whatever order they are typed in, so there is no way to get it wrong from the command line.
+The order is forced. `wheel` follows `collect`, because the wheel embeds the manifest `collect` stamps over every core; `verify` follows `publish`, because what it checks is the *published* wheel against the *published* payload. The phases run in that order whatever order they are typed in, so there is no way to get it wrong from the command line.
 
 `publish` is the one phase with no undo, since PyPI refuses a version it has already seen even after a yank. It stops and asks on `/dev/tty` unless `--yes` is given. Asking on the terminal matters here: this is usually run under tmux with its output redirected, where a prompt on stdin is a prompt no one can answer.
 
@@ -29,30 +29,53 @@ The builders are listed in `build/builders.toml`, which is gitignored because it
 
 ## The runbook, by hand
 
-What `make ship` does, in the order it does it, for when part of a release has to be redone or driven from somewhere else.
+What `make ship` does, phase by phase, for when part of a release has to be
+redone or driven from somewhere else.
 
-Every command, in order. The rest of this page is why each one is there, which you do not need mid-release.
+**One phase needs a Mac.** `native` builds `core-macos-arm64`, which nothing
+else can. Everything below it runs wherever you are sitting, so long as that
+machine has `build/builders.toml` and ssh to the builders. The Mac is one of
+three builders.
 
-**`make release-status` answers this table** against the tree, the artifacts on the disk, the origin and PyPI, then prints the next command. A release runs over days and two machines, so it measures which step you are on and does not ask you to remember.
+**Settle the two versions first.** `pyproject.toml` moves every release.
+`build/payload.version` and `src/libera/payload/locate.py` move together, and
+only when the payload itself changed. Rebuilding a payload under a version that
+is already published overwrites artifacts a published wheel verifies against:
+that is how 0.1.0 broke.
 
-**Settle the two versions first.** `pyproject.toml` moves every release. `build/payload.version` and `src/libera/payload/locate.py` move together, and only when the payload itself changed. Rebuilding a payload under a version that is already published overwrites artifacts a published wheel verifies against: that is how 0.1.0 broke.
+**`make release-status`** measures where a release has got to, against the
+tree, the artifacts on this disk, the origin and PyPI, then prints the next
+command. A release runs over days and several machines, so it measures which
+step you are on and does not ask you to remember.
 
-| | |
-| :--- | :--- |
-| **1. Mac** | `make release-check`. Preconditions and the plan, building nothing. Fix what it names. |
-| **2. Mac** | `git tag -a vX.Y.Z -m 'Libera Suite X.Y.Z' && git push --tags`. Before building, so the manifest records a revision other people can fetch. |
-| **3. Mac** | `make release ARCHES=arm64`. Native core, arm64 Linux core, editors, fonts, `Libera.app`, the arm64 bundle. Hours. Its wheel is provisional; step 6 replaces it. |
-| **3'. x86_64 Linux** | `git pull && git checkout vX.Y.Z`, then `make payload-container && make flatpak`. Hours, at the same time as step 3. |
-| **4. x86_64 Linux** | `scp build/out/libera-X.Y.Z-amd64.flatpak mac:…/build/out/`. The one artifact no Mac can build. |
-| **5. Mac** | `make origin-collect`. Fetches each builder's core, then stamps `src/libera/manifest.json` over the whole set. Needs `build/builders.toml`; copy the committed example once. |
-| **6. Mac** | `make build`: the wheel, now that the manifest is final. **After step 5, always.** |
-| **7. Mac** | `make verify`: lint, the suite, docs links, the patch queue, the converter. Plus the two things no check covers, in [Verify before publishing](#5-verify-before-publishing). |
-| **8. Mac** | `export CDN_TOKEN=…`, then `make origin-push && make origin-check`. |
-| **9. Mac** | `make publish`, then `WHEEL=pypi make origin-check`, which reads the wheel PyPI is serving and verifies the origin against *that*. The check 0.1.0 needed. |
-| **10.** | The mirrors, the bundles and `Libera.app` wherever the release is downloaded from. |
-| **11.** | `libera --payload-install` on a machine that has never built it. |
+| phase | what it does | where it runs |
+| :--- | :--- | :--- |
+| | `git tag -a vX.Y.Z && git push --tags`, before building, so the manifest records a revision other people can fetch. `ship` does not do this. | anywhere |
+| `update` | `git pull` each builder onto its branch, and refuse a dirty one. | the driving machine |
+| `native` | The macOS core and its tarballs. | **a Mac, and only this** |
+| `build` | The Linux cores, on their own machines, in parallel. Hours. | the Linux builders |
+| `collect` | Fetch every core to the driving machine, then stamp `src/libera/manifest.json` over the whole set. | the driving machine |
+| `push` | Upload the payload to the origin. Needs `CDN_TOKEN`. | anywhere |
+| `check` | Fetch it all back with no token and verify every hash. | anywhere |
+| `bundles` | The two `.flatpak` bundles. Neither can be cross-built. | a machine of each architecture |
+| `wheel` | `make verify`, then the wheel. After `collect`, always. | anywhere |
+| | The Windows installer, `sh build/origin.sh windows`, before `publish`. `ship` does not build Windows. | the Windows machine |
+| `publish` | The wheel to PyPI; the bundles, `install.sh` and `install.ps1` to the origin; then `bundles/latest`, which moves both install scripts to the new version. | anywhere with the credentials |
+| `verify` | Read the *published* wheel back and check it against the origin. The check 0.1.0 needed. | anywhere |
 
-`ARCHES=arm64` in step 3 stops the Mac building the amd64 core under Rosetta, because step 3' is building it natively and faster. Drop it and the Mac does both, and step 3' is then only the bundle.
+Two things are left that no command covers. The mirrors go up, and somebody
+runs `libera --payload-install` on a machine that has never built it.
+
+Any one phase runs on its own, which is what makes a partial redo cheap:
+
+```sh
+make ship ARGS="collect push check"
+make ship ARGS="--only linux-arm64 bundles"
+```
+
+`make release` is the older path. It builds every Linux core in containers on
+one machine, with no builders involved. It needs Docker locally and
+cannot produce the bundles at all. Prefer `ship`.
 
 ## What a release is
 
@@ -77,7 +100,7 @@ Three constraints have each cost somebody a build:
 
 **There is no macOS container.** A Mac builds its own core natively. Everything else about a Mac release follows from that one fact.
 
-**Linux cores do not need a Linux machine.** `build/docker.sh` exists so that a Linux payload never depends on what the host has installed. An Apple Silicon Mac builds `linux/arm64` natively and `linux/amd64` under Rosetta (not qemu), so both Linux cores come off the Mac at usable speed. On a Linux box, the host's own architecture is just one more container target; do not build it natively there.
+**A Linux core is built in a container, whatever the host is.** `build/docker.sh` exists so that a Linux payload never depends on what the host has installed, and that holds on a Linux builder as much as on a Mac: the host's own architecture is one more container target, so do not build it natively there. An Apple Silicon Mac can stand in, building `linux/arm64` natively and `linux/amd64` under Rosetta, which is the fallback when a builder is unreachable.
 
 **Flatpak bundles cannot be cross-built.** `flatpak-builder` runs every build command inside bubblewrap, which installs a seccomp filter compiled for the target architecture. Under emulation the kernel is still the host's, so it is rejected:
 
@@ -100,7 +123,14 @@ Which leaves the division of labour:
 | `*-arm64.flatpak` | yes | no | yes |
 | `*-amd64.flatpak` | no | **only here** | no |
 
-**So one Mac produces everything except the amd64 Flatpak**, with one x86_64 Linux machine contributing that single file. The coordination problem is that small. A release does not need an arm64 Linux box: the Mac covers arm64. Such a box is still the only place the suite gets exercised on real arm64 hardware, outside a container, which is a check to run before you ship.
+That table is what each machine *can* do. It is not how a release is built.
+`make ship` sends the Linux cores to the Linux builders, which is faster than a
+Mac emulating amd64 and is the only way to get the amd64 bundle at all. The Mac
+then does one thing nothing else can, `core-macos-arm64`, and the machine you
+type the command on does the collecting and the publishing.
+
+An arm64 Linux box has a second job: it is the only place the suite runs on
+real arm64 hardware outside a container. Run it there before you ship.
 
 `core-macos-x86_64` has no machine and is deferred: Intel Macs are not a target for this beta.
 
@@ -137,7 +167,7 @@ Which does, in order:
 5. `Libera.app`;
 6. the arm64 Flatpak.
 
-A failure in one architecture is recorded, leaving the run to carry on: one platform refusing to build is no reason to throw away the other five artifacts. The run ends with a list of what it failed to produce and the relevant lines from each failing log. Read that list: it is the report.
+A failure in one architecture is recorded, leaving the run to continue: one platform refusing to build is no reason to throw away the other five artifacts. The run ends with a list of what it failed to produce and the relevant lines from each failing log. Read that list: it is the report.
 
 Expect it to end saying:
 
@@ -150,7 +180,7 @@ Both are correct. The first is deferred; the second is step 2.
 
 ## 2. The x86_64 Linux machine
 
-**The bundle carries the payload**, so this box needs one built before it can make a bundle. That is a change: it used to need only the repository, Docker and `uv`.
+**The bundle includes the payload**, so this box needs one built before it can make a bundle. That is a change: it used to need only the repository, Docker and `uv`.
 
 ```sh
 git clone https://github.com/abilian/libera-suite && cd libera-suite
@@ -161,13 +191,9 @@ make flatpak                   # stages them into the bundle, then --diagnose in
 
 Or, if the Mac has already built the amd64 artifacts, copy them over and skip the hours: `make flatpak` takes them from `$DIST`; `DIST=/path/to/artifacts make flatpak` points it somewhere else.
 
-**Use `make flatpak` here.** A release run works and wastes an afternoon: it repackages a `$DIST` that is not the release. Only the Mac's is. Expect this box to end up reporting `still missing: core-macos-arm64` and the rest, which is correct: it is describing its own directory.
+**Use `make flatpak` here.** A release run works and wastes an afternoon: it repackages a `$DIST` that is not the release. Expect this box to report `still missing: core-macos-arm64` and the rest, which is correct: it is describing its own directory.
 
-That leaves `build/out/libera-0.1.0-amd64.flatpak`. Copy it next to the Mac's:
-
-```sh
-scp build/out/libera-0.1.0-amd64.flatpak mac:path/to/local-office/build/out/
-```
+That leaves `build/out/libera-X.Y.Z-amd64.flatpak`. `make ship ARGS=bundles` fetches it to wherever you are driving from; by hand it is one `scp`.
 
 **Check what else is in `build/out` first.** Nothing cleans it. Every build writes a new filename, so bundles from earlier versions, including from before the product was renamed, sit there indefinitely. `make release` now lists those separately, under "NOT part of this release". Delete them, so they are not in the way at upload time.
 
@@ -204,11 +230,11 @@ On a small machine the build is tight on memory before it is slow. `build/payloa
 
 ## 4. Bringing it together
 
-The manifest describes a directory, so it is written **after** every artifact has arrived, and the wheel **after** the manifest, because the wheel carries a copy and verifies every download against it.
+The manifest describes a directory, so it is written **after** every artifact has arrived, and the wheel **after** the manifest, because the wheel embeds a copy and verifies every download against it.
 
 Within one `make release` those are already in order. Across machines they are not, which is what `make origin-collect` is for: it fetches each builder's core over ssh and stamps the manifest over the result. The wheel comes after that, which is why the runbook puts it at step 6.
 
-The Flatpak bundles are not in the manifest, because each carries its own payload, so an amd64 bundle arriving late costs nothing.
+The Flatpak bundles are not in the manifest, because each has its own payload, so an amd64 bundle arriving late costs nothing.
 
 `make release` checks the agreement at the end and says so:
 
@@ -232,7 +258,7 @@ Two things remain that no automated check covers:
 
 ## 6. Collect
 
-A release is built on several machines: this one, a Linux box per architecture, and later a second Mac and a Windows box. The origin is one directory that has to hold every platform's core at once, so the cores are gathered before anything is published.
+A release is built on several machines: a Mac, a Linux box per architecture, and later a second Mac and a Windows box. The origin is one directory that has to hold every platform's core at once, so the cores are gathered before anything is published.
 
 List the machines once, in `build/builders.toml`, from the committed example:
 
@@ -241,7 +267,7 @@ cp build/builders.toml.example build/builders.toml
 make origin-collect          # DRY=1 first, to see what it would fetch
 ```
 
-Each machine gives up the core named for its own platform. The shared pair, `editors.tar.gz` and `fonts-core.tar.gz`, comes from exactly one of them. That part carries a trap. Every builder produces the pair; no two machines produce it byte-for-byte, because tar records modes and order while gzip records a time. The manifest names one hash for each. A second copy arriving over the first is a hash mismatch on a tester's machine, hours later, reported there as a corrupt download.
+Each machine gives up the core named for its own platform. The shared pair, `editors.tar.gz` and `fonts-core.tar.gz`, comes from exactly one of them. There is a trap in that. Every builder produces the pair; no two machines produce it byte-for-byte, because tar records modes and order while gzip records a time. The manifest names one hash for each. A second copy arriving over the first is a hash mismatch on a tester's machine, hours later, reported there as a corrupt download.
 
 `origin-collect` ends by re-hashing everything it gathered and stamping `src/libera/manifest.json`. An unreachable builder leaves the other transfers alone. It does stop the manifest: one missing a core publishes cleanly and tells that platform's users `manifest has no core artifact` days later.
 
@@ -263,8 +289,17 @@ Publish in this order, because the parts refer to each other:
 3. **The wheel** to PyPI (`make publish`), and then `WHEEL=pypi make origin-check`.
 
     That last command is the one that closes the loop: it fetches the wheel PyPI is actually serving, reads the manifest inside it, and verifies the origin against that copy. The wheel for `libera` 0.1.0 shipped naming a payload rebuilt two days later. Every check passed, because each one was looking at something correct.
-4. **`Libera.app` and both `.flatpak` bundles** wherever the release is downloaded from.
-5. **Push the tag.**
+4. **`Libera.app`, both `.flatpak` bundles and the Windows installer** wherever the release is downloaded from. The Windows installer goes first, from the Windows machine (`sh build/origin.sh windows`), because `make origin-extras` then publishes `install.ps1` and moves `bundles/latest`, and from that moment `install.ps1` fetches the new version's installer.
+5. **This documentation**, which deploys on its own and is not part of `make ship`:
+
+    ```sh
+    cd docs && make check       # a broken link fails the build
+    cd docs && make publish     # clean, build, then hop3 deploy
+    ```
+
+    `make publish` runs `hop3 deploy --context prod -y` against the app named in `docs/hop3.toml`: `libera-docs`, a static site serving `docs/site/` at `docs.liberasuite.eu`. It depends on `clean build`, so the deployed tree is never a stale one. `make deploy` is an alias. `hop3check` validates the config without touching the server.
+
+6. **Push the tag.**
 
 The last word belongs to the application, on a machine with no payload: `libera --payload-install`.
 

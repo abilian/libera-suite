@@ -23,10 +23,12 @@ set -eu
 HERE="$(cd "$(dirname "$0")" && pwd)"
 . "$HERE/common.sh"
 
-# Static CRT, because the rest of the build is /MT. Mixing runtimes links and
-# then fails at run time on a freed allocation, which is a worse day than a
-# link error. `x64-windows` is the dynamic default and is the wrong one here.
-TRIPLET="${VCPKG_TRIPLET:-x64-windows-static}"
+# A static library against the DLL CRT, because the rest of the build is /MD
+# (core patch 0028). Mixing runtimes links and then fails at run time, which is
+# a worse day than a link error. `x64-windows` would make OpenSSL a DLL of its
+# own, and `x64-windows-static` -- the earlier choice, when core was /MT --
+# gives it a private static CRT, which is exactly the fault 0028 removes.
+TRIPLET="${VCPKG_TRIPLET:-x64-windows-static-md}"
 
 # GitHub's windows images ship vcpkg and set VCPKG_INSTALLATION_ROOT. A desktop
 # usually has VCPKG_ROOT. Failing both, clone it beside the build tree.

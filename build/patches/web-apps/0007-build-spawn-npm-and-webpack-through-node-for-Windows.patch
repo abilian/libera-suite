@@ -1,0 +1,66 @@
+From 0b8870cc2ca06f70adbd3748808284eb273acafc Mon Sep 17 00:00:00 2001
+From: SF on Windows <sf+windows@abilian.com>
+Date: Tue, 29 Sep 2026 05:03:11 +0000
+Subject: [PATCH] build: spawn npm and webpack through node, for Windows
+
+Two tasks spawned a command that only exists as a .cmd on Windows:
+mobile:install ran `npm`, and every webpack task ran
+node_modules/.bin/webpack, a POSIX shim beside webpack.cmd.
+child_process.spawn() resolves neither without a shell, so each failed
+with `spawn ... ENOENT`, and since Node 20.12 a .cmd will not run
+without `shell: true` at all.
+
+Run both with process.execPath instead. webpack goes through
+require.resolve('webpack-cli/bin/cli.js'), which is what the sdkjs
+pipeline already does; npm goes through the npm-cli.js that ships
+beside this node, on win32 only. No shell means no argument quoting to
+get wrong.
+
+---
+ build/scripts/build-pipeline.js | 19 +++++++++++++++----
+ 1 file changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/build/scripts/build-pipeline.js b/build/scripts/build-pipeline.js
+index 98da5bec8a..a7fe27ad47 100755
+--- a/build/scripts/build-pipeline.js
++++ b/build/scripts/build-pipeline.js
+@@ -233,7 +233,10 @@ async function phase(title, taskSpecs) {
+ // ---- pipeline ---------------------------------------------------------------
+ 
+ const node = process.execPath; // same node version as the parent
+-const wp   = path.join(BUILD_DIR, 'node_modules', '.bin', 'webpack');
++// webpack-cli's entry point, run with this node, as sdkjs's pipeline does.
++// node_modules/.bin/webpack is a POSIX shim: on Windows the runnable file is
++// webpack.cmd, which spawn() cannot start without a shell (ENOENT).
++const wpCli = require.resolve('webpack-cli/bin/cli.js');
+ 
+ const WEBPACK_CONFIGS = [
+     'webpack.documenteditor.mjs',
+@@ -280,13 +283,21 @@ async function main() {
+ 
+     for (const cfg of WEBPACK_CONFIGS) {
+         const name = cfg.replace('webpack.', '').replace('.mjs', '');
+-        phase1Tasks.push(task(`webpack:${name}`, wp, ['--config', cfg]));
++        phase1Tasks.push(task(`webpack:${name}`, node, [wpCli, '--config', cfg]));
+     }
+ 
+     // Mobile: npm install first (sequential), then 4 editors in parallel.
+     // Run as a pre-phase so all 4 editor tasks appear individually in the summary.
+-    const install = await runTask(task('mobile:install', 'npm',
+-        ['install', '--include=dev', '--production=false'],
++    // On Windows npm is npm.cmd, which spawn() does not find without a shell
++    // (ENOENT) and, since Node 20.12, refuses to run without one (EINVAL).
++    // So run npm's own entry point with this node instead: no shell, no
++    // argument quoting, and the npm that ships beside this node.
++    const [npmCmd, npmArgs] = process.platform === 'win32'
++        ? [process.execPath, [path.join(path.dirname(process.execPath),
++            'node_modules', 'npm', 'bin', 'npm-cli.js')]]
++        : ['npm', []];
++    const install = await runTask(task('mobile:install', npmCmd,
++        [...npmArgs, 'install', '--include=dev', '--production=false'],
+         { cwd: FRAMEWORK7_DIR }
+     )).promise;
+     if (install.code !== 0) {
+-- 
+2.55.0.windows.3
+

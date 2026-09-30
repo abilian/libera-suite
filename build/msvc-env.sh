@@ -133,7 +133,7 @@ msvc_env() {
     # Case-insensitively, because Windows is about the case of these names and
     # the shell is not.
     for var in PATH INCLUDE LIB LIBPATH \
-        VSINSTALLDIR VCINSTALLDIR VCToolsInstallDir \
+        VSINSTALLDIR VCINSTALLDIR VCToolsInstallDir VCToolsRedistDir \
         WindowsSdkDir WindowsSdkVerBinPath WindowsSDKVersion UCRTVersion \
         VSCMD_ARG_TGT_ARCH; do
         value="$(sed -n "s/^$var=//Ip" "$dump" | tr -d '\r' | head -1)"

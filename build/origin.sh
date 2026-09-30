@@ -6,6 +6,7 @@
 #   build/origin.sh push      upload what the manifest names
 #   build/origin.sh check     fetch it all back and verify, with no token
 #   build/origin.sh extras    upload the bundles and install.sh, outside the version
+#   build/origin.sh windows   upload the Windows installer, from the Windows machine
 #
 #   DRY=1      say what would happen and change nothing
 #   QUICK=1    check: ask for sizes only, skipping the hashing
@@ -300,6 +301,9 @@ content_type() {
     # has made `curl URL | sh` harder to audit than it needed to be.
     *.sh)      echo "text/plain; charset=utf-8" ;;
     *.flatpak) echo "application/vnd.flatpak" ;;
+    # The PowerShell installer is read before it is run, like install.sh.
+    *.ps1 | *.sha256 | latest) echo "text/plain; charset=utf-8" ;;
+    *.exe)     echo "application/vnd.microsoft.portable-executable" ;;
     *)         echo "application/octet-stream" ;;
     esac
 }
@@ -594,7 +598,15 @@ cmd_extras() {
         fi
     done
 
+    if put_windows "$app"; then
+        found="$found windows"
+    else
+        say "    no Windows installer here; the Windows machine publishes it: build/origin.sh windows"
+    fi
+
     put "$installer" "install.sh" ""
+    # Its sibling for Windows, reached as `irm .../install.ps1 | iex`.
+    put "$REPO/build/install.ps1" "install.ps1" ""
 
     # What install.sh reads to learn which bundle to fetch. One line, so that
     # the script does not have to be re-stamped and re-published every release
@@ -611,12 +623,64 @@ cmd_extras() {
 
     step "published"
     for arch in $found; do
-        say "    $CDN_URL/$ZONE/bundles/libera-$app-$arch.flatpak"
+        case "$arch" in
+        windows)
+            say "    $CDN_URL/$ZONE/bundles/Libera-Suite-Setup-$app.exe"
+            say "    $CDN_URL/$ZONE/bundles/Libera-Suite-Setup.exe   (the stable link)"
+            ;;
+        *) say "    $CDN_URL/$ZONE/bundles/libera-$app-$arch.flatpak" ;;
+        esac
     done
     say "    $CDN_URL/$ZONE/bundles/latest            ($app)"
     say "    $CDN_URL/$ZONE/install.sh"
+    say "    $CDN_URL/$ZONE/install.ps1"
     say ""
     say "    check it:  curl -fsS $CDN_URL/$ZONE/install.sh | head -5"
+}
+
+# The Windows installer, with its SHA-256 beside it for install.ps1 to check,
+# or return 1 when this machine has not built one. Optional in `extras`: no
+# Windows builder is a normal state, and install.ps1 says so plainly when there
+# is no build for a version.
+put_windows() {
+    setup="$OUT_BUNDLES/Libera-Suite-Setup-$1.exe"
+    [ -f "$setup" ] && [ -f "$setup.sha256" ] || return 1
+    # The hash file has to describe the file being published, or install.ps1
+    # refuses every download of it: checked here, before either goes out.
+    want="$(cut -d' ' -f1 < "$setup.sha256")"
+    got="$(sha256sum "$setup" | cut -d' ' -f1)"
+    [ "$want" = "$got" ] || die "$setup.sha256 does not describe $setup"
+    put "$setup" "Libera-Suite-Setup-$1.exe" bundles
+    put "$setup.sha256" "Libera-Suite-Setup-$1.exe.sha256" bundles
+    # And under a name without the version: the link on the download page
+    # and in the docs, which should not move every release. A copy for the
+    # same reason `latest` is one; the versioned name is what install.ps1
+    # fetches, so its hash is checked against the file it names.
+    put "$setup" "Libera-Suite-Setup.exe" bundles
+}
+
+# The installer on its own, run on the Windows machine that built it, and before
+# the release's `publish`: install.ps1 finds the version in `latest`, which that
+# publish moves, so the installer it names is then already there.
+#
+# Not `extras` on Windows. That also publishes `latest`, which would name a
+# version whose Flatpak bundles are not up yet, and install.sh from a checkout
+# Git for Windows may have turned to CRLF (.gitattributes covers the patches only).
+cmd_windows() {
+    [ -n "${CDN_TOKEN:-}" ] || [ "${DRY:-}" = "1" ] || die \
+        "CDN_TOKEN is not set. See: build/origin.sh push"
+
+    app="$(sed -n 's/^version *= *//p' "$REPO/pyproject.toml" | head -1 | tr -d '"')"
+    [ -n "$app" ] || die "no version in pyproject.toml"
+
+    step "publishing the Windows installer for $app to $CDN_URL/$ZONE/bundles/"
+    put_windows "$app" || die "no $OUT_BUNDLES/Libera-Suite-Setup-$app.exe and .sha256
+       build/windows-app.sh writes both."
+
+    [ "${DRY:-}" = "1" ] && { step "nothing was uploaded (DRY=1)"; return 0; }
+    step "published"
+    say "    $CDN_URL/$ZONE/bundles/Libera-Suite-Setup-$app.exe"
+    say "    $CDN_URL/$ZONE/bundles/Libera-Suite-Setup.exe   (the stable link)"
 }
 
 case "${1:-}" in
@@ -625,8 +689,9 @@ collect) cmd_collect ;;
 push)    cmd_push ;;
 check)   cmd_check ;;
 extras)  cmd_extras ;;
+windows) cmd_windows ;;
 *)
-    sed -n '2,13p' "$0" | sed 's/^#\{1,\} \{0,1\}//'
+    sed -n '2,14p' "$0" | sed 's/^#\{1,\} \{0,1\}//'
     exit 2
     ;;
 esac

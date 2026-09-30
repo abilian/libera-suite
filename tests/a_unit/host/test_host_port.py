@@ -10,6 +10,8 @@ with Libera Suite open would otherwise fail the suite.
 
 from __future__ import annotations
 
+import errno
+import http.server
 import socket
 
 import pytest
@@ -46,3 +48,21 @@ def test_falls_back_when_the_stable_port_is_taken(monkeypatch):
 
     assert port != taken
     assert port > 0
+
+
+def test_a_second_server_cannot_share_the_port():
+    """Two instances on one port split each other's requests.
+
+    What SO_REUSEADDR allows on Windows, where it does not mean TIME_WAIT.
+    """
+    handler = http.server.BaseHTTPRequestHandler
+    with server.handler.Server(("127.0.0.1", 0), handler) as first:
+        port = first.server_address[1]
+        # The errno, not the message: that is the platform's own wording.
+        refused: OSError | None = None
+        try:
+            server.handler.Server(("127.0.0.1", port), handler).server_close()
+        except OSError as e:
+            refused = e
+    assert refused is not None, f"a second server bound {port}"
+    assert refused.errno == errno.EADDRINUSE, refused

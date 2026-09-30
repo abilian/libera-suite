@@ -1,8 +1,8 @@
 """Everything that puts something on screen and waits for an answer.
 
-Save panels, alerts, the close prompt, the recovery offer. Cocoa on macOS and
-pywebview's own dialogs elsewhere, and all of it above `windows`: a dialog
-needs a window to hang from.
+Save panels, alerts, the close prompt, the recovery offer. Cocoa on macOS, a
+Win32 message box on Windows, GTK on Linux, pywebview's own file dialogs off
+macOS, and all of it above `windows`: a dialog needs a window to hang from.
 """
 
 from __future__ import annotations
@@ -91,6 +91,76 @@ def _gtk_ask(title: str, message: str, buttons: Sequence[str]) -> int:
     return answer[0] if answer else -1
 
 
+# MessageBoxW's styles and answers, which Python does not name.
+MB_OK, MB_YESNOCANCEL, MB_YESNO = 0x0, 0x3, 0x4
+MB_ICONQUESTION, MB_ICONWARNING, MB_ICONINFORMATION = 0x20, 0x30, 0x40
+MB_SETFOREGROUND = 0x10000
+IDOK, IDCANCEL, IDYES, IDNO = 1, 2, 6, 7
+
+
+def _ask(
+    title: str, message: str, buttons: Sequence[str], windows: Sequence[int]
+) -> int:
+    """A modal question off macOS. Returns the index into `buttons`, or -1.
+
+    `windows` says which of `buttons` Windows' Yes, No and Cancel stand for, in
+    that order, one entry per button; a single entry is an OK box. A Win32
+    message box has those fixed buttons and no others -- the dialog that takes
+    custom labels needs Common Controls v6, which python.exe does not declare
+    -- and every question asked here reads as one: "Save changes to Report.docx
+    before closing?" Yes, No, Cancel is the classic Windows form of it.
+    """
+    if sys.platform == "win32":
+        return _win_ask(title, message, buttons, windows)
+    return _gtk_ask(title, message, buttons)
+
+
+def _win_ask(
+    title: str, message: str, buttons: Sequence[str], windows: Sequence[int]
+) -> int:
+    """MessageBoxW, owned by the front window so that it is modal to it.
+
+    Safe from any thread: MessageBoxW runs its own message loop, on the GUI
+    thread and off it, so this needs none of the hand-over GTK and AppKit do.
+    Under the question it says what each button means, in the words the other
+    platforms put on the buttons themselves -- "Yes: Recover" -- since "Open
+    it with them, or without?" is not a yes-or-no question on its own.
+    """
+    # For the type checkers as much as the runtime: every caller tests for
+    # win32, and a checker for another platform cannot see that. A block and
+    # not an early return, because pyrefly narrows on the first only. See
+    # _start in desktop.py.
+    if sys.platform == "win32":
+        import ctypes
+
+        styles = {
+            1: MB_OK | MB_ICONINFORMATION,
+            2: MB_YESNO | MB_ICONQUESTION,
+            3: MB_YESNOCANCEL | MB_ICONWARNING,
+        }
+        ids = (IDOK,) if len(windows) == 1 else (IDYES, IDNO, IDCANCEL)
+        meaning = dict(zip(ids, windows, strict=False))
+        text = f"{title}\n\n{message}"
+        if len(windows) > 1:
+            names = ("Yes", "No", "Cancel")
+            legend = "    ".join(
+                f"{names[i]}: {buttons[index]}" for i, index in enumerate(windows)
+            )
+            text += f"\n\n{legend}"
+
+        owner = None
+        native = getattr(front_window(), "native", None)
+        handle = getattr(native, "Handle", None)
+        if handle is not None:
+            owner = int(handle.ToInt64())
+
+        chosen = ctypes.windll.user32.MessageBoxW(
+            owner, text, "Libera Suite", styles[len(windows)] | MB_SETFOREGROUND
+        )
+        return meaning.get(chosen, -1)
+    return -1
+
+
 def _ask_to_recover(document: Path) -> bool:
     """Offer back edits that never reached the file.
 
@@ -104,11 +174,12 @@ def _ask_to_recover(document: Path) -> bool:
     """
     if sys.platform != "darwin":
         return (
-            _gtk_ask(
+            _ask(
                 f"Recover unsaved changes to \u201c{document.name}\u201d?",
                 "Libera Suite has edits to this document that were never "
                 "saved. Open the document with them, or without?",
                 ("Without", "Recover"),
+                windows=(1, 0),
             )
             == 1
         )
@@ -300,16 +371,18 @@ def build_save_panel(suggested: str, formats: Sequence[tuple[str, str]] | None =
 CLOSE_SAVE, CLOSE_CANCEL, CLOSE_DISCARD = 0, 1, 2
 
 
-def _gtk_confirm_close(document: Path) -> bool:
+def _confirm_close(document: Path) -> bool:
     """The close prompt everywhere that is not macOS. False keeps the window."""
-    chosen = _gtk_ask(
+    chosen = _ask(
         f"Save changes to \u201c{document.name}\u201d before closing?",
         "Your changes will be lost if you don't save them.",
         ("Save", "Cancel", "Don't Save"),
+        windows=(CLOSE_SAVE, CLOSE_DISCARD, CLOSE_CANCEL),
     )
     if chosen == CLOSE_SAVE:
         return _save_or_say_why(
-            document, lambda heading, detail: _gtk_ask(heading, detail, ("OK",))
+            document,
+            lambda heading, detail: _ask(heading, detail, ("OK",), windows=(0,)),
         )
     # A dismissed dialog (-1) keeps the window, which is the answer that cannot
     # lose anything.
@@ -350,7 +423,7 @@ def confirm_close(session: str) -> bool:
     if document is None or not H.unsaved.is_file():
         return True
     if sys.platform != "darwin":
-        return _gtk_confirm_close(document)
+        return _confirm_close(document)
 
     import AppKit
 
@@ -414,10 +487,11 @@ def offer_reload(session: str, message: str, port: int) -> None:
 
     if sys.platform != "darwin":
         if (
-            _gtk_ask(
+            _ask(
                 "The editor stopped responding.",
                 "Reload it? Your edits are kept; the undo history is not.",
                 ("Leave it", "Reload"),
+                windows=(1, 0),
             )
             == 1
         ):
@@ -472,8 +546,8 @@ def _mac_message(heading: str, detail: str) -> None:
     on_gui_thread(show)
 
 
-def _gtk_message(heading: str, detail: str) -> None:
-    _gtk_ask(heading, detail, ["OK"])
+def _plain_message(heading: str, detail: str) -> None:
+    _ask(heading, detail, ["OK"], windows=(0,))
 
 
 def say(heading: str, detail: str) -> None:
@@ -487,7 +561,7 @@ def say(heading: str, detail: str) -> None:
     Falls back to a log line rather than raising, because `libera --serve` runs
     with no toolkit at all and nothing here is worth failing a command over.
     """
-    show = _mac_message if sys.platform == "darwin" else _gtk_message
+    show = _mac_message if sys.platform == "darwin" else _plain_message
     try:
         show(heading, detail)
     except (ImportError, ValueError):

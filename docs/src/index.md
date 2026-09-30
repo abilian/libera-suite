@@ -1,8 +1,8 @@
 # Libera Suite
 
-**Libera Suite** is Abilian's desktop office suite: a word processor, a presentation editor and a spreadsheet that run on your own machine, on your own files, with no account or server.
+**Libera Suite** is Abilian's desktop office suite: four editors that run on your own machine, on your own files, with no account or server.
 
-It is built from [Euro-Office](https://github.com/Euro-Office), an AGPL fork of ONLYOFFICE by Ascensio System SIA, wrapped in a small Python host. The editors are the real thing, running locally: the same document engine, the same format support.
+It includes the editor components from [Euro-Office](https://github.com/Euro-Office), an AGPL fork of ONLYOFFICE by Ascensio System SIA, wrapped in a small Python host of our own. The editors are the real thing, running locally: the same document engine, the same format support.
 
 - **Libera Words**: documents (`.docx`, `.odt`, `.rtf`, `.txt`, `.md` and more)
 - **Libera Tables**: spreadsheets (`.xlsx`, `.ods`, `.csv`)
@@ -13,9 +13,9 @@ It is built from [Euro-Office](https://github.com/Euro-Office), an AGPL fork of 
 
 ## Where the project is
 
-All four run today, on **Linux** (x86_64 and arm64) and **macOS** (Apple Silicon). It is early. [What works today](guide/status.md) is a status list: it says what is built, what is half-built and what is not started.
+All four run today, on **Windows** 10 and 11 (x64), **Linux** (x86_64 and arm64) and **macOS** (Apple Silicon). It is early. [What works today](guide/status.md) is a status list: it says what is built, what is half-built and what is not started.
 
-If you want to try it, start with [Install](guide/install.md). If you want to build it, start with the [developer overview](develop/index.md).
+If you want to try it, start with [Install](guide/install.md): one command covers Linux and macOS, while Windows has an installer. If you want to build it, start with the [developer overview](develop/index.md). Either way, [tell us what happened](feedback.md).
 
 ## Why
 

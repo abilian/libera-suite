@@ -10,7 +10,7 @@ Everything that turns pinned upstream sources into a payload Libera Suite can ru
 | | |
 | :--- | :--- |
 | `pins.toml` | the upstream revisions, by SHA. `build.sh fetch` reads its repo list from here, so the two cannot drift |
-| `patches/<repo>/` | our changes to upstream, as `git format-patch` output — 21 on `core`, 6 on `web-apps`, 1 on `sdkjs` |
+| `patches/<repo>/` | our changes to upstream, as `git format-patch` output — 27 on `core`, 7 on `web-apps`, 1 on `sdkjs` |
 | `build.sh` | fetch and patch the sources, configure, build `core` (x2t and the native libraries) |
 | `payload.sh` | build the JS half: sdkjs, web-apps, fonts, blanks, dictionaries, branding |
 | `dist.sh` | the distributable tarballs and the manifest the wheel verifies them against |

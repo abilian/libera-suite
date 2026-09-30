@@ -8,11 +8,11 @@ which is also why the artifacts ship font *sources* rather than the web set.
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 from typing import TYPE_CHECKING
 
+from libera.payload import locate
 from libera.payload.locate import PayloadError
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ def generate(root: Path, *, core_fonts: Path | None = None) -> int:
     beside x2t -- which is where x2t looks for it. Returns the font count,
     because allfontsgen exits 0 having found none and the caller reports it.
     """
-    allfontsgen = root / "bin" / "tools" / "allfontsgen"
+    allfontsgen = root / "bin" / "tools" / f"allfontsgen{locate.EXE}"
     if not allfontsgen.is_file():
         msg = f"no allfontsgen at {allfontsgen}: the core artifact is incomplete"
         raise PayloadError(msg)
@@ -42,13 +42,14 @@ def generate(root: Path, *, core_fonts: Path | None = None) -> int:
     # exits 0 without writing anything, leaving an empty font directory behind.
     for stale in (root / "AllFonts.js", root / "sdkjs" / "common" / "AllFonts.js"):
         stale.unlink(missing_ok=True)
+    # And it skips every thumbnail scale whose PNG exists, so a changed font set
+    # would keep the pictures of the old one in the font menu.
+    for stale in images.glob("fonts_thumbnail*"):
+        stale.unlink()
     shutil.rmtree(web, ignore_errors=True)
     web.mkdir(parents=True, exist_ok=True)
     images.mkdir(parents=True, exist_ok=True)
 
-    env = dict(os.environ)
-    env["DYLD_LIBRARY_PATH"] = str(root / "bin")
-    env["LD_LIBRARY_PATH"] = str(root / "bin")
     subprocess.run(
         [
             str(allfontsgen),
@@ -61,7 +62,8 @@ def generate(root: Path, *, core_fonts: Path | None = None) -> int:
         ],
         check=True,
         capture_output=True,
-        env=env,
+        env=locate.tool_env(root / "bin"),
+        creationflags=locate.NO_WINDOW,
     )
     # The count, not the exit code: allfontsgen exits 0 having found nothing when
     # its directory walk has no live branch, and writes a well-formed AllFonts.js

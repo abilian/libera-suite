@@ -23,4 +23,4 @@ Some things are known to be missing and do not need reporting. See [What works t
 
 Send it to [github.com/abilian/libera-suite/issues](https://github.com/abilian/libera-suite/issues), which is also where Help ▸ Suggest a feature goes from inside the application.
 
-That repository is the public mirror: it carries the source and not the internal notes. If you would rather not use it, reach us through [abilian.com](https://abilian.com/).
+That repository is the public mirror: it holds the source, without the internal notes. If you would rather not use it, reach us through [abilian.com](https://abilian.com/).

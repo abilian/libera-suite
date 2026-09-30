@@ -4,7 +4,7 @@ Libera Suite is a Python host around upstream editors. Most of the work is in th
 
 - [Architecture](architecture.md): the pieces and how they talk.
 - [Build the payload](build.md): building the editors and the native binaries.
-- [The patch queue](patches.md): how we carry changes to upstream.
+- [The patch queue](patches.md): how our changes to upstream are kept.
 - [Cutting a release](release.md): which machine makes what, and in what order.
 - [Roadmap](roadmap.md): what is next and what we have decided against.
 
@@ -59,7 +59,7 @@ libera -q FILE       # errors only
 make help
 ```
 
-It reads the targets out of the Makefile, so it cannot fall behind them. A target appears there when it carries a `## summary`, which is how the ones you never type stay out of the way: the steps of `payload-all` are all still there to resume a build that failed in the middle.
+It reads the targets out of the Makefile, so it cannot fall behind them. A target appears there when it has a `## summary`, which is how the ones you never type stay out of the way: the steps of `payload-all` are all still there to resume a build that failed in the middle.
 
 `make tidy` removes every artefact a build on this machine wrote, which is mostly the Flatpak: its builddir, its ostree store and flatpak-builder's cache came to 1.4 GB on the laptop this was written on. It leaves `$BUILD_ROOT` alone, because that is the payload and the native core, and hours of V8 and ICU should not be removable by a repository-level tidy.
 
@@ -82,7 +82,7 @@ The suite is a pyramid, one directory per level. Markers are applied by director
 uv run playwright install chromium
 ```
 
-The last one is the important one. It carries the project's one hard-won lesson: **assert on content, never on exit codes.** A converter that writes an empty file exits zero. A browser that quits early exits zero. A PDF with no glyphs in it is the right size. So the e2e run photographs the editor's own canvas from inside the page, measures ink on it, and fails if the rows of text are closer together than a line of text can be. That is what a real regression looked like while every cheaper check reported success.
+The last one is the important one. It holds the project's one hard-won lesson: **assert on content, never on exit codes.** A converter that writes an empty file exits zero. A browser that quits early exits zero. A PDF with no glyphs in it is the right size. So the e2e run photographs the editor's own canvas from inside the page, measures ink on it, and fails if the rows of text are closer together than a line of text can be. That is what a real regression looked like while every cheaper check reported success.
 
 Both levels below `a_unit` skip themselves when they have nothing to run against: no installed payload, or no Chromium. Set `CHROMIUM=/path/to/browser` if yours is somewhere unusual.
 

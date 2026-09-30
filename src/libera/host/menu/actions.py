@@ -28,7 +28,7 @@ import logging
 import threading
 from pathlib import Path
 
-from libera.host import desktop, hooks, recents, session
+from libera.host import about, desktop, hooks, recents, session
 
 logger = logging.getLogger(__name__)
 
@@ -243,6 +243,21 @@ def _open_help() -> None:
         "Nothing here could open a browser",
         f"The documentation is at:\n\n{HELP_URL}",
     )
+
+
+def show_about() -> None:
+    """About: who wrote the editors, and under what licence.
+
+    On macOS the application menu's own About panel already reads
+    `NSHumanReadableCopyright` out of the main bundle, so this is the Linux
+    route to the same sentences. The editor has an About panel of its own,
+    which upstream switches off whenever `isDesktopApp` on the assumption that
+    the native shell provides one; `build/patches/web-apps/0007` turns it back
+    on, and this is what the shell owes either way.
+    """
+    from libera.host.window import dialogs
+
+    dialogs.say("Libera Suite", about.notice())
 
 
 def recent_documents() -> list[str]:

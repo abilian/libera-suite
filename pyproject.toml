@@ -1,6 +1,6 @@
 [project]
 name = "libera"
-version = "0.2.1"
+version = "0.3.0"
 description = "Libera Suite — Abilian's desktop office suite"
 readme = "README.md"
 authors = [

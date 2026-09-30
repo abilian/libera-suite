@@ -34,12 +34,25 @@ ARG BASE_DIGEST
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update \
+# flatpak-builder from bookworm-backports, because bookworm's 1.2.3 composes
+# AppStream data with `appstream-compose`, which the GNOME 49 SDK no longer
+# ships: once the app installed a metainfo file, the build died at the end with
+# `bwrap: execvp appstream-compose: No such file or directory`. 1.4 uses the
+# SDK's `appstreamcli compose`. The check below fails the image instead.
+RUN echo "deb http://deb.debian.org/debian bookworm-backports main" \
+        > /etc/apt/sources.list.d/backports.list \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
-        flatpak flatpak-builder ca-certificates \
+        flatpak ca-certificates \
         librsvg2-common \
         python3 python3-pip \
+    && apt-get install -y --no-install-recommends -t bookworm-backports \
+        flatpak-builder \
     && rm -rf /var/lib/apt/lists/*
+
+# 1.2.3 says `flatpak-builder 1.2.3` and 1.4.4 `flatpak-builder-1.4.4`.
+RUN flatpak-builder --version | grep -Eq '[ -]1\.[4-9]' \
+    || { echo "FATAL: $(flatpak-builder --version) cannot compose AppStream with this SDK" >&2; exit 1; }
 
 RUN ls /usr/lib/*/gdk-pixbuf-2.0/2.10.0/loaders/ | grep -q 'libpixbufloader-svg' \
     || { echo "FATAL: no gdk-pixbuf SVG loader in this base; icon export will fail" >&2; exit 1; }

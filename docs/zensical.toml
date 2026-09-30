@@ -41,8 +41,13 @@ nav = [
         { "Roadmap" = "develop/roadmap.md" },
     ]},
     { "Feedback" = "feedback.md" },
-    { "Licence" = "licence.md" },
 ]
+
+# licence.md is deliberately not a tab. Four tabs is already the point at which
+# the bar stops reading as a menu, and the licence is reached from the footer on
+# every page and from the Home page's own section. It still builds and is still
+# searchable; it just does not compete with Install for a reader's attention.
+
 
 [project.theme]
 

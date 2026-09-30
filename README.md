@@ -13,7 +13,7 @@ Four editors share one application. The file picks the editor, so there is nothi
 
 ![Libera Words, with a document open: the editor's toolbar in the Libera Words purple, and a laid-out page below it.](https://docs.liberasuite.eu/assets/words.png)
 
-Abilian builds the host as free software under the Apache License 2.0. The editors inside it are [Euro-Office](https://github.com/Euro-Office) (itself an AGPL fork of ONLYOFFICE by Ascensio System SIA), running locally and unmodified.
+Abilian builds the host as free software under the Apache License 2.0. The editors inside it come from [Euro-Office](https://github.com/Euro-Office) (itself an AGPL fork of ONLYOFFICE by Ascensio System SIA), running locally, with the document engine unmodified: our patch queue against them is build configuration and branding.
 
 ## Using it
 
@@ -24,7 +24,7 @@ libera *.pptx             # one window each
 libera                    # the start window: new, open, recent
 ```
 
-![The start window, carrying a New tile for each of Document, Spreadsheet and Presentation, an Open button, and a Recent list of three documents.](https://docs.liberasuite.eu/assets/start.png)
+![The start window, with a New tile for each of Document, Spreadsheet and Presentation, an Open button, and a Recent list of three documents.](https://docs.liberasuite.eu/assets/start.png)
 
 [What works today](https://docs.liberasuite.eu/guide/status/) sets out the full list with its gaps. It covers editing, saving and exporting, with PDF in the Save As popup. It also covers blank documents of all four kinds, images, printing, spell check in six languages, crash recovery and a Recent list.
 
@@ -54,9 +54,9 @@ Everything we ship, we build. [`build/`](build/README.md) compiles the editors a
 
 ## Where it stands
 
-**Early, and running.** All four editors work today on **Linux** (x86_64 and arm64) and **macOS** (Apple Silicon). Windows is not started.
+**Early, and running.** All four editors work today on **Windows** 10 and 11 (x64), **Linux** (x86_64 and arm64) and **macOS** (Apple Silicon).
 
-Tabs, file locking, and signing and notarisation on macOS are still to come. Linux has a menu bar and a launcher entry; neither carries keyboard shortcuts, because pywebview's GTK menu has no way to attach them. [What works today](https://docs.liberasuite.eu/guide/status/) lists the known issues, so an evening spent reporting one is an evening wasted. [The roadmap](https://docs.liberasuite.eu/develop/roadmap/) says what comes next and what we have decided against.
+Tabs, file locking, and signing and notarisation on macOS are still to come. Linux has a menu bar and a launcher entry; neither has keyboard shortcuts, because pywebview's GTK menu has no way to attach them. [What works today](https://docs.liberasuite.eu/guide/status/) lists the known issues, so an evening spent reporting one is an evening wasted. [The roadmap](https://docs.liberasuite.eu/develop/roadmap/) says what comes next and what we have decided against.
 
 The most useful thing you can send us is a document that renders wrongly, attached. The layout engine is upstream's and mature, so where output is wrong it is far more likely to be our packaging (a font we did not ship, a resource we failed to serve) than the engine.
 
@@ -77,7 +77,7 @@ brew install abilian/tap/libera
 libera --payload-install
 ```
 
-**Linux: the Flatpak.** The bundle carries the editors, GTK and WebKit, so there is nothing else to fetch and nothing to get wrong:
+**Linux: the Flatpak.** The bundle includes the editors, GTK and WebKit, so there is nothing else to fetch and nothing to get wrong:
 
 ```sh
 arch=amd64     # or arm64
@@ -130,13 +130,13 @@ The package and the command are `libera`. The repository directory is `local-off
 
 ## Credit
 
-Libera Suite is based on [Euro-Office](https://github.com/Euro-Office), itself based on [ONLYOFFICE](https://www.onlyoffice.com/) by Ascensio System SIA. The same line appears in Help ▸ About inside the application.
+Libera Suite includes components from [Euro-Office](https://github.com/Euro-Office), itself a fork of [ONLYOFFICE](https://www.onlyoffice.com/) by Ascensio System SIA. Those components are AGPL v3 and are modified. The same line appears in Help ▸ About inside the application, in the editor's own About panel, and in what a software centre shows for the Flatpak.
 
 The editors, the document engine and the format support are theirs. That is the hard part: twenty years of correctly reading a `.docx` written by somebody else's software. The host, the packaging and the desktop integration are ours. We are grateful for both.
 
 ## Licence
 
-Libera Suite ships as two artifacts, and they carry different licences.
+Libera Suite ships as two artifacts under different licences.
 
 **The host is [Apache-2.0](LICENSE)**: everything in `src/libera/`, which is the whole of this package.
 
