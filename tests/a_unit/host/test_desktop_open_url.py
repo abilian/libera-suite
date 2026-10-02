@@ -57,6 +57,13 @@ def opener(monkeypatch):
         return SimpleNamespace(wait=wait, kill=kill)
 
     monkeypatch.setattr(desktop.subprocess, "Popen", fake_popen)
+    # An opener waited on with no bound is the bug these tests are about, and
+    # on a Mac the real `open -R` would put Finder on screen besides.
+    monkeypatch.setattr(
+        desktop.subprocess,
+        "run",
+        lambda cmd, **_: pytest.fail(f"waited on {cmd[0]} with no bound"),
+    )
     return SimpleNamespace(calls=calls, answer=answer)
 
 
@@ -103,10 +110,40 @@ def test_an_opener_still_running_has_taken_it(opener, caplog):
     )
 
 
+def test_revealing_a_file_does_not_wait_on_the_file_manager(opener, tmp_path):
+    """xdg-open stays attached to what it starts, as it does to a browser, so
+    File > Open File Location held its request for as long as the folder
+    window stayed open."""
+    doc = tmp_path / "report.docx"
+    doc.write_bytes(b"PK")
+    opener.answer["code"] = "running"
+
+    assert desktop.reveal(doc) is True
+    assert opener.calls, "nothing was asked to show it"
+
+
+def test_a_file_nothing_could_reveal_is_reported(opener, tmp_path):
+    doc = tmp_path / "report.docx"
+    doc.write_bytes(b"PK")
+    opener.answer["code"] = 3
+
+    assert desktop.reveal(doc) is False
+
+
+def test_a_pdf_nothing_opens_is_reported(opener, tmp_path):
+    """Print hands its PDF to the desktop: a desktop that refuses it means
+    nothing was printed, and the editor has to be told."""
+    pdf = tmp_path / "report.pdf"
+    pdf.write_bytes(b"%PDF-1.7")
+    opener.answer["code"] = 3
+
+    assert desktop.open_externally(pdf) is False
+
+
 @pytest.mark.skipif(sys.platform != "darwin", reason="the macOS opener")
 def test_macos_uses_an_absolute_path():
     """`open` is a common enough word to shadow; the system one is meant."""
-    assert desktop.opener() == ["/usr/bin/open"]
+    assert desktop.choose_opener() == ["/usr/bin/open"]
 
 
 @pytest.fixture

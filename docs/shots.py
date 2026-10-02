@@ -36,16 +36,16 @@ from typing import TYPE_CHECKING, NamedTuple
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import FloatRect, ViewportSize, sync_playwright
 
 from libera import payload as payload_mod
 from libera.host import apps, recents, session
-from libera.host.session import Host
+from libera.host.session import Session
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "docs" / "src" / "assets"
 READY = 180  # seconds; a cold payload takes a while to lay out the first page
-VIEWPORT = {"width": 1440, "height": 900}
+VIEWPORT: ViewportSize = {"width": 1440, "height": 900}
 
 # What the sample document says. Written as prose and parsed, rather than as a
 # list of (style, text) pairs: the paragraphs are the point and they should be
@@ -103,7 +103,7 @@ def paragraphs(source: str) -> list[tuple[str, str]]:
     return out
 
 
-def free_port() -> int:
+def find_free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return int(s.getsockname()[1])
@@ -127,7 +127,7 @@ def wait_until_laid_out(calls: str) -> None:
 def shoot(document: Path, out: Path, *, work: Path, shot: Shot) -> None:
     """Serve one document, photograph the window, write `out`."""
     page_path, clip, viewport = shot.page_path, shot.clip, shot.viewport
-    port = free_port()
+    port = find_free_port()
     server = subprocess.Popen(
         [
             sys.executable,
@@ -145,6 +145,7 @@ def shoot(document: Path, out: Path, *, work: Path, shot: Shot) -> None:
         text=True,
         cwd=ROOT,
     )
+    assert server.stdout is not None  # stdout=PIPE
     url = server.stdout.readline().strip()
     if not url:
         server.wait(timeout=10)
@@ -180,6 +181,7 @@ def shoot(document: Path, out: Path, *, work: Path, shot: Shot) -> None:
 def blank(kind: str, work: Path) -> Path:
     """A copy of the payload's own blank document of that kind."""
     app = {"cell": apps.TABLES, "slide": apps.SLIDES}[kind]
+    assert app.blank is not None  # only Diagrams has none
     document = work / f"Blank.{app.ext}"
     shutil.copyfile(payload_mod.resolve().root / "empty" / app.blank, document)
     return document
@@ -226,7 +228,7 @@ def seed_recents(work: Path) -> None:
     shape, and a seed that guessed it wrong is how this script first produced
     a screenshot of an error message.
 
-    `Host.recents` sits one directory above a session, which is why the
+    `Session.recents` sits one directory above a session, which is why the
     sessions live under `work/session` and this writes beside them.
     """
     # Beside the work directory, never inside it: remember_recent refuses a
@@ -234,11 +236,12 @@ def seed_recents(work: Path) -> None:
     # our plumbing rather than the user's documents.
     folder = work.parent / "Documents"
     folder.mkdir(parents=True, exist_ok=True)
-    session.configure(Host(payload=work, work=work / "session"))
+    seeding = Session(payload=work, work=work / "session")
+    session.configure(seeding)
     for name in ("Quarterly report.docx", "Budget 2026.xlsx", "Team offsite.pptx"):
         document = folder / name
         document.write_bytes(b"seed")
-        recents.remember_recent(document)
+        recents.remember_recent(seeding, document)
 
 
 class Shot(NamedTuple):
@@ -247,8 +250,8 @@ class Shot(NamedTuple):
     label: str
     document: Callable[[Path], Path]
     page_path: str = ""
-    clip: dict | None = None
-    viewport: dict | None = None
+    clip: FloatRect | None = None
+    viewport: ViewportSize | None = None
 
 
 # The start window has no max-width: its layout is whatever width the window
@@ -256,12 +259,17 @@ class Shot(NamedTuple):
 # slab and every recent row pushes its directory to the far right, which made
 # a 2880x940 letterbox next to three 2880x1800 screenshots. 920 is about what
 # somebody would size the window to, and the page looks like itself in it.
-START_VIEWPORT = {"width": 920, "height": 900}
+START_VIEWPORT: ViewportSize = {"width": 920, "height": 900}
 # New, Open and Recent, and nothing below them. The payload block under those
 # prints the resolved payload directory, which on the machine that takes these
 # is under somebody's home -- and this file is published. seed_recents() keeps
 # the Recent list out of $HOME for the same reason; the clip does it here.
-START_CLIP = {"x": 0, "y": 0, "width": START_VIEWPORT["width"], "height": 468}
+START_CLIP: FloatRect = {
+    "x": 0,
+    "y": 0,
+    "width": START_VIEWPORT["width"],
+    "height": 468,
+}
 
 SHOTS = {
     "words": Shot("Words, holding a document", sample),

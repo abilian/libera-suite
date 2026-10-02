@@ -1,7 +1,7 @@
 """What the host has been asked for, and what it could not answer.
 
 The bottom of the package: counters and sets that both the GET and the POST
-side write, and that `host_report` reads back. The regression harness reads
+side write, and that `build_report` reads back. The regression harness reads
 that report instead of a log, which is why this is state rather than logging
 -- an assertion needs a value.
 """
@@ -9,8 +9,10 @@ that report instead of a log, which is why this is state rather than logging
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
-from libera.host.session import H
+if TYPE_CHECKING:
+    from libera.host.session import Session
 
 SEEN: dict[str, int] = {}
 ERRORS: list[dict] = []
@@ -20,7 +22,14 @@ ROUTES: dict[str, int] = {}
 NOT_FOUND_CODE = 404
 
 
-def host_report() -> bytes:
+def reset() -> None:
+    """Forget what the editor asked for: a new document is starting over."""
+    MEDIA_SERVED.clear()
+    SEEN.clear()
+    ERRORS.clear()
+
+
+def build_report(session: Session) -> bytes:
     return json.dumps(
         {
             "calls": SEEN,
@@ -28,8 +37,8 @@ def host_report() -> bytes:
             # Document media fails *silently* when the host gets it wrong: no
             # request, no console error, just a missing picture. Report what was
             # served so the check can compare it against what the document holds.
-            "media_expected": sorted(p.name for p in H.media.glob("*"))
-            if H.media.is_dir()
+            "media_expected": sorted(p.name for p in session.media.glob("*"))
+            if session.media.is_dir()
             else [],
             "media_served": sorted(MEDIA_SERVED),
             "not_found": sorted(NOT_FOUND),
@@ -38,6 +47,3 @@ def host_report() -> bytes:
         indent=2,
         sort_keys=True,
     ).encode()
-
-
-OFFERED: set[str] = set()

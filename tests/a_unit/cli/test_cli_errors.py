@@ -14,7 +14,9 @@ from support import repo_root
 
 from libera import cli, payload
 from libera.cli import commands
-from libera.payload import PayloadError
+from libera.host import app
+from libera.host.session import NotReadyError
+from libera.payload import NoPayloadError
 
 
 def run(argv, capsys):
@@ -40,12 +42,12 @@ def no_window(monkeypatch):
     # and on Linux the honest answer depends on what is installed: without the
     # GTK typelibs it returns a paragraph of advice and returns 1, so all three
     # tests below failed on the "no such file" and "one window per document"
-    # assertions with a message about apt. macOS never sees it -- why_no_window
+    # assertions with a message about apt. macOS never sees it -- explain_why_no_window
     # returns None there unconditionally -- which is why this was invisible
     # until the suite was first run on Linux.
-    monkeypatch.setattr(cli.commands.gui, "why_no_window", lambda: None)
-    monkeypatch.setattr(cli.commands, "_payload_or_offer", FakePayload)
-    monkeypatch.setattr(cli.commands.app, "run", fake_run)
+    monkeypatch.setattr(cli.commands.gui, "explain_why_no_window", lambda: None)
+    monkeypatch.setattr(cli.commands, "_resolve_payload_or_offer", FakePayload)
+    monkeypatch.setattr(app, "run", fake_run)
     return opened
 
 
@@ -87,13 +89,13 @@ def test_unreachable_origin_prints_a_message(monkeypatch, tmp_path, capsys):
     # that happened to have run a macOS dist.
     monkeypatch.setattr(
         payload.installer,
-        "bundled_manifest",
+        "read_bundled_manifest",
         lambda: {
             "payload_version": payload.PAYLOAD_VERSION,
             "artifacts": [
                 {
                     "kind": "core",
-                    "platform": payload.current_platform(),
+                    "platform": payload.get_current_platform(),
                     "name": "core.tar.gz",
                     "sha256": "0" * 64,
                     "size": 1,
@@ -102,7 +104,7 @@ def test_unreachable_origin_prints_a_message(monkeypatch, tmp_path, capsys):
         },
     )
     monkeypatch.setattr(payload.installer.urllib.request, "urlopen", boom)
-    monkeypatch.setattr(payload.locate, "data_dir", lambda: tmp_path / "data")
+    monkeypatch.setattr(payload.locate, "get_data_dir", lambda: tmp_path / "data")
 
     code, out = run(["--payload-install"], capsys)
 
@@ -142,16 +144,20 @@ def test_a_missing_file_is_reported_even_when_no_window_can_be_opened(
     """A typo is answered as a typo, not as an environment problem.
 
     `libera reprot.docx` on a Linux box whose virtualenv cannot see PyGObject
-    used to print a paragraph about GTK and exit, because cmd_open checked
+    used to print a paragraph about GTK and exit, because open_documents checked
     whether a window was possible before it looked at its arguments. The name
     is the thing the user can fix by retyping, so it is checked first.
 
-    Three e2e tests found this, and only on Linux: why_no_window() returns None
+    Three e2e tests found this, and only on Linux: explain_why_no_window() returns None
     on macOS unconditionally, so the order never mattered here.
     """
     monkeypatch.setattr(
-        cli.commands.gui, "why_no_window", lambda: "Libera Suite needs GTK and WebKit"
+        cli.commands.gui,
+        "explain_why_no_window",
+        lambda: "Libera Suite needs GTK and WebKit",
     )
+    # Should the order of the checks break, a failure rather than a window.
+    monkeypatch.setattr(app, "run", lambda *_a, **_k: pytest.fail("opened a window"))
 
     code, out = run(["/nope/missing.docx"], capsys)
 
@@ -168,8 +174,11 @@ def test_the_window_is_still_reported_when_the_file_is_fine(
     document = tmp_path / "real.docx"
     document.write_bytes(b"x")
     monkeypatch.setattr(
-        cli.commands.gui, "why_no_window", lambda: "Libera Suite needs GTK and WebKit"
+        cli.commands.gui,
+        "explain_why_no_window",
+        lambda: "Libera Suite needs GTK and WebKit",
     )
+    monkeypatch.setattr(app, "run", lambda *_a, **_k: pytest.fail("opened a window"))
 
     code, out = run([str(document)], capsys)
 
@@ -192,13 +201,70 @@ def test_a_launch_with_no_terminal_is_told_in_a_window(monkeypatch, capsys):
     monkeypatch.setattr(commands.gui, "show_problem", lambda *a: shown.append(a))
     monkeypatch.setattr(commands.sys.stdin, "isatty", lambda: False)
 
-    assert commands._agreed_to_install() is False
+    assert commands._ask_to_install() is False
 
     assert shown, "nothing on screen, and nobody reading the terminal"
     heading, _body, command = shown[0]
     assert "payload" in heading
     assert "--payload-install" in command
     assert "--payload-install" in capsys.readouterr().err, "the printing stays too"
+
+
+def test_a_windowed_windows_build_has_no_stdin_at_all(monkeypatch, capsys):
+    """sys.stdin is None there, and `sys.stdin.isatty()` raised AttributeError:
+    the silent exit the window exists to prevent."""
+    shown = []
+    monkeypatch.setattr(commands.gui, "show_problem", lambda *a: shown.append(a))
+    monkeypatch.setattr(commands.sys, "stdin", None)
+
+    assert commands._ask_to_install() is False
+    assert shown, "nothing on screen"
+
+
+def test_any_refusal_to_start_is_shown_when_there_is_no_terminal(
+    monkeypatch, tmp_path, capsys, no_window
+):
+    """Not only the two messages about the payload: a session that cannot be
+    served exited silently from a launcher too."""
+    document = tmp_path / "a.docx"
+    document.write_bytes(b"x")
+    shown = []
+    monkeypatch.setattr(commands.gui, "show_problem", lambda *a: shown.append(a))
+    monkeypatch.setattr(commands.sys.stdin, "isatty", lambda: False)
+
+    def not_ready(*_a, **_k):
+        msg = "missing: AllFonts.js"
+        raise NotReadyError(msg)
+
+    monkeypatch.setattr(app, "run", not_ready)
+
+    code, out = run([str(document)], capsys)
+
+    assert code == 1
+    assert "missing: AllFonts.js" in out.err
+    assert [paragraphs for _, paragraphs in shown] == [["missing: AllFonts.js"]]
+
+
+@pytest.mark.parametrize(
+    ("argv", "said"),
+    [
+        (["--from", "dist"], "--from goes with --payload-install"),
+        (["--trust-manifest"], "--trust-manifest goes with --payload-install"),
+        (["--port", "1234", "--payload-status"], "--port goes with --serve"),
+    ],
+)
+def test_an_option_of_another_command_is_refused(argv, said, capsys, no_window):
+    """`libera --from ./dist` opened the start window and offered a download
+    from the default origin, ignoring the directory it was given.
+
+    `no_window`, because that is what this does when it is broken: without it,
+    the bug coming back opens a real start window and the suite waits on it.
+    """
+    with pytest.raises(SystemExit) as refused:
+        cli.main(argv)
+
+    assert refused.value.code == 2
+    assert said in capsys.readouterr().err
 
 
 def test_a_terminal_run_is_asked_rather_than_shown_a_window(monkeypatch):
@@ -208,7 +274,7 @@ def test_a_terminal_run_is_asked_rather_than_shown_a_window(monkeypatch):
     monkeypatch.setattr(commands.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr("builtins.input", lambda _: "n")
 
-    assert commands._agreed_to_install() is False
+    assert commands._ask_to_install() is False
     assert not shown
 
 
@@ -216,14 +282,14 @@ def test_inside_the_flatpak_the_command_is_the_flatpak_one(monkeypatch):
     """`libera` is not on the host's PATH when the application is a sandbox."""
     monkeypatch.setenv("FLATPAK_ID", "eu.liberasuite.Libera")
     assert (
-        commands._install_command()
+        commands._format_install_command()
         == "flatpak run eu.liberasuite.Libera --payload-install"
     )
 
 
 def test_outside_it_is_just_libera(monkeypatch):
     monkeypatch.delenv("FLATPAK_ID", raising=False)
-    assert commands._install_command() == "libera --payload-install"
+    assert commands._format_install_command() == "libera --payload-install"
 
 
 def test_a_build_that_cannot_fetch_does_not_offer_to(monkeypatch, capsys):
@@ -239,16 +305,16 @@ def test_a_build_that_cannot_fetch_does_not_offer_to(monkeypatch, capsys):
     monkeypatch.setattr(
         commands.payload_mod,
         "resolve",
-        lambda: (_ for _ in ()).throw(PayloadError("no editor payload found")),
+        lambda: (_ for _ in ()).throw(NoPayloadError("nowhere it looked")),
     )
     monkeypatch.setattr(commands.payload_mod, "can_fetch", lambda: False)
-    monkeypatch.setattr(commands, "_agreed_to_install", lambda: asked.append(1))
+    monkeypatch.setattr(commands, "_ask_to_install", lambda: asked.append(1))
     # capsys leaves stdin without a tty, which is the launcher case: the
     # message goes into a window as well as onto stderr. Opening one here
     # would block the suite on webview.start().
     monkeypatch.setattr(commands.gui, "show_problem", lambda *_a, **_k: None)
 
-    assert commands._payload_or_offer() is None
+    assert commands._resolve_payload_or_offer() is None
     assert asked == [], "it asked a question it could not honour"
 
     said = capsys.readouterr().err

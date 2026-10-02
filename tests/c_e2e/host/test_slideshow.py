@@ -14,25 +14,19 @@ from __future__ import annotations
 
 import json
 import shutil
-import socket
 import threading
 import urllib.request
 
 import pytest
 from playwright.sync_api import Error, sync_playwright
+from support import find_free_port
 
 from libera import payload as payload_mod
 from libera.host import opening, server, session as sessions
-from libera.host.session import Host
+from libera.host.session import Session
 
 LOUD = ("error", "reject", "asc_onError")
 READY = 180_000
-
-
-def free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return int(s.getsockname()[1])
 
 
 @pytest.fixture
@@ -43,12 +37,12 @@ def slides(tmp_path):
     shutil.copyfile(root / "empty" / "new.pptx", deck)
 
     sessions.SESSIONS.clear()
-    sessions.configure(Host(payload=root, work=tmp_path / "0", document=deck))
-    opening.open_document(deck)
-    server.ROUTES.clear()
+    shown = Session(payload=root, work=tmp_path / "0", document=deck)
+    sessions.configure(shown)
+    opening.open_document(shown, deck)
 
-    port = free_port()
-    httpd = server.make_server(port)
+    port = find_free_port()
+    httpd = server.make_server(port, shown)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
     play = sync_playwright().start()
@@ -59,7 +53,7 @@ def slides(tmp_path):
         httpd.shutdown()
         pytest.skip(f"needs Playwright's chromium: playwright install chromium ({e})")
     page = browser.new_page(viewport={"width": 1400, "height": 900})
-    page.goto(server.editor_url(port, deck.name, "0"))
+    page.goto(server.make_editor_url(port, shown, deck.name))
     page.wait_for_function(
         "() => { const f = document.querySelector('iframe');"
         "return f && f.contentWindow && f.contentWindow.Asc"

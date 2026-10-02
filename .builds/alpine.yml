@@ -7,20 +7,21 @@ packages:
 secrets:
   - b88a4c2c-944c-42a6-9fbb-7483049c458a
 
+# playwright has no wheel for musl; see the e2e group in pyproject.toml.
+environment:
+  UV_NO_GROUP: e2e
+
 sources:
-  - git@git.sr.ht:~sfermigier/local-office
+  - git@git.sr.ht:~sfermigier/muchado
 
 tasks:
   - install: |
-      cd local-office
+      cd muchado
       uv sync
   - test: |
-      cd local-office
-      uv run pytest -q --tb=short
+      cd muchado
+      uv run pytest -q --tb=short --ignore=tests/c_e2e
   - lint: |
-      cd local-office
+      cd muchado
       uv run ruff check
       uv run ty check src
-  - nox: |
-      cd local-office
-      uvx nox

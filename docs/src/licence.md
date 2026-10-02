@@ -13,7 +13,7 @@ Run `libera --payload-status` to see the payload in use and the upstream revisio
 
 ## What it is built from
 
-Libera Suite includes components from [**Euro-Office**](https://github.com/Euro-Office), an AGPL fork of **ONLYOFFICE**, which is developed by Ascensio System SIA. Those components are modified, and our changes to them are the patch queue described below. The editors, the document engine and the format support are theirs; the host, the packaging and the desktop integration are ours.
+Libera Suite includes components from [**Euro-Office**](https://github.com/Euro-Office), an AGPL fork of **ONLYOFFICE**, which is developed by Ascensio System SIA. Those components are modified; our changes to them are the patch queue described below. The editors, the document engine and the format support are theirs; the host, the packaging and the desktop integration are ours.
 
 We are grateful for both. An office suite's hard part is the twenty years of reading other people's `.docx` files correctly. That part is inherited.
 

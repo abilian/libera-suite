@@ -19,6 +19,9 @@ pytestmark = pytest.mark.skipif(
     sys.platform != "darwin", reason="the menu bar is macOS only"
 )
 
+if sys.platform == "darwin":
+    from libera.host.menu import macos
+
 # Sent to the responder chain rather than to us: AppKit or the web view
 # implements them, and they must have no target.
 STANDARD = ("perform", "toggle", "arrangeInFront", "submenuAction")
@@ -41,7 +44,7 @@ def selectors_the_menu_uses() -> set[str]:
 
 
 def test_the_target_answers_every_selector_the_menu_sends_it():
-    target = menu.actions.target_class().alloc().init()
+    target = macos.LiberaMenuTarget.alloc().init()
     missing = [
         s for s in selectors_the_menu_uses() if not target.respondsToSelector_(s)
     ]
@@ -54,12 +57,12 @@ def test_there_are_actually_some_to_check():
 
 
 def test_the_recent_menu_delegate_answers_appkit():
-    delegate = menu.actions.recent_delegate_class().alloc().init()
+    delegate = macos.LiberaRecentMenu.alloc().init()
     assert delegate.respondsToSelector_("menuNeedsUpdate:")
 
 
 def test_the_target_validates_its_own_items():
     """Save, Undo and Redo decline silently when there is nothing to do, so
     the menu has to say so before the user presses them."""
-    target = menu.actions.target_class().alloc().init()
+    target = macos.LiberaMenuTarget.alloc().init()
     assert target.respondsToSelector_("validateMenuItem:")

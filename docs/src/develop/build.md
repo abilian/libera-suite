@@ -92,7 +92,7 @@ The steps above are the steps: the scripts run natively on Linux, with nothing i
 - **`V8_BUILD_JOBS` scales with the machine.** Linking `v8_monolith` takes about 2 GB a job, so the default is memory over two, capped at the core count. macOS keeps its hardcoded 4, because the laptop builds while being used for other things. Override either.
 - **Relocation checks; it does not rewrite.** `DT_NEEDED` records a soname and never a path, so a moved payload still finds its libraries through `LD_LIBRARY_PATH`, which both the build and the host set. A recorded `RPATH` pointing into the build tree is still reported (it is searched first, so a machine that happens to have that directory would silently load from it) and stripped when `patchelf` is installed.
 
-Of the 27 `core` patches, 21 are macOS work and 6 are Windows. All but one sit inside an `if(APPLE)`, `if(WIN32)` or `if(NOT WIN32)` block, so they are inert here. The exception is `0019`, which adds zlib's sources to the `IWorkFile` target for every platform; ELF resolves those symbols lazily where Mach-O demands them at link, so Linux never needed the patch and is unharmed by it. **No native Linux build has been run yet**; the container path below is the exercised one.
+Of the 28 `core` patches, 21 are macOS work and 7 are Windows. All but one sit inside an `if(APPLE)`, `if(WIN32)` or `if(NOT WIN32)` block, or in files only a Windows build reads, so they are inert here. The exception is `0019`, which adds zlib's sources to the `IWorkFile` target for every platform; ELF resolves those symbols lazily where Mach-O demands them at link, so Linux never needed the patch and is unharmed by it. **No native Linux build has been run yet**; the container path below is the exercised one.
 
 ### In a container
 

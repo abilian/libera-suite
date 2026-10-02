@@ -29,16 +29,16 @@ def data_home(tmp_path, monkeypatch) -> Path:
 
 def entry(data_home: Path) -> configparser.ConfigParser:
     parser = configparser.ConfigParser(interpolation=None)
-    parser.read(launcher.entry_path(), encoding="utf-8")
+    parser.read(launcher.get_entry_path(), encoding="utf-8")
     return parser
 
 
 def test_it_writes_where_freedesktop_looks(data_home):
     written = launcher.install()
-    assert launcher.entry_path() == (
+    assert launcher.get_entry_path() == (
         data_home / "applications" / "eu.liberasuite.Libera.desktop"
     )
-    assert launcher.icon_path() == (
+    assert launcher.get_icon_path() == (
         data_home
         / "icons"
         / "hicolor"
@@ -46,7 +46,7 @@ def test_it_writes_where_freedesktop_looks(data_home):
         / "apps"
         / "eu.liberasuite.Libera.svg"
     )
-    assert set(written) == {launcher.entry_path(), launcher.icon_path()}
+    assert set(written) == {launcher.get_entry_path(), launcher.get_icon_path()}
     assert all(p.is_file() for p in written)
     assert launcher.is_installed()
 
@@ -54,8 +54,8 @@ def test_it_writes_where_freedesktop_looks(data_home):
 def test_the_icon_is_a_copy_and_not_a_link(data_home):
     """An upgrade replaces site-packages; a link into it dangles."""
     launcher.install()
-    assert not launcher.icon_path().is_symlink()
-    assert launcher.icon_path().read_bytes().startswith(b"<")
+    assert not launcher.get_icon_path().is_symlink()
+    assert launcher.get_icon_path().read_bytes().startswith(b"<")
 
 
 def test_exec_is_absolute_and_still_takes_files(data_home):
@@ -96,7 +96,7 @@ def test_nothing_but_exec_is_rewritten(data_home):
 def test_remove_takes_both_and_says_so_once(data_home):
     launcher.install()
     gone = launcher.remove()
-    assert set(gone) == {launcher.entry_path(), launcher.icon_path()}
+    assert set(gone) == {launcher.get_entry_path(), launcher.get_icon_path()}
     assert not launcher.is_installed()
     assert launcher.remove() == []
 
@@ -110,17 +110,17 @@ def test_the_flatpak_is_told_not_to(data_home, monkeypatch):
     """
     monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setenv("FLATPAK_ID", "eu.liberasuite.Libera")
-    assert "Flatpak" in (launcher.why() or "")
+    assert "Flatpak" in (launcher.explain_unsupported() or "")
 
 
 def test_an_ordinary_linux_install_is_told_yes(data_home, monkeypatch):
     monkeypatch.setattr(sys, "platform", "linux")
-    assert launcher.why() is None
+    assert launcher.explain_unsupported() is None
 
 
 @pytest.mark.skipif(sys.platform.startswith("linux"), reason="the Linux answer is yes")
 def test_it_declines_where_there_is_no_launcher():
-    assert launcher.why() is not None
+    assert launcher.explain_unsupported() is not None
 
 
 @pytest.mark.skipif(
@@ -137,7 +137,7 @@ def test_freedesktop_accepts_the_entry(data_home):
     """
     launcher.install()
     result = subprocess.run(
-        ["desktop-file-validate", str(launcher.entry_path())],
+        ["desktop-file-validate", str(launcher.get_entry_path())],
         capture_output=True,
         text=True,
         check=False,

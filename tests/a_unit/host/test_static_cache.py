@@ -14,6 +14,7 @@ ETag over the file's full path, size and nanosecond mtime.
 from __future__ import annotations
 
 import http.client
+import logging
 import os
 import threading
 
@@ -21,7 +22,7 @@ import pytest
 
 from libera.host import session
 from libera.host.server import handler
-from libera.host.session import Host
+from libera.host.session import Session
 
 
 @pytest.fixture
@@ -30,7 +31,7 @@ def serve(tmp_path):
 
     Every request binds a session before it looks at a path, so there is one.
     """
-    session.configure(Host(payload=tmp_path / "payload", work=tmp_path / "work"))
+    session.configure(Session(payload=tmp_path / "payload", work=tmp_path / "work"))
     servers = []
 
     def start(root):
@@ -68,7 +69,7 @@ def test_a_payload_file_says_revalidate_and_names_itself(serve, tmp_path):
     assert response.getheader("ETag")
 
 
-def test_an_unchanged_file_is_a_304(serve, tmp_path):
+def test_an_unchanged_file_is_a_304(serve, tmp_path, caplog):
     root = tmp_path / "payload"
     port = serve(root)
     (root / "sdkjs" / "common" / "AllFonts.js").write_text("fonts = 32", "utf-8")
@@ -80,6 +81,9 @@ def test_an_unchanged_file_is_a_304(serve, tmp_path):
 
     assert again.status == 304
     assert body == b""
+    # A success, so nothing on the terminal: every page load used to print a
+    # "! 304" line per cached file.
+    assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
 
 
 def test_another_payload_with_the_same_file_times_is_not_a_304(serve, tmp_path):

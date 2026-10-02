@@ -1,97 +1,116 @@
-"""Callbacks the window layer installs, and the host calls.
+"""What the host asks of whoever owns the windows.
 
 A file dialog needs a window to hang from, and a second document needs
 somewhere to put it -- neither of which the HTTP host knows anything about. It
-asks through these instead.
+asks `shell`.
 
-They are read through the module (`hooks.SAVE_PATH_CHOOSER`), never imported
-by name: `from .hooks import SAVE_PATH_CHOOSER` would bind whatever None was
-there at import time and never see the real one.
+`shell` starts as `HeadlessShell`, which is what `libera --serve` and the regression
+harness run with: one window, no way to make another, nobody to ask. `app.run`
+replaces it with one that has windows. Read it through the module
+(`hooks.shell`), never imported by name: `from .hooks import shell` would keep
+the headless one after run() has replaced it.
 
-All None is a valid state: `libera --serve` and the regression harness have one
-window and no way to make another, and both behave accordingly.
+A headless shell mostly declines -- no file chosen, nothing recovered, nothing
+offered. Where having no window changes what the host itself does -- a
+document opened in place, a save that goes into the session -- the caller
+says so on `shell.windowed`, rather than leave it to a default nobody sees.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from pathlib import Path
+import logging
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from pathlib import Path
+
     from libera.host.apps import App
+    from libera.host.session import Session
+
+logger = logging.getLogger(__name__)
 
 
-# Each of these is "that callback, or nobody installed one". Spelling it out
-# matters more than it looks: declared as a bare `= None`, the inferred type of
-# every hook is None -- so a checker reads `hooks.SAVE_PATH_CHOOSER = chooser`
-# as assigning a function to a None, and `if hooks.SAVE_PATH_CHOOSER:` as a
-# condition that is always false. Fourteen diagnostics came from that, and they
-# hid the ones that meant something.
-class WindowOpener(Protocol):
-    """Put a document on screen in a window of its own.
+class Shell(Protocol):
+    """What the host asks of whoever owns the windows."""
 
-    A Protocol rather than a Callable alias, because the editor asks for a
-    window in two ways -- `WINDOW_OPENER(path)` from a menu, and
-    `WINDOW_OPENER(None, app)` from the start window -- and
-    `Callable[[A, B], None]` has no way to say that the second is optional.
+    # Whether there are windows at all, and so a menu bar and dialogs.
+    windowed: bool
+
+    def open_window(self, document: Path | None, app: App | None = None) -> bool:
+        """A document in a window of its own. None is a new one of `app`'s kind.
+
+        Whether it is on screen. When it is not, the user has been told why.
+        """
+
+    def show_start_window(self) -> None:
+        """The start window: a second launch with no document asked for it."""
+
+    def choose_save_path(
+        self, suggested: str, formats: Sequence[tuple[str, str]], start_in: Path | None
+    ) -> str | None:
+        """Where to save, as one of `formats`, or None if the user cancelled.
+
+        Starting in `start_in`, or where the toolkit chooses when it is None.
+        """
+
+    def choose_open_path(self, kind: str) -> str | None:
+        """What to open, or None if the user cancelled."""
+
+    def set_fullscreen(self, on: bool) -> None:
+        """Slides, starting or ending a demonstration."""
+
+    def offer_reload(self, session: Session, message: str) -> None:
+        """The editor threw where nothing caught it: offer to rebuild it."""
+
+    def reload(self, session: Session) -> None:
+        """File > Reload: rebuild the editor in that window, keeping the edits."""
+
+    def ask_to_recover(self, document: Path) -> bool:
+        """Whether to open the edits that never reached this document's file."""
+
+    def tell(self, heading: str, detail: str) -> None:
+        """Something the user should know, with nothing to decide."""
+
+
+class HeadlessShell:
+    """No windows, and nobody to ask.
+
+    Every answer is the one that changes nothing. Recovery in particular stays
+    off: a check that sometimes resumes the previous run is not a check.
     """
 
-    def __call__(self, document: Path | None, app: App | None = None) -> None: ...
+    windowed = False
+
+    def open_window(self, document: Path | None, app: App | None = None) -> bool:
+        logger.info("no window to open %s in", document or "a new document")
+        return False
+
+    def show_start_window(self) -> None:
+        logger.info("no start window to show")
+
+    def choose_save_path(
+        self, suggested: str, formats: Sequence[tuple[str, str]], start_in: Path | None
+    ) -> str | None:
+        return None
+
+    def choose_open_path(self, kind: str) -> str | None:
+        return None
+
+    def set_fullscreen(self, on: bool) -> None:
+        pass
+
+    def offer_reload(self, session: Session, message: str) -> None:
+        pass
+
+    def reload(self, session: Session) -> None:
+        logger.warning("reload: no window to reload")
+
+    def ask_to_recover(self, document: Path) -> bool:
+        return False
+
+    def tell(self, heading: str, detail: str) -> None:
+        logger.warning("%s: %s", heading, detail)
 
 
-PathChooser = Callable[[str], str | None]
-Fullscreen = Callable[[bool], None]
-Reload = Callable[[str], None]
-Broken = Callable[[str, str], None]
-RecoveryChooser = Callable[[Path], bool]
-
-# Set by whoever owns windows, so the host can ask for another one. None means
-# there is nowhere to put a second document -- the harness, or `libera --serve`
-# -- and File > Open replaces what is open, as it used to.
-WINDOW_OPENER: WindowOpener | None = None
-
-
-# File dialogs need a window, so the host installs them here; run.sh check
-# leaves them None (saves to a fixed path, picks no file, never recovers).
-#   SAVE_PATH_CHOOSER(suggested_name) -> chosen path, or None if cancelled
-#   OPEN_PATH_CHOOSER(filter)         -> chosen path, or None if cancelled
-SAVE_PATH_CHOOSER: PathChooser | None = None
-
-
-OPEN_PATH_CHOOSER: PathChooser | None = None
-
-
-# Slides takes the window fullscreen for a demonstration and gives it back
-# afterwards. A setter rather than a toggle, because sdkjs sends true and
-# false explicitly. None means the window cannot do it -- `libera --serve`
-# has no window -- and the slideshow runs in the window it has.
-FULLSCREEN: Fullscreen | None = None
-
-
-# Rebuild the editor in a window that has stopped behaving, keeping the edits.
-# The way out when the editor has wedged and said so itself, which is when the
-# host stays quiet -- see server.broken.
-#   RELOAD(session) -> None
-RELOAD: Reload | None = None
-
-
-# Called when the editor throws where nobody caught it, so its state is no
-# longer trustworthy. The window layer offers to reload; None means nobody can
-# ask, and the error is only logged -- which is what `libera --serve` wants.
-#   BROKEN(session, message) -> None
-BROKEN: Broken | None = None
-
-
-# Asked before a session is thrown away, when it still holds unsaved edits.
-# None means never recover, which is what the harness wants: a check that
-# sometimes resumes the previous run is not a check.
-RECOVERY_CHOOSER: RecoveryChooser | None = None
-
-
-# Put the start window up. A second launch with no document -- the icon
-# clicked while Libera Suite is already open -- hands off to the running
-# instance, and this is what that instance does with it. None means there is no
-# window to put up, which is `libera --serve`.
-#   START_OPENER() -> None
-START_OPENER: Callable[[], None] | None = None
+shell: Shell = HeadlessShell()

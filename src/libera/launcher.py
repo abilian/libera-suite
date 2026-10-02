@@ -24,7 +24,8 @@ does not include `~/.local/bin`, so shipping the template as-is would have
 produced an icon that silently does nothing -- the same class of failure as a
 launch with no terminal to print to.
 
-Linux only. `why()` says so, rather than each caller testing the platform.
+Linux only. `explain_unsupported()` says so, rather than each caller testing
+the platform.
 """
 
 from __future__ import annotations
@@ -37,14 +38,14 @@ import sys
 from importlib import resources
 from pathlib import Path
 
-from libera.payload.locate import xdg_data_home
+from libera.payload.locate import get_xdg_data_home
 
 logger = logging.getLogger(__name__)
 
 APP_ID = "eu.liberasuite.Libera"
 
 
-def why() -> str | None:
+def explain_unsupported() -> str | None:
     """None when a launcher entry makes sense here; otherwise what to say."""
     if not sys.platform.startswith("linux"):
         return "a desktop entry is a Linux thing; macOS has Libera.app"
@@ -53,16 +54,23 @@ def why() -> str | None:
     return None
 
 
-def entry_path() -> Path:
-    return xdg_data_home() / "applications" / f"{APP_ID}.desktop"
+def get_entry_path() -> Path:
+    return get_xdg_data_home() / "applications" / f"{APP_ID}.desktop"
 
 
-def icon_path() -> Path:
-    return xdg_data_home() / "icons" / "hicolor" / "scalable" / "apps" / f"{APP_ID}.svg"
+def get_icon_path() -> Path:
+    return (
+        get_xdg_data_home()
+        / "icons"
+        / "hicolor"
+        / "scalable"
+        / "apps"
+        / f"{APP_ID}.svg"
+    )
 
 
 def is_installed() -> bool:
-    return entry_path().is_file()
+    return get_entry_path().is_file()
 
 
 def _quote(path: Path) -> str:
@@ -79,7 +87,7 @@ def _quote(path: Path) -> str:
     return text
 
 
-def _exec_line() -> str:
+def _make_exec_line() -> str:
     """The command the desktop file should run, absolute.
 
     argv[0] first, because that is the copy the user just invoked and the one
@@ -95,13 +103,13 @@ def _exec_line() -> str:
     return f"{_quote(Path(sys.executable).resolve())} -m libera %F"
 
 
-def _entry_text() -> str:
+def _render_entry() -> str:
     template = (resources.files("libera") / "launcher.desktop").read_text(
         encoding="utf-8"
     )
     out = []
     for line in template.splitlines():
-        out.append(f"Exec={_exec_line()}" if line.startswith("Exec=") else line)
+        out.append(f"Exec={_make_exec_line()}" if line.startswith("Exec=") else line)
     return "\n".join(out) + "\n"
 
 
@@ -129,11 +137,11 @@ def _refresh(applications: Path) -> None:
 
 def install() -> list[Path]:
     """Write the entry and the icon. Returns what was written."""
-    entry, icon = entry_path(), icon_path()
+    entry, icon = get_entry_path(), get_icon_path()
     for path in (entry, icon):
         path.parent.mkdir(parents=True, exist_ok=True)
 
-    entry.write_text(_entry_text(), encoding="utf-8")
+    entry.write_text(_render_entry(), encoding="utf-8")
     # Not a symlink into site-packages: an upgrade replaces that directory, and
     # a launcher pointing into the old one is a dangling icon.
     icon.write_bytes((resources.files("libera") / "icon.svg").read_bytes())
@@ -145,10 +153,10 @@ def install() -> list[Path]:
 def remove() -> list[Path]:
     """Take both away. Returns what was there."""
     gone = []
-    for path in (entry_path(), icon_path()):
+    for path in (get_entry_path(), get_icon_path()):
         if path.is_file():
             path.unlink()
             gone.append(path)
     if gone:
-        _refresh(entry_path().parent)
+        _refresh(get_entry_path().parent)
     return gone

@@ -6,23 +6,25 @@ and splices the bridge into every HTML page on the way out.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import http.server
+import io
 import logging
 import pathlib
 import socket
 import sys
 import time
 import urllib.parse
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from libera import logs
-from libera.host.desktop import local_user
+from libera.host.desktop import lookup_local_user
 from libera.host.server import get, post, state
-from libera.host.session import H, NotReadyError, bind
+from libera.host.session import NotReadyError, Session, lookup
 
 if TYPE_CHECKING:
-    import io
+    from collections.abc import Callable
     from typing import Any, BinaryIO
 
 logger = logging.getLogger(__name__)
@@ -31,29 +33,71 @@ logger = logging.getLogger(__name__)
 # gets: it caches nothing, and clears what upstream's cached.
 SERVICE_WORKER = pathlib.Path(__file__).with_name("service-worker.js")
 
+# Only our own pages may frame ours. Any site could put the start window in an
+# iframe, and a click there sends new, open-recent and open-document with our
+# origin, which admit() lets through. 'self' and not 'none': the editor
+# frames itself.
+FRAME_ANCESTORS = "frame-ancestors 'self'"
+
 
 class Handler(http.server.SimpleHTTPRequestHandler):
+    # The session this request is about, looked up by admit() from the id
+    # in its query string, and handed to whatever answers it.
+    session: Session
+
     def __init__(self, request, client_address, server, **kw) -> None:
         # The payload is the same for every session, so the static root comes
-        # from the server; anything session-shaped is bound per request below.
+        # from the server; the session is looked up per request, by admit().
         super().__init__(
             request, client_address, server, directory=str(server.payload), **kw
         )
 
-    def bind_session(self) -> None:
-        """Bind the session this request names, or the first one.
+    def admit(self) -> bool:
+        """Whether to serve this request. If not, it has been answered already.
 
-        Static requests carry no session and do not need one -- the payload is
-        shared. Everything the bridge sends does carry one, because a request
-        about a document has to reach the right document.
+        The server is on 127.0.0.1, which every page in every browser on this
+        machine can reach, so what a page elsewhere could send is the question.
+
+        **Host must be this server's address.** A page on a name its author
+        controls can re-resolve that name to 127.0.0.1 -- DNS rebinding -- and
+        is then same-origin with itself, so it reads every answer: the open
+        document, the recent list, any file media-import was told to copy in.
+
+        **Origin, when there is one, must be ours.** A browser sends it with
+        every POST another page makes, and a text/plain POST needs no
+        preflight. Measured before this check: a request from another origin,
+        with no session named, truncated the open document's change log to
+        nothing. Our own pages send our origin; the hand-off and the tests
+        send none.
+
+        **The session must exist.** Static requests name none and get the
+        first, which is harmless because the payload is shared. A request
+        about a document names its session, and one that has gone is refused:
+        see session.lookup.
         """
-        bind(self.query().get("session", [""])[0])
+        # The port this request arrived on, which is the server's.
+        own = f"127.0.0.1:{self.connection.getsockname()[1]}"
+        origin = self.headers.get("Origin")
+        if self.headers.get("Host") != own or origin not in {None, f"http://{own}"}:
+            logger.info("refused: Host %s, Origin %s", self.headers.get("Host"), origin)
+            self.send_error(403)
+            return False
+        try:
+            self.session = lookup(self.parse_query().get("session", [""])[0])
+        except NotReadyError as e:
+            # As the explanation, not the reason: the reason goes in the status
+            # line, which http.server writes as latin-1, and an id that is not
+            # raised UnicodeEncodeError there and dropped the connection.
+            self.send_error(404, explain=str(e))
+            return False
+        return True
 
     def log_request(self, code: int | str = "-", size: int | str = "-") -> None:
         code = getattr(code, "value", code)
         if code == state.NOT_FOUND_CODE:
             state.NOT_FOUND.add(self.path.split("?")[0])
-        if code in {200, 204}:
+        # 304 is the ETag answer: the webview already holds that file.
+        if code in {200, 204, 304}:
             return
         # A 404 is usually the editor asking for something we chose not to
         # ship -- its help, its plugins -- and the e2e suite checks the whole
@@ -76,57 +120,80 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         telling them apart needs to know which requests were made and which
         came back. During a document load that is thousands of lines.
         """
-        if logs.tracing_requests():
+        if logs.is_tracing_requests():
             logger.debug("%.3f %s %s %s", time.time(), tag, self.command, self.path)
 
     def do_POST(self) -> None:
-        self.bind_session()
+        if not self.admit():
+            return
         route = self.path.split("?")[0].removeprefix("/__host__/")
         state.ROUTES[route] = state.ROUTES.get(route, 0) + 1
         handler = {
             "new": post.create_new,
-            "changes": post.post_changes,
-            "save": post.post_save,
-            "open": post.post_open,
-            "media-import": post.post_media_import,
-            "open-document": post.post_open_document,
-            "hand-off": post.post_hand_off,
-            "fullscreen": post.post_fullscreen,
-            "reveal": post.post_reveal,
-            "open-url": post.post_open_url,
-            "open-recent": post.post_open_recent,
-            "modified": post.post_modified,
-            "can": post.post_can,
-            "report": post.post_report,
-            "shot": post.post_shot,
+            "changes": post.record_changes,
+            "save": post.save,
+            "open": post.show_open_dialog,
+            "media-import": post.import_media,
+            "open-document": post.open_document,
+            "hand-off": post.take_hand_off,
+            "fullscreen": post.set_fullscreen,
+            "reveal": post.reveal,
+            "open-url": post.open_url,
+            "open-recent": post.open_recent,
+            "modified": post.record_modified,
+            "can": post.record_abilities,
+            "report": post.receive_report,
+            "shot": post.receive_shot,
         }.get(route)
         if handler is None:
             self.send_error(404)
             return
-        handler(self)
+        self.answer(handler)
 
-    def query(self) -> dict[str, list[str]]:
+    def answer(self, route: Callable[[Handler], None]) -> None:
+        """Run an endpoint, and answer for it when it fails.
+
+        The one place a request's failure is caught: a route that raised used
+        to close the connection with no response at all, which the editor sees
+        as a network fault, and print a traceback past logs.py. A 400 for what
+        the page sent, a 500 for the rest -- logged, with the traceback.
+        """
+        try:
+            route(self)
+        except post.BadRequestError as e:
+            self.send_error(400, explain=str(e))
+        except Exception:
+            logger.exception("%s %s failed", self.command, self.path)
+            # A route that had started its answer cannot start another; the
+            # connection closes rather than carry a second one.
+            self.close_connection = True
+            with contextlib.suppress(OSError):
+                self.send_error(500)
+
+    def parse_query(self) -> dict[str, list[str]]:
         return urllib.parse.parse_qs(
             urllib.parse.urlparse(self.path).query, keep_blank_values=True
         )
 
-    def body(self) -> bytes:
+    def read_body(self) -> bytes:
         return self.rfile.read(int(self.headers.get("Content-Length", 0)))
 
-    def no_content(self) -> None:
+    def send_no_content(self) -> None:
         self.send_response(204)
         self.end_headers()
 
     def do_GET(self) -> None:
         self._trace("get>")
-        self.bind_session()
         try:
+            if not self.admit():
+                return
             if self.path == "/document_editor_service_worker.js":
                 # Ours, not the payload's: see service-worker.js for why.
                 self.send_bytes(SERVICE_WORKER.read_bytes(), "application/javascript")
                 return
             if self.path.startswith("/__host__/"):
-                self.serve_host(self.path[len("/__host__/") :].split("?")[0])
+                name = self.path[len("/__host__/") :].split("?")[0]
+                self.answer(lambda h: h.serve_host(name))
                 return
             super().do_GET()
         finally:
@@ -134,7 +201,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def serve_host(self, name: str) -> None:
         """GET side of the POC API. Static files fall through to the base class."""
-        body, ctype = get.host_get(name)
+        body, ctype = get.serve(self.session, name)
         if body is None:
             self.send_error(404)
             return
@@ -173,6 +240,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         got 404s, and died in text shaping on a null m_pFaceInfo. A payload
         update or a font regeneration would do the same to any user.
         """
+        self.send_header("Content-Security-Policy", FRAME_ANCESTORS)
         if self._etag is not None and self.command in {"GET", "HEAD"}:
             self.send_header("ETag", self._etag)
         if not self._cache_control_sent:
@@ -193,7 +261,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         path = pathlib.Path(self.translate_path(self.path))
         if path.suffix != ".html" or not path.is_file():
             if path.is_file():
-                self._etag = _etag(path)
+                self._etag = _make_etag(path)
                 if self._etag in self.headers.get("If-None-Match", ""):
                     self.send_response(304)
                     self.end_headers()
@@ -214,28 +282,28 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        return None if self.command == "HEAD" else __import__("io").BytesIO(body)
+        return None if self.command == "HEAD" else io.BytesIO(body)
 
 
-def _etag(path: pathlib.Path) -> str:
+def _make_etag(path: pathlib.Path) -> str:
     st = path.stat()
     identity = f"{path}|{st.st_size}|{st.st_mtime_ns}".encode()
     return '"' + hashlib.sha256(identity).hexdigest()[:24] + '"'
 
 
-def check_ready() -> None:
+def check_ready(session: Session) -> None:
     """Fail early and legibly rather than 404-ing every asset.
 
     The payload only. Editor.bin is session state, not payload, and a start
     window has no document and therefore no Editor.bin -- opening one is what
     creates it, and opening reports its own failure.
     """
-    for path in (H.web, H.sdkjs_common / "AllFonts.js"):
+    for path in (session.payload, session.sdkjs_common / "AllFonts.js"):
         if not path.exists():
             msg = f"missing: {path}"
             raise NotReadyError(msg)
-    if not any(H.fonts.glob("*")):
-        msg = f"no fonts in {H.fonts}"
+    if not any(session.fonts.glob("*")):
+        msg = f"no fonts in {session.fonts}"
         raise NotReadyError(msg)
 
 
@@ -255,13 +323,32 @@ class Server(http.server.ThreadingHTTPServer):
     # and split its requests between them.
     allow_reuse_address = sys.platform != "win32"
 
+    # The listen backlog: connections the kernel holds before the server
+    # accepts them. socketserver's default is 5, and the editor opens with a
+    # burst of font requests over half a dozen connections at once. One that
+    # found the queue full was reset; the font loader does not retry, and the
+    # document sat at "Loading document: 8%" for good -- the project's oldest
+    # bug. Measured: 5 loads in 300 stalled, each with exactly one font request
+    # reset, and none in 300 with this. Resetting one font request on purpose
+    # stalls the load every time; delaying it by 3s does not.
+    request_queue_size = socket.SOMAXCONN
+
     def server_bind(self) -> None:
         if sys.platform == "win32":
-            _exclusive(self.socket)
+            _set_exclusive(self.socket)
         super().server_bind()
 
+    @override
+    def handle_error(self, request, client_address) -> None:
+        """What escapes a handler, through logs.py rather than onto stderr.
 
-def _exclusive(s: socket.socket) -> None:
+        socketserver calls this from inside its own `except`, which is where
+        the exception being reported comes from.
+        """
+        logger.error("request from %s failed", client_address, exc_info=sys.exc_info())
+
+
+def _set_exclusive(s: socket.socket) -> None:
     """Refuse the port to every other socket while this one holds it.
 
     **The `sys.platform` test belongs inside the function**, not only at the two
@@ -280,18 +367,19 @@ def _exclusive(s: socket.socket) -> None:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
 
 
-def make_server(port: int) -> Server:
-    check_ready()
+def make_server(port: int, session: Session) -> Server:
+    """The server, on that port, for the payload `session` and every other
+    session share: static files need it before any request names a session."""
+    check_ready(session)
     httpd = Server(("127.0.0.1", port), Handler)
-    # Shared by every session, and needed before any session is bound.
-    httpd.payload = H.payload
+    httpd.payload = session.payload
     return httpd
 
 
 PREFERRED_PORT = 43110
 
 
-def free_port() -> int:
+def find_free_port() -> int:
     """The editor's port: the usual one, or any free one if it is taken.
 
     A second window falls back and forgets its settings. One window remembering
@@ -304,7 +392,7 @@ def free_port() -> int:
         # which is to say, a different origin with none of the settings.
         # Windows means something else by it: see Server.allow_reuse_address.
         if sys.platform == "win32":
-            _exclusive(s)
+            _set_exclusive(s)
         else:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
@@ -314,7 +402,7 @@ def free_port() -> int:
         return int(s.getsockname()[1])
 
 
-def editor_url(port: int, title: str = "document.docx", session: str = "") -> str:
+def make_editor_url(port: int, session: Session, title: str) -> str:
     """The editor's address, with the session that answers for it.
 
     doctype is what api.js's appMap turns into an editor directory -- word,
@@ -326,15 +414,15 @@ def editor_url(port: int, title: str = "document.docx", session: str = "") -> st
     knows, so the session never reaches the inner frame's URL. It does not need
     to: the frames are same-origin, and the bridge reads it off the top window.
     """
-    user_id, user_name = local_user()
-    app = H.editor
+    user_id, user_name = lookup_local_user()
+    app = session.editor
     mode = "edit" if app.editable else "view"
     ext = pathlib.Path(title).suffix.lstrip(".").lower() or app.ext
     return (
         f"http://127.0.0.1:{port}/web-apps/apps/api/documents/index.html"
         f"?doctype={app.doctype}&mode={mode}&lang=en"
         f"&title={urllib.parse.quote(title)}"
-        f"&filetype={ext}&session={urllib.parse.quote(session)}"
+        f"&filetype={ext}&session={urllib.parse.quote(session.id)}"
         f"&userid={urllib.parse.quote(user_id)}"
         f"&username={urllib.parse.quote(user_name)}"
     )

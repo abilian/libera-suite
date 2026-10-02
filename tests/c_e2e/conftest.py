@@ -16,7 +16,6 @@ import functools
 import json
 import os
 import shutil
-import socket
 import subprocess
 import sys
 import time
@@ -27,7 +26,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from support import repo_root
+from support import find_free_port, repo_root
 
 from libera import payload as payload_mod
 from libera.host import apps
@@ -83,12 +82,6 @@ def find_browser() -> str | None:
         return env
     system = next((b for b in BROWSERS if b and Path(b).is_file()), None)
     return system or _playwright_chromium()
-
-
-def free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return int(s.getsockname()[1])
 
 
 def libera(*args: str, **kw) -> subprocess.CompletedProcess:
@@ -209,7 +202,7 @@ def running_editor(document: Path, work: Path) -> Iterator[Editor]:
         )
 
     shot = work / "render.png"
-    port = free_port()
+    port = find_free_port()
     server = subprocess.Popen(
         [
             sys.executable,

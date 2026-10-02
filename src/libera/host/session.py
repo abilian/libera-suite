@@ -4,9 +4,10 @@ They share a server and therefore an origin, which is what keeps localStorage
 -- theme, units, spellcheck language -- the same in every window. A server per
 window would give each one its own port and its own empty settings.
 
-The session for the request being served is bound to the thread serving it, so
-the fifty-odd places that need it and nothing else can say `H.doc` without
-being handed it.
+Each request names its session in its query string, and the server looks it
+up and hands it on; nothing finds a session any other way. It used to be bound
+to the thread serving the request, as `H`, and every thread bug this host had
+came from reading `H` on a thread that had bound none, or the wrong one.
 """
 
 from __future__ import annotations
@@ -16,20 +17,25 @@ import logging
 import pathlib
 import secrets
 import shutil
-import threading
 import time
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
 
 from libera.host import apps
+from libera.host.changelog import ChangeLog
 from libera.payload import locate
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-class Host:
-    """Where the payload is, where session state goes, and what is open."""
+@dataclass(eq=False)
+class Session:
+    """One window: where its files are, what is open in it, and what the host
+    learns while it is.
+
+    The last three fields used to be three dictionaries keyed by session id,
+    in three modules -- here, `window` and `server` -- and closing a window
+    cleared one of them. Held here, they go when the session does.
+    """
 
     payload: pathlib.Path
     work: pathlib.Path
@@ -39,19 +45,33 @@ class Host:
     # so `libera sheet.xlsx` opens Tables rather than showing a
     # spreadsheet to a word processor.
     app: apps.App | None = None
+    # pywebview's uid for the window showing this session, once there is one.
+    window: str | None = None
+    # What the editor last said it can do -- undo, redo -- so a menu can grey
+    # out what would decline. Pushed by the editor, never asked for.
+    abilities: dict[str, bool] = field(default_factory=dict)
+    # Whether a reload has been offered for an error already: an editor that
+    # throws once throws again, and a dialog per repeat is worse than the fault.
+    reload_offered: bool = False
+
+    @property
+    def id(self) -> str:
+        """The id the registry knows it by, which every request from its
+        window carries in the query string: its directory's name.
+
+        A field once, set by `configure`, so a session that skipped it had an
+        id of "" -- which `lookup` reads as "the first session", another
+        window's. Derived, it cannot be missing or disagree with the directory.
+        """
+        return self.work.name
 
     @property
     def editor(self) -> apps.App:
         if self.app is not None:
             return self.app
-        return apps.for_document(self.document) if self.document else apps.WORDS
+        return apps.choose_for(self.document) if self.document else apps.WORDS
 
     # --- the payload, read-only
-    @property
-    def web(self) -> pathlib.Path:
-        """Served at /, so /sdkjs and /web-apps resolve."""
-        return self.payload
-
     @property
     def sdkjs_common(self) -> pathlib.Path:
         return self.payload / "sdkjs" / "common"
@@ -62,7 +82,7 @@ class Host:
         return self.payload / "fonts"
 
     @property
-    def unsaved(self) -> pathlib.Path:
+    def unsaved_marker(self) -> pathlib.Path:
         """Marks a session whose document has edits that are not in the file.
 
         Beside the session rather than inside it, because the session's doc/
@@ -107,9 +127,9 @@ class Host:
     @property
     def blank(self) -> pathlib.Path:
         """What File > New starts from, for the editor this session is."""
-        return self.blank_for(None)
+        return self.choose_blank(None)
 
-    def blank_for(self, app: apps.App | None) -> pathlib.Path:
+    def choose_blank(self, app: apps.App | None) -> pathlib.Path:
         """The same, for an editor named by the caller.
 
         The start window asks for a spreadsheet from a session that is showing
@@ -139,12 +159,48 @@ class Host:
         return self.doc / "media"
 
     @property
-    def out(self) -> pathlib.Path:
+    def change_log(self) -> ChangeLog:
+        """Every edit since the document was opened, as the editor streamed it."""
+        return ChangeLog(self.doc / "changes" / "changes0.json")
+
+    @property
+    def out_dir(self) -> pathlib.Path:
         return self.work / "out"
 
     @property
-    def current(self) -> pathlib.Path:
+    def current_file(self) -> pathlib.Path:
         return self.work / "current.txt"
+
+    def read_current_document(self) -> pathlib.Path | None:
+        """The document this window has open: where Save writes, and what
+        Save As moves it to. On disk, beside the session, so recovery can
+        read it after a crash."""
+        if not self.current_file.is_file():
+            return None
+        text = self.current_file.read_text(encoding="utf-8").strip()
+        return pathlib.Path(text) if text else None
+
+    def write_current_document(self, document: pathlib.Path) -> None:
+        self.current_file.write_text(str(document), encoding="utf-8")
+
+    def mark_modified(self, modified: bool) -> None:
+        """Record whether the editor has edits the file does not.
+
+        The editor tells us on every transition, which is a better signal than
+        the change log: the log stays non-empty after a save, because it is
+        the delta from the document as it was opened.
+        """
+        if modified:
+            self.work.mkdir(parents=True, exist_ok=True)
+            self.unsaved_marker.write_text(
+                json.dumps({
+                    "document": str(self.read_current_document() or ""),
+                    "at": time.time(),
+                }),
+                encoding="utf-8",
+            )
+        else:
+            self.unsaved_marker.unlink(missing_ok=True)
 
 
 # One window, one session, one document -- the shape LibreOffice and every
@@ -152,89 +208,40 @@ class Host:
 # is what keeps localStorage (theme, units, spellcheck language) the same in
 # every window; a server per window would give each one its own port and its
 # own empty settings.
-SESSIONS: dict[str, Host] = {}
+SESSIONS: dict[str, Session] = {}
 
 
-_current = threading.local()
+def lookup(session_id: str) -> Session:
+    """The session with that id, or the first if no id is given.
 
+    An HTTP request names its session in the query string. A static request
+    names none, and gets the first, which is harmless because the payload is
+    shared.
 
-class _Session:
-    """The session the calling thread is serving.
-
-    Fifty-odd places need the session and nothing else. Threading it through
-    each of them would be noise that never varies, so the server binds it per
-    request from the id in the URL: `H.doc` means "the document this request is
-    about" rather than "the one document there is".
+    An id that matches no session is refused, not defaulted. It used to fall
+    back to the first session, so a request still on its way from a window
+    that had closed went to another window's document: a change-log write with
+    an undo index truncated that document's log.
     """
-
-    def __getattr__(self, name: str) -> Any:
-        host = getattr(_current, "host", None)
-        if host is None:
-            msg = "no session bound on this thread"
-            raise NotReadyError(msg)
-        return getattr(host, name)
-
-
-H = _Session()
-
-
-# What the editor in each session can do right now, so a menu can grey out
-# what would decline. Keyed by session id; the editor pushes changes.
-EDITOR_STATE: dict[str, dict] = {}
-
-
-def use(host: Host, session: str = "") -> None:
-    """Bind a session to this thread."""
-    _current.host = host
-    _current.session = session
-
-
-def bind(session: str) -> None:
-    """Bind the named session to this thread, or the first one if unknown.
-
-    Two callers need this and they arrive very differently: an HTTP request
-    names its session in the query string, and a macOS menu action arrives on a
-    thread of its own with nothing bound at all. Both want the same answer, and
-    both fail the same confusing way without it -- `H` is thread-local, so an
-    unbound thread does not get a default, it raises.
-    """
-    host = SESSIONS.get(session) or next(iter(SESSIONS.values()), None)
-    if host is None:
-        msg = "no sessions"
+    if not session_id:
+        session_id = next(iter(SESSIONS), "")
+    found = SESSIONS.get(session_id)
+    if found is None:
+        msg = f"no session {session_id!r}" if session_id else "no sessions"
         raise NotReadyError(msg)
-    use(host, session if session in SESSIONS else next(iter(SESSIONS), ""))
+    return found
 
 
-def forget() -> None:
-    """Unbind this thread. Used by the tests between cases.
-
-    Nothing in the application calls it: a request thread ends, and the GUI
-    thread should never have been bound in the first place.
-    """
-    _current.__dict__.pop("host", None)
-    _current.__dict__.pop("session", None)
-
-
-def current_session() -> str:
-    return getattr(_current, "session", "")
+def configure(session: Session) -> None:
+    """Register a session under its id, and make its directories."""
+    SESSIONS[session.id] = session
+    session.work.mkdir(parents=True, exist_ok=True)
+    session.out_dir.mkdir(parents=True, exist_ok=True)
+    if session.document is not None:
+        session.write_current_document(session.document)
 
 
-def editor_state(session: str) -> dict:
-    """What that session's editor last said it could do."""
-    return EDITOR_STATE.get(session, {})
-
-
-def configure(host: Host, session: str = "0") -> None:
-    """Register a session and bind it to this thread."""
-    SESSIONS[session] = host
-    use(host, session)
-    host.work.mkdir(parents=True, exist_ok=True)
-    host.out.mkdir(parents=True, exist_ok=True)
-    if host.document is not None:
-        host.current.write_text(str(host.document), encoding="utf-8")
-
-
-def new_session(document: pathlib.Path | None = None) -> str:
+def create_session(document: pathlib.Path | None = None) -> Session:
     """A second window's worth of state, beside the first.
 
     Sessions share the payload and the recents list and nothing else: each has
@@ -242,33 +249,24 @@ def new_session(document: pathlib.Path | None = None) -> str:
     editing a different document.
     """
     template = next(iter(SESSIONS.values()))
-    session = secrets.token_hex(6)
-    host = Host(
+    made = Session(
         payload=template.payload,
-        work=template.work.parent / session,
+        work=template.work.parent / secrets.token_hex(6),
         document=document,
     )
-    previous = getattr(_current, "host", None)
-    configure(host, session)
-    if previous is not None:
-        use(previous)  # do not steal this thread from the request in progress
-    return session
+    configure(made)
+    return made
 
 
-def drop_session(session: str) -> None:
-    """Forget a closed window. Its directory stays: it may hold unsaved edits."""
-    SESSIONS.pop(session, None)
-    EDITOR_STATE.pop(session, None)
+def drop_session(session_id: str) -> None:
+    """Forget a closed window, and all the host learned about it.
+
+    Its directory stays: it may hold unsaved edits.
+    """
+    SESSIONS.pop(session_id, None)
 
 
-def current_path() -> pathlib.Path | None:
-    if not H.current.is_file():
-        return None
-    text = H.current.read_text(encoding="utf-8").strip()
-    return pathlib.Path(text) if text else None
-
-
-def contains(root: pathlib.Path, f: pathlib.Path) -> bool:
+def is_inside(root: pathlib.Path, f: pathlib.Path) -> bool:
     """Is `f` a real file inside `root`, with no `..` escaping it?
 
     Both sides have to be resolved. Comparing an unresolved root against
@@ -281,58 +279,6 @@ def contains(root: pathlib.Path, f: pathlib.Path) -> bool:
 
 class NotReadyError(RuntimeError):
     """The session cannot be served, said in terms a user can act on."""
-
-
-def set_modified(modified: bool) -> None:
-    """Record whether the editor has edits the file does not.
-
-    The editor tells us on every transition, which is a better signal than the
-    change log: the log stays non-empty after a save, because it is the delta
-    from the document as it was opened.
-    """
-    if modified:
-        H.work.mkdir(parents=True, exist_ok=True)
-        H.unsaved.write_text(
-            json.dumps({"document": str(current_path() or ""), "at": time.time()}),
-            encoding="utf-8",
-        )
-    else:
-        H.unsaved.unlink(missing_ok=True)
-
-
-def holds_unsaved(work: pathlib.Path, document: pathlib.Path) -> bool:
-    """Does this session directory hold unsaved edits to that document?"""
-    marker, editor_bin = work / "unsaved.json", work / "doc" / "Editor.bin"
-    change_log = work / "doc" / "changes" / "changes0.json"
-    if not (marker.is_file() and editor_bin.is_file()):
-        return False
-    if not change_log.is_file() or change_log.stat().st_size == 0:
-        return False
-    try:
-        return json.loads(marker.read_text(encoding="utf-8")).get("document") == str(
-            document
-        )
-    except (ValueError, OSError) as e:
-        # Answering False here means "nothing to recover", and the edits go
-        # without the user being asked. That is the right answer for a marker
-        # we cannot read -- there is nothing to offer them *about* -- but it
-        # is never a right answer to give quietly.
-        logger.warning("unreadable recovery marker at %s: %s", marker, e)
-        return False
-
-
-def recoverable(document: pathlib.Path) -> pathlib.Path | None:
-    """The session directory holding unsaved edits to this document, if any.
-
-    Any of them, not just this window's: with a window per document the
-    session that crashed is rarely the one being opened now.
-    """
-    if holds_unsaved(H.work, document):
-        return H.work
-    for other in sorted(H.work.parent.glob("*")):
-        if other != H.work and other.is_dir() and holds_unsaved(other, document):
-            return other
-    return None
 
 
 def sweep_sessions(root: pathlib.Path, keep: set[str]) -> None:

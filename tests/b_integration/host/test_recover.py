@@ -16,28 +16,27 @@ import re
 import zipfile
 from typing import TYPE_CHECKING
 
-from libera.host import server, window
-from libera.host.convert import save_document
+from support import ScriptedShell
+
+from libera.host import hooks, server, window
+from libera.host.saving import save_document
 
 if TYPE_CHECKING:
-    from libera.host.session import Host
+    from libera.host.session import Session
 
 
-def a_change(host: Host, raw: str) -> None:
+def a_change(host: Session, raw: str) -> None:
     """What the editor streams as someone types."""
-    log = host.doc / "changes" / "changes0.json"
-    log.parent.mkdir(parents=True, exist_ok=True)
-    with log.open("a", encoding="utf-8") as f:
-        f.write(f'"{raw}",')
+    host.change_log.record(raw, None, 1)
 
 
-def test_folding_with_nothing_to_fold_is_a_no_op(opened: Host):
+def test_folding_with_nothing_to_fold_is_a_no_op(opened: Session):
     before = opened.editor_bin.read_bytes()
-    assert window.fold_changes_in()
+    assert window.fold_changes_in(opened)
     assert opened.editor_bin.read_bytes() == before
 
 
-def test_folding_rebuilds_editor_bin(opened: Host):
+def test_folding_rebuilds_editor_bin(opened: Session):
     """A log present means the base is rebuilt through the converter.
 
     This says the round trip ran and produced something, not that a particular
@@ -48,22 +47,21 @@ def test_folding_rebuilds_editor_bin(opened: Host):
     before = opened.editor_bin.read_bytes()
     a_change(opened, "AgAAAA==")
 
-    assert window.fold_changes_in()
+    assert window.fold_changes_in(opened)
 
     assert opened.editor_bin.stat().st_size > 0
     assert opened.editor_bin.read_bytes() != before, "the base was not rebuilt"
 
 
-def test_folding_empties_the_log_it_folded(opened: Host):
+def test_folding_empties_the_log_it_folded(opened: Session):
     """Otherwise the next save applies them twice."""
     a_change(opened, "AgAAAA==")
-    assert window.fold_changes_in()
+    assert window.fold_changes_in(opened)
 
-    log = opened.doc / "changes" / "changes0.json"
-    assert not log.is_file() or log.stat().st_size == 0
+    assert not opened.change_log
 
 
-def test_the_document_survives_the_round_trip(opened: Host):
+def test_the_document_survives_the_round_trip(opened: Session):
     """Folding must not cost the document itself.
 
     Out through x2t and back in is two lossy-looking conversions in a row, on
@@ -71,9 +69,9 @@ def test_the_document_survives_the_round_trip(opened: Host):
     the recovery is worse than the fault it recovers from.
     """
     a_change(opened, "AgAAAA==")
-    window.fold_changes_in()
+    window.fold_changes_in(opened)
 
-    assert save_document({"fileType": 0})["error"] == 0
+    assert save_document(opened, {"fileType": 0})["error"] == 0
 
     text = re.sub(
         r"<[^>]+>",
@@ -86,51 +84,60 @@ def test_the_document_survives_the_round_trip(opened: Host):
     assert "Second paragraph" in text, "the round trip lost the document"
 
 
-def test_the_host_stays_quiet_when_the_editor_speaks(opened: Host, monkeypatch):
+def test_the_host_stays_quiet_when_the_editor_speaks(opened: Session, monkeypatch):
     """Two dialogs for one fault is what a user called confusing.
 
     asc_onError means the editor is already putting its own message up. File >
     Reload stays the way out, and it is always there.
     """
     offered: list[str] = []
-    monkeypatch.setattr(server.post.hooks, "BROKEN", lambda _s, m: offered.append(m))
-    server.OFFERED.clear()
+    monkeypatch.setattr(
+        hooks, "shell", ScriptedShell(offer_reload=lambda _s, m: offered.append(m))
+    )
 
-    server.broken("TypeError: endReporter is not a function", quiet=True)
+    server.handle_editor_error(
+        opened, "TypeError: endReporter is not a function", quiet=True
+    )
 
     assert offered == []
 
 
 def test_an_uncaught_error_the_editor_says_nothing_about_is_offered(
-    opened: Host, monkeypatch
+    opened: Session, monkeypatch
 ):
     """Nothing else would tell the user anything at all."""
     offered: list[str] = []
-    monkeypatch.setattr(server.post.hooks, "BROKEN", lambda _s, m: offered.append(m))
-    server.OFFERED.clear()
+    monkeypatch.setattr(
+        hooks, "shell", ScriptedShell(offer_reload=lambda _s, m: offered.append(m))
+    )
 
-    server.broken("TypeError: x is not a function")
+    server.handle_editor_error(opened, "TypeError: x is not a function")
 
     assert offered == ["TypeError: x is not a function"]
 
 
-def test_an_uncaught_error_is_offered_once(opened: Host, monkeypatch):
+def test_an_uncaught_error_is_offered_once(opened: Session, monkeypatch):
     """An editor that throws once throws again; a dialog per repeat is worse
     than the fault."""
     seen: list[str] = []
-    monkeypatch.setattr(server.post.hooks, "BROKEN", lambda _s, m: seen.append(m))
-    server.OFFERED.clear()
+    monkeypatch.setattr(
+        hooks, "shell", ScriptedShell(offer_reload=lambda _s, m: seen.append(m))
+    )
 
-    server.broken("TypeError: x is not a function")
-    server.broken("TypeError: x is not a function")
+    server.handle_editor_error(opened, "TypeError: x is not a function")
+    server.handle_editor_error(opened, "TypeError: x is not a function")
 
     assert seen == ["TypeError: x is not a function"]
 
 
-def test_nothing_is_offered_where_there_is_no_window(opened: Host, monkeypatch):
+def test_nothing_is_offered_where_there_is_no_window(opened: Session, monkeypatch):
     """`libera --serve` and the harness have no way to ask, and must not
     block waiting to."""
-    monkeypatch.setattr(server.post.hooks, "BROKEN", None)
-    server.OFFERED.clear()
+    monkeypatch.setattr(hooks, "shell", hooks.HeadlessShell())
 
-    server.broken("TypeError: x is not a function")  # must not raise
+    server.handle_editor_error(
+        opened, "TypeError: x is not a function"
+    )  # must not raise
+
+    # And it got as far as the shell, which is what declined.
+    assert opened.reload_offered

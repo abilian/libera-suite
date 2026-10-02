@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import socket
 import threading
 import urllib.error
 import urllib.request
@@ -17,10 +16,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from support import find_free_port
 
 from libera import payload as payload_mod
 from libera.host import opening, server, session as sessions
-from libera.host.session import Host
+from libera.host.session import Session
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -33,7 +33,7 @@ class LiveHost:
 
     url: str
     session: str
-    host: Host
+    host: Session
     document: Path
 
     def at(self, path: str, session: str | None = None) -> str:
@@ -55,10 +55,16 @@ class LiveHost:
             return r.read()
 
     def post(
-        self, path: str, body: bytes = b"", session: str | None = None
+        self,
+        path: str,
+        body: bytes = b"",
+        session: str | None = None,
+        headers: dict[str, str] | None = None,
     ) -> tuple[int, bytes]:
         """Status and body, because half of what we check here is the status."""
-        req = urllib.request.Request(self.at(path, session), data=body, method="POST")
+        req = urllib.request.Request(
+            self.at(path, session), data=body, method="POST", headers=headers or {}
+        )
         try:
             with urllib.request.urlopen(req, timeout=120) as r:
                 return r.status, r.read()
@@ -66,33 +72,31 @@ class LiveHost:
             return e.code, e.read()
 
 
-def free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return int(s.getsockname()[1])
-
-
 @pytest.fixture
-def opened(tmp_path, sample_document) -> Iterator[Host]:
+def opened(tmp_path, sample_document) -> Iterator[Session]:
     """One session with the sample document open, isolated from the user's own.
 
     Opening runs x2t, so this is where the payload first has to be real.
+
+    A copy of the sample, not the sample: a plain save writes over the
+    document that is open, and the sample is the session-wide one the e2e tier
+    and render.py's thresholds read. Saved over, it made a full run read a
+    different document from a tier run on its own.
     """
     sessions.SESSIONS.clear()
-    sessions.EDITOR_STATE.clear()
-    sessions.configure(
-        Host(
-            payload=payload_mod.resolve().root,
-            work=tmp_path / "sessions" / "0",
-            document=sample_document,
-        )
+    document = tmp_path / sample_document.name
+    shutil.copyfile(sample_document, document)
+    session = Session(
+        payload=payload_mod.resolve().root,
+        work=tmp_path / "sessions" / "0",
+        document=document,
     )
-    opening.open_document(sample_document)
+    sessions.configure(session)
+    opening.open_document(session, document)
     try:
-        yield sessions.H
+        yield session
     finally:
         sessions.SESSIONS.clear()
-        sessions.EDITOR_STATE.clear()
 
 
 @pytest.fixture(scope="module")
@@ -113,24 +117,26 @@ def open_blank(tmp_path):
         payload = payload_mod.resolve().root
         blank = tmp_path / f"blank.{app.ext}"
         shutil.copyfile(payload / "empty" / app.blank, blank)
-        sessions.configure(
-            Host(payload=payload, work=tmp_path / app.name, document=blank, app=app)
+        session = Session(
+            payload=payload, work=tmp_path / app.name, document=blank, app=app
         )
-        opening.open_document(blank)
-        return sessions.H
+        sessions.configure(session)
+        opening.open_document(session, blank)
+        return session
 
     return _open
 
 
 @pytest.fixture
-def live(opened, sample_document) -> Iterator[LiveHost]:
+def live(opened) -> Iterator[LiveHost]:
     """The server, on top of that session."""
-    port = free_port()
-    httpd = server.make_server(port)
+    port = find_free_port()
+    httpd = server.make_server(port, opened)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
+    assert opened.document is not None
     try:
-        yield LiveHost(f"http://127.0.0.1:{port}", "0", opened, sample_document)
+        yield LiveHost(f"http://127.0.0.1:{port}", "0", opened, opened.document)
     finally:
         httpd.shutdown()
         thread.join(timeout=5)

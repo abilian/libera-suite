@@ -1,18 +1,30 @@
-# Documentation site for Libera Suite, built with Zensical.
+# Documentation site for Libera Suite, built with Zensical: the English edition.
 #
-# Sources live in docs/src and the built site in docs/site, so everything the
-# documentation needs sits under one directory. Both paths resolve relative to
-# this file. `make serve` previews, `make check` fails on a broken link.
+# Sources live in docs/src, and this edition builds to docs/site/en/. The other
+# editions are generated from this file by preprocess.py; the site root is
+# docs/index.html. Paths resolve relative to this file. `make serve` previews,
+# `make preview` serves the whole site, `make check` fails on a broken link.
 
 [project]
 
 docs_dir = "src"
-site_dir = "site"
+site_dir = "site/en"
 
 site_name = "Libera Suite"
-site_description = "Libera Suite — Abilian's desktop office suite. Words, Tables, Slides and Diagrams, running locally on your own documents."
+site_description = "A free and open source office suite for Windows, macOS and Linux. It opens and saves Word, Excel, PowerPoint and LibreOffice files, with no account and no cloud."
 site_author = "Abilian SAS"
-site_url = "https://docs.liberasuite.eu/"
+site_url = "https://docs.liberasuite.eu/en/"
+
+# The language selector, one entry per edition, English first. Every edition is
+# at /<lang>/, English included, and the site root is a chooser (index.html,
+# beside this file). preprocess.py makes an edition of every other entry:
+# i18n/<lang>/ for its pages, zensical.<lang>.toml for its config. lang.js
+# points each entry at the same page in that edition. deck.js is the slide
+# viewer the home page and the developer overview embed their PDF decks with.
+extra_javascript = ["assets/lang.js", "assets/deck.js"]
+# The fonts, from the site itself: see assets/fonts/fonts.css, and `font = false`
+# below, which stops the theme asking Google Fonts for them.
+extra_css = ["assets/fonts/fonts.css", "assets/deck.css"]
 
 copyright = """
 Copyright &copy; 2026 Abilian SAS —
@@ -25,12 +37,16 @@ the editor payload
 # Top-level entries become the tab bar under the header, so keep the list
 # short: tabs stop being a menu once they wrap.
 nav = [
-    { "Home" = "index.md" },
+    { "Home" = [
+        { "Overview" = "index.md" },
+        { "Install" = "main/install.md" },
+        { "Other ways to install" = "main/alt-install.md" },
+        { "What works today" = "main/status.md" },
+        { "About" = "main/about.md" },
+    ]},
     { "Using Libera Suite" = [
         { "Overview" = "guide/index.md" },
-        { "Install" = "guide/install.md" },
         { "Work with documents" = "guide/documents.md" },
-        { "What works today" = "guide/status.md" },
     ]},
     { "Developers" = [
         { "Overview" = "develop/index.md" },
@@ -40,18 +56,51 @@ nav = [
         { "Cutting a release" = "develop/release.md" },
         { "Roadmap" = "develop/roadmap.md" },
     ]},
+    { "News" = [
+        { "All news" = "news/index.md" },
+        { "Libera Suite: your documents, on your own machine" = "news/2026-10-01-your-documents-on-your-own-machine.md" },
+    ]},
     { "Feedback" = "feedback.md" },
 ]
 
-# licence.md is deliberately not a tab. Four tabs is already the point at which
-# the bar stops reading as a menu, and the licence is reached from the footer on
-# every page and from the Home page's own section. It still builds and is still
+# licence.md is deliberately not a tab. The bar has five with News, past the
+# point at which it stops reading as a menu, and the licence is reached from the
+# footer on every page and from the Home page's own section. It still builds and is still
 # searchable; it just does not compete with Install for a reader's attention.
 
 
+[[project.extra.alternate]]
+name = "English"
+link = "/en/"
+lang = "en"
+
+[[project.extra.alternate]]
+name = "Français"
+link = "/fr/"
+lang = "fr"
+
+[[project.extra.alternate]]
+name = "Deutsch"
+link = "/de/"
+lang = "de"
+
+[[project.extra.alternate]]
+name = "Italiano"
+link = "/it/"
+lang = "it"
+
+[[project.extra.alternate]]
+name = "Español"
+link = "/es/"
+lang = "es"
+
 [project.theme]
 
+# overrides/main.html adds the Umami analytics script to every page.
+custom_dir = "overrides"
 language = "en"
+# Not from Google: assets/fonts/fonts.css serves them. See extra_css above.
+font = false
 
 # navigation.indexes is deliberately absent. It folds a section's index page
 # into the section's own title, which removes the row for it: "Using Libera
@@ -87,3 +136,8 @@ toggle.name = "Switch to dark mode"
 scheme = "slate"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to light mode"
+
+# A post's address carries its date, and a published address keeps working when
+# the date changes. Paths are relative to docs_dir, so every edition gets them.
+[project.plugins.redirects.redirect_maps]
+"news/2026-09-30-your-documents-on-your-own-machine.md" = "news/2026-10-01-your-documents-on-your-own-machine.md"

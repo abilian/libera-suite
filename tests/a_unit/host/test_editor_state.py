@@ -11,46 +11,52 @@ import json
 import pytest
 
 from libera.host import server, session as sessions
-from libera.host.session import Host
+from libera.host.session import Session
 
 
 @pytest.fixture
-def bound_session(tmp_path):
-    sessions.EDITOR_STATE.clear()
-    sessions.configure(Host(payload=tmp_path / "payload", work=tmp_path / "s"), "s")
-    return sessions
+def bound_session(tmp_path) -> Session:
+    found = Session(payload=tmp_path / "payload", work=tmp_path / "s")
+    sessions.configure(found)
+    return found
 
 
 class FakeHandler:
-    def __init__(self, body: bytes):
+    """A request from that session's window: what record_abilities reads of one."""
+
+    def __init__(self, body: bytes, session: Session):
         self._body = body
+        self.session = session
         self.status = None
 
-    def body(self) -> bytes:
+    def read_body(self) -> bytes:
         return self._body
 
-    def no_content(self):
+    def send_no_content(self):
         self.status = 204
 
 
-def test_an_unknown_session_can_do_nothing_in_particular(bound_session):
-    assert sessions.editor_state("nobody") == {}
-
-
 def test_the_editor_reports_what_it_can_do(bound_session):
-    server.post_can(FakeHandler(json.dumps({"undo": True}).encode()))
-    assert sessions.editor_state("s") == {"undo": True}
+    server.record_abilities(
+        FakeHandler(json.dumps({"undo": True}).encode(), bound_session)
+    )
+    assert sessions.SESSIONS["s"].abilities == {"undo": True}
 
 
 def test_later_reports_merge_rather_than_replace(bound_session):
-    server.post_can(FakeHandler(b'{"undo": true}'))
-    server.post_can(FakeHandler(b'{"redo": true}'))
+    server.record_abilities(FakeHandler(b'{"undo": true}', bound_session))
+    server.record_abilities(FakeHandler(b'{"redo": true}', bound_session))
 
-    assert sessions.editor_state("s") == {"undo": True, "redo": True}
+    assert sessions.SESSIONS["s"].abilities == {"undo": True, "redo": True}
 
 
-def test_closing_a_window_forgets_its_state(bound_session):
-    server.post_can(FakeHandler(b'{"undo": true}'))
+def test_closing_a_window_forgets_everything_about_it(bound_session):
+    """The editor's state, its window, the reload offer: all on the session.
+
+    They were three dictionaries in three modules, and closing a window
+    cleared one of them.
+    """
+    server.record_abilities(FakeHandler(b'{"undo": true}', bound_session))
     sessions.drop_session("s")
 
-    assert sessions.editor_state("s") == {}
+    assert "s" not in sessions.SESSIONS

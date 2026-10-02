@@ -9,11 +9,11 @@ One module per verb, in that order, and nothing imports upward. What was one
 
 The names below are the package's surface and are re-exported so that
 `payload.resolve(...)` still reads the way it did. Code *inside* the package
-goes through the module -- `locate.data_dir()` -- because a test that replaces
+goes through the module -- `locate.get_data_dir()` -- because a test that replaces
 a name has to replace it for every caller.
 
 `installer`, not `install`: the package re-exports `install()` and a module of
-that name would be shadowed by it, so `payload.install.bundled_manifest` would
+that name would be shadowed by it, so `payload.install.read_bundled_manifest` would
 be an attribute lookup on a function. `generate` keeps its name because
 nothing outside the package calls it.
 """
@@ -22,38 +22,42 @@ from __future__ import annotations
 
 from libera.payload.installer import (
     DEFAULT_ORIGIN,
-    bundled_manifest,
     can_fetch,
     install,
+    read_bundled_manifest,
     safe_extract,
 )
 from libera.payload.locate import (
     PAYLOAD_VERSION,
+    NoPayloadError,
     Payload,
     PayloadError,
-    config_file,
-    current_platform,
-    data_dir,
-    looks_complete,
+    get_config_file,
+    get_current_platform,
+    get_data_dir,
+    get_installed_dir,
+    get_sessions_dir,
+    get_state_dir,
+    is_complete,
     resolve,
-    sessions_dir,
-    state_dir,
 )
 
 __all__ = [
     "DEFAULT_ORIGIN",
     "PAYLOAD_VERSION",
+    "NoPayloadError",
     "Payload",
     "PayloadError",
-    "bundled_manifest",
     "can_fetch",
-    "config_file",
-    "current_platform",
-    "data_dir",
+    "get_config_file",
+    "get_current_platform",
+    "get_data_dir",
+    "get_installed_dir",
+    "get_sessions_dir",
+    "get_state_dir",
     "install",
-    "looks_complete",
+    "is_complete",
+    "read_bundled_manifest",
     "resolve",
     "safe_extract",
-    "sessions_dir",
-    "state_dir",
 ]

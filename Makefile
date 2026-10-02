@@ -69,6 +69,10 @@ lint-py:
 	@set -e; for p in $(TY_PLATFORMS); do \
 		echo "uv run --active ty check --python-platform $$p src"; \
 		uv run --active ty check --python-platform $$p src; done
+# The scripts outside src that import it: a signature changed there broke
+# docs/shots.py with nothing to say so.
+	uv run --active ty check docs/shots.py docs/cards.py \
+		build/test-linux/dialog-smoke.py build/windows/associations.py
 	@set -e; for p in $(PYREFLY_PLATFORMS); do \
 		echo "uv run --active pyrefly check --python-platform $$p src"; \
 		uv run --active pyrefly check --python-platform $$p src; done

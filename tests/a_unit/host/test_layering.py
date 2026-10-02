@@ -15,8 +15,12 @@ from __future__ import annotations
 
 import ast
 import re
+from typing import TYPE_CHECKING
 
 from support import repo_root
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 HOST = repo_root() / "src" / "libera" / "host"
 
@@ -33,22 +37,33 @@ def documented_order() -> list[str]:
     return names
 
 
+def find_sources(module: str) -> list[Path]:
+    """A module's file, or every file of a package.
+
+    Every file, not the package's `__init__.py`: that one only re-exports,
+    and reading it alone let an upward import anywhere else in `server`,
+    `window` or `menu` through unseen.
+    """
+    single = HOST / f"{module}.py"
+    return [single] if single.is_file() else sorted((HOST / module).glob("*.py"))
+
+
 def imports_of(module: str) -> set[str]:
     """Every host module this one imports, wherever the import is written."""
-    path = HOST / f"{module}.py"
-    if not path.is_file():
-        path = HOST / module / "__init__.py"
     found: set[str] = set()
-    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-        if not isinstance(node, ast.ImportFrom) or not node.module:
-            continue
-        if not node.module.startswith("libera.host"):
-            continue
-        parts = node.module.split(".")
-        if len(parts) > 2:
-            found.add(parts[2])
-        else:
-            found.update(a.name for a in node.names)
+    for path in find_sources(module):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Import):
+                named = [(alias.name, []) for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                named = [(node.module, [alias.name for alias in node.names])]
+            else:
+                continue
+            for name, members in named:
+                parts = name.split(".")
+                if parts[:2] != ["libera", "host"]:
+                    continue
+                found.update(parts[2:3] or members)
     return found
 
 

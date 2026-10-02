@@ -15,6 +15,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from types import SimpleNamespace
 
 import pytest
+from support import ScriptedShell
 
 from libera.host import hooks, instance
 from libera.host.server import post
@@ -25,12 +26,12 @@ from libera.payload import locate
 def state(tmp_path, monkeypatch):
     """A temporary state directory, with instance.json inside it.
 
-    The suite-wide `no_running_instance` fixture points instance.path at a
-    temporary file of its own; these tests also need state_dir, so both point
+    The suite-wide `no_running_instance` fixture points instance.get_path at a
+    temporary file of its own; these tests also need get_state_dir, so both point
     at the same directory here -- which is where the real path() would put it.
     """
-    monkeypatch.setattr(locate, "state_dir", lambda: tmp_path)
-    monkeypatch.setattr(instance, "path", lambda: tmp_path / "instance.json")
+    monkeypatch.setattr(locate, "get_state_dir", lambda: tmp_path)
+    monkeypatch.setattr(instance, "get_path", lambda: tmp_path / "instance.json")
     return tmp_path
 
 
@@ -97,11 +98,11 @@ def test_withdraw_leaves_another_instances_announcement(state):
 
 @pytest.fixture
 def handler():
-    """Enough of server.Handler for post_hand_off: a body, and its answers."""
+    """Enough of server.Handler for take_hand_off: a body, and its answers."""
 
     def make(body: dict):
         h = SimpleNamespace(errors=[], sent=[])
-        h.body = lambda: json.dumps(body).encode()
+        h.read_body = lambda: json.dumps(body).encode()
         h.send_error = h.errors.append
         h.send_bytes = lambda data, _ctype: h.sent.append(json.loads(data))
         return h
@@ -113,9 +114,13 @@ def handler():
 def opened(monkeypatch):
     calls: list = []
     monkeypatch.setattr(
-        hooks, "WINDOW_OPENER", lambda doc, _app=None: calls.append(doc)
+        hooks,
+        "shell",
+        ScriptedShell(
+            open_window=lambda doc, _app=None: calls.append(doc),
+            show_start_window=lambda: calls.append("start"),
+        ),
     )
-    monkeypatch.setattr(hooks, "START_OPENER", lambda: calls.append("start"))
     return calls
 
 
@@ -125,7 +130,7 @@ def test_a_wrong_token_opens_nothing(handler, opened, tmp_path):
     doc.write_bytes(b"PK")
     h = handler({"token": "guessed", "documents": [str(doc)]})
 
-    post.post_hand_off(h)
+    post.take_hand_off(h)
 
     assert h.errors == [403]
     assert opened == []
@@ -139,7 +144,7 @@ def test_the_right_token_opens_each_file_that_exists(handler, opened, tmp_path):
         "documents": [str(doc), str(tmp_path / "gone.docx")],
     })
 
-    post.post_hand_off(h)
+    post.take_hand_off(h)
 
     assert opened == [doc]
     assert h.sent == [{"opened": True}]
@@ -149,6 +154,6 @@ def test_no_documents_puts_the_start_window_up(handler, opened):
     """The icon clicked while Libera Suite is already open."""
     h = handler({"token": instance.TOKEN, "documents": []})
 
-    post.post_hand_off(h)
+    post.take_hand_off(h)
 
     assert opened == ["start"]

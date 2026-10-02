@@ -14,7 +14,7 @@ import pathlib
 import pytest
 
 from libera.host import apps
-from libera.host.convert import plan_save
+from libera.host.saving import plan_save
 
 DOCX = pathlib.Path("/home/u/Rapport.docx")
 
@@ -71,3 +71,36 @@ def test_an_unknown_format_id_falls_back_to_the_editors_own(app):
     plan = plan_save({"fileType": 99999}, app, None)
 
     assert (plan.ext, plan.fmt) == app.formats[0]
+
+
+@pytest.mark.parametrize(
+    ("app", "name"),
+    [
+        (apps.WORDS, "Rapport.odt"),
+        (apps.TABLES, "Budget.ods"),
+        (apps.TABLES, "Export.csv"),
+        (apps.SLIDES, "Deck.odp"),
+        (apps.WORDS, "RAPPORT.DOCX"),
+    ],
+)
+def test_plain_save_keeps_the_format_the_document_has(app, name):
+    """fileType 0 is the editor's plain Save: the format the document already has.
+
+    Read as the editor's first format, it wrote a .docx or .xlsx into the
+    session and said it had saved, and the document stayed as it was.
+    """
+    document = pathlib.Path("/home/u") / name
+    plan = plan_save({"fileType": 0}, app, document)
+
+    assert plan.target == document
+    assert plan.ext == document.suffix.lstrip(".").lower()
+    assert not plan.asks_where
+
+
+def test_plain_save_of_a_format_it_cannot_write_asks_where():
+    """x2t reads .doc and does not write it, so Save has to make a new file."""
+    plan = plan_save({"fileType": 0}, apps.WORDS, pathlib.Path("/home/u/Old.doc"))
+
+    assert plan.target is None
+    assert plan.asks_where
+    assert plan.ext == "docx"

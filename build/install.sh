@@ -13,12 +13,12 @@
 # is short enough to read. It writes to two places and nowhere else:
 #
 #     ~/.local/bin/libera                     the command
-#     ~/.local/share/libera/                  the virtualenv behind it
+#     ~/.local/share/libera/venv/             the virtualenv behind it
 #
 # and then asks `libera` to fetch its editor payload, which lands in the
 # platform data directory (~/Library/Application Support/Libera Suite on macOS,
-# ~/.local/share/Libera Suite on Linux). Nothing is written outside $HOME and
-# nothing asks for a password.
+# ~/.local/share/libera on Linux, around the virtualenv). Nothing is written
+# outside $HOME and nothing asks for a password.
 #
 # `--help` lists the options; they are defined once, in usage() below.
 #
@@ -106,7 +106,15 @@ case "$CHANNEL" in
 esac
 
 BIN="$PREFIX/bin"
-VENV="$PREFIX/share/libera"
+# A directory of its own, inside $PREFIX/share/libera and not that directory
+# itself. On Linux $XDG_DATA_HOME/libera is also where the application keeps
+# its state -- the payload, the sessions crash recovery reads, and WebKit's
+# storage, which holds the editor's settings -- and every install starts with
+# rm -rf on the virtualenv. While the two were one directory, updating deleted
+# all of that.
+VENV="$PREFIX/share/libera/venv"
+# Where installs before that change put it. See move_old_venv.
+OLD_VENV="$PREFIX/share/libera"
 
 # Does this command actually run? `--help` and not `--version`, because
 # `--version` arrived after 0.1.1 and this script has to work against whatever
@@ -305,6 +313,21 @@ find_python() {
     return 1
 }
 
+# An install from before VENV moved: take the virtualenv out of the state
+# directory part by part, since everything else in there is the user's. Its
+# launcher entry runs a path this removes, so it is written again once the new
+# command runs.
+move_old_venv() {
+    [ -f "$OLD_VENV/pyvenv.cfg" ] || return 0
+    step "moving the virtualenv to $VENV"
+    (cd "$OLD_VENV" && rm -rf bin include lib lib64 pyvenv.cfg .gitignore)
+    entry="${XDG_DATA_HOME:-$HOME/.local/share}/applications/$APP_ID.desktop"
+    if [ "$os" = linux ] && [ -f "$entry" ] && grep -q "$OLD_VENV/bin/libera" "$entry"; then
+        REWRITE_LAUNCHER=1
+    fi
+}
+REWRITE_LAUNCHER=
+
 install_pip() {
     python="$(find_python)" || die \
         "no Python 3.12 or newer on this machine.
@@ -325,6 +348,7 @@ install_pip() {
         venv_flags=""
     fi
 
+    move_old_venv
     step "installing libera into $VENV"
     rm -rf "$VENV"
     # shellcheck disable=SC2086  # venv_flags is one optional flag, deliberately unquoted
@@ -348,6 +372,14 @@ install_pip() {
     output="$(runs "$BIN/libera")" || die \
         "pip reported success and $BIN/libera does not run:
        $output"
+
+    if [ -n "$REWRITE_LAUNCHER" ]; then
+        if "$BIN/libera" --launcher-install >/dev/null; then
+            say "    rewrote the launcher entry for the new path"
+        else
+            say "    the launcher entry is stale: run  libera --launcher-install"
+        fi
+    fi
     say "    $(describe "$BIN/libera")"
 }
 

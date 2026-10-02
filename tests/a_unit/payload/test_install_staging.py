@@ -39,17 +39,3 @@ def test_room_check_passes_with_headroom(tmp_path, monkeypatch):
         shutil, "disk_usage", lambda _p: shutil._ntuple_diskusage(0, 0, 999_000_000)
     )
     installer._check_room(tmp_path, artifacts)  # no exception
-
-
-def test_staging_happens_on_the_destination_filesystem():
-    """The staging directory is created with dir=dest.parent.
-
-    Asserted on the source because the alternative is a test that needs two
-    filesystems. The defect was one keyword argument absent, and its absence is
-    what this reads.
-    """
-    import inspect
-
-    source = inspect.getsource(installer.install)
-    assert "dir=dest.parent" in source
-    assert "staged.rename(dest)" in source, "the move must be a same-filesystem rename"

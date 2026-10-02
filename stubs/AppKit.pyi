@@ -5,6 +5,7 @@ from typing import Any
 NSAlert: Any
 NSAlertStyleWarning: Any
 NSApp: Any
+NSAppleEventManager: Any
 NSBeep: Any
 NSFileHandlingPanelOKButton: Any
 NSMenu: Any

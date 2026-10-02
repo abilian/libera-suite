@@ -29,7 +29,7 @@ def spare_port():
 
 def test_prefers_the_stable_port(monkeypatch, spare_port):
     monkeypatch.setattr(server.handler, "PREFERRED_PORT", spare_port)
-    assert server.free_port() == spare_port
+    assert server.find_free_port() == spare_port
 
 
 def test_falls_back_when_the_stable_port_is_taken(monkeypatch):
@@ -42,7 +42,7 @@ def test_falls_back_when_the_stable_port_is_taken(monkeypatch):
     taken = int(held.getsockname()[1])
     monkeypatch.setattr(server.handler, "PREFERRED_PORT", taken)
     try:
-        port = server.free_port()
+        port = server.find_free_port()
     finally:
         held.close()
 

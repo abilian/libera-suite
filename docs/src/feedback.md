@@ -17,7 +17,7 @@ Rendering problems in particular are hard to chase without the document: the lay
 
 Say what you were trying to get done. The feature you would have used helps, but the task behind it decides whether there is a better answer.
 
-Some things are known to be missing and do not need reporting. See [What works today](guide/status.md).
+Some things are known to be missing and do not need reporting. See [What works today](main/status.md).
 
 ## Where to send it
 

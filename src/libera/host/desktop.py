@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 OPEN_TIMEOUT = 5.0
 
 
-def opener() -> list[str]:
+def choose_opener() -> list[str]:
     """The command this desktop opens things with."""
     return ["/usr/bin/open"] if sys.platform == "darwin" else ["xdg-open"]
 
@@ -49,22 +49,34 @@ def open_url(url: str) -> bool:
     """
     if sys.platform == "win32":
         return _start(url)
-    cmd = [*opener(), url]
-    proc = subprocess.Popen(cmd)  # our own argv; callers check the url
+    return _run_opener([*choose_opener(), url])
+
+
+def _run_opener(cmd: list[str]) -> bool:
+    """Run the desktop's opener on `cmd[-1]`, and say whether it took it.
+
+    The bounded wait open_url describes, for every caller: a URL, a file to
+    reveal, a PDF to print. Revealing and printing used `subprocess.run`
+    and ignored the status, so on Linux either could hold its request
+    thread for as long as the file manager or viewer stayed open, and both
+    reported success whatever the opener said.
+    """
+    target = cmd[-1]
+    proc = subprocess.Popen(cmd)  # our own argv; callers check the target
     try:
         status = proc.wait(timeout=OPEN_TIMEOUT)
     except subprocess.TimeoutExpired:
-        logger.info("open-url -> %s (the opener is still running)", url)
+        logger.info("open -> %s (the opener is still running)", target)
         return True
     # In `else`, which is where code that needs the try to have succeeded goes.
     # It was after the block and just as correct, but pyrefly checking for
-    # Windows, where all of this sits behind the early return above, reported
+    # Windows, where all of this sits behind an early return, reported
     # `status` as possibly unbound there and does not in `else`.
     else:
         if status == 0:
-            logger.info("open-url -> %s", url)
+            logger.info("open -> %s", target)
             return True
-        logger.warning("open-url: %s exited %d for %s", cmd[0], status, url)
+        logger.warning("open: %s exited %d for %s", cmd[0], status, target)
         return False
 
 
@@ -120,19 +132,14 @@ def reveal(path: pathlib.Path) -> bool:
         subprocess.run(["explorer", f"/select,{target}"], check=False)
         return True
     if sys.platform == "darwin":
-        cmd = (
-            ["/usr/bin/open", "-R", str(target)]
-            if select
-            else ["/usr/bin/open", str(target)]
-        )
-    else:
-        cmd = ["xdg-open", str(target if not select else target.parent)]
-    subprocess.run(cmd, check=False)
-    return True
+        select_flag = ["-R"] if select else []
+        return _run_opener([*choose_opener(), *select_flag, str(target)])
+    # xdg-open has no "select": the folder is the closest it comes.
+    return _run_opener([*choose_opener(), str(target.parent if select else target)])
 
 
-def open_externally(path: pathlib.Path) -> None:
-    """Hand a file to whatever the desktop opens it with.
+def open_externally(path: pathlib.Path) -> bool:
+    """Hand a file to whatever the desktop opens it with, and say if it did.
 
     Printing ends here. Upstream's host draws its own print preview; ours hands
     the PDF to Preview (or the Linux equivalent), which has a print dialog and
@@ -140,19 +147,12 @@ def open_externally(path: pathlib.Path) -> None:
     a machine nobody has changed.
     """
     if sys.platform == "win32":
-        _start(str(path))
-        return
-    cmd = (
-        ["/usr/bin/open", str(path)]
-        if sys.platform == "darwin"
-        else ["xdg-open", str(path)]
-    )
-    subprocess.run(cmd, check=False)
-    logger.info("print -> %s", path)
+        return _start(str(path))
+    return _run_opener([*choose_opener(), str(path)])
 
 
 @functools.cache
-def local_user() -> tuple[str, str]:
+def lookup_local_user() -> tuple[str, str]:
     """Who the editor should say you are: (id, name).
 
     Without this the editor uses upstream's placeholder, "Chuk.Gek", and that
@@ -174,7 +174,7 @@ def local_user() -> tuple[str, str]:
 
             full = str(Foundation.NSFullUserName())
     if not full and sys.platform == "win32":
-        full = _windows_full_name(login)
+        full = _lookup_windows_full_name(login)
     # Not on Windows, and not only because the lookup would fail: `pwd` does not
     # exist there, so this used to run by way of a swallowed ModuleNotFoundError,
     # and a checker for win32 reports it as the unresolved attribute it is.
@@ -188,7 +188,7 @@ def local_user() -> tuple[str, str]:
     return login, (full.strip() or login)
 
 
-def _windows_full_name(login: str) -> str:
+def _lookup_windows_full_name(login: str) -> str:
     """The display name Windows shows for this account, or "".
 
     Two sources, because each answers for one kind of account: GetUserNameExW
@@ -196,10 +196,7 @@ def _windows_full_name(login: str) -> str:
     local account; NetUserGetInfo reads the local account database, which is
     where a home machine's "Full name" lives.
     """
-    # For the type checkers as much as the runtime: every caller tests for
-    # win32, and a checker for another platform cannot see that. A block and
-    # not an early return, because pyrefly narrows on the first only. See
-    # _start in desktop.py.
+    # A block, not an early return: see _start.
     if sys.platform == "win32":
         import ctypes
         from ctypes import wintypes

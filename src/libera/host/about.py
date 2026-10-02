@@ -44,7 +44,7 @@ COPYRIGHT = (
 )
 
 
-def notice() -> str:
+def format_notice() -> str:
     """The attribution as a dialog body: the paragraph, then where to look."""
     return (
         f"{ATTRIBUTION}\n\n"

@@ -16,14 +16,18 @@ import urllib.error
 import urllib.request
 from importlib import resources
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from libera.payload import generate, locate
 from libera.payload.locate import Payload, PayloadError
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 DEFAULT_ORIGIN = "https://cdn.abilian.com/libera"
 
 
-def _sha256(path: Path) -> str:
+def _hash_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
@@ -31,7 +35,7 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def bundled_manifest() -> dict | None:
+def read_bundled_manifest() -> dict | None:
     """The manifest shipped in the wheel, which is what makes the origin untrusted.
 
     resources.files("libera"), not Path(__file__).with_name(): this module is
@@ -63,34 +67,41 @@ def can_fetch() -> bool:
     refused -- which reads as a failure rather than as something that was never
     on offer.
     """
-    return bundled_manifest() is not None
+    return read_bundled_manifest() is not None
 
 
 def _fetch(url: str, dest: Path) -> None:
     """Download one artifact, turning network failures into something readable.
 
-    The public origin does not exist yet, so the common case here is a DNS
-    failure -- which as a raw traceback tells a user nothing they can act on.
+    The common failure is a machine with no network, or one that cannot reach
+    the origin, and as a raw traceback that tells a user nothing they can act
+    on.
     """
-    try:
-        with urllib.request.urlopen(url, timeout=60) as r, dest.open("wb") as out:
-            shutil.copyfileobj(r, out, 1 << 20)
-    except urllib.error.HTTPError as e:
-        msg = f"{url}\n  the origin answered {e.code} {e.reason}"
-        raise PayloadError(msg) from e
-    except (urllib.error.URLError, TimeoutError, OSError) as e:
-        reason = getattr(e, "reason", e)
-        msg = (
-            f"could not reach {url}\n"
-            f"  {reason}\n"
-            "  The public payload origin is not published yet. Until it is,\n"
-            "  install from artifacts you have built or been given:\n"
-            "    libera --payload-install --from DIR"
-        )
-        raise PayloadError(msg) from e
+    # A full disk is not a network fault, and was reported as one, with advice
+    # to check the connection: only what urlopen raises gets that advice.
+    with dest.open("wb") as out:
+        try:
+            with urllib.request.urlopen(url, timeout=60) as r:
+                shutil.copyfileobj(r, out, 1 << 20)
+        except urllib.error.HTTPError as e:
+            msg = f"{url}\n  the origin answered {e.code} {e.reason}"
+            raise PayloadError(msg) from e
+        except (urllib.error.URLError, TimeoutError) as e:
+            reason = getattr(e, "reason", e)
+            msg = (
+                f"could not reach {url}\n"
+                f"  {reason}\n"
+                "  Check the network connection, or install from artifacts you\n"
+                "  have built or been given:\n"
+                "    libera --payload-install --from DIR"
+            )
+            raise PayloadError(msg) from e
+        except OSError as e:
+            msg = f"could not download {url} to {dest}\n  {e}"
+            raise PayloadError(msg) from e
 
 
-def _wanted(manifest: dict, want_platform: str) -> list[dict]:
+def _select_artifacts(manifest: dict, want_platform: str) -> list[dict]:
     """The artifacts this machine needs: its own core, plus the neutral ones."""
     out = []
     for a in manifest["artifacts"]:
@@ -104,24 +115,29 @@ def _wanted(manifest: dict, want_platform: str) -> list[dict]:
 
 
 def safe_extract(tar: tarfile.TarFile, dest: Path) -> None:
-    """Extract, refusing members that would escape dest."""
-    dest = dest.resolve()
-    for member in tar.getmembers():
-        target = (dest / member.name).resolve()
-        if dest not in target.parents and target != dest:
-            msg = f"refusing tar member outside the payload: {member.name}"
-            raise PayloadError(msg)
-    tar.extractall(dest)
+    """Extract, refusing members that would escape dest.
+
+    The standard library's "data" filter, not a check of member names: a
+    name can stay inside dest while a link does not -- a symlink to /etc,
+    then a file written through it -- and only the filter looks at both. It
+    matters where the hash does not protect us: `--from DIR` and
+    `--trust-manifest`. The payload's own links are relative and inside it.
+    """
+    try:
+        tar.extractall(dest, filter="data")
+    except tarfile.FilterError as e:
+        msg = f"refusing tar member outside the payload: {e}"
+        raise PayloadError(msg) from e
 
 
-def _manifest_for(source, local: Path | None, *, trust_manifest: bool) -> dict:
+def _read_manifest(base_url: str, local: Path | None, *, trust_manifest: bool) -> dict:
     """The manifest that decides what gets installed, and whether to trust it.
 
     The wheel's copy is authoritative -- that is what makes the origin untrusted
     storage. Without it, a local directory is still fine (the user chose those
     bytes), but a download needs an explicit --trust-manifest.
     """
-    bundled = bundled_manifest()
+    bundled = read_bundled_manifest()
     if bundled is not None:
         return bundled
     if local is not None:
@@ -141,7 +157,7 @@ def _manifest_for(source, local: Path | None, *, trust_manifest: bool) -> dict:
             "  or accept the origin's manifest explicitly: --trust-manifest"
         )
         raise PayloadError(msg)
-    url = f"{source}/manifest.json"
+    url = f"{base_url}/manifest.json"
     try:
         with urllib.request.urlopen(url, timeout=60) as r:
             return json.loads(r.read())
@@ -150,12 +166,12 @@ def _manifest_for(source, local: Path | None, *, trust_manifest: bool) -> dict:
         raise PayloadError(msg) from e
 
 
-def _finish(dest: Path, log) -> None:
+def _finish(dest: Path, say: Callable[[str], object]) -> None:
     """Generate the local files and confirm the result is usable."""
-    log("  generating fonts and configuration")
+    say("  generating fonts and configuration")
     found = generate.generate(dest)
-    log(f"    {found} fonts")
-    if not locate.looks_complete(dest):
+    say(f"    {found} fonts")
+    if not locate.is_complete(dest):
         msg = "installed payload is incomplete"
         raise PayloadError(msg)
 
@@ -190,19 +206,22 @@ def install(
     source: Path | str | None = None,
     dest: Path | None = None,
     trust_manifest: bool = False,
-    log=print,
+    say: Callable[[str], object] = print,
 ) -> Payload:
     """Fetch or copy the artifacts, verify them, unpack, and generate.
 
     ``source`` is a local directory of artifacts or a base URL; the default is
     the public origin. Nothing is installed until every hash matches.
     """
-    dest = dest or (locate.data_dir() / locate.PAYLOAD_VERSION)
-    want_platform = locate.current_platform()
+    dest = dest or locate.get_installed_dir()
+    want_platform = locate.get_current_platform()
 
     is_url = bool(source) and str(source).startswith(("http://", "https://"))
     local = Path(source) if source and not is_url else None
-    manifest = _manifest_for(source, local, trust_manifest=trust_manifest)
+    # Before the manifest, which is read from it: with no --from, `source` is
+    # None, and --trust-manifest asked for "None/manifest.json".
+    base_url = str(source or f"{DEFAULT_ORIGIN}/{locate.PAYLOAD_VERSION}")
+    manifest = _read_manifest(base_url, local, trust_manifest=trust_manifest)
 
     if manifest["payload_version"] != locate.PAYLOAD_VERSION:
         msg = (
@@ -211,8 +230,7 @@ def install(
         )
         raise PayloadError(msg)
 
-    artifacts = _wanted(manifest, want_platform)
-    base_url = str(source or f"{DEFAULT_ORIGIN}/{locate.PAYLOAD_VERSION}")
+    artifacts = _select_artifacts(manifest, want_platform)
 
     if local is not None:
         missing = [a["name"] for a in artifacts if not (local / a["name"]).is_file()]
@@ -253,10 +271,10 @@ def install(
             if local:
                 shutil.copyfile(local / a["name"], got)
             else:
-                log(f"  fetching {a['name']} ({a['size'] / 1e6:.0f} MB)")
+                say(f"  fetching {a['name']} ({a['size'] / 1e6:.0f} MB)")
                 _fetch(f"{base_url}/{a['name']}", got)
 
-            digest = _sha256(got)
+            digest = _hash_file(got)
             if digest != a["sha256"]:
                 msg = (
                     f"{a['name']} failed verification\n"
@@ -297,10 +315,13 @@ def install(
         # The rename and the generation share one rollback. They used to be
         # separate, so a failed move left dest broken and the working payload
         # stranded at .previous -- the one outcome worse than not installing.
+        # BaseException: a Ctrl-C while the fonts are generated is the likeliest
+        # interruption of all, and it left the working payload at .previous,
+        # where nothing looks and the next install deletes it. Re-raised.
         try:
             staged.rename(dest)
-            _finish(dest, log)
-        except Exception:
+            _finish(dest, say)
+        except BaseException:
             shutil.rmtree(dest, ignore_errors=True)
             if previous.exists():
                 previous.rename(dest)

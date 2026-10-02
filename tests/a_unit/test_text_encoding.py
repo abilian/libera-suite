@@ -14,7 +14,7 @@ a cron job and an unset-LANG ssh session all have:
     UnicodeDecodeError: 'ascii' codec can't decode byte 0xe2 in position 36
 
 That is `Rapport financier — déjà vu.docx`, which is not an exotic filename
-here. And UnicodeDecodeError is a ValueError, so session.holds_unsaved's
+here. And UnicodeDecodeError is a ValueError, so opening.has_unsaved_edits's
 handler catches it and reports "no unsaved edits" -- the recovery prompt never
 appears and the edits go.
 
@@ -28,6 +28,8 @@ import ast
 
 import pytest
 from support import repo_root
+
+from libera.host.session import Session
 
 SRC = repo_root() / "src" / "libera"
 
@@ -66,13 +68,15 @@ def test_no_text_io_relies_on_the_machines_locale():
     ],
 )
 def test_a_documents_path_survives_being_written_and_read_back(tmp_path, name):
-    """The round trip current.txt actually makes, with the encoding pinned.
+    """The round trip current.txt actually makes, through the code that makes it.
 
-    utf-8 both ways, so the answer does not depend on where this runs.
+    It was pathlib with the encoding pinned in the test, which passes whatever
+    Session does: what has to be pinned is Session's own read and write.
     """
-    current = tmp_path / "current.txt"
+    found = Session(payload=tmp_path / "payload", work=tmp_path / "session")
+    found.work.mkdir()
     document = tmp_path / name
 
-    current.write_text(str(document), encoding="utf-8")
+    found.write_current_document(document)
 
-    assert current.read_text(encoding="utf-8").strip() == str(document)
+    assert found.read_current_document() == document

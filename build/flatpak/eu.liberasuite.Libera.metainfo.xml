@@ -47,7 +47,7 @@
   <launchable type="desktop-id">eu.liberasuite.Libera.desktop</launchable>
 
   <url type="homepage">https://docs.liberasuite.eu/</url>
-  <url type="help">https://docs.liberasuite.eu/guide/</url>
+  <url type="help">https://docs.liberasuite.eu/</url>
   <url type="bugtracker">https://github.com/abilian/libera-suite/issues</url>
   <url type="vcs-browser">https://github.com/abilian/libera-suite</url>
 
@@ -61,12 +61,20 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
-    <release version="0.2.2" date="2026-09-28">
+    <release version="0.3.1" date="2026-09-30">
       <description>
         <p>
-          Help now says where the documentation is when no browser can be
-          opened, and About names the upstream components and their licence on
-          both platforms.
+          File ▸ New creates a document, a spreadsheet or a presentation from
+          any window, and the editor's own Create New asks which of the three.
+        </p>
+      </description>
+    </release>
+    <release version="0.3.0" date="2026-09-29">
+      <description>
+        <p>
+          Opening a document while Libera Suite is running hands it to the
+          running instance, and About names the upstream components and their
+          licence.
         </p>
       </description>
     </release>

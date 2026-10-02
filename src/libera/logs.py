@@ -43,7 +43,7 @@ MOST_VERBOSE = 3
 _STATE = {"trace_requests": False}
 
 
-def tracing_requests() -> bool:
+def is_tracing_requests() -> bool:
     """Two lines for every request, which is -vvv and nothing less.
 
     During a document load that is thousands of lines, and useless until the
@@ -60,7 +60,7 @@ MARKS = {
 }
 
 
-class Terse(logging.Formatter):
+class TerseFormatter(logging.Formatter):
     """Two spaces and the message, which is what this already looked like.
 
     The host's output is read next to the editor's own, in a terminal someone
@@ -94,12 +94,12 @@ def setup(verbosity: int = 0, *, quiet: bool = False) -> None:
     _STATE["trace_requests"] = not quiet and verbosity >= MOST_VERBOSE
 
     handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(Terse())
+    handler.setFormatter(TerseFormatter())
 
-    log = logging.getLogger("libera")
-    log.handlers.clear()
-    log.addHandler(handler)
-    log.setLevel(level)
+    ours = logging.getLogger("libera")
+    ours.handlers.clear()
+    ours.addHandler(handler)
+    ours.setLevel(level)
     # Ours alone. Nothing here should reconfigure logging for whatever
     # imported us.
-    log.propagate = False
+    ours.propagate = False

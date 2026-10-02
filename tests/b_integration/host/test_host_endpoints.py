@@ -8,12 +8,17 @@ string, and the shapes the bridge parses on the other side.
 from __future__ import annotations
 
 import json
+import shutil
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from typing import TYPE_CHECKING
 
 import pytest
+from support import ScriptedShell
 
-from libera.host import apps, recents, session as sessions
+from libera.host import apps, convert, recents, session as sessions
 from libera.host.server import BRIDGE_PARTS
 
 if TYPE_CHECKING:
@@ -61,10 +66,10 @@ def test_the_owned_keys_are_the_menu_bar_own_definition(live: LiveHost, monkeypa
     from libera.host import hooks, menu, server
 
     monkeypatch.setattr(sys, "platform", "darwin")
-    monkeypatch.setattr(hooks, "WINDOW_OPENER", lambda _document: None)
+    monkeypatch.setattr(hooks, "shell", ScriptedShell())
 
-    assert server.owned_keys() == [s.as_json() for s in menu.PAGE_YIELDS]
-    assert server.owned_keys() == [{"key": menu.NEW.key, "shift": False}]
+    assert server.list_owned_keys() == [s.as_json() for s in menu.PAGE_YIELDS]
+    assert server.list_owned_keys() == [{"key": menu.NEW.key, "shift": False}]
 
 
 def test_only_the_first_part_carries_the_flags(live: LiveHost):
@@ -122,16 +127,16 @@ def test_dictionaries_are_served(live: LiveHost):
 
 def test_modified_raises_and_clears_the_recovery_marker(live: LiveHost):
     live.post("modified", b'{"modified": true}')
-    assert live.host.unsaved.is_file()
+    assert live.host.unsaved_marker.is_file()
 
     live.post("modified", b'{"modified": false}')
-    assert not live.host.unsaved.is_file()
+    assert not live.host.unsaved_marker.is_file()
 
 
 def test_the_editor_reports_what_it_can_do(live: LiveHost):
     """Pushed, not asked for: the menu is validated on the GUI thread."""
     live.post("can", b'{"undo": true, "redo": false}')
-    assert sessions.EDITOR_STATE["0"] == {"undo": True, "redo": False}
+    assert sessions.SESSIONS["0"].abilities == {"undo": True, "redo": False}
 
 
 def test_changes_are_appended_to_the_log_x2t_reads(live: LiveHost):
@@ -139,7 +144,7 @@ def test_changes_are_appended_to_the_log_x2t_reads(live: LiveHost):
     live.post("changes?index=&count=1", b"first")
     live.post("changes?index=&count=1", b"second")
 
-    log = live.host.doc / "changes" / "changes0.json"
+    log = live.host.change_log.path
     assert log.read_text() == '"first","second",'
 
 
@@ -171,7 +176,110 @@ def test_open_recent_refuses_a_path_it_never_offered(live: LiveHost):
 
 @pytest.mark.parametrize("name", ["../../../../etc/passwd", "..%2f..%2fpayload.json"])
 def test_media_stays_inside_the_media_folder(live: LiveHost, name: str):
-    assert live.post(f"media/{name}")[0] == 404
+    """Asked for the way the editor asks, with a GET. This was a POST, to a
+    route that does not exist, so it answered 404 whatever media did."""
+    with pytest.raises(urllib.error.HTTPError) as refused:
+        live.get(f"media/{name}")
+
+    assert refused.value.code == 404
+
+
+def test_media_with_a_space_in_its_name_is_served(live: LiveHost):
+    """Imported under its own name, and asked for percent-encoded."""
+    live.host.media.mkdir(parents=True, exist_ok=True)
+    (live.host.media / "My Photo.png").write_bytes(b"\x89PNG picture")
+
+    assert live.get("media/My%20Photo.png") == b"\x89PNG picture"
+
+
+# --- who may ask at all -----------------------------------------------------
+#
+# Every page in every browser on this machine can reach 127.0.0.1. Before these
+# checks, one from anywhere truncated the open document's change log, and one
+# on a rebound DNS name read the document back.
+
+EVIL = "https://evil.example"
+
+
+def test_a_page_from_another_origin_cannot_touch_the_change_log(live: LiveHost):
+    """A text/plain POST is a "simple" request: the browser sends it unasked."""
+    live.post("changes?index=&count=1", b"typed")
+    log = live.host.change_log.path
+
+    status, _ = live.post(
+        "changes?index=0&count=0", session="", headers={"Origin": EVIL}
+    )
+
+    assert status == 403
+    assert log.read_text() == '"typed",', "another origin rewound the log"
+
+
+def test_our_own_pages_are_still_let_in(live: LiveHost):
+    """The editor's page sends our origin with every POST, and must get through."""
+    status, _ = live.post(
+        "changes?index=&count=1", b"typed", headers={"Origin": live.url}
+    )
+
+    assert status == 204
+
+
+def test_no_other_site_may_frame_our_pages(live: LiveHost):
+    """Framed, the start window's buttons send our origin, which is let in."""
+    with urllib.request.urlopen(live.at("start"), timeout=30) as answer:
+        policy = answer.headers["Content-Security-Policy"]
+
+    assert policy == "frame-ancestors 'self'"
+
+
+def test_a_name_rebound_to_this_address_reads_nothing(live: LiveHost):
+    """DNS rebinding: the attacker's name, resolving here, makes their page
+    same-origin with itself. The Host header is the one thing that gives it
+    away."""
+    port = live.url.rsplit(":", 1)[1]
+    request = urllib.request.Request(
+        live.at("current"), headers={"Host": f"evil.example:{port}"}
+    )
+
+    with pytest.raises(urllib.error.HTTPError) as refused:
+        urllib.request.urlopen(request, timeout=30)
+
+    assert refused.value.code == 403
+
+
+# --- what a request can carry -----------------------------------------------
+#
+# Each endpoint read its body where it first needed it, so one it could not
+# read raised there and the connection closed with no response at all: the
+# editor saw a network fault, and the traceback went past logs.py.
+
+
+@pytest.mark.parametrize(
+    ("route", "body"),
+    [
+        ("save", b"not json"),
+        ("can", b"[1]"),
+        ("modified", b"[1]"),
+        ("open-recent", b"[]"),
+        ("changes?index=abc&count=1", b"x"),
+    ],
+)
+def test_what_an_endpoint_cannot_read_is_a_400(live: LiveHost, route, body):
+    assert live.post(route, body)[0] == 400
+
+
+def test_an_endpoint_that_fails_still_answers(live: LiveHost):
+    """The session's files gone from under it, as a sweep would leave them."""
+    shutil.rmtree(live.host.doc)
+
+    assert live.post("changes?index=&count=1", b"typed")[0] == 500
+
+
+def test_a_session_id_outside_latin_1_is_answered(live: LiveHost):
+    """Put in the status line, it raised UnicodeEncodeError there instead."""
+    with pytest.raises(urllib.error.HTTPError) as refused:
+        live.get("current", session=urllib.parse.quote("\u0141"))
+
+    assert refused.value.code == 404
 
 
 # --- sessions ---------------------------------------------------------------
@@ -181,10 +289,10 @@ def test_each_session_answers_for_its_own_document(live: LiveHost, tmp_path):
     """Two windows, two documents: the session decides which one replies."""
     second = tmp_path / "second.docx"
     second.write_bytes(live.document.read_bytes())
-    host = sessions.Host(
+    host = sessions.Session(
         payload=live.host.payload, work=tmp_path / "sessions" / "1", document=second
     )
-    sessions.configure(host, "1")
+    sessions.configure(host)
 
     assert live.json("current", session="0")["path"] == str(live.document)
     assert live.json("current", session="1")["path"] == str(second)
@@ -193,6 +301,19 @@ def test_each_session_answers_for_its_own_document(live: LiveHost, tmp_path):
 def test_a_request_naming_no_session_still_gets_answered(live: LiveHost):
     """Static pages carry no session, and the first one is as good as any."""
     assert live.json("current", session="")["path"] == str(live.document)
+
+
+def test_a_session_that_has_gone_is_not_answered_for(live: LiveHost):
+    """A window that closed may still have a request on its way. It used to
+    land on the first session, and an undo index there truncates the wrong
+    document's log."""
+    live.post("changes?index=&count=1", b"typed")
+    log = live.host.change_log.path
+
+    status, _ = live.post("changes?index=0&count=0", session="closed")
+
+    assert status == 404
+    assert log.read_text() == '"typed",'
 
 
 # --- the start window -------------------------------------------------------
@@ -303,18 +424,27 @@ def test_the_start_page_can_say_where_the_payload_came_from(live: LiveHost):
 @pytest.mark.parametrize(
     ("doctype", "suffix"), [("word", ".docx"), ("cell", ".xlsx"), ("slide", ".pptx")]
 )
-def test_new_makes_the_kind_of_document_that_was_asked_for(
-    live: LiveHost, doctype: str, suffix: str
-):
-    """The start window asks for a spreadsheet from a session showing a docx."""
-    assert live.post(f"new?type={doctype}")[0] == 200
-    # In serve mode the blank is converted in place; the session's Editor.bin
-    # is the only evidence, and it has to be the one for that editor.
-    assert live.host.editor_bin.stat().st_size > 0
-    assert (
-        live.host.blank_for(next(a for a in apps.ALL if a.doctype == doctype)).suffix
-        == suffix
-    )
+def test_each_kind_starts_from_its_own_blank(live: LiveHost, doctype: str, suffix: str):
+    kind = next(a for a in apps.ALL if a.doctype == doctype)
+    assert live.host.choose_blank(kind).suffix == suffix
+
+
+def test_with_no_window_to_open_new_makes_its_own_kind_in_place(live: LiveHost):
+    """`libera --serve`: one window, and the new document replaces the old."""
+    before = live.host.editor_bin.read_bytes()
+
+    assert live.post("new?type=word")[0] == 200
+    # The session's Editor.bin is the only evidence in serve mode -- and it is
+    # not empty before either, so what counts is that it changed.
+    assert live.host.editor_bin.read_bytes() != before
+
+
+@pytest.mark.parametrize("doctype", ["cell", "slide"])
+def test_with_no_window_to_open_another_kind_is_refused(live: LiveHost, doctype: str):
+    """A spreadsheet converted into a Words session left a word processor on
+    screen with a spreadsheet's blank behind it. `--serve` has one document and
+    one window, so another kind has nowhere to go, and the host says so."""
+    assert live.post(f"new?type={doctype}")[0] == 409
 
 
 # --- opening things ---------------------------------------------------------
@@ -331,15 +461,40 @@ def test_a_listed_document_can_be_opened(live: LiveHost, tmp_path):
     """With no window to open it in, the one window takes it -- `libera --serve`."""
     other = tmp_path / "other.docx"
     other.write_bytes(live.document.read_bytes())
-    recents.remember_recent(other)
+    recents.remember_recent(live.host, other)
+    live.host.mark_modified(True)
 
     status, body = live.post("open-recent", json.dumps({"id": str(other)}).encode())
 
     assert status == 200
     assert json.loads(body) == {"opened": True, "here": True}
     assert live.json("current")["path"] == str(other)
+    # The edits went with the document they were made to; the marker with them.
+    assert not live.host.unsaved_marker.is_file()
+
+
+def test_a_listed_document_that_will_not_open_is_still_answered(
+    live: LiveHost, tmp_path, monkeypatch
+):
+    """Opening it raises, and the request gets an answer, not a dropped line.
+
+    The converter is told to fail rather than handed a broken file: x2t reads
+    a broken .docx as plain text and succeeds.
+    """
+    broken = tmp_path / "broken.docx"
+    broken.write_bytes(b"not a document")
+    recents.remember_recent(live.host, broken)
+    monkeypatch.setattr(convert, "convert_to_editor_bin", lambda *_: False)
+
+    status, body = live.post("open-recent", json.dumps({"id": str(broken)}).encode())
+
+    assert status == 200
+    assert json.loads(body) == {"opened": False, "here": True}
+    assert live.json("current")["path"] == str(live.document)
 
 
 def test_file_new_converts_the_blank_the_payload_ships(live: LiveHost):
+    before = live.host.editor_bin.read_bytes()
+
     assert live.post("new")[0] == 200
-    assert live.host.editor_bin.stat().st_size > 0
+    assert live.host.editor_bin.read_bytes() != before

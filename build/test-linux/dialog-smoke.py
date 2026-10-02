@@ -1,6 +1,6 @@
 """Does the GTK question actually reach the screen, and come back?
 
-`dialogs._gtk_ask` is the Linux half of three questions the host has to ask:
+`window.gtk.ask` is the Linux half of three questions the host has to ask:
 save before closing, recover unsaved edits, reload a wedged editor. All three
 returned "no" without asking before, and the one that mattered lost work.
 
@@ -21,19 +21,23 @@ from __future__ import annotations
 
 import sys
 import threading
+from dataclasses import replace
 
 import gi
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk  # ruff: ignore[module-import-not-at-top-of-file] -- require_version comes first
 
-from libera.host.window import dialogs  # ruff: ignore[module-import-not-at-top-of-file] -- and so does gi's
+from libera.host.window import Answer, Question, gtk  # ruff: ignore[module-import-not-at-top-of-file] -- and so does gi's
 
-BUTTONS = ("Save", "Cancel", "Don't Save")
-WANTED = 2  # "Don't Save", the last button, so an off-by-one shows up
+QUESTION = Question("Question", "Body.", yes="Save", no="Don't Save", cancel="Cancel")
+# "Don't Save": the button GNOME's order puts leftmost and the default is not,
+# so an answer read from the wrong button shows up.
+CLICKED = Gtk.ResponseType.NO
+WANTED = Answer.NO
 
 
-def answer_the_dialog(index: int) -> bool:
+def answer_the_dialog(response: int) -> bool:
     """Find the dialog on screen and respond to it, from the GTK thread.
 
     Returns True to be called again: the dialog takes a moment to be realised,
@@ -41,26 +45,27 @@ def answer_the_dialog(index: int) -> bool:
     """
     for window in Gtk.Window.list_toplevels():
         if isinstance(window, Gtk.MessageDialog) and window.get_visible():
-            window.response(index)
+            window.response(response)
             return False
     return True
 
 
-def ask_from(where: str, on_gtk_thread: bool) -> int:
+def ask_from(where: str, on_gtk_thread: bool) -> Answer | None:
     """Put the question up from one of the two places it gets asked from."""
-    answers: list[int] = []
+    answers: list[Answer] = []
+    question = replace(QUESTION, title=f"Question from {where}")
 
     def ask() -> None:
-        answers.append(dialogs._gtk_ask(f"Question from {where}", "Body.", BUTTONS))  # ruff: ignore[private-member-access] -- _gtk_ask is the thing under test
+        answers.append(gtk.ask(question, None))
 
-    GLib.timeout_add(300, answer_the_dialog, WANTED)
+    GLib.timeout_add(300, answer_the_dialog, CLICKED)
     if on_gtk_thread:
         GLib.idle_add(lambda: (ask(), Gtk.main_quit(), False)[-1])
     else:
         worker = threading.Thread(target=lambda: (ask(), Gtk.main_quit()))
         worker.start()
     Gtk.main()
-    return answers[0] if answers else -1
+    return answers[0] if answers else None
 
 
 def main() -> int:

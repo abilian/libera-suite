@@ -11,7 +11,7 @@ Four editors share one application. The file picks the editor, so there is nothi
 | **Libera Slides** | `.pptx` `.odp` |
 | **Libera Diagrams** | opens `.vsdx` to read |
 
-![Libera Words, with a document open: the editor's toolbar in the Libera Words purple, and a laid-out page below it.](https://docs.liberasuite.eu/assets/words.png)
+![Libera Words, with a document open: the editor's toolbar in the Libera Words purple, and a laid-out page below it.](https://docs.liberasuite.eu/en/assets/words.png)
 
 Abilian builds the host as free software under the Apache License 2.0. The editors inside it come from [Euro-Office](https://github.com/Euro-Office) (itself an AGPL fork of ONLYOFFICE by Ascensio System SIA), running locally, with the document engine unmodified: our patch queue against them is build configuration and branding.
 
@@ -24,9 +24,9 @@ libera *.pptx             # one window each
 libera                    # the start window: new, open, recent
 ```
 
-![The start window, with a New tile for each of Document, Spreadsheet and Presentation, an Open button, and a Recent list of three documents.](https://docs.liberasuite.eu/assets/start.png)
+![The start window, with a New tile for each of Document, Spreadsheet and Presentation, an Open button, and a Recent list of three documents.](https://docs.liberasuite.eu/en/assets/start.png)
 
-[What works today](https://docs.liberasuite.eu/guide/status/) sets out the full list with its gaps. It covers editing, saving and exporting, with PDF in the Save As popup. It also covers blank documents of all four kinds, images, printing, spell check in six languages, crash recovery and a Recent list.
+[What works today](https://docs.liberasuite.eu/en/main/status/) sets out the full list with its gaps. It covers editing, saving and exporting, with PDF in the Save As popup. It also covers blank documents of all four kinds, images, printing, spell check in six languages, crash recovery and a Recent list.
 
 ```sh
 libera -v FILE            # what it is doing; -vv how; -vvv every request
@@ -56,13 +56,13 @@ Everything we ship, we build. [`build/`](build/README.md) compiles the editors a
 
 **Early, and running.** All four editors work today on **Windows** 10 and 11 (x64), **Linux** (x86_64 and arm64) and **macOS** (Apple Silicon).
 
-Tabs, file locking, and signing and notarisation on macOS are still to come. Linux has a menu bar and a launcher entry; neither has keyboard shortcuts, because pywebview's GTK menu has no way to attach them. [What works today](https://docs.liberasuite.eu/guide/status/) lists the known issues, so an evening spent reporting one is an evening wasted. [The roadmap](https://docs.liberasuite.eu/develop/roadmap/) says what comes next and what we have decided against.
+Tabs, file locking, and signing and notarisation on macOS are still to come. Linux has a menu bar and a launcher entry; neither has keyboard shortcuts, because pywebview's GTK menu has no way to attach them. [What works today](https://docs.liberasuite.eu/en/main/status/) lists the known issues, so an evening spent reporting one is an evening wasted. [The roadmap](https://docs.liberasuite.eu/en/develop/roadmap/) says what comes next and what we have decided against.
 
 The most useful thing you can send us is a document that renders wrongly, attached. The layout engine is upstream's and mature, so where output is wrong it is far more likely to be our packaging (a font we did not ship, a resource we failed to serve) than the engine.
 
 ## Installing it
 
-[Install](https://docs.liberasuite.eu/guide/install/) gives the full instructions for each platform. Four ways in; the first works on both.
+[Install](https://docs.liberasuite.eu/en/main/install/) gives the full instructions for each platform. There are four ways in. The first works on Linux and macOS alike.
 
 **One command, no root.** It picks the channel that suits the machine:
 
@@ -121,7 +121,7 @@ The test suite enforces one house rule: **assert on content, never on exit codes
 
 | | |
 | :--- | :--- |
-| `docs/` | The documentation site, published at <https://docs.liberasuite.eu/>. Start at [Developers](https://docs.liberasuite.eu/develop/). |
+| `docs/` | The documentation site, published at <https://docs.liberasuite.eu/>. Start at [Developers](https://docs.liberasuite.eu/en/develop/). |
 | `notes/` | Where the reasoning lives: vision, specs, architecture, packaging, our relationship with upstream, the bugs that escaped to a user, a survey of how Euro-Office is put together. It stays in the development repository. |
 | [`build/`](build/README.md) | Building the editors and the native binaries from pinned source plus our patches. |
 | [`CLAUDE.md`](CLAUDE.md) | The orientation an agent gets, which happens to be the fastest one for a human too. |
@@ -142,4 +142,4 @@ Libera Suite ships as two artifacts under different licences.
 
 **The editor payload is AGPL-3.0**: Euro-Office plus our patch queue against it (GUI assets are CC-BY-SA-4.0). It arrives as a separate download or inside a Flatpak, never vendored into the wheel.
 
-[Licence and attribution](https://docs.liberasuite.eu/licence/) has the corresponding-source detail: what each release records, and where to fetch it.
+[Licence and attribution](https://docs.liberasuite.eu/en/licence/) has the corresponding-source detail: what each release records, and where to fetch it.

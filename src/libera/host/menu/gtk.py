@@ -28,7 +28,7 @@ alternative is reaching into `webview.platforms.gtk._app` and calling
 build -- `create_menu` appends an underscore until the name is free -- so a
 rebuilt bar leaks a dead action per item.
 
-**Nothing greys out.** `actions.enabled_for` decides that on the Mac, through
+**Nothing greys out.** `actions.is_enabled` decides that on the Mac, through
 validateMenuItem:, and Gio's equivalent is `Gio.SimpleAction.set_enabled` on an
 action pywebview owns and names by a rule of its own. Save on an unmodified
 document and Undo with an empty history therefore stay available here and do
@@ -46,21 +46,21 @@ from __future__ import annotations
 from functools import partial
 from pathlib import Path
 
+from webview.menu import Menu, MenuAction, MenuSeparator
+
 from libera.host.menu import actions
 
 
-def menubar() -> list:
+def make_menubar() -> list:
     """The bar, for `webview.start(menu=...)`.
 
-    Returns a plain list so `app.run` can pass it through on Linux and pass
-    `[]` everywhere else, which is `start()`'s own default.
+    Linux and Windows both: pywebview's WinForms backend draws the same list
+    as each window's menu strip.
     """
-    from webview.menu import Menu, MenuAction, MenuSeparator
-
     # No submenu rather than an empty one: Gio has no disabled item pywebview
     # can reach, so "No Recent Documents" would be a live item that does
     # nothing, which reads as broken.
-    remembered = actions.recent_documents()
+    remembered = actions.read_recent_documents()
 
     # partial rather than a lambda: a comprehension keeps one binding for all
     # of its iterations, so `lambda: open_recent(path)` would give every item
@@ -83,7 +83,13 @@ def menubar() -> list:
         Menu(
             "File",
             [
-                MenuAction("New", actions.new_document),
+                Menu(
+                    "New",
+                    [
+                        MenuAction(app.noun, partial(actions.open_new_document, app))
+                        for app in actions.list_creatable()
+                    ],
+                ),
                 MenuAction("Open…", actions.open_document),
                 *recent,
                 MenuSeparator(),
@@ -127,3 +133,7 @@ def menubar() -> list:
             ],
         ),
     ]
+
+
+def install() -> None:
+    """Nothing: the bar went to `webview.start`, and GTK reads it only then."""

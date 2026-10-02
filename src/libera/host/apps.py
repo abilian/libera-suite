@@ -1,7 +1,7 @@
 """The editors: what differs between Words, Tables, Slides and Diagrams.
 
 Almost nothing does. The bridge, the server, the session, the change log and
-the save path are the same code for all four. Five things are not, and they
+the save path are the same code for all four. Six things are not, and they
 are all here:
 
     doctype       what web-apps' api.js maps to an editor directory
@@ -9,6 +9,7 @@ are all here:
     blank         which template File > New starts from
     formats       the fileType ids x2t will write, by the id the editor sends
     save_formats  what the Save As popup offers, in order
+    recent_id     what the Recent list files a document under, failing that
 
 Every id in `formats` was **measured**, by converting a blank of that kind to
 it and checking a file came out -- the same way the Words table was built. x2t
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     import pathlib
 
 
-def _exts(names: str) -> frozenset[str]:
+def _split_exts(names: str) -> frozenset[str]:
     """A readable extension list. Fourteen of them one per line is not."""
     return frozenset(names.split())
 
@@ -49,6 +50,11 @@ class App:
     ext: str
     opens: frozenset[str]
     formats: dict[int, tuple[str, int]]
+    # The id the editor's Recent list files a document under when x2t has no
+    # id for its extension. From web-apps' own FileFormat table, not from x2t:
+    # matchFileFormat drops an entry outside the editor's range without a
+    # word, and Diagrams, which x2t writes nothing for, still needs a DRAW id.
+    recent_id: int
     save_formats: tuple[tuple[str, str], ...]
     blank: str | None = None
 
@@ -58,7 +64,7 @@ class App:
         return bool(self.save_formats)
 
     @property
-    def by_ext(self) -> dict[str, int]:
+    def ids_by_ext(self) -> dict[str, int]:
         """Extension to the format id that writes it."""
         return dict(self.formats.values())
 
@@ -69,7 +75,8 @@ WORDS = App(
     noun="Document",
     doctype="word",
     ext="docx",
-    opens=_exts("docx doc odt rtf txt html htm epub fb2 dotx dot ott md mht xml"),
+    opens=_split_exts("docx doc odt rtf txt html htm epub fb2 dotx dot ott md mht xml"),
+    recent_id=65,
     blank="new.docx",
     formats={
         0: ("docx", 65),
@@ -106,7 +113,8 @@ TABLES = App(
     noun="Spreadsheet",
     doctype="cell",
     ext="xlsx",
-    opens=_exts("xlsx xls ods csv tsv xlsm xlt xltm xltx fods ots xlsb numbers"),
+    opens=_split_exts("xlsx xls ods csv tsv xlsm xlt xltm xltx fods ots xlsb numbers"),
+    recent_id=257,
     blank="new.xlsx",
     formats={
         0: ("xlsx", 257),
@@ -139,7 +147,8 @@ SLIDES = App(
     noun="Presentation",
     doctype="slide",
     ext="pptx",
-    opens=_exts("pptx ppt pps ppsx odp pot potm potx ppsm pptm fodp otp key odg"),
+    opens=_split_exts("pptx ppt pps ppsx odp pot potm potx ppsm pptm fodp otp key odg"),
+    recent_id=129,
     blank="new.pptx",
     formats={
         0: ("pptx", 129),
@@ -169,6 +178,9 @@ DIAGRAMS = App(
     doctype="diagram",
     ext="vsdx",
     opens=frozenset(["vsdx", "vssx", "vstx", "vsdm", "vssm", "vstm"]),
+    # FILE_DRAW_VSDX. The Diagrams list takes any of the six DRAW ids and
+    # shows each as a .vsdx, so one serves every extension above.
+    recent_id=16385,
     # No blank, no formats, no save: see the module docstring.
     formats={},
     save_formats=(),
@@ -178,7 +190,7 @@ ALL = (WORDS, TABLES, SLIDES, DIAGRAMS)
 BY_NAME = {app.name: app for app in ALL}
 
 
-def for_document(document: pathlib.Path) -> App:
+def choose_for(document: pathlib.Path) -> App:
     """Which editor opens this file.
 
     Words is the fallback rather than an error: it is the one that reads plain

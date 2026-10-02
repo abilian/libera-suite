@@ -11,30 +11,25 @@ import urllib.parse
 from pathlib import Path
 
 from libera.host import apps, desktop, server
-from libera.host.session import Host, use
+from libera.host.session import Session
 
 
-def a_window() -> None:
-    """editor_url reads the session for its doctype, so bind one.
-
-    Every caller in the application does -- cmd_serve and both window paths
-    configure a session first -- but a test has to say so.
-    """
-    use(Host(payload=Path("/payload"), work=Path("/work"), app=apps.WORDS))
+def a_window() -> Session:
+    """make_editor_url takes the session, for its doctype and its id."""
+    return Session(payload=Path("/payload"), work=Path("/abc"), app=apps.WORDS)
 
 
 def test_the_user_has_a_name_and_an_id():
-    user_id, name = desktop.local_user()
+    user_id, name = desktop.lookup_local_user()
     assert user_id
     assert name
     assert "Chuk" not in name
 
 
 def test_the_editor_is_told_both():
-    a_window()
-    url = server.editor_url(43110, "Note.docx", "abc")
+    url = server.make_editor_url(43110, a_window(), "Note.docx")
     query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
-    user_id, name = desktop.local_user()
+    user_id, name = desktop.lookup_local_user()
 
     # index.html.desktop falls back to Chuk.Gek for name and uid-901 for id
     # whenever these are absent, so both have to be there.
@@ -42,11 +37,18 @@ def test_the_editor_is_told_both():
     assert query["userid"] == [user_id]
 
 
-def test_a_name_with_a_space_survives_the_url():
+def test_a_name_with_a_space_survives_the_url(monkeypatch):
     """Full names have spaces in them, and an unencoded one truncates the
-    parameter."""
-    a_window()
-    url = server.editor_url(43110, "Note.docx", "abc")
-    _, name = desktop.local_user()
-    if " " in name:
-        assert urllib.parse.quote(name) in url
+    parameter.
+
+    A name with a space, every time: it used to be whatever this machine's
+    user was called, and the assertion ran only if that had a space in it.
+    """
+    monkeypatch.setattr(
+        server.handler, "lookup_local_user", lambda: ("jdupont", "Jeanne Dupont")
+    )
+
+    url = server.make_editor_url(43110, a_window(), "Note.docx")
+
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+    assert query["username"] == ["Jeanne Dupont"]

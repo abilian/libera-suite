@@ -133,7 +133,7 @@ run() {
 # The wheel decides which payload the bundle will accept, and until this
 # existed nothing made it agree with the payload being staged beside it.
 #
-# `installer._manifest_for` prefers the manifest *baked into the wheel* over
+# `installer._read_manifest` prefers the manifest *baked into the wheel* over
 # the one in the directory it is installing from, deliberately: that is what
 # makes the origin untrusted storage. src/libera/manifest.json is gitignored,
 # so on a builder it is whatever some earlier run left there -- and the two
@@ -385,7 +385,7 @@ cmd_check() {
         say "       --diagnose should say 'payload 0.1 (bundled)'. Either the" >&2
         say "       install step in the manifest did not run, or resolve() no" >&2
         say "       longer looks beside the application: see" >&2
-        say "       locate.bundled_dir()." >&2
+        say "       locate.find_bundled_dir()." >&2
         exit 1
     }
 }

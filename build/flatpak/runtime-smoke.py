@@ -9,7 +9,7 @@ Runs in the builder container, against the bundle alone: the payload is inside
 it, so this exercises what a user gets rather than one the test put there.
 Two assertions, both on content:
 
-- `libera --serve` prints a URL. cmd_serve runs opening.open_document --
+- `libera --serve` prints a URL. serve runs opening.open_document --
   which runs x2t -- before it prints anything, and reports NotReadyError
   instead when that fails. A URL means the conversion happened in there.
 - the page it serves carries all three bridge scripts. A 200 holding

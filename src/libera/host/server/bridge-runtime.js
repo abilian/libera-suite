@@ -19,13 +19,13 @@
   // an iframe and forwards only the parameters it knows about, so the session
   // never reaches the inner frame's URL -- but the frames are same-origin, so
   // the top window's search string is readable from either.
+  //
+  // No catch. The one thing that throws here is a top window of another
+  // origin, and "" -- which the host reads as "the first session" -- sent a
+  // frame's requests to whichever window happened to be first.
   const SESSION = (() => {
-    try {
-      const m = /[?&]session=([^&]*)/.exec(w.top.location.search);
-      return m ? m[1] : "";
-    } catch (_e) {
-      return "";
-    }
+    const m = /[?&]session=([^&]*)/.exec(w.top.location.search);
+    return m ? m[1] : "";
   })();
 
   // Every /__host__/ URL goes through here: a request about a document has to
@@ -135,6 +135,8 @@
     _err.apply(console, arguments);
   };
 
+  // Ship what we saw back to the host, so a run is checkable without a human
+  // reading a console. Errors included -- those are the real signal.
   setInterval(() => {
     if (!out.length && !calls.length) return;
     postToHost(
@@ -142,15 +144,6 @@
       JSON.stringify({ events: out.splice(0), calls: calls.splice(0) }),
     );
   }, 1000);
-
-  // The editor reports document trouble through its own asc_onError event and
-  // a modal, not through a JS exception -- so a run can look clean to
-  // window.onerror while the user is staring at "An error occurred during the
-  // work with the document". Hook it. asc_registerCallback is a quoted export,
-  // so it survives minification.
-  // Tell the host what the editor can do, so the menu bar can grey out an
-  // item that would decline. Pushed, not asked for: a menu is validated on the
-  // GUI thread, and asking the editor from there would deadlock.
 
   // Everything the other two files need from this one. A namespace rather
   // than a closure, because they are separate scripts.

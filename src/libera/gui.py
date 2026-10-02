@@ -32,6 +32,7 @@ asks the system interpreter before deciding what to say.
 
 from __future__ import annotations
 
+import html
 import pathlib
 import subprocess
 import sys
@@ -48,7 +49,7 @@ PACKAGES = {
 }
 
 # What pywebview's GTK backend requires, in the order it requires it, and the
-# WebKit/Soup pairs it will accept. Two checks read these: gtk_is_available in
+# WebKit/Soup pairs it will accept. Two checks read these: is_gtk_available in
 # this process, and the probe it hands another interpreter. They have to agree
 # -- when they did not, a Fedora box with python3-gobject and no typelibs was
 # told the packages were installed and its virtualenv was at fault.
@@ -68,7 +69,7 @@ FAMILIES = {
 }
 
 
-def family(os_release: str) -> str | None:
+def parse_family(os_release: str) -> str | None:
     """Which package manager's names to quote, from /etc/os-release.
 
     ID first, then ID_LIKE, which is what a derivative sets: Mint says
@@ -100,15 +101,15 @@ COMPONENTS = """  Libera Suite needs three things your distribution packages:
   The Flatpak brings all three with it and needs none of this."""
 
 
-def install_hint(os_release: str) -> str:
+def format_install_hint(os_release: str) -> str:
     """The line to type, or what to ask for where there is no line."""
-    known = family(os_release)
+    known = parse_family(os_release)
     if known:
         return PACKAGES[known]
     return COMPONENTS
 
 
-def _system_python_that_can_start_gtk() -> tuple[str, str] | None:
+def _find_system_python_for_gtk() -> tuple[str, str] | None:
     """The distribution's own interpreter that could open a window, and its version.
 
     ("/usr/bin/python3", "3.12"), or None where no system interpreter could.
@@ -136,7 +137,7 @@ def _system_python_that_can_start_gtk() -> tuple[str, str] | None:
     A subprocess, and only ever on the path where the application is about to
     refuse to start, so its cost is measured against a traceback.
     """
-    probe = probe_source()
+    probe = make_probe_source()
     for interpreter in ("/usr/bin/python3", "/usr/bin/python"):
         if not pathlib.Path(interpreter).exists():
             continue
@@ -155,7 +156,7 @@ def _system_python_that_can_start_gtk() -> tuple[str, str] | None:
     return None
 
 
-def gtk_is_available() -> bool:
+def is_gtk_available() -> bool:
     """Whether pywebview's GTK backend can actually start.
 
     Asks for what it asks for, in the order it asks: importing `gi` proves
@@ -185,8 +186,8 @@ def gtk_is_available() -> bool:
     return False
 
 
-def probe_source() -> str:
-    """gtk_is_available, written out for another interpreter to run.
+def make_probe_source() -> str:
+    """is_gtk_available, written out for another interpreter to run.
 
     Prints that interpreter's "major.minor" and exits 0 when the backend could
     start there; exits non-zero otherwise. Built from the same two tables as
@@ -245,7 +246,7 @@ def show_problem(heading: str, paragraphs: list[str], command: str = "") -> None
     for anyone who has not installed the payload.
 
     So this is the channel of last resort, and it only makes sense where a
-    window is possible: every caller is already past `why_no_window`, because
+    window is possible: every caller is already past `explain_why_no_window`, because
     a machine that cannot open one cannot be told in a window either.
 
     It says what is wrong and the line to type. **A button that did the install
@@ -255,26 +256,24 @@ def show_problem(heading: str, paragraphs: list[str], command: str = "") -> None
     """
     # Imported here: pywebview pulls in the platform toolkit, and every other
     # path through the CLI has no reason to pay for it.
-    import html as html_mod
-
     import webview
 
     page = _PROBLEM_PAGE.format(
-        heading=html_mod.escape(heading),
-        body="\n".join(f"<p>{html_mod.escape(p)}</p>" for p in paragraphs),
-        command=f"<code>{html_mod.escape(command)}</code>" if command else "",
+        heading=html.escape(heading),
+        body="\n".join(f"<p>{html.escape(p)}</p>" for p in paragraphs),
+        command=f"<code>{html.escape(command)}</code>" if command else "",
     )
     webview.create_window("Libera Suite", html=page, width=560, height=340)
     webview.start()
 
 
-def venv_kind(prefix: str | None = None) -> str:
+def detect_venv_kind(prefix: str | None = None) -> str:
     """How this copy was installed: "pipx", "uv-tool" or "venv".
 
     Which decides the advice, and getting it wrong wastes somebody's afternoon.
     A developer running `uv run libera` from a checkout was told to
     `pipx uninstall libera` and reinstall it -- there was nothing to uninstall,
-    and the package is not on PyPI yet either, so the advice failed twice for
+    and the package was not on PyPI yet either, so the advice failed twice for
     two different reasons before it could have helped.
 
     Read from what each installer leaves behind rather than guessed from the
@@ -290,7 +289,7 @@ def venv_kind(prefix: str | None = None) -> str:
     return "venv"
 
 
-def _how_to_open_the_virtualenv(interpreter: str | None = None) -> str:
+def _explain_how_to_open_the_virtualenv(interpreter: str | None = None) -> str:
     """The lines to type, for the way this copy was actually installed.
 
     `interpreter` is the system Python that has PyGObject, and is passed only
@@ -298,7 +297,7 @@ def _how_to_open_the_virtualenv(interpreter: str | None = None) -> str:
     built on that one; a flag cannot reach across versions.
     """
     on = f" --python {interpreter}" if interpreter else ""
-    kind = venv_kind()
+    kind = detect_venv_kind()
     if kind == "pipx":
         return (
             f"  pipx uninstall libera\n  pipx install{on} --system-site-packages libera"
@@ -322,33 +321,40 @@ def _how_to_open_the_virtualenv(interpreter: str | None = None) -> str:
         # environment being rebuilt underneath you -- and the pyvenv.cfg line
         # then survives, because uv only rewrites that file when it makes the
         # virtualenv again.
-        return (
-            f"  export UV_PYTHON={interpreter}\n"
-            "  uv sync\n"
-            "  sed -i 's/^include-system-site-packages = false/"
-            f"include-system-site-packages = true/' \\\n      {sys.prefix}/pyvenv.cfg"
-        )
+        return f"  export UV_PYTHON={interpreter}\n  uv sync\n{_format_venv_fix()}"
     # Name the file rather than describe it: this is the one case where the
     # fix is a single line and the user is already in a terminal.
     return (
-        f"  sed -i 's/^include-system-site-packages = false/"
-        f"include-system-site-packages = true/' \\\n      {sys.prefix}/pyvenv.cfg\n\n"
+        f"{_format_venv_fix()}\n\n"
         "`uv sync` rewrites that file, so a fresh sync needs the line again."
     )
 
 
-def why_no_window() -> str | None:
+def _format_venv_fix() -> str:
+    """The one line that lets this virtualenv see the system's PyGObject."""
+    return (
+        "  sed -i 's/^include-system-site-packages = false/"
+        f"include-system-site-packages = true/' \\\n      {sys.prefix}/pyvenv.cfg"
+    )
+
+
+FLATPAK_AVOIDS_IT = (
+    "The Flatpak avoids the whole question: it brings its own GTK and WebKit."
+)
+
+
+def explain_why_no_window() -> str | None:
     """None when a window can be opened; otherwise what to tell the user.
 
-    Only Linux is checked. macOS ships its backend with pywebview, and
-    Windows does not exist yet.
+    Only Linux is checked. macOS gets its backend with pywebview, and the
+    Windows installer bundles pywebview and its .NET bridge itself.
     """
     if not sys.platform.startswith("linux"):
         return None
-    if gtk_is_available():
+    if is_gtk_available():
         return None
 
-    system = _system_python_that_can_start_gtk()
+    system = _find_system_python_for_gtk()
     if system:
         interpreter, theirs = system
         ours = f"{sys.version_info.major}.{sys.version_info.minor}"
@@ -359,18 +365,16 @@ def why_no_window() -> str | None:
                 f"Python {ours}. PyGObject is a compiled\nextension built for one "
                 f"Python, so nothing on {ours} can reach it, whatever flags\nthe "
                 "virtualenv was made with.\n\n"
-                f"{_how_to_open_the_virtualenv(interpreter)}\n\n"
-                "The Flatpak avoids the whole question: it brings its own GTK and "
-                "WebKit."
+                f"{_explain_how_to_open_the_virtualenv(interpreter)}\n\n"
+                f"{FLATPAK_AVOIDS_IT}"
             )
         return (
             "Libera Suite needs GTK and WebKit, which are installed on this "
             "machine -- but\nthis copy of Libera Suite is in a virtualenv that "
             "cannot see them. PyGObject is\nnot a wheel, so an isolated "
             "environment never finds it.\n\n"
-            f"{_how_to_open_the_virtualenv()}\n\n"
-            "The Flatpak avoids the whole question: it brings its own GTK and "
-            "WebKit."
+            f"{_explain_how_to_open_the_virtualenv()}\n\n"
+            f"{FLATPAK_AVOIDS_IT}"
         )
 
     try:
@@ -380,7 +384,7 @@ def why_no_window() -> str | None:
 
     return (
         "Libera Suite needs GTK and WebKit, which pip cannot install.\n\n"
-        f"{install_hint(os_release)}\n\n"
+        f"{format_install_hint(os_release)}\n\n"
         "Then run the same command again -- and if you installed with pipx, "
         "reinstall\nit as `pipx install --system-site-packages libera`, "
         "because an isolated\nvirtualenv cannot see the packages above."

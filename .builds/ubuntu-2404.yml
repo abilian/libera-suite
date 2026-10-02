@@ -7,6 +7,8 @@ image: ubuntu/24.04
 secrets:
   - b88a4c2c-944c-42a6-9fbb-7483049c458a
 
+sources:
+  - git@git.sr.ht:~sfermigier/muchado
 
 packages:
   # Build tools
@@ -22,16 +24,16 @@ tasks:
   - setup: |
       echo "Building on Ubuntu 2404"
       sudo pip install --break-system-packages -U uv nox
-      cd local-office
+      cd muchado
       uv sync
 
   - test: |
-      cd local-office
+      cd muchado
       uv run pytest -q --tb=short
   - lint: |
-      cd local-office
+      cd muchado
       uv run ruff check
       # uv run ty check src
   - nox: |
-      cd local-office
-      uvx nox
+      cd muchado
+      uvx nox -e tests-3.12 check

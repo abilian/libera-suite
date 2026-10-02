@@ -12,22 +12,16 @@ over HTTP anyway.
 from __future__ import annotations
 
 import json
-import socket
 import threading
 import urllib.request
 
 import pytest
 from playwright.sync_api import Error, sync_playwright
+from support import find_free_port
 
 from libera import payload as payload_mod
 from libera.host import recents, server, session as sessions
-from libera.host.session import Host
-
-
-def free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return int(s.getsockname()[1])
+from libera.host.session import Session
 
 
 @pytest.fixture
@@ -37,19 +31,17 @@ def start_window(tmp_path):
     # The session state gets its own subtree. remember_recent refuses anything
     # under the recents file's own directory -- that is our plumbing, not the
     # user's documents -- so the two have to be genuinely apart.
-    sessions.configure(
-        Host(payload=payload_mod.resolve().root, work=tmp_path / "state" / "0")
-    )
-    server.ROUTES.clear()
+    start = Session(payload=payload_mod.resolve().root, work=tmp_path / "state" / "0")
+    sessions.configure(start)
 
     elsewhere = tmp_path / "Documents"
     elsewhere.mkdir()
     for name in ("Report.docx", "Budget.xlsx", "Deck.pptx"):
         (elsewhere / name).write_bytes(b"x")
-        recents.remember_recent(elsewhere / name)
+        recents.remember_recent(start, elsewhere / name)
 
-    port = free_port()
-    httpd = server.make_server(port)
+    port = find_free_port()
+    httpd = server.make_server(port, start)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
     play = sync_playwright().start()
@@ -158,3 +150,15 @@ def test_a_failed_click_leaves_the_window_usable(start_window, tmp_path):
     assert start_window.asked_for("open-recent") == 1, "the host was never asked"
     assert not button.is_disabled(), "a failed click left the window dead"
     assert start_window.locator("#problem").is_visible(), "and said nothing about it"
+
+
+def test_a_cancelled_open_leaves_the_window_usable(start_window):
+    """Cancelling the panel is not an error, so host() did not throw, and the
+    buttons stayed disabled for good. With no window to put a panel on, the
+    host answers as a cancelled panel does: 200, and nothing opened."""
+    button = start_window.locator("#open")
+    button.click()
+    start_window.wait_for_timeout(1500)
+
+    assert start_window.asked_for("open-document") == 1, "the host was never asked"
+    assert not button.is_disabled(), "a cancelled Open left the window dead"

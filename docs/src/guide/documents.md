@@ -23,6 +23,8 @@ libera ~/Documents/*.docx     # one window each
 
 You can also open a document from inside the editor, through **File ▸ Open** or **File ▸ Open Recent**. Either opens a new window; neither disturbs the document you already have open.
 
+**File ▸ New** offers a Document, a Spreadsheet or a Presentation from any window, each in a window of its own. On macOS, `⌘N` makes one of the same kind as the front window. Inside the editor, you get the same choice from **File ▸ Create New**.
+
 ## Save
 
 **File ▸ Save** writes back to the document you opened. **File ▸ Save As** asks where to put it. From then on that is the document you are editing.
@@ -61,7 +63,7 @@ On macOS it is a real Mac menu bar, with the same items plus **Window**. The usu
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | New, Open: each in its own window |
+| `⌘N` `⌘O` | New (of the front window's kind), Open: each in its own window |
 | `⌘S` `⇧⌘S` | Save, Save As |
 | `⌘P` | Print |
 | `⌘W` | Close, asking about unsaved changes first |
@@ -93,24 +95,15 @@ Images embedded in a document are preserved on open and save. **Insert ▸ Image
 
 ## Spell checking
 
-Misspellings are underlined, and right-click offers suggestions. Which
-dictionary is used follows **the document's language**, which you set from the
-**status bar** at the bottom of the window, per document.
+Misspellings are underlined, and right-click offers suggestions. Which dictionary is used follows **the document's language**, which you set from the **status bar** at the bottom of the window, per document.
 
-Six languages ship: English (US and UK), French, German, Spanish and Italian.
-A language with no dictionary is not an error; its words are simply treated as
-correct. Words you add through *Add to dictionary* come back next session,
-because personal dictionaries are not stored yet.
+Dictionaries for five languages ship: English (US and UK), French, German, Spanish and Italian. A language with no dictionary is not an error; its words are simply treated as correct. Words you add through *Add to dictionary* come back next session, because personal dictionaries are not stored yet.
 
 ## Your name in documents
 
-Tracked changes and comments are attributed to a person, whose name is
-written into the saved file. Libera Suite takes it from your account: your full
-name as macOS knows it, the display name of your Windows account, or the
-full-name field of your Unix account on Linux, falling back to your login name.
+Tracked changes and comments are attributed to a person, whose name is written into the saved file. Libera Suite takes it from your account: your full name as macOS knows it, the display name of your Windows account, or the full-name field of your Unix account on Linux, falling back to your login name.
 
-There is no setting for it yet. If a document has to go out under a different
-name, that is worth [telling us](../feedback.md) about.
+There is no setting for it yet. If a document has to go out under a different name, that is worth [telling us](../feedback.md) about.
 
 ## Where your working files go
 
@@ -118,6 +111,4 @@ While a document is open, Libera Suite keeps a session directory alongside its a
 
 ---
 
-[What works today](status.md) is the next page: what is built, and the
-problems we already know about. If you meet one that is not on that list,
-[tell us](../feedback.md).
+[What works today](../main/status.md) is the next page: what is built and the problems we already know about. If you meet one that is not on that list, [tell us](../feedback.md).

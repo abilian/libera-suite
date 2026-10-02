@@ -18,20 +18,20 @@ from libera.host import desktop, server
 
 
 class FakeHandler:
-    """Just enough of the request handler for post_open_url."""
+    """Just enough of the request handler for open_url."""
 
     def __init__(self, body: bytes):
         self._body = body
         self.status = None
         self.opened = False
 
-    def body(self) -> bytes:
+    def read_body(self) -> bytes:
         return self._body
 
     def send_error(self, code):
         self.status = code
 
-    def no_content(self):
+    def send_no_content(self):
         self.status = 204
 
 
@@ -56,7 +56,7 @@ def launched(monkeypatch):
 )
 def test_refuses_anything_but_http(url, launched):
     h = FakeHandler(url.encode())
-    server.post_open_url(h)
+    server.open_url(h)
     assert h.status == 400
     assert launched == []
 
@@ -64,7 +64,7 @@ def test_refuses_anything_but_http(url, launched):
 @pytest.mark.parametrize("url", ["https://example.com/x", "http://example.com/"])
 def test_opens_http(url, launched):
     h = FakeHandler(url.encode())
-    server.post_open_url(h)
+    server.open_url(h)
     assert h.status == 204
     assert launched == [url]
 
@@ -78,6 +78,6 @@ def test_the_page_is_told_nothing_when_the_desktop_refuses(monkeypatch):
     monkeypatch.setattr(desktop, "open_url", lambda _url: False)
     h = FakeHandler(b"https://example.com/x")
 
-    server.post_open_url(h)
+    server.open_url(h)
 
     assert h.status == 204

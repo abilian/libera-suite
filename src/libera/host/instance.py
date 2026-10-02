@@ -42,13 +42,13 @@ HAND_OFF_TIMEOUT = 3.0
 TOKEN = secrets.token_urlsafe(32)
 
 
-def path() -> Path:
-    return locate.state_dir() / "instance.json"
+def get_path() -> Path:
+    return locate.get_state_dir() / "instance.json"
 
 
 def announce(port: int) -> None:
     """Say where this instance is. Called once the server is listening."""
-    target = path()
+    target = get_path()
     target.parent.mkdir(parents=True, exist_ok=True)
     staged = target.with_suffix(".tmp")
     staged.write_text(
@@ -67,11 +67,11 @@ def withdraw() -> None:
     not take the survivor's announcement with it.
     """
     with contextlib.suppress(OSError, ValueError):
-        if json.loads(path().read_text(encoding="utf-8")).get("token") == TOKEN:
-            path().unlink()
+        if json.loads(get_path().read_text(encoding="utf-8")).get("token") == TOKEN:
+            get_path().unlink()
 
 
-def accepts(token: str) -> bool:
+def is_own_token(token: str) -> bool:
     """Whether a hand-off request carries this instance's token."""
     return hmac.compare_digest(token.encode(), TOKEN.encode())
 
@@ -85,7 +85,7 @@ def hand_off(documents: list[Path]) -> bool:
     clicking the icon of an application that is already open does elsewhere.
     """
     try:
-        known = json.loads(path().read_text(encoding="utf-8"))
+        known = json.loads(get_path().read_text(encoding="utf-8"))
         port, token = int(known["port"]), str(known["token"])
     except (OSError, ValueError, KeyError, TypeError):
         return False
@@ -117,10 +117,7 @@ def _allow_foreground() -> None:
     whatever was in front, with a flashing taskbar button. ASFW_ANY hands the
     right on. Elsewhere there is nothing to hand.
     """
-    # For the type checkers as much as the runtime: every caller tests for
-    # win32, and a checker for another platform cannot see that. A block and
-    # not an early return, because pyrefly narrows on the first only. See
-    # _start in desktop.py.
+    # A block, not an early return: see desktop._start.
     if sys.platform == "win32":
         asfw_any = -1
         with contextlib.suppress(Exception):

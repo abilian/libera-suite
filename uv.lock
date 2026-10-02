@@ -680,7 +680,7 @@ wheels = [
 
 [[package]]
 name = "libera"
-version = "0.3.0"
+version = "0.3.3"
 source = { editable = "." }
 dependencies = [
     { name = "pywebview" },
@@ -695,10 +695,12 @@ dev = [
     { name = "pyrefly" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "pytest-playwright" },
     { name = "ruff" },
     { name = "ty" },
     { name = "zensical" },
+]
+e2e = [
+    { name = "pytest-playwright" },
 ]
 
 [package.metadata]
@@ -713,11 +715,11 @@ dev = [
     { name = "pyrefly", specifier = ">=1.2.0" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
-    { name = "pytest-playwright", specifier = ">=0.9.0" },
     { name = "ruff", specifier = ">=0.16.6" },
     { name = "ty", specifier = ">=0.0.79" },
     { name = "zensical", specifier = ">=0.0.60" },
 ]
+e2e = [{ name = "pytest-playwright", specifier = ">=0.9.0" }]
 
 [[package]]
 name = "librt"

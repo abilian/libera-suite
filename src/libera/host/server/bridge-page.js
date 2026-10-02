@@ -10,10 +10,6 @@
   const w = M.w;
   const { TAG, hostUrl, postToHost, report } = M;
 
-  // -- ascdesktop://fonts/<id> ------------------------------------------------
-  // sdkjs hard-codes this scheme in LoadFontAsync. A real host registers a
-  // scheme handler (QWebEngineUrlSchemeHandler); here we just rewrite the URL,
-  // which exercises the same code path.
   // -- localStorage ------------------------------------------------------------
   // pywebview's GTK/WebKit backend leaves window.localStorage (and indexedDB)
   // *undefined* rather than throwing. web-apps guards with
@@ -32,6 +28,24 @@
       configurable: true,
     });
     console.log(`[libera:${TAG}] localStorage shimmed onto sessionStorage`);
+  }
+
+  // -- mousewheel ---------------------------------------------------------------
+  // On a Mac, sdkjs listens for the legacy `mousewheel` event, while web-apps
+  // has listened for `wheel` since Euro-Office's d7edcbfd4e, and the
+  // spreadsheet puts both on #editor_sdk. A browser fires an element's
+  // `mousewheel` listeners only when it has no `wheel` listener, so the grid
+  // never scrolled. Elsewhere sdkjs asks for `wheel` itself, by this same test
+  // on the user agent, so turning `mousewheel` into `wheel` puts the Mac on the
+  // path Linux and Windows already take. The event is a WheelEvent either way,
+  // wheelDelta included.
+  if (/mac/i.test(w.navigator.userAgent)) {
+    for (const name of ["addEventListener", "removeEventListener"]) {
+      const original = w.EventTarget.prototype[name];
+      w.EventTarget.prototype[name] = function (type, ...rest) {
+        return original.call(this, type === "mousewheel" ? "wheel" : type, ...rest);
+      };
+    }
   }
 
   // -- document media ---------------------------------------------------------
@@ -53,6 +67,10 @@
     },
   });
 
+  // -- ascdesktop://fonts/<id> ------------------------------------------------
+  // sdkjs hard-codes this scheme in LoadFontAsync. A real host registers a
+  // scheme handler (QWebEngineUrlSchemeHandler); here we just rewrite the URL,
+  // which exercises the same code path.
   const FONTS = "ascdesktop://fonts/";
   const open = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function (_method, url) {
@@ -63,13 +81,19 @@
   };
 
   function captureLater() {
-    // Armed by the host (see host_get) only when a shot was requested; a real
+    // Armed by the host (see get.serve) only when a shot was requested; a real
     // window has no reason to photograph itself.
     if (!w.LIBERA_SHOT) return;
     // onDocumentContentReady fires before the first paint settles.
     w.setTimeout(captureCanvas, 1500);
   }
 
+  // The page photographs itself, rather than the harness asking Chromium for a
+  // screenshot. --screenshot only fires when --virtual-time-budget runs out, and
+  // when that budget is even slightly short the browser quits mid-load: the run
+  // stops at a different place each time, with no error and no incomplete
+  // response. Capturing from inside the page needs neither flag, and yields the
+  // document canvas alone instead of a window full of chrome to crop.
   function captureCanvas() {
     const all = w.document.getElementsByTagName("canvas");
     let best = null;
@@ -173,9 +197,6 @@
     theme: { id: "theme-light", type: "light", system: "light" },
     rtl: false,
   };
-
-  // Ship what we saw back to the host, so the POC is checkable without a
-  // human reading a console. Errors included -- those are the real signal.
 
   M.page = { captureLater, spellChecker };
 })(window.__libera__);

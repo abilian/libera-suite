@@ -12,7 +12,7 @@ Read [Build the payload](build.md) first if you have never built one. This page 
 make ship-plan                        # the plan, running nothing
 make ship                             # all ten phases
 make ship ARGS="collect push check"   # some of them
-make ship ARGS="--only linux-arm64"   # one builder
+make ship ARGS="--only linux-arm64"   # one builder: update, native, build, bundles
 ```
 
 ```
@@ -66,7 +66,7 @@ step you are on and does not ask you to remember.
 Two things are left that no command covers. The mirrors go up, and somebody
 runs `libera --payload-install` on a machine that has never built it.
 
-Any one phase runs on its own, which is what makes a partial redo cheap:
+Any one phase runs on its own, which is what makes a partial redo cheap. `--only` narrows the phases that run per builder, and refuses the rest: collect, push, check, wheel, publish and verify work on every builder at once. `publish` also wants `check` in the same run, and a manifest collected from this commit for this payload version:
 
 ```sh
 make ship ARGS="collect push check"
@@ -100,7 +100,7 @@ Three constraints have each cost somebody a build:
 
 **There is no macOS container.** A Mac builds its own core natively. Everything else about a Mac release follows from that one fact.
 
-**A Linux core is built in a container, whatever the host is.** `build/docker.sh` exists so that a Linux payload never depends on what the host has installed, and that holds on a Linux builder as much as on a Mac: the host's own architecture is one more container target, so do not build it natively there. An Apple Silicon Mac can stand in, building `linux/arm64` natively and `linux/amd64` under Rosetta, which is the fallback when a builder is unreachable.
+**A Linux core is built in a container, whatever the host is.** `build/docker.sh` exists so that a Linux payload never depends on what the host has installed. That holds on a Linux builder as much as on a Mac: the host's own architecture is one more container target, so do not build it natively there. An Apple Silicon Mac can stand in, building `linux/arm64` natively and `linux/amd64` under Rosetta, which is the fallback when a builder is unreachable.
 
 **Flatpak bundles cannot be cross-built.** `flatpak-builder` runs every build command inside bubblewrap, which installs a seccomp filter compiled for the target architecture. Under emulation the kernel is still the host's, so it is rejected:
 
@@ -258,7 +258,7 @@ Two things remain that no automated check covers:
 
 ## 6. Collect
 
-A release is built on several machines: a Mac, a Linux box per architecture, and later a second Mac and a Windows box. The origin is one directory that has to hold every platform's core at once, so the cores are gathered before anything is published.
+A release is built on several machines: a Mac and a Linux box per architecture, with a Windows machine building and publishing its installer on its own (see [Build](build.md#windows)). The origin is one directory that has to hold every platform's core at once, so the cores are gathered before anything is published.
 
 List the machines once, in `build/builders.toml`, from the committed example:
 

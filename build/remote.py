@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import json
 import os
 import shlex
 import subprocess
@@ -49,6 +50,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import NoReturn
 
 import tomllib
 
@@ -96,6 +98,14 @@ PHASES = (
 # refuses a version it has already seen, so a mistaken `publish` costs a
 # version number rather than a retry.
 IRREVERSIBLE = ("publish",)
+
+# What `--only` can narrow. The rest act on every builder at once -- collect
+# reads them all through --print-builders -- so a run narrowed to one platform
+# that went on to them published cores nobody had rebuilt.
+PER_BUILDER = ("update", "native", "build", "bundles")
+
+# Written by collect, gitignored, and carried by the wheel.
+MANIFEST = REPO / "src" / "libera" / "manifest.json"
 
 # What the remote scripts print instead of relying on an exit status. A login
 # bash returns 1 from `set -eu; exit 0`, because ~/.bash_logout runs with -u
@@ -201,7 +211,7 @@ def read_builders(path: Path = BUILDERS) -> list[Builder]:
     return out
 
 
-def die(message: str) -> None:
+def die(message: str) -> NoReturn:
     print(f"\nFATAL: {message}", file=sys.stderr)
     raise SystemExit(1)
 
@@ -281,7 +291,6 @@ def payload_version() -> str:
         if sep and key.strip() == "version":
             return value.strip().strip('"')
     die("no version in build/payload.version")
-    raise AssertionError  # die() exits; this is for the type checker
 
 
 def app_version() -> str:
@@ -352,11 +361,8 @@ def precheck(builders: list[Builder], phases: list[str]) -> None:
                 f"    note: {len(dirty)} uncommitted file(s) here, which no builder sees"
             )
 
-    if (
-        "publish" in phases
-        and not (REPO / "src" / "libera" / "manifest.json").is_file()
-    ):
-        problems.append("publish needs src/libera/manifest.json; run collect first")
+    if "publish" in phases:
+        problems.extend(find_publish_problems(phases))
 
     for b in builders:
         if b.remote:
@@ -369,6 +375,39 @@ def precheck(builders: list[Builder], phases: list[str]) -> None:
         for p in problems:
             say(f"    - {p}")
         die("nothing was started.")
+
+
+def find_publish_problems(phases: list[str]) -> list[str]:
+    """Why what `publish` would upload is not this release, if it is not.
+
+    The manifest is whatever the last collect wrote. Publishing used to want
+    only that it existed, so `make ship ARGS="publish"` uploaded a wheel
+    carrying an earlier run's manifest -- another payload version, another
+    commit -- that nothing had read back from the origin.
+    """
+    problems: list[str] = []
+    if "check" not in phases:
+        problems.append(
+            "publish without check: add check, so that what goes up is what "
+            "the origin serves"
+        )
+    if "collect" in phases:
+        return problems  # written in this run, from this commit
+    if not MANIFEST.is_file():
+        return [*problems, "publish needs src/libera/manifest.json; run collect"]
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    if (found := manifest.get("payload_version")) != payload_version():
+        problems.append(
+            f"the manifest is for payload {found}, this tree for "
+            f"{payload_version()}; run collect"
+        )
+    stamped = manifest.get("source", {}).get("libera_commit", "")
+    if stamped != local_head():
+        problems.append(
+            f"the manifest was collected at {stamped[:9] or 'no commit'}, this "
+            f"tree is at {local_head()[:9]}; run collect"
+        )
+    return problems
 
 
 def check_builder(b: Builder) -> list[str]:
@@ -469,8 +508,16 @@ def cmd_update(builders: list[Builder]) -> None:
                 f"{b.platform}: {facts['DIRTY']} file(s) dirty after the update"
             )
             continue
-        drift = "" if facts["HEAD"] == here else "  (differs from this checkout)"
-        say(f"    {b.platform:<14} {b.branch} at {facts['SHORT']}{drift}")
+        # Fatal, because the builders would build another commit than the one
+        # the wheel is built from here. It was a warning, and 0.3.1's first
+        # run built two 0.3.0 Flatpaks from a release commit left unpushed.
+        if facts["HEAD"] != here:
+            problems.append(
+                f"{b.platform}: {b.branch} is at {facts['SHORT']} and this "
+                f"checkout at {here[:9]}; push or pull until they agree"
+            )
+            continue
+        say(f"    {b.platform:<14} {b.branch} at {facts['SHORT']}")
 
     if problems:
         say()
@@ -695,18 +742,18 @@ def fetch_bundles(remotes: list[Builder]) -> None:
 def cmd_native(builders: list[Builder]) -> None:
     """The macOS core, on this machine, because there is nowhere else for it.
 
-    `payload-dist` re-tars a core that is already built and takes a minute;
-    building one takes an afternoon and is `make payload-all`. Which of the two
-    is wanted is decided by whether the core is there, and said out loud.
+    `payload-dist` re-tars the core already built under $BUILD_ROOT and takes
+    a minute. It does not build one: that is `make payload-all`, an afternoon,
+    and it is run by hand beforehand.
     """
     local = [b for b in builders if not b.remote]
     if not local:
-        say("    no local builder in builders.toml; nothing to do here")
+        say("    no local builder selected; nothing to do here")
         return
     step("the native core, here")
     if sys.platform != "darwin":
-        say(f"    this is {sys.platform}, not a Mac; skipping")
-        return
+        # Skipping and going on let collect publish the previous macOS core.
+        die(f"the local builder makes the macOS core, and this is {sys.platform}")
     make("payload-dist", "native")
 
 
@@ -900,8 +947,9 @@ def main() -> None:
         print_builders(args.print_builders)
         return
 
-    phases = args.phases or list(PHASES)
     builders = read_builders()
+    # Narrowed to some platforms, the default is what narrows with them.
+    phases = args.phases or list(PER_BUILDER if args.only else PHASES)
 
     # One platform at a time, because the reasons to build them differ: an
     # arm64 flatpak can only be built on an arm64 machine, and a machine short
@@ -913,6 +961,11 @@ def main() -> None:
                 f"no such builder: {', '.join(unknown)}\n  have: {', '.join(sorted(known))}"
             )
         builders = [b for b in builders if b.platform in args.only]
+        if spanning := [p for p in phases if p not in PER_BUILDER]:
+            die(
+                f"--only narrows {', '.join(PER_BUILDER)}, and not "
+                f"{', '.join(spanning)}, which work on every builder at once"
+            )
 
     if args.dry_run:
         step("the plan")

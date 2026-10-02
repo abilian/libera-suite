@@ -16,14 +16,46 @@ import shutil
 import sys
 from importlib.metadata import version
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from libera import gui, launcher, payload as payload_mod
-from libera.host import app, instance, opening, server, session
+from libera.host import instance, opening, server, session
 from libera.host.session import NotReadyError
-from libera.payload import PayloadError
+from libera.payload import NoPayloadError, PayloadError
+
+if TYPE_CHECKING:
+    import argparse
+
+# Where `libera --serve` listens unless told otherwise.
+SERVE_PORT = 8765
 
 
-def cmd_payload_install(args) -> int:
+def _is_interactive() -> bool:
+    """Whether a terminal is there: to answer a question, and to have read what
+    was printed.
+
+    `sys.stdin` is None, not a stream, in the windowed Windows build -- its
+    entry point gives stdout and stderr a file, which print() needs, and
+    leaves stdin alone -- so `sys.stdin.isatty()` raised AttributeError there,
+    which is the silent exit the window below exists to prevent.
+    """
+    return sys.stdin is not None and sys.stdin.isatty()
+
+
+def _refuse(message: str) -> None:
+    """Say why `libera` will not start, where somebody will see it.
+
+    On stderr, and in a window as well when there is no terminal: launched
+    from an icon or a file manager, stderr goes nowhere and the icon flashes
+    and vanishes. Only for what comes after `gui.explain_why_no_window`, because a
+    machine that cannot open a window cannot be told in one.
+    """
+    print(f"libera: {message}", file=sys.stderr)
+    if not _is_interactive():
+        gui.show_problem("Libera Suite could not start", [message])
+
+
+def install_payload(args: argparse.Namespace) -> int:
     try:
         p = payload_mod.install(source=args.source, trust_manifest=args.trust_manifest)
     except PayloadError as e:
@@ -34,13 +66,13 @@ def cmd_payload_install(args) -> int:
     # has just finished setting it up. Said here rather than done here: the
     # command is called payload-install, and writing to the desktop's own
     # directories is not what that name promises.
-    if launcher.why() is None and not launcher.is_installed():
+    if launcher.explain_unsupported() is None and not launcher.is_installed():
         print("  for an icon in the launcher, and Open With: libera --launcher-install")
     return 0
 
 
-def cmd_launcher_install(_args) -> int:
-    why = launcher.why()
+def install_launcher(_args: argparse.Namespace) -> int:
+    why = launcher.explain_unsupported()
     if why:
         print(f"libera: {why}", file=sys.stderr)
         return 1
@@ -50,8 +82,8 @@ def cmd_launcher_install(_args) -> int:
     return 0
 
 
-def cmd_launcher_remove(_args) -> int:
-    why = launcher.why()
+def remove_launcher(_args: argparse.Namespace) -> int:
+    why = launcher.explain_unsupported()
     if why:
         print(f"libera: {why}", file=sys.stderr)
         return 1
@@ -64,24 +96,24 @@ def cmd_launcher_remove(_args) -> int:
     return 0
 
 
-def cmd_payload_status(_args) -> int:
+def show_payload_status(_args: argparse.Namespace) -> int:
     try:
         p = payload_mod.resolve()
     except PayloadError as e:
         print(f"libera: {e}", file=sys.stderr)
         return 1
 
-    info = p.info()
+    record = p.read_record()
     print(f"payload:   {p.root}")
     print(f"found via: {p.origin}")
-    print(f"version:   {info.get('payload_version', 'unknown (local build)')}")
-    if info.get("platform"):
-        print(f"platform:  {info['platform']}  fonts: {info.get('font_set', '?')}")
+    print(f"version:   {record.get('payload_version', 'unknown (local build)')}")
+    if record.get("platform"):
+        print(f"platform:  {record['platform']}  fonts: {record.get('font_set', '?')}")
     print(f"x2t:       {'present' if p.x2t.is_file() else 'MISSING'}")
 
     # Corresponding source, per AGPL. A user holding this binary is entitled to
     # know exactly which revisions it was built from.
-    source = info.get("source") or {}
+    source = record.get("source") or {}
     if source:
         print("source:")
         for url in source.get("repositories", []):
@@ -93,8 +125,8 @@ def cmd_payload_status(_args) -> int:
     return 0
 
 
-def cmd_payload_remove(_args) -> int:
-    root = payload_mod.data_dir() / payload_mod.PAYLOAD_VERSION
+def remove_payload(_args: argparse.Namespace) -> int:
+    root = payload_mod.get_installed_dir()
     if not root.exists():
         print(f"nothing installed at {root}")
         return 0
@@ -103,7 +135,7 @@ def cmd_payload_remove(_args) -> int:
     return 0
 
 
-def _payload_or_offer() -> payload_mod.Payload | None:
+def _resolve_payload_or_offer() -> payload_mod.Payload | None:
     """Resolve the payload, offering to install it when there is none.
 
     Nothing downloads behind the user's back: an interactive run asks, and a
@@ -111,21 +143,25 @@ def _payload_or_offer() -> payload_mod.Payload | None:
     """
     try:
         return payload_mod.resolve()
+    except NoPayloadError:
+        return _offer_to_install()
     except PayloadError as e:
-        if "no editor payload found" not in str(e):
-            print(f"libera: {e}", file=sys.stderr)
-            return None
+        _refuse(str(e))
+        return None
 
+
+def _offer_to_install() -> payload_mod.Payload | None:
+    """There is no payload: fetch one if this build can, and the user agrees."""
     if not payload_mod.can_fetch():
         _say_there_is_nothing_to_fetch()
         return None
 
-    if not _agreed_to_install():
+    if not _ask_to_install():
         return None
     try:
         return payload_mod.install()
     except PayloadError as e:
-        print(f"libera: {e}", file=sys.stderr)
+        _refuse(str(e))
         return None
 
 
@@ -148,13 +184,13 @@ def _say_there_is_nothing_to_fetch() -> None:
         "  or build one (an afternoon; V8 alone is ~30 minutes):   make payload-all"
     )
     print(f"libera: {heading}.\n\n{why}\n\n{lines}", file=sys.stderr)
-    if not sys.stdin.isatty():
-        # Same reason as in _agreed_to_install: a launcher has no terminal, so
+    if not _is_interactive():
+        # Same reason as in _ask_to_install: a launcher has no terminal, so
         # stderr went nowhere and the icon just vanished.
         gui.show_problem(heading, [why], lines)
 
 
-def _install_command() -> str:
+def _format_install_command() -> str:
     """The exact line to type, which is not the same inside the sandbox.
 
     `libera` is not on the host's PATH when the application is a Flatpak, so
@@ -167,18 +203,18 @@ def _install_command() -> str:
     return "libera --payload-install"
 
 
-def _agreed_to_install() -> bool:
+def _ask_to_install() -> bool:
     """Ask before downloading. A non-interactive run never does."""
     print(
         "Libera Suite needs its editor payload (about 120 MB), "
         "and does not have it yet."
     )
-    command = _install_command()
-    if not sys.stdin.isatty():
+    command = _format_install_command()
+    if not _is_interactive():
         print(f"  run: {command}", file=sys.stderr)
         # And on screen, because there may be no terminal to have read that.
-        # Reached only from cmd_open, which has already been past
-        # gui.why_no_window(), so a window can be opened here.
+        # Reached only from open_documents, which has already been past
+        # gui.explain_why_no_window(), so a window can be opened here.
         gui.show_problem(
             "Libera Suite has no editor payload yet",
             [
@@ -197,12 +233,12 @@ def _agreed_to_install() -> bool:
         print()
         return False
     if answer not in {"", "y", "yes"}:
-        print("  run `libera --payload-install` when you are ready.")
+        print(f"  run `{command}` when you are ready.")
         return False
     return True
 
 
-def cmd_serve(args) -> int:
+def serve(args: argparse.Namespace) -> int:
     """Serve the editor without a window. Used by the regression harness."""
     try:
         p = payload_mod.resolve()
@@ -220,28 +256,31 @@ def cmd_serve(args) -> int:
     work = (
         Path(args.work).expanduser()
         if args.work
-        else payload_mod.sessions_dir() / "serve"
+        else payload_mod.get_sessions_dir() / "serve"
     )
-    session.configure(
-        session.Host(
-            payload=p.root,
-            work=work,
-            document=document,
-            shot=Path(args.shot).expanduser() if args.shot else None,
-        )
+    served = session.Session(
+        payload=p.root,
+        work=work,
+        document=document,
+        shot=Path(args.shot).expanduser() if args.shot else None,
     )
+    session.configure(served)
+    port = SERVE_PORT if args.port is None else args.port
     try:
-        opening.open_document(document)
-        httpd = server.make_server(args.port)
+        opening.open_document(served, document)
+        httpd = server.make_server(port, served)
     except NotReadyError as e:
         print(f"libera: {e}", file=sys.stderr)
         return 1
-    print(server.editor_url(args.port, document.name), flush=True)
+    except OSError as e:
+        print(f"libera: cannot listen on port {port}: {e.strerror}", file=sys.stderr)
+        return 1
+    print(server.make_editor_url(port, served, document.name), flush=True)
     httpd.serve_forever()
     return 0
 
 
-def cmd_diagnose(_args) -> int:
+def diagnose(_args: argparse.Namespace) -> int:
     """Everything worth pasting into a bug report, in one place.
 
     `-v` covers what is happening now; this covers "it did something odd an
@@ -253,15 +292,15 @@ def cmd_diagnose(_args) -> int:
     print(f"python     {sys.version.split()[0]}")
     print(f"platform   {platform.platform()}  {platform.machine()}")
 
-    window = gui.why_no_window()
+    window = gui.explain_why_no_window()
     print(f"window     {'ok' if window is None else 'NOT AVAILABLE'}")
 
-    if launcher.why() is None:
+    if launcher.explain_unsupported() is None:
         # Inline rather than a local: `state` further down is the state
         # directory, and this had taken the name first.
         print(
             f"launcher   {'installed' if launcher.is_installed() else 'not installed'}"
-            f"  ({launcher.entry_path()})"
+            f"  ({launcher.get_entry_path()})"
         )
 
     try:
@@ -270,24 +309,25 @@ def cmd_diagnose(_args) -> int:
         print(f"payload    MISSING\n  {e}")
         return 0
 
-    info = p.info()
-    print(f"payload    {info.get('payload_version', 'local build')}  ({p.origin})")
+    record = p.read_record()
+    print(f"payload    {record.get('payload_version', 'local build')}  ({p.origin})")
     print(f"  at       {p.root}")
-    print(f"  platform {info.get('platform', '?')}  fonts: {info.get('font_set', '?')}")
-    print(f"  built    {info.get('built', '?')}")
+    built_for, fonts = record.get("platform", "?"), record.get("font_set", "?")
+    print(f"  platform {built_for}  fonts: {fonts}")
+    print(f"  built    {record.get('built', '?')}")
     print(f"  x2t      {'present' if p.x2t.is_file() else 'MISSING'}")
 
     editors = sorted(d.name for d in (p.root / "web-apps" / "apps").glob("*editor"))
     print(f"  editors  {', '.join(editors) or 'none'}")
 
-    state = payload_mod.state_dir()
-    sessions = sorted(payload_mod.sessions_dir().glob("*/unsaved.json"))
+    state = payload_mod.get_state_dir()
+    sessions = sorted(payload_mod.get_sessions_dir().glob("*/unsaved.json"))
     print(f"state      {state}")
     print(f"  unsaved  {len(sessions)} session(s) holding edits that were never saved")
     return 0
 
 
-def cmd_open(args) -> int:
+def open_documents(args: argparse.Namespace) -> int:
     """Open documents, or the start window when none are named.
 
     Which editor a file gets is decided by the file, not by a command: see
@@ -317,18 +357,22 @@ def cmd_open(args) -> int:
 
     # Then the window, and only then the payload: a machine that cannot open
     # one has no use for 116 MB of editor.
-    cannot = gui.why_no_window()
+    cannot = gui.explain_why_no_window()
     if cannot:
         print(f"libera: {cannot}", file=sys.stderr)
         return 1
 
-    p = _payload_or_offer()
+    p = _resolve_payload_or_offer()
     if p is None:
         return 1
 
+    # The one place the GUI is imported: pywebview and, on a Mac, AppKit cost
+    # a third of a second, and only this command opens a window.
+    from libera.host import app
+
     try:
-        app.run(p.root, payload_mod.sessions_dir(), documents)
+        app.run(p.root, payload_mod.get_sessions_dir(), documents)
     except NotReadyError as e:
-        print(f"libera: {e}", file=sys.stderr)
+        _refuse(str(e))
         return 1
     return 0

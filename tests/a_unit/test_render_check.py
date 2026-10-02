@@ -104,3 +104,33 @@ def test_rejects_a_non_png(render, tmp_path: Path) -> None:
     bad.write_bytes(b"definitely not a png")
     with pytest.raises(render.UnsupportedPNGError):
         render.check(str(bad))
+
+
+def paeth(a: int, b: int, c: int) -> int:
+    p = a + b - c
+    pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+    return a if (pa <= pb and pa <= pc) else (b if pb <= pc else c)
+
+
+def filtered(raw: bytes, prev: bytes, flt: int, channels: int) -> bytes:
+    """An encoder's side of a scanline filter: each byte less its predictor."""
+    out = bytearray(len(raw))
+    for i, x in enumerate(raw):
+        a = raw[i - channels] if i >= channels else 0
+        b = prev[i]
+        c = prev[i - channels] if i >= channels else 0
+        predictor = (0, a, b, (a + b) // 2, paeth(a, b, c))[flt]
+        out[i] = (x - predictor) & 0xFF
+    return bytes(out)
+
+
+@pytest.mark.parametrize("flt", [1, 2, 3, 4], ids=["sub", "up", "average", "paeth"])
+def test_each_filter_chromium_writes_is_undone(flt: int) -> None:
+    """write_png only ever writes filter 0, and Chromium writes the other four:
+    without this, none of their branches in unfilter had ever run."""
+    channels = 3
+    prev = bytes((i * 53 + 7) % 256 for i in range(WIDTH * channels))
+    raw = bytes((i * 37 + 11) % 256 for i in range(WIDTH * channels))
+    line = bytearray(filtered(raw, prev, flt, channels))
+
+    assert render_mod.unfilter(line, prev, flt, channels) == raw

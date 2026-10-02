@@ -1,34 +1,23 @@
 """What a menu item does when it fires, and what decides whether it can.
 
-The lower half: a plain function per item, the Objective-C target whose
-selectors point at them, the recent-menu delegate, and the small helpers those
-call. `build` and `gtk` put the items on a bar; nothing here knows a bar
-exists.
+The lower half: a plain function per item, and the small helpers those call.
+`macos` and `gtk` put the items on a bar; nothing here knows a bar exists, and
+nothing here touches a toolkit.
 
 The functions are the reason both bars can exist. Their bodies used to be the
 selector bodies, so File > Save was a method on an NSObject subclass -- which
 is a macOS-only home for a line of JavaScript that has nothing to do with
-AppKit.
-
-TARGET, RECENT_DELEGATE and the two class factories carry no leading
-underscore: `build` uses all four, and an underscore would be claiming a
-privacy the package does not have.
-
-TARGET and RECENT_DELEGATE are module state because AppKit holds a menu
-item's target by an *unretained* pointer -- an object that goes out of scope
-leaves items wired to freed memory. `build.install()` assigns them here, as
-`actions.TARGET = ...`, and everything that reads them reads them through this
-module for the same reason.
+AppKit. The Objective-C target whose selectors call them, and the menu
+delegates, are in `macos`.
 """
 
 from __future__ import annotations
 
-import functools
 import logging
 import threading
 from pathlib import Path
 
-from libera.host import about, desktop, hooks, recents, session
+from libera.host import about, apps, desktop, hooks, recents, session, window
 
 logger = logging.getLogger(__name__)
 
@@ -42,16 +31,14 @@ def _reload_front_window() -> None:
     -- the host folds the change log back into the document first -- and costs
     the undo history and where the cursor was.
     """
-    from libera.host.window import front_session
-
-    session_id = front_session()
-    if hooks.RELOAD is None or not session_id:
+    front = window.find_front_session()
+    if front is None:
         logger.warning("reload: no window to reload")
         return
-    hooks.RELOAD(session_id)
+    hooks.shell.reload(front)
 
 
-def _in_background(work) -> None:
+def _run_in_background(work) -> None:
     """Run a menu action off the GUI thread.
 
     Menu actions arrive on the GUI thread and most of what they do -- asking
@@ -61,7 +48,7 @@ def _in_background(work) -> None:
     threading.Thread(target=work, daemon=True).start()
 
 
-def _editor(what: str, js: str) -> None:
+def _ask_editor(what: str, js: str) -> None:
     """Ask the front window's editor to do something.
 
     Anything that goes wrong is said out loud. A menu item that silently does
@@ -70,13 +57,11 @@ def _editor(what: str, js: str) -> None:
     """
 
     def ask():
-        from libera.host.window import front_window
-
-        window = front_window()
-        if window is None:
+        front = window.find_front_window()
+        if front is None:
             logger.warning("menu %s: no window", what)
             return
-        result = window.evaluate_js(
+        result = front.evaluate_js(
             '(function(){try{var w=document.querySelector("iframe").contentWindow;'
             "var api=w.Asc&&w.Asc.editor;"
             'if(!api) return "no editor in this window";'
@@ -86,14 +71,14 @@ def _editor(what: str, js: str) -> None:
         if result:
             logger.warning("menu %s: %s", what, result)
 
-    _in_background(ask)
+    _run_in_background(ask)
 
 
 CONDITIONAL = frozenset({"undo:", "redo:", "saveDocument:"})
 
 
-def enabled_for(action: str, session_id: str) -> bool:
-    """Should the menu item for `action` be available, for that session?
+def is_enabled(action: str, front: session.Session | None) -> bool:
+    """Should the menu item for `action` be available, for the front session?
 
     asc_Save on an unmodified document writes nothing and says nothing, and so
     does Undo with an empty history -- which from the other side of the screen
@@ -101,8 +86,8 @@ def enabled_for(action: str, session_id: str) -> bool:
     this only reads what it last said.
 
     A plain function and not a method, so it can be tested without AppKit --
-    and so that the session *id* and the session *module* cannot end up with
-    the same name. They did: `session = front_session()` shadowed the imported
+    and so that a session and the session *module* cannot end up with the
+    same name. They did: `session = find_front_session()` shadowed the imported
     module, and `session.SESSIONS` was then an attribute lookup on a str.
     Every Undo, Redo and Save validation raised AttributeError inside an ObjC
     callback, where the exception goes nowhere anyone reads.
@@ -110,12 +95,10 @@ def enabled_for(action: str, session_id: str) -> bool:
     if action not in CONDITIONAL:
         return True
     if action == "saveDocument:":
-        host = session.SESSIONS.get(session_id)
-        return bool(host and host.unsaved.is_file())
-    state = session.editor_state(session_id)
+        return bool(front and front.unsaved_marker.is_file())
     # Absent means the editor has not said yet: leave it available rather than
     # grey out something that would have worked.
-    return bool(state.get(action.rstrip(":"), True))
+    return bool(front.abilities.get(action.rstrip(":"), True)) if front else True
 
 
 # --- what an item does -------------------------------------------------------
@@ -126,29 +109,55 @@ def enabled_for(action: str, session_id: str) -> bool:
 # touches AppKit.
 
 
-def new_document() -> None:
-    _in_background(lambda: hooks.WINDOW_OPENER and hooks.WINDOW_OPENER(None))
+def open_new_document(app: apps.App | None = None) -> None:
+    """File > New > Document, Spreadsheet or Presentation: a blank, in a window.
+
+    Any kind from any window. It used to be the front window's kind only, so
+    with a document open there was no way to a new spreadsheet: the start
+    window, which offers every kind, closes once it has been used.
+    """
+    _run_in_background(lambda: hooks.shell.open_window(None, app))
+
+
+def list_creatable() -> tuple[apps.App, ...]:
+    """What File > New offers: every editor with a blank to start from.
+
+    Diagrams has none, being a viewer, so it is not on the list.
+    """
+    return tuple(app for app in apps.ALL if app.blank)
+
+
+def choose_new_kind() -> apps.App:
+    """The kind ⌘N makes: the front window's, or a Document.
+
+    A Document when there is no window to ask, when the front one is the start
+    window (which shows no document), and when it holds a kind that cannot be
+    created, which is Diagrams.
+    """
+    front = window.find_front_session()
+    editor = front.editor if front is not None else apps.WORDS
+    return editor if editor in list_creatable() else apps.WORDS
 
 
 def open_document() -> None:
     def pick():
-        path = hooks.OPEN_PATH_CHOOSER("documents") if hooks.OPEN_PATH_CHOOSER else None
-        if path and hooks.WINDOW_OPENER:
-            hooks.WINDOW_OPENER(Path(path))
+        path = hooks.shell.choose_open_path("documents")
+        if path:
+            hooks.shell.open_window(Path(path))
 
-    _in_background(pick)
+    _run_in_background(pick)
 
 
 def open_recent(path: str) -> None:
     def open_it():
-        if path and hooks.WINDOW_OPENER:
-            hooks.WINDOW_OPENER(Path(path))
+        if path:
+            hooks.shell.open_window(Path(path))
 
-    _in_background(open_it)
+    _run_in_background(open_it)
 
 
 def reload_document() -> None:
-    _in_background(_reload_front_window)
+    _run_in_background(_reload_front_window)
 
 
 def close_window() -> None:
@@ -163,63 +172,61 @@ def close_window() -> None:
     """
 
     def close():
-        from libera.host.window import front_window
-
-        window = front_window()
-        if window is None:
+        front = window.find_front_window()
+        if front is None:
             logger.warning("menu Close: no window")
             return
-        window.destroy()
+        front.destroy()
 
-    _in_background(close)
+    _run_in_background(close)
 
 
 def save() -> None:
-    _editor("Save", "api.asc_Save();")
+    _ask_editor("Save", "api.asc_Save();")
 
 
 def save_as() -> None:
-    _editor("Save As", "api.asc_DownloadAs(new w.Asc.asc_CDownloadOptions());")
+    _ask_editor("Save As", "api.asc_DownloadAs(new w.Asc.asc_CDownloadOptions());")
 
 
 def print_document() -> None:
-    _editor("Print", "api.asc_Print();")
+    _ask_editor("Print", "api.asc_Print();")
 
 
 def undo() -> None:
-    _editor("Undo", "(api.asc_Undo || api.Undo).call(api);")
+    _ask_editor("Undo", "(api.asc_Undo || api.Undo).call(api);")
 
 
 def redo() -> None:
-    _editor("Redo", "(api.asc_Redo || api.Redo).call(api);")
+    _ask_editor("Redo", "(api.asc_Redo || api.Redo).call(api);")
 
 
 def find() -> None:
-    _editor("Find", 'w.Common.NotificationCenter.trigger("search:show");')
+    _ask_editor("Find", 'w.Common.NotificationCenter.trigger("search:show");')
 
 
 def zoom_in() -> None:
-    _editor("Zoom In", "api.zoomIn();")
+    _ask_editor("Zoom In", "api.zoomIn();")
 
 
 def zoom_out() -> None:
-    _editor("Zoom Out", "api.zoomOut();")
+    _ask_editor("Zoom Out", "api.zoomOut();")
 
 
 def fit_page() -> None:
-    _editor("Fit Page", "api.zoomFitToPage();")
+    _ask_editor("Fit Page", "api.zoomFitToPage();")
 
 
 def fit_width() -> None:
-    _editor("Fit Width", "api.zoomFitToWidth();")
+    _ask_editor("Fit Width", "api.zoomFitToWidth();")
 
 
 def toggle_formatting_marks() -> None:
-    _editor("Formatting Marks", "api.put_ShowParaMarks(!api.get_ShowParaMarks());")
+    _ask_editor("Formatting Marks", "api.put_ShowParaMarks(!api.get_ShowParaMarks());")
 
 
 def show_help() -> None:
-    _in_background(_open_help)
+    _run_in_background(_open_help)
 
 
 def _open_help() -> None:
@@ -237,9 +244,7 @@ def _open_help() -> None:
     if desktop.open_url(HELP_URL):
         return
 
-    from libera.host.window import dialogs
-
-    dialogs.say(
+    window.dialogs.say(
         "Nothing here could open a browser",
         f"The documentation is at:\n\n{HELP_URL}",
     )
@@ -255,128 +260,18 @@ def show_about() -> None:
     the native shell provides one; `build/patches/web-apps/0007` turns it back
     on, and this is what the shell owes either way.
     """
-    from libera.host.window import dialogs
 
-    dialogs.say("Libera Suite", about.notice())
+    window.dialogs.say("Libera Suite", about.format_notice())
 
 
-def recent_documents() -> list[str]:
+def read_recent_documents() -> list[str]:
     """The remembered documents, for whichever menu is asking.
 
-    Both bars need a session bound before `read_recents` will answer: H is
-    thread-local and raises rather than defaulting, and the thread asking is
-    AppKit's menu delegate or `run()` itself, neither of which has one.
-
-    NotReadyError and nothing wider: read_recents already answers [] for a
-    corrupt or unreadable file and says so in the log, so a broader except
-    would only catch the bugs.
+    The list is shared by every session, so any one says where it is. Handed
+    the first, rather than binding it to the thread asking -- AppKit's menu
+    delegate, or `run()` itself -- which is what this used to do.
     """
-    host = next(iter(session.SESSIONS.values()), None)
-    if host is None:
+    first = next(iter(session.SESSIONS.values()), None)
+    if first is None:
         return []
-    session.use(host)
-    try:
-        return [entry["path"] for entry in recents.read_recents()]
-    except session.NotReadyError as e:
-        logger.warning("no recent list for the menu: %s", e)
-        return []
-
-
-@functools.cache
-def target_class():
-    """The menu's action target.
-
-    Cached because pyobjc registers a class by name with the Objective-C
-    runtime, and building it twice raises.
-    """
-    import AppKit
-
-    class LiberaMenuTarget(AppKit.NSObject):
-        def newDocument_(self, _sender):
-            new_document()
-
-        def reloadDocument_(self, _sender):
-            reload_document()
-
-        def openDocument_(self, _sender):
-            open_document()
-
-        def openRecent_(self, sender):
-            open_recent(str(sender.representedObject() or ""))
-
-        def saveDocument_(self, _sender):
-            save()
-
-        def saveDocumentAs_(self, _sender):
-            save_as()
-
-        def printDocument_(self, _sender):
-            print_document()
-
-        def undo_(self, _sender):
-            undo()
-
-        def redo_(self, _sender):
-            redo()
-
-        def find_(self, _sender):
-            find()
-
-        def zoomIn_(self, _sender):
-            zoom_in()
-
-        def zoomOut_(self, _sender):
-            zoom_out()
-
-        def zoomFitPage_(self, _sender):
-            fit_page()
-
-        def zoomFitWidth_(self, _sender):
-            fit_width()
-
-        def toggleFormattingMarks_(self, _sender):
-            toggle_formatting_marks()
-
-        def showHelp_(self, _sender):
-            show_help()
-
-        def validateMenuItem_(self, item):
-            """Grey out what would decline. The decision is in enabled_for()."""
-            from libera.host.window import front_session
-
-            return enabled_for(str(item.action() or ""), front_session())
-
-    return LiberaMenuTarget
-
-
-@functools.cache
-def recent_delegate_class():
-    """Rebuilds the Open Recent submenu each time it is opened.
-
-    Building it once would show whatever was remembered when the application
-    started, which is wrong the moment a document is opened.
-    """
-    import AppKit
-
-    class LiberaRecentMenu(AppKit.NSObject):
-        def menuNeedsUpdate_(self, menu):
-            menu.removeAllItems()
-            paths = recent_documents()
-            if not paths:
-                empty = menu.addItemWithTitle_action_keyEquivalent_(
-                    "No Recent Documents", None, ""
-                )
-                empty.setEnabled_(False)
-                return
-            for path in paths:
-                item = menu.addItemWithTitle_action_keyEquivalent_(
-                    Path(path).name, "openRecent:", ""
-                )
-                item.setTarget_(TARGET)
-                item.setRepresentedObject_(path)
-
-    return LiberaRecentMenu
-
-
-TARGET = None
-RECENT_DELEGATE = None
+    return [entry["path"] for entry in recents.read_recents(first)]

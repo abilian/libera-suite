@@ -245,20 +245,24 @@
       //
       // And put everything back if it does not happen: a start window left
       // disabled is one that is still on screen and takes no clicks at all,
-      // which is how this was found. host() throws on a bad status so that
-      // this catch is reached.
+      // which is how this was found. Two ways for it not to happen: host()
+      // throws on a bad status, and a host that opened nothing says so with
+      // `opened: false` -- a cancelled Open, or a document that would not
+      // open, about which the host has already put up a dialog. Only the
+      // first of those used to put the buttons back.
       let leaving = false;
       const once = (fn) => async (...args) => {
         if (leaving) return;
         leaving = true;
         buttons(true);
         try {
-          await fn(...args);
+          const answer = await (await fn(...args)).json();
+          if (answer.opened !== false) return;
         } catch (e) {
-          leaving = false;
-          buttons(false);
           problem(`That did not work: ${e.message || e}`);
         }
+        leaving = false;
+        buttons(false);
       };
 
       // Each section on its own: a start window with no recent list is still

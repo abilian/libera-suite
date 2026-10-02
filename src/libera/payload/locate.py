@@ -3,9 +3,9 @@
 The bottom of the package: everything here answers "where is it, and is it
 the right one", and nothing here writes anything.
 
-`install` and `generate` reach these through the module -- `locate.data_dir()`
-rather than a bare `data_dir` -- for the same reason `host/hooks.py` is read
-that way: a test that replaces `data_dir` replaces it for every caller, not
+`install` and `generate` reach these through the module -- `locate.get_data_dir()`
+rather than a bare `get_data_dir` -- for the same reason `host/hooks.py` is read
+that way: a test that replaces `get_data_dir` replaces it for every caller, not
 only for the module that happened to import it first.
 """
 
@@ -32,7 +32,7 @@ EXE = ".exe" if os.name == "nt" else ""
 NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 
 
-def tool_env(bin_dir: Path) -> dict[str, str]:
+def make_tool_env(bin_dir: Path) -> dict[str, str]:
     """The environment to run one of the payload's binaries in.
 
     They link the libraries beside them in `bin`, and nothing in the binary
@@ -57,6 +57,15 @@ class PayloadError(RuntimeError):
     """Something is wrong with the payload, said in terms a user can act on."""
 
 
+class NoPayloadError(PayloadError):
+    """There is no payload anywhere `resolve` looks: the one case to offer an install.
+
+    A class of its own so the caller can tell it from the others by type.
+    It used to search the message for "no editor payload found", which any
+    rewording of the message would have broken without a sound.
+    """
+
+
 @dataclass(frozen=True)
 class Payload:
     """A usable payload directory, and how we came to be using it."""
@@ -72,12 +81,12 @@ class Payload:
     def x2t(self) -> Path:
         return self.bin / f"x2t{EXE}"
 
-    def info(self) -> dict:
+    def read_record(self) -> dict:
         f = self.root / "payload.json"
         return json.loads(f.read_text(encoding="utf-8")) if f.is_file() else {}
 
 
-def xdg_data_home() -> Path:
+def get_xdg_data_home() -> Path:
     """`$XDG_DATA_HOME`, or the default the base-directory spec names.
 
     Here rather than beside its second caller because it is one answer to one
@@ -89,22 +98,28 @@ def xdg_data_home() -> Path:
     return Path(xdg) if xdg else Path.home() / ".local" / "share"
 
 
-def state_dir() -> Path:
+def get_state_dir() -> Path:
     """Everything Libera Suite keeps between runs, per platform convention."""
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "Libera Suite"
     if os.name == "nt":
         local = os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")
         return Path(local) / "Libera Suite"
-    return xdg_data_home() / "libera"
+    return get_xdg_data_home() / "libera"
 
 
-def data_dir() -> Path:
+def get_data_dir() -> Path:
     """Where an installed payload lives."""
-    return state_dir() / "payload"
+    return get_state_dir() / "payload"
 
 
-def sessions_dir() -> Path:
+def get_installed_dir() -> Path:
+    """Where `--payload-install` puts this application's payload, and where
+    `resolve` looks for it. Three callers used to spell it for themselves."""
+    return get_data_dir() / PAYLOAD_VERSION
+
+
+def get_sessions_dir() -> Path:
     """Where per-window state lives, and beside it the Recent list.
 
     One function because three callers were computing it and one of them spelt
@@ -113,30 +128,40 @@ def sessions_dir() -> Path:
     document opened through the harness never appeared in the start window and
     `--diagnose` could not see its unsaved edits either.
 
-    The Recent list is `Host.recents`, one hop up from a session directory. So
+    The Recent list is `Session.recents`, one hop up from a session directory. So
     two commands share a Recent list exactly when their session directories
     share a parent, which is what this is for.
     """
-    return state_dir() / "sessions"
+    return get_state_dir() / "sessions"
 
 
-def config_file() -> Path:
+def get_config_file() -> Path:
     xdg = os.environ.get("XDG_CONFIG_HOME")
     if sys.platform == "darwin" and not xdg:
-        return state_dir() / "config.toml"
+        return get_state_dir() / "config.toml"
     base = Path(xdg) if xdg else Path.home() / ".config"
     return base / "libera" / "config.toml"
 
 
-def _configured_dir() -> Path | None:
-    f = config_file()
+def _read_configured_dir() -> Path | None:
+    f = get_config_file()
     if not f.is_file():
         return None
-    value = tomllib.loads(f.read_text(encoding="utf-8")).get("payload_dir")
+    # A PayloadError like any other answer from here, so that every command --
+    # --diagnose, the bug-report one, included -- says which file is wrong
+    # rather than printing a traceback.
+    try:
+        value = tomllib.loads(f.read_text(encoding="utf-8")).get("payload_dir")
+    except tomllib.TOMLDecodeError as e:
+        msg = f"{f} is not valid TOML: {e}"
+        raise PayloadError(msg) from e
+    if value is not None and not isinstance(value, str):
+        msg = f"payload_dir in {f} is not a path: {value!r}"
+        raise PayloadError(msg)
     return Path(value).expanduser() if value else None
 
 
-def current_platform() -> str:
+def get_current_platform() -> str:
     system = {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}.get(
         platform.system()
     )
@@ -152,7 +177,7 @@ def current_platform() -> str:
     return f"{system}-{machine}"
 
 
-def bundled_dir() -> Path | None:
+def find_bundled_dir() -> Path | None:
     """A payload shipped inside the application, under the same prefix.
 
     Every channel that can carry 120 MB should carry it: a Flatpak, and later a
@@ -174,12 +199,12 @@ def bundled_dir() -> Path | None:
     """
     for parent in Path(__file__).resolve().parents:
         candidate = parent / "share" / "libera" / "payload"
-        if looks_complete(candidate):
+        if is_complete(candidate):
             return candidate
     return None
 
 
-def looks_complete(root: Path) -> bool:
+def is_complete(root: Path) -> bool:
     """Everything the host needs, including what install generates."""
     needed = [
         root / "bin" / f"x2t{EXE}",
@@ -201,7 +226,7 @@ def resolve() -> Payload:
         # local build. No version check, so a half-built tree fails loudly here
         # rather than mysteriously later.
         root = Path(env).expanduser()
-        if not looks_complete(root):
+        if not is_complete(root):
             msg = (
                 f"LIBERA_PAYLOAD={root} is not a complete payload"
                 " (run build/payload.sh?)"
@@ -209,11 +234,12 @@ def resolve() -> Payload:
             raise PayloadError(msg)
         return Payload(root, "LIBERA_PAYLOAD")
 
-    configured = _configured_dir()
+    configured = _read_configured_dir()
     if configured:
-        if not looks_complete(configured):
+        if not is_complete(configured):
             msg = (
-                f"payload_dir={configured} in {config_file()} is not a complete payload"
+                f"payload_dir={configured} in {get_config_file()} "
+                "is not a complete payload"
             )
             raise PayloadError(msg)
         return Payload(configured, "config")
@@ -223,12 +249,12 @@ def resolve() -> Payload:
     # whatever some earlier run put there. Both are the same PAYLOAD_VERSION or
     # neither is used at all, so this only decides which of two equals wins --
     # and the one that cannot be half-upgraded should.
-    bundled = bundled_dir()
+    bundled = find_bundled_dir()
     if bundled is not None:
         return Payload(bundled, "bundled")
 
-    installed = data_dir() / PAYLOAD_VERSION
-    if looks_complete(installed):
+    installed = get_installed_dir()
+    if is_complete(installed):
         return Payload(installed, "installed")
 
     msg = (
@@ -236,4 +262,4 @@ def resolve() -> Payload:
         f"  install it:   libera --payload-install\n"
         f"  or point at a local build:   export LIBERA_PAYLOAD=/path/to/out/payload"
     )
-    raise PayloadError(msg)
+    raise NoPayloadError(msg)

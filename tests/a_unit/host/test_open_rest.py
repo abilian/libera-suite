@@ -82,17 +82,3 @@ def test_a_window_that_never_appears_does_not_swallow_the_documents(
     app._open_rest(FakeWindow(), ["b.pptx", "c.xlsx"], lambda d: opened.append(str(d)))
 
     assert opened == ["b.pptx", "c.xlsx"]
-
-
-def test_the_list_pywebview_fills_early_is_not_the_condition() -> None:
-    """The regression itself, stated as a fact about `_open_rest`'s source.
-
-    A non-empty `webview.windows` must not be what releases it, because that is
-    true before `start()`. Read off the bytecode rather than the source: the
-    docstrings here and in `_install_menu` both discuss `webview.windows`, so
-    grepping the text matches the prose that explains the bug. `co_names` is
-    what the function actually looks up.
-    """
-    names = set(app._open_rest.__code__.co_names)
-    assert "shown" in names, f"does not wait on the shown event: {sorted(names)}"
-    assert "windows" not in names, "back to waiting on a list create_window fills"

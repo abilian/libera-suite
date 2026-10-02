@@ -32,7 +32,7 @@ from libera import gui
     ],
 )
 def test_the_distribution_decides_which_packages_to_name(os_release, expected):
-    assert gui.family(os_release) == expected
+    assert gui.parse_family(os_release) == expected
 
 
 def test_an_unknown_distribution_is_told_what_to_ask_for():
@@ -44,7 +44,7 @@ def test_an_unknown_distribution_is_told_what_to_ask_for():
     four wrong answers; the component names are something a reader can look up
     in whatever their own package manager is.
     """
-    hint = gui.install_hint("ID=nixos\n")
+    hint = gui.format_install_hint("ID=nixos\n")
 
     assert "apt install" not in hint
     assert "dnf install" not in hint
@@ -60,13 +60,15 @@ def test_a_distribution_we_do_know_is_matched_through_id_like():
     Read from a real image rather than assumed: its ID_LIKE is "opensuse
     suse", and that is what carries it to the zypper line.
     """
-    hint = gui.install_hint('ID="opensuse-tumbleweed"\nID_LIKE="opensuse suse"\n')
+    hint = gui.format_install_hint(
+        'ID="opensuse-tumbleweed"\nID_LIKE="opensuse suse"\n'
+    )
 
     assert hint.strip().startswith("sudo zypper install")
 
 
 def test_a_known_distribution_gets_one_line():
-    hint = gui.install_hint("ID=fedora\n")
+    hint = gui.format_install_hint("ID=fedora\n")
     assert hint.strip().startswith("sudo dnf install")
     assert "apt install" not in hint
 
@@ -86,7 +88,7 @@ def test_the_packages_are_the_ones_pywebview_asks_for():
 def test_nothing_to_say_where_the_backend_ships_with_pywebview():
     """macOS gets pyobjc as a wheel; there is nothing to install and nothing
     to warn about."""
-    assert gui.why_no_window() is None
+    assert gui.explain_why_no_window() is None
 
 
 def test_a_virtualenv_that_cannot_see_the_system_packages_is_told_so(
@@ -107,17 +109,17 @@ def test_a_virtualenv_that_cannot_see_the_system_packages_is_told_so(
     (tmp_path / "pipx_metadata.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(sys, "prefix", str(tmp_path))
     monkeypatch.setattr(sys, "platform", "linux")
-    monkeypatch.setattr(gui, "gtk_is_available", lambda: False)
+    monkeypatch.setattr(gui, "is_gtk_available", lambda: False)
     monkeypatch.setattr(
         gui,
-        "_system_python_that_can_start_gtk",
+        "_find_system_python_for_gtk",
         lambda: (
             "/usr/bin/python3",
             f"{sys.version_info.major}.{sys.version_info.minor}",
         ),
     )
 
-    message = gui.why_no_window()
+    message = gui.explain_why_no_window()
 
     assert message is not None
     assert "--system-site-packages" in message, "the flag is the whole answer"
@@ -130,17 +132,17 @@ def test_the_same_failure_in_a_checkout_is_told_something_it_can_act_on(
     """Same diagnosis, different fix, and the wrong one wastes an afternoon."""
     monkeypatch.setattr(sys, "prefix", str(tmp_path))
     monkeypatch.setattr(sys, "platform", "linux")
-    monkeypatch.setattr(gui, "gtk_is_available", lambda: False)
+    monkeypatch.setattr(gui, "is_gtk_available", lambda: False)
     monkeypatch.setattr(
         gui,
-        "_system_python_that_can_start_gtk",
+        "_find_system_python_for_gtk",
         lambda: (
             "/usr/bin/python3",
             f"{sys.version_info.major}.{sys.version_info.minor}",
         ),
     )
 
-    message = gui.why_no_window()
+    message = gui.explain_why_no_window()
 
     assert message is not None
     assert "pyvenv.cfg" in message
@@ -159,14 +161,14 @@ def test_a_virtualenv_on_another_python_is_told_that_instead(monkeypatch, tmp_pa
     (tmp_path / "pipx_metadata.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(sys, "prefix", str(tmp_path))
     monkeypatch.setattr(sys, "platform", "linux")
-    monkeypatch.setattr(gui, "gtk_is_available", lambda: False)
+    monkeypatch.setattr(gui, "is_gtk_available", lambda: False)
     # 3.9 because the package requires 3.12 and up, so it can never be the
     # version the suite is running on and the branch is pinned either way.
     monkeypatch.setattr(
-        gui, "_system_python_that_can_start_gtk", lambda: ("/usr/bin/python3", "3.9")
+        gui, "_find_system_python_for_gtk", lambda: ("/usr/bin/python3", "3.9")
     )
 
-    message = gui.why_no_window()
+    message = gui.explain_why_no_window()
 
     assert message is not None
     assert "--python /usr/bin/python3" in message, "the interpreter is the fix"
@@ -188,12 +190,12 @@ def test_a_checkout_on_another_python_is_not_told_to_uv_venv(monkeypatch, tmp_pa
     """
     monkeypatch.setattr(sys, "prefix", str(tmp_path))
     monkeypatch.setattr(sys, "platform", "linux")
-    monkeypatch.setattr(gui, "gtk_is_available", lambda: False)
+    monkeypatch.setattr(gui, "is_gtk_available", lambda: False)
     monkeypatch.setattr(
-        gui, "_system_python_that_can_start_gtk", lambda: ("/usr/bin/python3", "3.9")
+        gui, "_find_system_python_for_gtk", lambda: ("/usr/bin/python3", "3.9")
     )
 
-    message = gui.why_no_window()
+    message = gui.explain_why_no_window()
 
     assert message is not None
     assert "UV_PYTHON=/usr/bin/python3" in message
@@ -211,22 +213,22 @@ def test_the_probe_asks_the_same_question_as_the_check(monkeypatch):
     it -- on any machine, whichever way the answer comes out.
     """
     done = subprocess.run(
-        [sys.executable, "-c", gui.probe_source()],
+        [sys.executable, "-c", gui.make_probe_source()],
         capture_output=True,
         text=True,
         timeout=30,
         check=False,
     )
 
-    assert (done.returncode == 0) is gui.gtk_is_available(), done.stderr[-400:]
+    assert (done.returncode == 0) is gui.is_gtk_available(), done.stderr[-400:]
 
 
 def test_the_probe_reports_the_version_it_ran_on(monkeypatch):
     """Because the caller compares it against ours, and a blank never differs."""
-    if not gui.gtk_is_available():
+    if not gui.is_gtk_available():
         pytest.skip("the probe only prints a version when it succeeds")
     done = subprocess.run(
-        [sys.executable, "-c", gui.probe_source()],
+        [sys.executable, "-c", gui.make_probe_source()],
         capture_output=True,
         text=True,
         timeout=30,
@@ -245,10 +247,10 @@ def test_packages_actually_missing_still_names_them(monkeypatch):
     now.
     """
     monkeypatch.setattr(sys, "platform", "linux")
-    monkeypatch.setattr(gui, "gtk_is_available", lambda: False)
-    monkeypatch.setattr(gui, "_system_python_that_can_start_gtk", lambda: None)
+    monkeypatch.setattr(gui, "is_gtk_available", lambda: False)
+    monkeypatch.setattr(gui, "_find_system_python_for_gtk", lambda: None)
 
-    message = gui.why_no_window()
+    message = gui.explain_why_no_window()
 
     assert message is not None
     assert "pip cannot install" in message
@@ -268,23 +270,23 @@ def test_packages_actually_missing_still_names_them(monkeypatch):
 
 def test_a_checkout_is_told_to_open_its_own_virtualenv(tmp_path):
     """Nothing pipx about a `.venv` -- the one-line fix is its pyvenv.cfg."""
-    assert gui.venv_kind(str(tmp_path)) == "venv"
+    assert gui.detect_venv_kind(str(tmp_path)) == "venv"
 
 
 def test_a_pipx_install_is_recognised_by_what_pipx_leaves(tmp_path):
     (tmp_path / "pipx_metadata.json").write_text("{}", encoding="utf-8")
-    assert gui.venv_kind(str(tmp_path)) == "pipx"
+    assert gui.detect_venv_kind(str(tmp_path)) == "pipx"
 
 
 def test_a_uv_tool_install_is_recognised_by_its_receipt(tmp_path):
     (tmp_path / "uv-receipt.toml").write_text("", encoding="utf-8")
-    assert gui.venv_kind(str(tmp_path)) == "uv-tool"
+    assert gui.detect_venv_kind(str(tmp_path)) == "uv-tool"
 
 
 def test_the_advice_names_the_file_to_edit_for_a_checkout(monkeypatch, tmp_path):
     """A path the reader can paste, not a description of one."""
     monkeypatch.setattr(sys, "prefix", str(tmp_path))
-    advice = gui._how_to_open_the_virtualenv()
+    advice = gui._explain_how_to_open_the_virtualenv()
     assert f"{tmp_path}/pyvenv.cfg" in advice
     assert "pipx" not in advice, "a checkout has nothing to uninstall"
 
@@ -293,5 +295,5 @@ def test_the_advice_for_uv_tool_sends_you_somewhere_that_works(monkeypatch, tmp_
     """`uv tool` has no --system-site-packages, so the answer is another tool."""
     (tmp_path / "uv-receipt.toml").write_text("", encoding="utf-8")
     monkeypatch.setattr(sys, "prefix", str(tmp_path))
-    advice = gui._how_to_open_the_virtualenv()
+    advice = gui._explain_how_to_open_the_virtualenv()
     assert "pipx install --system-site-packages libera" in advice

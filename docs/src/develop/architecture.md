@@ -12,7 +12,7 @@ libera FILE
       │   host/, innermost first -- nothing imports anything above it
       │
       ├── session.py    who is editing what, bound per request
-      ├── hooks.py      callbacks the window layer installs
+      ├── hooks.py      the shell the window layer installs
       ├── desktop.py    reveal a file, open a URL, whose account this is
       ├── convert.py    x2t: documents in, documents out
       ├── recents.py    the Recent list

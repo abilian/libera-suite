@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  <script defer src="https://umami.apps.joinux.fr/script.js" data-website-id="d1b2dfe0-3526-4fe8-8b0f-02573e4146a4"></script>
+
+  {#- What a shared link shows: the page's title, the description the theme
+      already chose for <meta name="description">, and the edition's card,
+      which cards.py draws. The home page is told by its address: Zensical
+      leaves page.is_homepage false there, so its title would be "Overview". -#}
+  {% if page.meta and page.meta.title %}
+    {% set og_title = page.meta.title %}
+  {% elif page.title and page.canonical_url != config.site_url %}
+    {% set og_title = page.title | striptags %}
+  {% else %}
+    {% set og_title = config.site_name %}
+  {% endif %}
+  {% if page.meta and page.meta.description %}
+    {% set og_description = page.meta.description %}
+  {% else %}
+    {% set og_description = config.site_description %}
+  {% endif %}
+  {% set og_image = config.site_url ~ "assets/og/card-" ~ lang.t("language") ~ ".jpg" %}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ config.site_name }}">
+  <meta property="og:title" content="{{ og_title }}">
+  <meta property="og:description" content="{{ og_description }}">
+  {% if page.canonical_url %}
+    <meta property="og:url" content="{{ page.canonical_url }}">
+  {% endif %}
+  <meta property="og:image" content="{{ og_image }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="{{ config.site_name }}">
+  <meta name="twitter:card" content="summary_large_image">
+{% endblock %}

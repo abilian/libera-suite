@@ -27,6 +27,132 @@
   } = M;
   const { captureLater, spellChecker } = M.page;
 
+  // -- File > Create New -------------------------------------------------------
+  //
+  // The editor asks for a new document of its own kind, because that is all it
+  // knows to ask for, so Create New in Words could only make another Words
+  // document. The choice is offered here instead, over the whole window: one
+  // button per kind the host can create. The list is the host's
+  // (/__host__/apps, which the start window draws too), so a kind is offered in
+  // both or in neither, and the icons are the editor's own format icons, served
+  // from the payload. Esc, or a click outside, leaves everything as it was.
+  const CHOOSER = "libera-create-new";
+  const ICONS = "/web-apps/apps/common/main/resources/img/doc-formats/large/";
+
+  function createNew(type) {
+    const made = postToHostSync(`/__host__/new?type=${encodeURIComponent(type)}`);
+    if (made.status !== 200) {
+      // `libera --serve` has one window, and a new document of another kind
+      // cannot take the place of this one. The host says so; so does this.
+      w.alert(made.statusText || "Libera Suite could not create the document.");
+      return;
+    }
+    if (openedHere(made)) w.top.location.reload();
+  }
+
+  function chooseNewKind(own) {
+    const doc = w.top.document;
+    if (doc.getElementById(CHOOSER)) return;
+    getFromHost("/__host__/apps", (xhr) => {
+      let kinds = [];
+      try {
+        kinds = JSON.parse(xhr.responseText).filter((app) => app.creates);
+      } catch (_e) {
+        // No list to offer: the editor's own kind is still a new document.
+      }
+      if (kinds.length) showChooser(doc, kinds, own);
+      else createNew(own);
+    });
+  }
+
+  function showChooser(doc, kinds, own) {
+    const page = w.document.documentElement;
+    const dark =
+      page.classList.contains("theme-type-dark") ||
+      (w.document.body?.classList.contains("theme-type-dark") ?? false);
+    const [card, text, line, raised] = dark
+      ? ["#2a2a2a", "#e8e5e0", "#4a4a4a", "#333"]
+      : ["#fff", "#1e1a17", "#d8d2c8", "#fff"];
+
+    const backdrop = doc.createElement("div");
+    backdrop.id = CHOOSER;
+    backdrop.style.cssText =
+      "position:fixed;inset:0;z-index:100000;display:flex;align-items:center;" +
+      "justify-content:center;background:rgba(0,0,0,.35);" +
+      "font:14px system-ui,-apple-system,'Segoe UI',sans-serif;";
+    const dialog = doc.createElement("div");
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-label", "Create New");
+    dialog.style.cssText =
+      `background:${card};color:${text};border-radius:10px;` +
+      "padding:18px 22px 22px;box-shadow:0 12px 40px rgba(0,0,0,.3);";
+    const title = doc.createElement("div");
+    title.textContent = "Create New";
+    title.style.cssText = "font-weight:600;font-size:15px;margin-bottom:14px;";
+    const row = doc.createElement("div");
+    row.style.cssText = "display:flex;gap:12px;";
+
+    // Return and Esc, caught before the editor sees them, in its frame as well
+    // as here: a chooser opened by a key leaves the focus in the editor, which
+    // takes it back on the key's way up, and would type the Return into the
+    // document. Return takes the focused choice, else the editor's own kind.
+    const docs = [doc, w.document];
+    const buttons = [];
+    const onKey = (event) => {
+      if (event.key !== "Escape" && event.key !== "Enter") return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === "Escape") {
+        close();
+        return;
+      }
+      const focused = buttons.find((b) => b === doc.activeElement);
+      (focused || preferred()).click();
+    };
+    const close = () => {
+      backdrop.remove();
+      for (const d of docs) d.removeEventListener("keydown", onKey, true);
+    };
+    const preferred = () =>
+      buttons.find((b) => b.dataset.doctype === own) || buttons[0];
+
+    for (const app of kinds) {
+      const button = doc.createElement("button");
+      button.type = "button";
+      button.dataset.doctype = app.doctype;
+      button.style.cssText =
+        "display:flex;flex-direction:column;align-items:center;gap:8px;" +
+        `width:120px;padding:14px 8px;border:1px solid ${line};border-radius:8px;` +
+        `background:${raised};color:inherit;font:inherit;cursor:pointer;`;
+      const icon = doc.createElement("img");
+      icon.src = `${ICONS}${app.ext}.svg`;
+      icon.alt = "";
+      icon.width = 48;
+      icon.height = 48;
+      const label = doc.createElement("span");
+      label.textContent = app.kind;
+      button.append(icon, label);
+      button.addEventListener("click", () => {
+        close();
+        createNew(app.doctype);
+      });
+      row.append(button);
+      buttons.push(button);
+    }
+
+    backdrop.addEventListener("mousedown", (event) => {
+      if (event.target === backdrop) close();
+    });
+    for (const d of docs) d.addEventListener("keydown", onKey, true);
+    dialog.append(title, row);
+    backdrop.append(dialog);
+    doc.body.append(backdrop);
+    // The editor's own kind has the focus, so Return does what Create New
+    // did before there was a choice.
+    preferred().focus();
+  }
+
   // -- host state -------------------------------------------------------------
   const DOC_DIR = "/doc"; // where Editor.bin + media/ live
   let saved = true;
@@ -45,24 +171,24 @@
     // --- lifecycle
     // Once per page, however many times the editor asks.
     //
-    // It asks twice, about 7ms apart, on every single load -- measured in the
-    // console log of both a good run and a stalled one. Each ask schedules
-    // DesktopOfflineAppDocumentEndLoad, so the document was being fed into the
-    // editor twice, and the two were racing.
-    //
-    // That race is where the intermittent stall happens. Captured with the
-    // browser's console on a run that hung: everything up to the second
-    // SetDocumentName, then silence -- no error, no further call, for 75
-    // seconds. A good run goes straight on to `doc:onready`. The step in
-    // between is this handover, and it is the only thing here that runs twice.
-    //
-    // Handing the same bytes over twice cannot be right whatever the editor's
-    // reason for asking, so this is a contract rather than a workaround.
+    // The console shows it asked twice on every load, and the two handovers
+    // were once blamed for the intermittent stall at "Loading document: 8%".
+    // They were not its cause: that was a font request reset by the host's
+    // listen backlog -- see Server.request_queue_size in handler.py. Handing
+    // the same bytes over twice cannot be right whatever the editor's reason
+    // for asking, so this stays, as a contract rather than a workaround.
     LocalStartOpen: function () {
       log("LocalStartOpen", arguments);
       if (handedOver) return;
       handedOver = true;
-      const payload = JSON.parse(getFromHostSync("/__host__/opened"));
+      const opened = getFromHostSync("/__host__/opened");
+      if (opened === null) {
+        // Said as what it is. Parsed regardless, the null threw "Cannot read
+        // properties of null" from a timer, and that was the reload offer's text.
+        report("error", "the host has no converted document to hand over");
+        return;
+      }
+      const payload = JSON.parse(opened);
       setTimeout(() => {
         w.DesktopOfflineAppDocumentEndLoad(DOC_DIR, payload.b64, payload.len);
       }, 0);
@@ -127,13 +253,19 @@
         : changes == null
           ? ""
           : String(changes);
-      postToHostSync(
+      const sent = postToHostSync(
         "/__host__/changes?index=" +
           (index == null ? "" : index | 0) +
           "&count=" +
           (count | 0),
         body,
       );
+      // An XHR answers a 500 without throwing. An edit the log did not take
+      // is one no save will write, so say it as an error: the host offers a
+      // reload, which puts the editor back in step with what is on disk.
+      if (sent.status !== 204) {
+        report("error", `the change log did not take an edit (HTTP ${sent.status})`);
+      }
     },
     // The host's "save finished, or there was nothing to save" acknowledgement
     // (AscDesktopEditor_Save calls it when asc_Save declines). Only long-lived
@@ -325,6 +457,12 @@
       postToHost(
         "/__host__/save",
         JSON.stringify({ fileType: 513, isPrint: true, params: "" }),
+        (xhr) => {
+          // Nothing in the editor waits for this, so a failure is ours to say.
+          if (answer(xhr).error !== 0) {
+            w.alert("Libera Suite could not print this document.");
+          }
+        },
       );
     },
     Print_Start: () => {},
@@ -382,10 +520,7 @@
       log("execCommand", arguments);
 
       if (cmd === "create:new") {
-        const made = postToHostSync(
-          `/__host__/new?type=${encodeURIComponent(param || "word")}`,
-        );
-        if (openedHere(made)) w.top.location.reload();
+        chooseNewKind(String(param || "word"));
         return;
       }
 
@@ -443,6 +578,40 @@
     }
   }
 
+  // The editor is an offline desktop editor, and it decides so once: from
+  // asc_isOffline() when its permissions arrive, which picks Save As over
+  // Download As in the File menu, among much else. The SDK's base answer is
+  // "is this page a file: URL", which over http is no; the desktop half of the
+  // SDK, sdk-all.js, answers yes, but it loads by a <script> tag after
+  // sdk-all-min.js and raced the permissions. A slow load lost, and the File
+  // menu offered Download As. Measured in WebKit with sdk-all.js held back
+  // three seconds: Download As three times in three, Save As three in three
+  // on time.
+  //
+  // So the answer is made the desktop one as soon as sdk-all-min.js has run,
+  // which defines it, and before the editor built on it can ask. On every API
+  // class that has its own copy: each editor's API copies the base method when
+  // it is defined, so patching the base alone changed nothing. A capturing
+  // listener, because a script's load event does not bubble, and on the
+  // document, because a load event never reaches the window at all.
+  w.document.addEventListener(
+    "load",
+    (e) => {
+      const src = (e.target && e.target.src) || "";
+      if (!src.includes("/sdk-all-min.js")) return;
+      const classes = [w.AscCommon.baseEditorsApi, ...Object.values(w.Asc || {})];
+      for (const api of classes) {
+        if (
+          typeof api === "function" &&
+          Object.hasOwn(api.prototype || {}, "asc_isOffline")
+        ) {
+          api.prototype.asc_isOffline = () => true;
+        }
+      }
+    },
+    true,
+  );
+
   w.AscDesktopEditor = new Proxy(impl, {
     get: (t, k) => {
       if (k in t) {
@@ -465,13 +634,9 @@
     },
   });
 
-  // The page photographs itself, rather than the harness asking Chromium for a
-  // screenshot. --screenshot only fires when --virtual-time-budget runs out, and
-  // when that budget is even slightly short the browser quits mid-load: the run
-  // stops at a different place each time, with no error and no incomplete
-  // response. Capturing from inside the page needs neither flag, and yields the
-  // document canvas alone instead of a window full of chrome to crop.
-
+  // Tell the host what the editor can do, so the menu bar can grey out an
+  // item that would decline. Pushed, not asked for: a menu is validated on the
+  // GUI thread, and asking the editor from there would deadlock.
   (function watchEditorState() {
     const api = (w.Asc && w.Asc.editor) || w.editor;
     if (!api || !api.asc_registerCallback) {
@@ -487,6 +652,11 @@
     api.asc_registerCallback("asc_onCanRedo", send("redo"));
   })();
 
+  // The editor reports document trouble through its own asc_onError event and
+  // a modal, not through a JS exception -- so a run can look clean to
+  // window.onerror while the user is staring at "An error occurred during the
+  // work with the document". Hook it. asc_registerCallback is a quoted export,
+  // so it survives minification.
   (function watchEditorErrors() {
     const api = (w.Asc && w.Asc.editor) || w.editor;
     if (!api || !api.asc_registerCallback) {

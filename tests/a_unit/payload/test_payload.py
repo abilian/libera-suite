@@ -9,9 +9,11 @@ and a tar member that escapes the destination.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import re
 import tarfile
+import urllib.error
 from pathlib import Path, PurePath
 
 import pytest
@@ -24,7 +26,7 @@ REPO = repo_root()
 
 
 def make_payload(root: Path) -> Path:
-    """A directory that satisfies looks_complete()."""
+    """A directory that satisfies is_complete()."""
     (root / "bin" / "tools").mkdir(parents=True)
     (root / "bin" / f"x2t{locate.EXE}").write_text("#!/bin/sh\n")
     (root / "bin" / "DoctRenderer.config").write_text("<Settings/>")
@@ -66,24 +68,26 @@ def test_incomplete_env_payload_fails_loudly(tmp_path: Path, monkeypatch) -> Non
     (half / "bin").mkdir(parents=True)
     (half / "bin" / "x2t").write_text("#!/bin/sh\n")
     monkeypatch.setenv("LIBERA_PAYLOAD", str(half))
-    with pytest.raises(PayloadError, match="not a complete payload"):
+    with pytest.raises(PayloadError, match="not a complete payload") as raised:
         payload.resolve()
+    # A payload somebody pointed at and got wrong is not offered a download.
+    assert not isinstance(raised.value, payload.NoPayloadError)
 
 
 def test_missing_payload_says_what_to_do(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("LIBERA_PAYLOAD", raising=False)
-    monkeypatch.setattr(payload.locate, "data_dir", lambda: tmp_path / "nothing")
-    monkeypatch.setattr(payload.locate, "_configured_dir", lambda: None)
-    with pytest.raises(PayloadError, match="libera --payload-install"):
+    monkeypatch.setattr(payload.locate, "get_data_dir", lambda: tmp_path / "nothing")
+    monkeypatch.setattr(payload.locate, "_read_configured_dir", lambda: None)
+    with pytest.raises(payload.NoPayloadError, match="libera --payload-install"):
         payload.resolve()
 
 
 def test_generated_files_count_as_required(tmp_path: Path) -> None:
     """An unpacked-but-not-generated payload is not usable."""
     root = make_payload(tmp_path / "p")
-    assert payload.looks_complete(root)
+    assert payload.is_complete(root)
     (root / "bin" / "DoctRenderer.config").unlink()
-    assert not payload.looks_complete(root)
+    assert not payload.is_complete(root)
 
 
 def test_tar_member_escaping_the_payload_is_refused(tmp_path: Path) -> None:
@@ -102,6 +106,33 @@ def test_tar_member_escaping_the_payload_is_refused(tmp_path: Path) -> None:
     assert victim.read_text() == "original"
 
 
+def test_a_link_out_of_the_payload_is_refused(tmp_path: Path) -> None:
+    """A name inside the payload, pointing outside it.
+
+    Checking member names alone let this through: `bin/etc` is a fine name,
+    and the file after it lands wherever the link points.
+    """
+    evil = tmp_path / "evil.tar"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    with tarfile.open(evil, "w") as tar:
+        link = tarfile.TarInfo("bin/etc")
+        link.type = tarfile.SYMTYPE
+        link.linkname = str(outside)
+        tar.addfile(link)
+        planted = tarfile.TarInfo("bin/etc/planted")
+        planted.size = 0
+        tar.addfile(planted, io.BytesIO(b""))
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    with (
+        tarfile.open(evil) as tar,
+        pytest.raises(PayloadError, match="outside the payload"),
+    ):
+        payload.safe_extract(tar, dest)
+    assert not (outside / "planted").exists()
+
+
 def _fake_dist(tmp_path: Path, *, corrupt: bool) -> Path:
     """A manifest plus one artifact, whose hash may or may not be honest."""
     dist = tmp_path / "dist"
@@ -109,7 +140,7 @@ def _fake_dist(tmp_path: Path, *, corrupt: bool) -> Path:
     member = tmp_path / "bin"
     member.mkdir()
     (member / "x2t").write_text("#!/bin/sh\n")
-    artifact = dist / f"core-{payload.current_platform()}.tar.gz"
+    artifact = dist / f"core-{payload.get_current_platform()}.tar.gz"
     with tarfile.open(artifact, "w:gz") as tar:
         tar.add(member, arcname="bin")
     digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
@@ -122,7 +153,7 @@ def _fake_dist(tmp_path: Path, *, corrupt: bool) -> Path:
                 {
                     "name": artifact.name,
                     "kind": "core",
-                    "platform": payload.current_platform(),
+                    "platform": payload.get_current_platform(),
                     "size": artifact.stat().st_size,
                     "sha256": digest,
                 }
@@ -132,35 +163,115 @@ def _fake_dist(tmp_path: Path, *, corrupt: bool) -> Path:
     return dist
 
 
+def test_a_config_file_that_is_not_toml_is_named(tmp_path: Path, monkeypatch) -> None:
+    """Not a traceback from every command, --diagnose included."""
+    config = tmp_path / "config.toml"
+    config.write_text("payload_dir = \n", encoding="utf-8")
+    monkeypatch.setattr(locate, "get_config_file", lambda: config)
+
+    with pytest.raises(PayloadError, match=r"config\.toml is not valid TOML"):
+        locate._read_configured_dir()
+
+
 def test_install_refuses_a_bad_hash(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(payload.installer, "bundled_manifest", lambda: None)
+    monkeypatch.setattr(payload.installer, "read_bundled_manifest", lambda: None)
     dist = _fake_dist(tmp_path, corrupt=True)
     dest = tmp_path / "dest"
     with pytest.raises(PayloadError, match="failed verification"):
-        payload.install(source=dist, dest=dest, log=lambda *_: None)
+        payload.install(source=dist, dest=dest, say=lambda *_: None)
     assert not dest.exists()
 
 
 def test_install_refuses_a_mismatched_payload_version(
     tmp_path: Path, monkeypatch
 ) -> None:
-    monkeypatch.setattr(payload.installer, "bundled_manifest", lambda: None)
+    monkeypatch.setattr(payload.installer, "read_bundled_manifest", lambda: None)
     dist = _fake_dist(tmp_path, corrupt=False)
     manifest = json.loads((dist / "manifest.json").read_text())
     manifest["payload_version"] = "99.0"
     (dist / "manifest.json").write_text(json.dumps(manifest))
     with pytest.raises(PayloadError, match="this libera needs"):
-        payload.install(source=dist, dest=tmp_path / "dest", log=lambda *_: None)
+        payload.install(source=dist, dest=tmp_path / "dest", say=lambda *_: None)
+
+
+def test_install_replaces_the_payload_by_a_rename_beside_it(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Staged beside the destination, not in /tmp: a rename cannot cross
+    filesystems, and shutil.move then copied, twice the size and not atomic."""
+    monkeypatch.setattr(payload.installer, "read_bundled_manifest", lambda: None)
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    (dest / "old").write_text("the previous payload")
+    staged_beside: list[Path] = []
+    monkeypatch.setattr(
+        payload.installer,
+        "_finish",
+        lambda d, _say: staged_beside.extend(d.parent.glob(".libera-staging-*")),
+    )
+
+    payload.install(
+        source=_fake_dist(tmp_path, corrupt=False), dest=dest, say=lambda *_: None
+    )
+
+    assert (dest / "bin" / "x2t").is_file()
+    assert not (dest / "old").exists()
+    assert not dest.with_name("dest.previous").exists()
+    assert staged_beside, "staged somewhere other than beside the destination"
+
+
+def test_an_interrupted_install_puts_the_old_payload_back(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Ctrl-C while the fonts are generated. The rollback caught Exception
+    only, so the working payload stayed at .previous, where nothing looks and
+    the next install deletes it."""
+    monkeypatch.setattr(payload.installer, "read_bundled_manifest", lambda: None)
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    (dest / "old").write_text("the previous payload")
+
+    def interrupted(_dest: Path, _say) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(payload.installer, "_finish", interrupted)
+
+    with pytest.raises(KeyboardInterrupt):
+        payload.install(
+            source=_fake_dist(tmp_path, corrupt=False), dest=dest, say=lambda *_: None
+        )
+
+    assert (dest / "old").read_text() == "the previous payload"
+    assert not dest.with_name("dest.previous").exists()
+
+
+def test_trusting_the_origin_asks_the_default_one(tmp_path: Path, monkeypatch) -> None:
+    """With no --from there is no source, and it asked for None/manifest.json."""
+    monkeypatch.setattr(payload.installer, "read_bundled_manifest", lambda: None)
+    asked: list[str] = []
+
+    def offline(url: str, timeout: float):
+        asked.append(url)
+        reason = "offline"
+        raise urllib.error.URLError(reason)
+
+    monkeypatch.setattr(payload.installer.urllib.request, "urlopen", offline)
+
+    with pytest.raises(PayloadError):
+        payload.install(trust_manifest=True, dest=tmp_path / "d", say=lambda *_: None)
+
+    origin = payload.installer.DEFAULT_ORIGIN
+    assert asked == [f"{origin}/{payload.PAYLOAD_VERSION}/manifest.json"]
 
 
 def test_unverifiable_download_is_refused(tmp_path: Path, monkeypatch) -> None:
     """Without a manifest in the wheel, the origin would decide what we install."""
-    monkeypatch.setattr(payload.installer, "bundled_manifest", lambda: None)
+    monkeypatch.setattr(payload.installer, "read_bundled_manifest", lambda: None)
     with pytest.raises(PayloadError, match="cannot be verified"):
         payload.install(
             source="https://example.invalid/libera",
             dest=tmp_path / "d",
-            log=lambda *_: None,
+            say=lambda *_: None,
         )
 
 
@@ -202,7 +313,7 @@ def test_the_artifacts_carry_no_apple_metadata() -> None:
 
 
 def _complete_payload(root):
-    """The files locate.looks_complete insists on, and nothing else."""
+    """The files locate.is_complete insists on, and nothing else."""
     for rel in (
         f"bin/x2t{locate.EXE}",
         "bin/DoctRenderer.config",
@@ -226,7 +337,7 @@ def test_a_bundled_payload_is_found_under_the_same_prefix(monkeypatch, tmp_path)
     module.mkdir(parents=True)
     monkeypatch.setattr(locate, "__file__", str(module / "locate.py"))
 
-    assert locate.bundled_dir() == prefix / "share" / "libera" / "payload"
+    assert locate.find_bundled_dir() == prefix / "share" / "libera" / "payload"
 
 
 def test_an_incomplete_one_is_not_a_payload(monkeypatch, tmp_path):
@@ -237,7 +348,7 @@ def test_an_incomplete_one_is_not_a_payload(monkeypatch, tmp_path):
     module.mkdir(parents=True)
     monkeypatch.setattr(locate, "__file__", str(module / "locate.py"))
 
-    assert locate.bundled_dir() is None
+    assert locate.find_bundled_dir() is None
 
 
 def test_the_bundled_one_wins_over_a_separately_installed_one(monkeypatch, tmp_path):
@@ -245,11 +356,11 @@ def test_the_bundled_one_wins_over_a_separately_installed_one(monkeypatch, tmp_p
     between equals -- and the one that shipped with the application cannot be
     half-upgraded by an earlier run."""
     monkeypatch.delenv("LIBERA_PAYLOAD", raising=False)
-    monkeypatch.setattr(locate, "_configured_dir", lambda: None)
+    monkeypatch.setattr(locate, "_read_configured_dir", lambda: None)
     bundled = _complete_payload(tmp_path / "bundled")
     installed = _complete_payload(tmp_path / "installed")
-    monkeypatch.setattr(locate, "bundled_dir", lambda: bundled)
-    monkeypatch.setattr(locate, "data_dir", lambda: installed.parent)
+    monkeypatch.setattr(locate, "find_bundled_dir", lambda: bundled)
+    monkeypatch.setattr(locate, "get_data_dir", lambda: installed.parent)
 
     found = locate.resolve()
 
@@ -263,16 +374,16 @@ def test_the_bundled_one_wins_over_a_separately_installed_one(monkeypatch, tmp_p
 def test_nothing_spells_the_sessions_directory_for_itself():
     """Three callers composed this path and one of them spelt it `session`.
 
-    `Host.recents` sits one hop up from a session directory, so two commands
+    `Session.recents` sits one hop up from a session directory, so two commands
     share a Recent list exactly when their session directories share a parent.
-    `cmd_serve` defaulted to `state_dir()/"session"` while `app.run` uses the
+    `serve` defaulted to `get_state_dir()/"session"` while `app.run` uses the
     plural, so a document opened through the harness was remembered in a file
     the application never reads -- and `--diagnose`, which went looking under
     the plural, could not see its unsaved edits either. Nothing failed; the two
     simply never met.
 
     A test comparing the two values proves nothing now that both come from
-    `sessions_dir()`. What can still regress is somebody writing the path out
+    `get_sessions_dir()`. What can still regress is somebody writing the path out
     again, so that is what this looks for.
     """
     src = repo_root() / "src" / "libera"
@@ -281,16 +392,16 @@ def test_nothing_spells_the_sessions_directory_for_itself():
         for path in sorted(src.rglob("*.py"))
         if path.name != "locate.py"
         for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
-        if re.search(r'state_dir\(\)\s*/\s*"sessions?"', line)
+        if re.search(r'get_state_dir\(\)\s*/\s*"sessions?"', line)
     ]
     assert offenders == [], (
-        f"compose it with payload.sessions_dir() instead: {offenders}"
+        f"compose it with payload.get_sessions_dir() instead: {offenders}"
     )
 
 
 # --- the manifest the wheel ships ---------------------------------------------
 #
-# Every other test in this file replaces bundled_manifest with a lambda, which
+# Every other test in this file replaces read_bundled_manifest with a lambda, which
 # is what let it point at the wrong directory for as long as it did. These two
 # are the ones that look at the real lookup.
 
@@ -305,7 +416,7 @@ def test_the_build_writes_the_manifest_where_the_application_reads_it():
     """One path, written by a shell script and read by a module.
 
     `build/dist.sh` copies it into the package under INSTALL_MANIFEST, and
-    `installer.bundled_manifest` opens it. They disagreed: the copy went to
+    `installer.read_bundled_manifest` opens it. They disagreed: the copy went to
     `libera/manifest.json` and the read looked in `libera/payload/`, because it
     was spelt `Path(__file__).with_name(...)` inside `libera.payload.installer`.
 
@@ -332,7 +443,7 @@ def test_a_stamped_manifest_is_the_one_found():
     allowed to disagree for a while and this half is not.
     """
     assert payload.can_fetch()
-    found = payload.installer.bundled_manifest()
+    found = payload.installer.read_bundled_manifest()
     assert found is not None
     assert [a["name"] for a in found["artifacts"]]
 
@@ -354,7 +465,7 @@ def test_the_stamped_manifest_is_for_the_payload_this_build_wants():
     its own installer rejects -- `manifest is for payload 0.1, this libera
     needs 0.2` -- and the only thing that would have told anyone is this.
     """
-    found = payload.installer.bundled_manifest()
+    found = payload.installer.read_bundled_manifest()
     assert found is not None
     if found["payload_version"] != locate.PAYLOAD_VERSION:
         pytest.skip(

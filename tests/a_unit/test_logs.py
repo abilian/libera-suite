@@ -29,13 +29,13 @@ def test_the_count_picks_the_level(verbosity, quiet, expected):
 def test_the_request_trace_needs_three_and_no_quiet():
     """Two lines per asset, thousands during a load. It is its own step."""
     logs.setup(2)
-    assert not logs.tracing_requests()
+    assert not logs.is_tracing_requests()
 
     logs.setup(3)
-    assert logs.tracing_requests()
+    assert logs.is_tracing_requests()
 
     logs.setup(3, quiet=True)
-    assert not logs.tracing_requests()
+    assert not logs.is_tracing_requests()
 
 
 def test_nothing_is_said_by_default(caplog):
@@ -69,14 +69,14 @@ def test_the_level_marks_what_matters(caplog):
     record = logging.LogRecord(
         "libera.host.server", logging.WARNING, "f", 1, "open-url refused", None, None
     )
-    assert logs.Terse().format(record) == "  ! open-url refused"
+    assert logs.TerseFormatter().format(record) == "  ! open-url refused"
 
     record.levelno = logging.ERROR
-    assert logs.Terse().format(record) == "  !! open-url refused"
+    assert logs.TerseFormatter().format(record) == "  !! open-url refused"
 
     record.levelno = logging.INFO
-    assert logs.Terse().format(record) == "  open-url refused"
+    assert logs.TerseFormatter().format(record) == "  open-url refused"
 
     # Debug says which part is talking, because that is the question then.
     record.levelno = logging.DEBUG
-    assert logs.Terse().format(record) == "  [server] open-url refused"
+    assert logs.TerseFormatter().format(record) == "  [server] open-url refused"

@@ -2,7 +2,7 @@
 
 The lowest layer that has anything to do with the menu, and it is here rather
 than in `menu.py` because two modules need it and they sit on either side of
-that one: `server._get_bridge` injects the list into the page, and the menu
+that one: `server._serve_bridge` injects the list into the page, and the menu
 builds its items from it.
 
 With the definition in `menu.py`, `server` reached upward for it with a
@@ -50,7 +50,7 @@ NEW = Shortcut("n")
 # command, and the menu then fires too. Both ends of File > New make a window,
 # so Cmd-N made two.
 #
-# The host injects this list into the page (server._get_bridge), and
+# The host injects this list into the page (server._serve_bridge), and
 # bridge-page.js yields exactly what is here. One definition, two readers:
 # change the menu's shortcut and the page follows, which is the drift this
 # exists to make impossible.

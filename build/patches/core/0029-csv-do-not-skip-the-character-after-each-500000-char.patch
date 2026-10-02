@@ -1,0 +1,45 @@
+From 592b50a314a23880a529db43363927623a3d53df Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Fri, 2 Oct 2026 17:27:49 +0200
+Subject: [PATCH] csv: do not skip the character after each 500000-character
+ block
+
+CSVReader drops the text it has read once it passes 500000 characters, and
+sets nIndex to 0 before the loop's ++nIndex. The first character kept was
+never looked at: when it was a quote, a delimiter or a newline, a quoted
+cell split in two, two cells or two rows merged, silently, in any CSV over
+half a million characters. The index now wraps, so ++nIndex lands on it.
+---
+ OOXML/Binary/Sheets/Reader/CSVReader.cpp | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/OOXML/Binary/Sheets/Reader/CSVReader.cpp b/OOXML/Binary/Sheets/Reader/CSVReader.cpp
+index 1c37152da6..cb22b71e44 100644
+--- a/OOXML/Binary/Sheets/Reader/CSVReader.cpp
++++ b/OOXML/Binary/Sheets/Reader/CSVReader.cpp
+@@ -374,7 +374,11 @@ _UINT32 CSVReader::Impl::Read(const std::wstring &sFileName, OOX::Spreadsheet::C
+ 			{
+ 				nStartCell = 0;
+ 				sFileDataW.erase(0, nIndex + nDelimiterSize);
+-				nSize -= (nIndex + nDelimiterSize); nIndex = 0;
++				// The loop's ++nIndex has to land on the first character kept. Left at
++				// 0, it skipped that character, and when it was a quote, a delimiter
++				// or a newline, the cell or row after every 500000 characters was read
++				// wrongly: a quoted cell split in two, two cells or two rows merged.
++				nSize -= (nIndex + nDelimiterSize); nIndex = static_cast<size_t>(-1);
+ 				pTemp = sFileDataW.c_str();
+ 			}
+ 			else
+@@ -409,7 +413,8 @@ _UINT32 CSVReader::Impl::Read(const std::wstring &sFileName, OOX::Spreadsheet::C
+ 			{
+ 				nStartCell = 0;
+ 				sFileDataW.erase(0, nIndex + 1);
+-				nSize -= (nIndex + 1); nIndex = 0;
++				// As above: the next ++nIndex lands on the first character kept.
++				nSize -= (nIndex + 1); nIndex = static_cast<size_t>(-1);
+ 				pTemp = sFileDataW.c_str();
+ 			}
+ 			else
+-- 
+2.55.0
+

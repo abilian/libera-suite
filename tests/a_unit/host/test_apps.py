@@ -25,7 +25,7 @@ from libera.host import apps
 )
 def test_the_extension_decides_which_editor_opens_it(name: str, expected: str):
     """Words is the fallback: an unknown file is a document far more often."""
-    assert apps.for_document(Path(name)).name == expected
+    assert apps.choose_for(Path(name)).name == expected
 
 
 def test_no_extension_lands_in_two_editors():
@@ -55,3 +55,11 @@ def test_an_editor_opens_everything_it_saves_except_pdf(app: apps.App):
 def test_a_viewer_has_no_blank_and_an_editor_does(app: apps.App):
     """The two halves of "can this editor make a new document" must agree."""
     assert (app.blank is not None) == app.editable
+
+
+@pytest.mark.parametrize(
+    "app", [a for a in apps.ALL if a.editable], ids=lambda a: a.name
+)
+def test_recent_id_is_the_id_its_own_extension_is_written_with(app):
+    """Two tables naming one number: they must not drift apart."""
+    assert app.recent_id == app.ids_by_ext[app.ext]

@@ -82,11 +82,11 @@ def implemented() -> set[str]:
 
 def test_nothing_the_payload_calls_unguarded_is_missing(live_payload, implemented):
     """The whole test. Absence here is an exception, not a disabled feature."""
-    missing = {
-        name: where
-        for name, where in unguarded_calls(live_payload).items()
-        if name not in implemented
-    }
+    calls = unguarded_calls(live_payload)
+    # A scan that finds nothing passes as well: the bundle written another way,
+    # and every call goes unexamined. endReporter is one we know is there.
+    assert "endReporter" in calls, "the scan no longer finds the payload's calls"
+    missing = {name: where for name, where in calls.items() if name not in implemented}
     assert not missing, (
         "called with no feature check and not implemented:\n"
         + "\n".join(f"  {name}\n    {where}" for name, where in sorted(missing.items()))

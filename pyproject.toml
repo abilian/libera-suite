@@ -1,6 +1,6 @@
 [project]
 name = "libera"
-version = "0.3.0"
+version = "0.3.3"
 description = "Libera Suite — Abilian's desktop office suite"
 readme = "README.md"
 authors = [
@@ -98,11 +98,18 @@ dev = [
     "pyrefly>=1.2.0",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "pytest-playwright>=0.9.0",
     "ruff>=0.16.6",
     "ty>=0.0.79",
     "zensical>=0.0.60",
 ]
+# Apart because playwright ships no wheel for musl: Alpine syncs without it,
+# and the e2e tier, which imports it, has no payload to run against there.
+e2e = [
+    "pytest-playwright>=0.9.0",
+]
+
+[tool.uv]
+default-groups = ["dev", "e2e"]
 
 [tool.mypy]
 # The same stubs ty and pyrefly use. See stubs/README.md.

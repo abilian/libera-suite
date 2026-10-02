@@ -23,6 +23,7 @@ from support import build_roots, make_sample_docx
 
 from libera import logs, payload
 from libera.host import instance, session
+from libera.host.server import state
 
 
 def _built_payload() -> Path | None:
@@ -48,7 +49,7 @@ def _built_payload() -> Path | None:
     """
     for root in build_roots():
         tree = root / "out" / "payload"
-        if payload.looks_complete(tree):
+        if payload.is_complete(tree):
             return tree
     return None
 
@@ -77,14 +78,14 @@ def _installed_payload() -> Path | None:
         except ValueError:
             return ()
 
-    root = payload.data_dir()
+    root = payload.get_data_dir()
     if not root.is_dir():
         return None
     installed = sorted(
         (p for p in root.iterdir() if p.is_dir()), key=version, reverse=True
     )
     for tree in installed:
-        if payload.looks_complete(tree):
+        if payload.is_complete(tree):
             return tree
     return None
 
@@ -118,7 +119,7 @@ def pytest_report_header() -> list[str]:
                 " `libera --payload-install`, or LIBERA_PAYLOAD=DIR"
             ),
         ]
-    found = PAYLOAD.info().get("payload_version", "unknown")
+    found = PAYLOAD.read_record().get("payload_version", "unknown")
     line = f"libera payload: {PAYLOAD.root} (payload {found})"
     if found != payload.PAYLOAD_VERSION:
         line += f" -- this tree wants {payload.PAYLOAD_VERSION}"
@@ -149,25 +150,29 @@ def pytest_runtest_setup(item):
     A hook rather than an autouse fixture, like the teardown below. Tests of
     the hand-off itself point it back at a directory of their own.
     """
-    instance.path = lambda: NO_INSTANCE
+    instance.get_path = lambda: NO_INSTANCE
 
 
 def pytest_runtest_teardown(item):
-    """A session bound by one test must not still be bound for the next.
+    """What one test leaves in module state, the next must not find.
 
-    `H` is thread-local and pytest runs every test on one thread, so a leaked
-    binding makes code that reads `H` where it must not look fine. That is
-    exactly how a live bug hid: the save panel's format popup reads `H` from
-    the GUI thread, where nothing is bound and `H` raises, and the suite stayed
-    green because an earlier test had left a session behind -- run on its own,
-    that file failed eighteen times.
+    The registry of sessions above all. A request that names no session gets
+    the first one registered, so a session one test left behind became the
+    next test's -- with somebody else's payload under it. While sessions were
+    bound to the thread, the binding hid that; a test passed on its own and
+    failed in a full run.
 
-    The rule this keeps: every test file has to pass on its own.
+    And the logging any test turned up, so the next one is not louder than it
+    asked to be; the server's counters, which `/__host__/calls` reports and
+    tests count; and an announcement a test that ran the real `app.run` left
+    where every later hand-off would find it.
     """
-    session.forget()
-    # And the logging any test turned up, so the next one is not louder than
-    # it asked to be.
+    session.SESSIONS.clear()
     logs.setup(0)
+    state.reset()
+    state.ROUTES.clear()
+    state.NOT_FOUND.clear()
+    NO_INSTANCE.unlink(missing_ok=True)
 
 
 def pytest_collection_modifyitems(config, items):

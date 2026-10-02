@@ -21,6 +21,6 @@ StartupWMClass=libera
 # because .doc opens and cannot be saved.
 #
 # No Words/Tables/Slides split. One binary opens all of these and picks the
-# editor from the extension (apps.for_document), so one entry is honest and
+# editor from the extension (apps.choose_for), so one entry is honest and
 # three would put three Libera Suites in every Open With menu.
 MimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/msword;application/vnd.oasis.opendocument.text;application/rtf;text/plain;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel;application/vnd.oasis.opendocument.spreadsheet;text/csv;application/vnd.openxmlformats-officedocument.presentationml.presentation;application/vnd.ms-powerpoint;application/vnd.oasis.opendocument.presentation;application/vnd.visio;

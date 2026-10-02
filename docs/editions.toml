@@ -1,0 +1,158 @@
+# What each edition of the site says in its own language, read by
+# preprocess.py. The editions themselves are the [[project.extra.alternate]]
+# entries in zensical.toml, English first.
+#
+# `nav` translates every label of zensical.toml's nav, English on the left.
+# A label with no translation stops the build, so a new English page cannot
+# reach another edition under an English title. Developers is translated but
+# not its pages: that section is English-only, and in every other edition its
+# tab links to it.
+#
+# `card_tagline` and `card_line` are the text of the edition's Open Graph card,
+# the picture a shared link shows: cards.py draws them.
+#
+# The interface of Libera Suite itself is English in every edition (the editor
+# is started with lang=en), so the pages keep its menu items in English. What
+# the operating system says, SmartScreen or System Settings, they translate.
+
+[en]
+card_tagline = "Your documents, on your own machine."
+card_line = "A free and open source office suite for Windows, macOS and Linux"
+months = ["January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December"]
+date = "{day} {month} {year}"
+news_title = "News"
+news_intro = "The Libera Suite project posts its announcements here, newest first."
+all_news = "All news"
+
+[fr]
+card_tagline = "Vos documents, sur votre propre machine."
+card_line = "Une suite bureautique libre et gratuite pour Windows, macOS et Linux"
+site_description = "Une suite bureautique libre et gratuite pour Windows, macOS et Linux. Elle ouvre et enregistre les fichiers Word, Excel, PowerPoint et LibreOffice, sans compte ni cloud."
+copyright = """
+Copyright &copy; 2026 Abilian SAS —
+Libera Suite est un logiciel libre : l'application est sous licence
+<a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a>,
+les éditeurs sous licence
+<a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL v3</a>.
+"""
+dark = "Passer en mode sombre"
+light = "Passer en mode clair"
+months = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+          "août", "septembre", "octobre", "novembre", "décembre"]
+date = "{day} {month} {year}"
+news_title = "Actualités"
+news_intro = "Le projet Libera Suite publie ici ses annonces, de la plus récente à la plus ancienne."
+all_news = "Toutes les actualités"
+
+[fr.nav]
+"Home" = "Accueil"
+"Overview" = "Présentation"
+"Install" = "Installer"
+"Other ways to install" = "Autres façons d'installer"
+"What works today" = "État des lieux"
+"About" = "À propos"
+"Using Libera Suite" = "Utiliser Libera Suite"
+"Work with documents" = "Travailler sur des documents"
+"Developers" = "Développeurs"
+"News" = "Actualités"
+"Feedback" = "Vos retours"
+
+[de]
+card_tagline = "Ihre Dokumente, auf Ihrem eigenen Rechner."
+card_line = "Eine freie und kostenlose Office-Suite für Windows, macOS und Linux"
+site_description = "Eine freie und kostenlose Office-Suite für Windows, macOS und Linux. Sie öffnet und speichert Word-, Excel-, PowerPoint- und LibreOffice-Dateien, ohne Konto und ohne Cloud."
+copyright = """
+Copyright &copy; 2026 Abilian SAS —
+Libera Suite ist freie Software: die Anwendung steht unter der
+<a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a>,
+die Editoren unter der
+<a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL v3</a>.
+"""
+dark = "Zum dunklen Modus wechseln"
+light = "Zum hellen Modus wechseln"
+months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
+          "August", "September", "Oktober", "November", "Dezember"]
+date = "{day}. {month} {year}"
+news_title = "Neuigkeiten"
+news_intro = "Hier veröffentlicht das Projekt Libera Suite seine Ankündigungen, die neueste zuerst."
+all_news = "Alle Neuigkeiten"
+
+[de.nav]
+"Home" = "Startseite"
+"Overview" = "Überblick"
+"Install" = "Installieren"
+"Other ways to install" = "Weitere Installationswege"
+"What works today" = "Was heute funktioniert"
+"About" = "Über Libera Suite"
+"Using Libera Suite" = "Libera Suite verwenden"
+"Work with documents" = "Mit Dokumenten arbeiten"
+"Developers" = "Entwickler"
+"News" = "Neuigkeiten"
+"Feedback" = "Rückmeldung"
+
+[it]
+card_tagline = "I tuoi documenti, sulla tua macchina."
+card_line = "Una suite per ufficio libera e gratuita per Windows, macOS e Linux"
+site_description = "Una suite per ufficio libera e gratuita per Windows, macOS e Linux. Apre e salva file Word, Excel, PowerPoint e LibreOffice, senza account né cloud."
+copyright = """
+Copyright &copy; 2026 Abilian SAS —
+Libera Suite è software libero: l'applicazione è sotto licenza
+<a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a>,
+gli editor sotto licenza
+<a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL v3</a>.
+"""
+dark = "Passa alla modalità scura"
+light = "Passa alla modalità chiara"
+months = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio",
+          "agosto", "settembre", "ottobre", "novembre", "dicembre"]
+date = "{day} {month} {year}"
+news_title = "Novità"
+news_intro = "Qui il progetto Libera Suite pubblica i suoi annunci, dal più recente al meno recente."
+all_news = "Tutte le novità"
+
+[it.nav]
+"Home" = "Home"
+"Overview" = "Panoramica"
+"Install" = "Installare"
+"Other ways to install" = "Altri modi di installare"
+"What works today" = "Cosa funziona oggi"
+"About" = "Informazioni"
+"Using Libera Suite" = "Usare Libera Suite"
+"Work with documents" = "Lavorare con i documenti"
+"Developers" = "Sviluppatori"
+"News" = "Novità"
+"Feedback" = "Commenti"
+
+[es]
+card_tagline = "Tus documentos, en tu propia máquina."
+card_line = "Una suite ofimática libre y gratuita para Windows, macOS y Linux"
+site_description = "Una suite ofimática libre y gratuita para Windows, macOS y Linux. Abre y guarda archivos de Word, Excel, PowerPoint y LibreOffice, sin cuenta ni nube."
+copyright = """
+Copyright &copy; 2026 Abilian SAS —
+Libera Suite es software libre: la aplicación tiene licencia
+<a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a>,
+los editores licencia
+<a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL v3</a>.
+"""
+dark = "Cambiar al modo oscuro"
+light = "Cambiar al modo claro"
+months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+          "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+date = "{day} de {month} de {year}"
+news_title = "Noticias"
+news_intro = "Aquí el proyecto Libera Suite publica sus anuncios, del más reciente al más antiguo."
+all_news = "Todas las noticias"
+
+[es.nav]
+"Home" = "Inicio"
+"Overview" = "Presentación"
+"Install" = "Instalar"
+"Other ways to install" = "Otras formas de instalar"
+"What works today" = "Qué funciona hoy"
+"About" = "Acerca de"
+"Using Libera Suite" = "Usar Libera Suite"
+"Work with documents" = "Trabajar con documentos"
+"Developers" = "Desarrolladores"
+"News" = "Noticias"
+"Feedback" = "Comentarios"

@@ -52,7 +52,7 @@ Darwin-x86_64) PLATFORM="macos-x86_64" ;;
 Linux-x86_64)  PLATFORM="linux-x86_64" ;;
 Linux-aarch64) PLATFORM="linux-arm64" ;;
 # Git Bash says MINGW64_NT-10.0-26100; the application names the same machine
-# windows-x86_64 (locate.current_platform), and the two have to agree or the
+# windows-x86_64 (locate.get_current_platform), and the two have to agree or the
 # installer finds no core for it.
 MINGW*-x86_64 | MSYS*-x86_64) PLATFORM="windows-x86_64" ;;
 *) PLATFORM="" ;;

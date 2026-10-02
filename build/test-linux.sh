@@ -60,6 +60,37 @@ fi
 say() { printf '%s\n' "$*"; }
 step() { printf '\n==> %s\n' "$*"; }
 
+# And when there are no artifacts at all, an installed payload of any version,
+# the way tests/conftest.py does it for the suite. Without this the only way in
+# was to know the path and type `PAYLOAD=$HOME/.local/share/...` -- which is the
+# same friction, one directory along, as the `export LIBERA_PAYLOAD` that
+# conftest.py now removes. `resolve()` refuses these because it wants
+# PAYLOAD_VERSION exactly; a window check does not care which payload drew the
+# window, only that one did.
+#
+# The paths are locate.py's state_dir(), restated here because this script is
+# shell and already re-derives PAYLOAD_VERSION from payload.version the same
+# way. If those move, they move in two places.
+if [ -z "${PAYLOAD:-}" ] && [ ! -d "$DIST" ]; then
+    case "$(uname -s)" in
+    Darwin) installed="$HOME/Library/Application Support/Libera Suite/payload" ;;
+    *)      installed="${XDG_DATA_HOME:-$HOME/.local/share}/libera/payload" ;;
+    esac
+    if [ -d "$installed" ]; then
+        # Newest first, and by number: a plain sort puts 0.10 before 0.9.
+        for version in $(ls -1 "$installed" 2>/dev/null | sort -t. -k1,1nr -k2,2nr); do
+            # The two files is_complete() would not do without. A fuller
+            # check lives in Python and this only has to beat "nothing".
+            if [ -x "$installed/$version/bin/x2t" ] && [ -d "$installed/$version/sdkjs" ]; then
+                PAYLOAD="$installed/$version"
+                say "==> no artifacts in $DIST; using the installed payload $version"
+                say "    $PAYLOAD  (PAYLOAD=DIR overrides)"
+                break
+            fi
+        done
+    fi
+fi
+
 [ $# -gt 0 ] || { sed -n '3,20p' "$0" | sed 's/^#\{1,\} \{0,1\}//'; exit 2; }
 
 build_image() { "$ENGINE" build --platform "linux/$ARCH" -t "$IMAGE" "$HERE/test-linux"; }
@@ -138,7 +169,7 @@ prepare() {
     # /usr/lib/python3/dist-packages/gi -- so an environment built on a
     # downloaded interpreter can never reach it whatever else is set, and one
     # built on the system interpreter still cannot until system site-packages
-    # are switched on. Without both, gui.gtk_is_available() is False in here
+    # are switched on. Without both, gui.is_gtk_available() is False in here
     # and every test that opens a window is testing the wrong machine.
     #
     # This is the same trap a user meets: `pipx install libera` reports no
@@ -172,7 +203,7 @@ prepare() {
 # `sys.platform` is a fact at check time, so a checker on a Mac prunes every
 # non-macOS branch before looking at it. Two real defects lived in those
 # branches -- a `Window | None` dereferenced in set_fullscreen and a list with
-# no inferrable element type in front_window -- and both were invisible here
+# no inferrable element type in find_front_window -- and both were invisible here
 # and reported on the first Linux run.
 #
 # The suite's own lesson, applied to lint: a check that never ran elsewhere is

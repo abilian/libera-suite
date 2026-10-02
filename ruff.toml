@@ -44,6 +44,11 @@ lint.extend-ignore = [
     "N802", # callAfter -- pyobjc's name
     "N816", # setAssociatedObject -- likewise
 ]
+# The CLI imports the GUI in open_documents alone: pywebview and AppKit cost a third
+# of a second, and no other command opens a window.
+"src/libera/cli/commands.py" = [
+    "PLC0415", # libera.host.app, imported where a window is about to open
+]
 # payload.py runs allfontsgen out of the payload it just unpacked: that is the
 # job, and the generated font index cannot be built anywhere but the target.
 # convert.py shells out to x2t for every open and save: that is the host's job.
@@ -153,57 +158,54 @@ lint.extend-ignore = [
 # there is a window, and `libera payload install` has to work without one. Its
 # save panel needs an Objective-C action target, whose selector name is part of
 # the contract with AppKit.
-# app.py was carved out of window.py and keeps its reasons: webview, AppKit and
-# PyObjCTools are imported where they are used, because this module is read on
-# every platform and they exist on one.
 "src/libera/host/app.py" = [
-    "PLC0415", # webview and AppKit, imported where they are used
     "TC003",   # pathlib is used at runtime, not only in annotations
-    # run() is a sequence of setup steps, not a knot: server, choosers, port,
-    # window opener, platform quirks, windows. Splitting it would scatter an
-    # order that has to be read top to bottom.
-    "C901",
+    # WindowedShell answers hooks.Shell, whose calls are methods whether or not a
+    # given one needs the port.
+    "PLR6301",
+]
+# HeadlessShell answers hooks.Shell by declining: its methods need neither `self`
+# nor what they are asked with.
+"src/libera/host/hooks.py" = [
+    "ARG002",
+    "PLR6301",
 ]
 # The window package. pywebview and AppKit are imported where they are used in
 # both halves: this module is read on every platform and they exist on one.
 "src/libera/host/window/windows.py" = [
-    "PLC0415", # lazy GUI imports
     "TC003",   # pathlib is used at runtime, not only in annotations
 ]
-"src/libera/host/window/dialogs.py" = [
-    "PLC0415", # lazy GUI imports
-    "N802",    # formatChanged: is an Objective-C selector
-    "TC003",   # pathlib is used at runtime, not only in annotations
+# The three toolkit modules answer the same calls, and some have no use for an
+# argument another needs: an AppKit alert is application-modal and has no
+# parent, pywebview has no fullscreen state to set and no format list to show.
+"src/libera/host/window/portable.py" = [
+    "ARG001",  # see above
 ]
-# menu.py is Cocoa: selector names are the contract with AppKit, the frameworks
-# are imported where they are used because this module is imported on every
-# platform, the target and delegate are module state because AppKit holds them
-# by an unretained pointer, and a class full of one-line actions is not
-# "complex" in the sense the rule means.
-# The menu package. Selector names are the contract with AppKit, the
-# frameworks are imported where they are used because these modules are read
-# on every platform, and a class full of one-line actions is not "complex" in
-# the sense the rule means.
-"src/libera/host/menu/actions.py" = [
+"src/libera/host/window/macos.py" = [
+    "ARG001",  # see above
+    "N802",    # formatChanged:, handleOpen:withReply: are Objective-C selectors
+    "PLR6301", # AppKit calls these, not us
+    "BLE001",  # run_on_gui_thread catches whatever the work raised on the GUI
+               # thread, to raise it again on the thread that asked
+]
+# PyGObject is a system package, so it can be missing wherever this module is
+# merely imported -- the test tier, `--serve` on a headless box -- and only a
+# question on screen needs it.
+"src/libera/host/window/gtk.py" = [
+    "PLC0415", # gi, where a dialog is built
+]
+# The menu package picks its platform's bar in __init__, once, so nothing that
+# uses the package tests the platform again.
+"src/libera/host/menu/__init__.py" = [
+    "RUF067", # `native` is chosen here: that choice is the package's surface
+]
+# menu/macos.py is Cocoa: selector names are the contract with AppKit, and a
+# class full of one-line actions is not "complex" in the sense the rule means.
+"src/libera/host/menu/macos.py" = [
     "N802",    # newDocument:, openRecent: and friends are selectors
-    "PLC0415", # AppKit and webview only where they are used
     "C901",    # a class of one-line menu actions
     "PLR6301", # AppKit calls these, not us
     "E501",    # a selector plus its Objective-C call is sometimes long
-]
-# gtk.py builds the same bar for pywebview, whose menu classes it imports
-# where it uses them: this module is read on every platform and only Linux
-# hands the result to `webview.start`.
-"src/libera/host/menu/gtk.py" = [
-    "PLC0415", # webview.menu only where it is used
-]
-"src/libera/host/menu/build.py" = [
-    "PLC0415", # AppKit only where it is used
-    # TARGET and _RECENT_DELEGATE must outlive install(): AppKit holds a menu
-    # item's target by an unretained pointer. They live on `actions` and are
-    # assigned there, which is a module attribute rather than a global.
-    "PLW0603",
-    "E501",
 ]
 # gui.py asks whether the GTK bindings are installed, which it can only do by
 # trying to import them -- at module scope that import is the failure it is
@@ -245,13 +247,14 @@ lint.extend-ignore = [
 # process: it becomes sys.stdout and sys.stderr, so there is no block to close
 # it at the end of.
 "build/windows/entry.py" = ["SIM115"]
+
+#
+# Tests
+#
 "tests/**/*.py" = [
     "SLF001", # reaching into a module to check its wiring is the point
     "ARG001", # pytest matches hook parameters by name; they cannot be renamed
     "BLE001", #  blind-except
-    "D",
-    "DOC",
-    "ANN",
     "PLR2004",
     "INP001",
     "PLC0415", # runtime imports for optional dependencies

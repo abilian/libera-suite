@@ -13,11 +13,14 @@ from pathlib import Path
 
 import pytest
 
-from libera.host import apps, window
+from libera.host import apps
 
 pytestmark = pytest.mark.skipif(
     sys.platform != "darwin", reason="the native save panel is macOS only"
 )
+
+if sys.platform == "darwin":
+    from libera.host.window import macos
 
 
 WORDS = apps.WORDS.save_formats
@@ -41,27 +44,34 @@ def choose(popup, index):
     assert popup.sendAction_to_(popup.action(), popup.target()), "action not delivered"
 
 
+def test_the_panel_starts_in_the_folder_it_is_given(tmp_path):
+    """The document's own folder, which the save hands it."""
+    panel, _ = macos.build_save_panel("Report.docx", WORDS, tmp_path)
+
+    assert Path(str(panel.directoryURL().path())).resolve() == tmp_path.resolve()
+
+
 def test_the_panel_offers_every_format_the_host_can_write():
-    panel, popup = window.build_save_panel("Report.docx", WORDS)
+    panel, popup = macos.build_save_panel("Report.docx", WORDS)
 
     assert panel.accessoryView() is not None
     assert popup_titles(popup) == [label for label, _ in WORDS]
 
 
 def test_it_starts_on_the_format_the_document_already_is():
-    _, popup = window.build_save_panel("Report.odt", WORDS)
+    _, popup = macos.build_save_panel("Report.odt", WORDS)
     assert "OpenDocument" in popup_titles(popup)[popup.indexOfSelectedItem()]
 
 
 def test_an_unknown_extension_falls_back_to_the_first_format():
-    _, popup = window.build_save_panel("Report.pages", WORDS)
+    _, popup = macos.build_save_panel("Report.pages", WORDS)
     assert popup.indexOfSelectedItem() == 0
 
 
 def test_choosing_a_format_renames_the_file():
     """The name field has to follow, or the dialog says .docx while the popup
     says PDF and the user has no idea which wins."""
-    panel, popup = window.build_save_panel("Report.docx", WORDS)
+    panel, popup = macos.build_save_panel("Report.docx", WORDS)
     assert str(panel.nameFieldStringValue()) == "Report.docx"
 
     pdf = next(i for i, (label, _) in enumerate(WORDS) if "PDF" in label)
@@ -74,14 +84,14 @@ def test_choosing_a_format_renames_the_file():
 def test_the_popup_target_survives():
     """setTarget_ does not retain, so an uncollected watcher is the difference
     between the popup working and doing nothing."""
-    _, popup = window.build_save_panel("Report.docx", WORDS)
+    _, popup = macos.build_save_panel("Report.docx", WORDS)
     assert popup.target() is not None
 
 
 def test_renaming_keeps_a_name_the_user_typed():
     """The format popup changes the format, not the name. Resetting to the
     name the dialog opened with throws away what the user just typed."""
-    panel, popup = window.build_save_panel("Dear Onno.docx", WORDS)
+    panel, popup = macos.build_save_panel("Dear Onno.docx", WORDS)
     panel.setNameFieldStringValue_("Quarterly report.docx")
 
     pdf = next(i for i, (label, _) in enumerate(WORDS) if "PDF" in label)
@@ -93,7 +103,7 @@ def test_renaming_keeps_a_name_the_user_typed():
 
 def test_a_dotted_name_keeps_all_of_itself():
     """ "Minutes 2026.03.11" has no extension -- ".11" is part of the name."""
-    panel, popup = window.build_save_panel("Dear Onno.docx", WORDS)
+    panel, popup = macos.build_save_panel("Dear Onno.docx", WORDS)
     panel.setNameFieldStringValue_("Minutes 2026.03.11")
 
     choose(popup, 0)
@@ -114,7 +124,7 @@ def test_a_dotted_name_keeps_all_of_itself():
 def test_the_chosen_format_decides_the_extension(typed, extension, expected):
     from pathlib import Path
 
-    assert str(window.with_format(Path(typed), extension, KNOWN)) == expected
+    assert str(macos.with_format(Path(typed), extension, KNOWN)) == expected
 
 
 def test_the_name_can_never_disagree_with_the_format():
@@ -122,12 +132,12 @@ def test_the_name_can_never_disagree_with_the_format():
     whatever is in the name field, the path that comes back carries the
     chosen format's extension."""
     for index, (_, extension) in enumerate(WORDS):
-        panel, popup = window.build_save_panel("Dear Onno.docx", WORDS)
+        panel, popup = macos.build_save_panel("Dear Onno.docx", WORDS)
         # the worst case: a contradicting extension typed after the choice
         choose(popup, index)
         panel.setNameFieldStringValue_("mydoc.docx")
 
-        picked = window.with_format(
+        picked = macos.with_format(
             Path(str(panel.nameFieldStringValue())),
             KNOWN[popup.indexOfSelectedItem()],
             KNOWN,
@@ -136,7 +146,7 @@ def test_the_name_can_never_disagree_with_the_format():
 
 
 def test_the_name_field_follows_every_format():
-    panel, popup = window.build_save_panel("Dear Onno.docx", WORDS)
+    panel, popup = macos.build_save_panel("Dear Onno.docx", WORDS)
     for index, (_, extension) in enumerate(WORDS):
         choose(popup, index)
         assert str(panel.nameFieldStringValue()) == f"Dear Onno.{extension}"
@@ -148,7 +158,7 @@ def test_the_panel_itself_enforces_the_extension():
     macOS grants, are for the file we are about to write. Without it the host
     has to rewrite the path afterwards, and both of those are then for a
     different file."""
-    panel, popup = window.build_save_panel("mydoc.docx", WORDS)
+    panel, popup = macos.build_save_panel("mydoc.docx", WORDS)
 
     for index, (_, extension) in enumerate(WORDS):
         choose(popup, index)
@@ -156,7 +166,7 @@ def test_the_panel_itself_enforces_the_extension():
 
 
 def test_a_typed_extension_cannot_override_the_format():
-    panel, _ = window.build_save_panel("mydoc.docx", WORDS)
+    panel, _ = macos.build_save_panel("mydoc.docx", WORDS)
     assert panel.allowsOtherFileTypes() is False
 
 
@@ -170,5 +180,5 @@ def test_the_popup_offers_what_that_editor_can_write(app):
     programming error, refused by save_document before it gets here, and
     guarding for it twice would only hide which check is doing the work.
     """
-    _, popup = window.build_save_panel(f"Report.{app.ext}", app.save_formats)
+    _, popup = macos.build_save_panel(f"Report.{app.ext}", app.save_formats)
     assert popup_titles(popup) == [label for label, _ in app.save_formats]

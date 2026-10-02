@@ -5,7 +5,7 @@
 
        The only copy in the repository, and it lives in the package because one
        of its three readers is the running application. The host sets it as the
-       Dock icon at startup (host/menu/build.py), because outside the .app
+       Dock icon at startup (host/menu/macos.py), because outside the .app
        bundle the process wears the interpreter's identity and the Dock shows
        Python's rocket. build/macos-icon.py rasterises it into Libera.icns, and
        build/flatpak.sh copies it next to the Flatpak manifest, which exports it
