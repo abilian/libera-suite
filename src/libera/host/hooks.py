@@ -78,6 +78,9 @@ class Shell(Protocol):
     def show_edited(self, session: Session, edited: bool) -> None:
         """Mark that session's window as holding unsaved edits, or not."""
 
+    def show_document(self, session: Session, document: Path) -> None:
+        """Name `document` in that session's window: a Save As moved it there."""
+
     def take_dropped(self, names: list[str]) -> list[Path]:
         """The full paths of files just dropped on a window, which the page
         knows only by name. Those it cannot account for are left out."""
@@ -126,6 +129,9 @@ class HeadlessShell:
         logger.warning("%s: %s", heading, detail)
 
     def show_edited(self, session: Session, edited: bool) -> None:
+        pass
+
+    def show_document(self, session: Session, document: Path) -> None:
         pass
 
     def take_dropped(self, names: list[str]) -> list[Path]:

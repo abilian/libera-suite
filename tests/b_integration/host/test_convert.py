@@ -196,18 +196,24 @@ def test_save_as_follows_the_extension_the_user_typed(
     so it decides, and the format follows it.
     """
     chosen = tmp_path / "elsewhere.odt"
+    named: list[pathlib.Path] = []
     monkeypatch.setattr(
         hooks,
         "shell",
-        ScriptedShell(choose_save_path=lambda _name, _formats, _start_in: str(chosen)),
+        ScriptedShell(
+            choose_save_path=lambda _name, _formats, _start_in: str(chosen),
+            show_document=lambda _session, document: named.append(document),
+        ),
     )
 
     result = save_document(opened, SaveRequest(file_type=65, save_as=True))
 
     assert result == {"error": 0, "path": str(chosen)}
     assert chosen.read_bytes()[:2] == b"PK"  # an ODF package, not a docx
-    # Save As moves the session onto the new file; a plain Save now goes there.
+    # Save As moves the session onto the new file; a plain Save now goes there,
+    # and the window (and its tab) is called after it.
     assert opened.current_file.read_text() == str(chosen)
+    assert named == [chosen]
 
 
 def test_a_failed_save_as_leaves_the_session_on_the_open_document(

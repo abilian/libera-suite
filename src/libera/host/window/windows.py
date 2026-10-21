@@ -237,6 +237,18 @@ def close_session_window(session: Session) -> None:
         native.close_window(window)
 
 
+def document_title(session: Session, document: Path) -> str:
+    """What a document window is called, and its tab on macOS."""
+    return f"{document.name} — {session.editor.title}"
+
+
+def show_session_document(session: Session, document: Path) -> None:
+    """Retitle the window showing that session after a Save As."""
+    window = find_window(session)
+    if window is not None:
+        window.set_title(document_title(session, document))
+
+
 def show_session_edited(session: Session, edited: bool) -> None:
     """Mark the window showing that session as edited, or not."""
     window = find_window(session)

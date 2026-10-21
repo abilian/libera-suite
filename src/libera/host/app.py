@@ -53,6 +53,7 @@ from libera.host.window import (
     confirm_close,
     create_window,
     dialogs,
+    document_title,
     find_window,
     forget_start_window,
     listen_for_drops,
@@ -61,6 +62,7 @@ from libera.host.window import (
     offer_reload,
     remember_start_window,
     set_fullscreen,
+    show_session_document,
     show_session_edited,
     take_dropped,
 )
@@ -99,7 +101,7 @@ def _show_session(
     "Don't Save" left behind were never offered back.
     """
     window = create_window(
-        title or f"{document.name} — {session.editor.title}",
+        title or document_title(session, document),
         server.make_editor_url(port, session, document.name),
     )
     session.window = window.uid
@@ -362,6 +364,9 @@ class WindowedShell:
 
     def show_edited(self, session: Session, edited: bool) -> None:
         show_session_edited(session, edited)
+
+    def show_document(self, session: Session, document: Path) -> None:
+        show_session_document(session, document)
 
     def take_dropped(self, names: list[str]) -> list[Path]:
         return take_dropped(names)

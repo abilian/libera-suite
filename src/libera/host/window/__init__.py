@@ -36,6 +36,7 @@ from libera.host.window.windows import (
     close_start_window,
     copy_untitled,
     create_window,
+    document_title,
     find_front_session,
     find_front_window,
     find_window,
@@ -47,6 +48,7 @@ from libera.host.window.windows import (
     reload_session,
     remember_start_window,
     set_fullscreen,
+    show_session_document,
     show_session_edited,
     take_dropped,
 )
@@ -64,6 +66,7 @@ __all__ = [
     "confirm_close",
     "copy_untitled",
     "create_window",
+    "document_title",
     "find_front_session",
     "find_front_window",
     "find_window",
@@ -77,6 +80,7 @@ __all__ = [
     "remember_start_window",
     "say",
     "set_fullscreen",
+    "show_session_document",
     "show_session_edited",
     "take_dropped",
 ]
