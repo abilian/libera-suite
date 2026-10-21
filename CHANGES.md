@@ -4,7 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 Two versions move here and they move independently. The **application** is this package, `libera`. The **editor payload** is the Euro-Office build it fetches on first use, versioned separately so that a fix to the host does not force a 120 MB re-download. `libera --version` prints both.
 
-## [0.5.0] - 2026-10-20
+## [0.5.0] - Unreleased
 
 The first with payload **0.5**, so the editors are downloaded again once.
 

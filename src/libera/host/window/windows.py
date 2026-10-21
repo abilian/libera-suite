@@ -49,7 +49,9 @@ logger = logging.getLogger(__name__)
 WINDOW_SIZE = (1400, 900)
 
 
-def create_window(title: str, url: str, size: tuple[int, int] = WINDOW_SIZE) -> Window:
+def create_window(
+    title: str, url: str, size: tuple[int, int] = WINDOW_SIZE, *, tabs: bool = True
+) -> Window:
     """A window, or a NotReadyError where pywebview would return None.
 
     pywebview types create_window as `Window | None`; the callers all went
@@ -58,7 +60,7 @@ def create_window(title: str, url: str, size: tuple[int, int] = WINDOW_SIZE) -> 
     dereferences.
     """
     width, height = size
-    window = native.make_window(title, url, width, height)
+    window = native.make_window(title, url, width, height, tabs=tabs)
     if window is None:
         msg = f"pywebview could not make a window for {title}"
         raise NotReadyError(msg)

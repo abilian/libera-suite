@@ -72,9 +72,12 @@ class Toolkit(Protocol):
         """Run work where the toolkit wants it, and return its answer."""
 
     def make_window(
-        self, title: str, url: str, width: int, height: int
+        self, title: str, url: str, width: int, height: int, *, tabs: bool
     ) -> Window | None:
-        """pywebview's create_window, made where the toolkit can make it."""
+        """pywebview's create_window, made where the toolkit can make it.
+
+        `tabs` says whether the window may join a tab group, where the
+        toolkit has them."""
 
     def find_key_window(self, windows: Sequence[Window]) -> Window | None:
         """The window the toolkit says is in front, if it says."""
@@ -127,8 +130,11 @@ def run_on_gui_thread(work: Callable[[], T]) -> T:
     return work()
 
 
-def make_window(title: str, url: str, width: int, height: int) -> Window | None:
-    """pywebview's own."""
+def make_window(
+    title: str, url: str, width: int, height: int, *, tabs: bool
+) -> Window | None:
+    """pywebview's own, which has no tabs, so `tabs` changes nothing."""
+    del tabs
     return webview.create_window(title, url, width=width, height=height)
 
 

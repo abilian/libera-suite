@@ -117,6 +117,7 @@ def _open_start_window(port: int, title: str | None = None):
         title or "Libera Suite",
         f"http://127.0.0.1:{port}/__host__/start?key={instance.TOKEN}",
         size=(720, 640),
+        tabs=False,
     )
     remember_start_window(window)
     window.events.closed += lambda: forget_start_window(window)
