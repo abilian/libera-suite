@@ -25,6 +25,8 @@ libera ~/Documents/*.docx     # une fenêtre chacun
 
 Vous pouvez aussi ouvrir un document depuis la fenêtre du document, par **Fichier ▸ Ouvrir** ou **Fichier ▸ Ouvrir récent**. L'un et l'autre ouvrent une nouvelle fenêtre et laissent en place le document déjà ouvert.
 
+**Sous macOS, les documents peuvent s'ouvrir en onglets** d'une même fenêtre. Libera Suite suit le réglage du système, *Préférer les onglets lors de l'ouverture de documents* dans Réglages Système ▸ Bureau et Dock, comme toute application de documents sur Mac. Réglé sur *Toujours*, chaque document s'ouvre dans un onglet. Sinon, il s'ouvre dans sa propre fenêtre, et **Fenêtre ▸ Merge All Windows** les rassemble. Le **+** au bout de la barre d'onglets ouvre la fenêtre de démarrage dans un nouvel onglet, et le document choisi prend sa place. Un onglet se détache en une fenêtre par glisser-déposer.
+
 **Un document déposé** sur une fenêtre de Libera Suite, fenêtre de démarrage comprise, s'ouvre dans sa propre fenêtre. Une image déposée sur un document y est insérée.
 
 **Fichier ▸ Nouveau** propose un document, une feuille de calcul ou une présentation depuis n'importe quelle fenêtre, chacun dans sa propre fenêtre. Sous macOS, `⌘N` en crée un du même type que la fenêtre au premier plan. Dans la fenêtre du document, **Fichier ▸ Nouveau document** vous demande lequel des trois créer.
@@ -80,7 +82,7 @@ Sous macOS, c'est une vraie barre de menus Mac, avec les mêmes éléments plus 
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | Nouveau (du type de la fenêtre au premier plan), Ouvrir : chacun dans sa propre fenêtre |
+| `⌘N` `⌘O` | Nouveau (du type de la fenêtre au premier plan), Ouvrir : chacun dans sa propre fenêtre, ou son onglet |
 | `⌘S` `⇧⌘S` | Enregistrer, Enregistrer sous |
 | `⌘P` | Imprimer |
 | `⌘W` | Fermer, en demandant d'abord quoi faire des modifications non enregistrées |

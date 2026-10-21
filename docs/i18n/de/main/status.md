@@ -16,7 +16,7 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 | **Rechtschreibprüfung** | Fünf Sprachen, mit Vorschlägen. Siehe unten. |
 | **In Ihrer Sprache** | Die Anwendungen folgen der Sprache Ihres Systems, und ein neues Dokument beginnt mit der leeren Vorlage Ihrer Region: A4-Papier überall außer in den USA, und Rechtschreibprüfung in Ihrer Sprache. Auf Deutsch, Französisch, Italienisch und Spanisch folgen auch Menüleiste, Startfenster und Dialoge; in jeder anderen Sprache sind sie auf Englisch. |
 | **Zuletzt verwendete Dokumente** | Datei ▸ Zuletzt verwendet merkt sich die letzten 20. |
-| **Mehrere Dokumente gleichzeitig** | Auch verschiedener Art, jedes in seinem Fenster: über Datei ▸ Neu oder Datei ▸ Öffnen, per Doppelklick im Dateimanager oder mit `libera *.docx`. Der Dateityp bestimmt die Anwendung. |
+| **Mehrere Dokumente gleichzeitig** | Auch verschiedener Art, jedes in seinem Fenster, unter macOS jedes in seinem Tab, wenn das System Tabs bevorzugt: über Datei ▸ Neu oder Datei ▸ Öffnen, per Doppelklick im Dateimanager oder mit `libera *.docx`. Der Dateityp bestimmt die Anwendung. |
 | **Im Startmenü und im Anwendungsmenü** | Unter Windows legt das Installationsprogramm Libera Suite im Startmenü und auf dem Desktop ab und trägt sie im Explorer unter *Öffnen mit* ein. Unter Linux trägt das Flatpak sie mit Symbol und Dateizuordnungen in das Anwendungsmenü ein; `libera --launcher-install` tut dasselbe für jede andere Installation. |
 | **Ein Startfenster** | `libera` ohne Argument: neues Dokument, öffnen, zuletzt verwendete Dokumente und die Herkunft der Komponenten. |
 | **Wiederherstellung nach Abstürzen** | Nicht gespeicherte Änderungen werden beim nächsten Öffnen des Dokuments wieder angeboten. |
@@ -38,7 +38,7 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 | **Diagrams kann nicht speichern** | Es öffnet eine `.vsdx`-Datei und zeigt sie an. Der Konverter kann kein Visio-Format schreiben, also gibt es nichts zu speichern und keine leere Vorlage für den Anfang. |
 | **Keine PDF-Bearbeitung** | PDFs werden nur erzeugt. Ein PDF zum Bearbeiten zu öffnen, ist nicht angebunden. |
 | **Eine schmale Menüleiste, ohne angezeigte Tastenkürzel unter Linux und Windows** | Linux und Windows haben File, Edit, View und Help, im Fenster gezeichnet, ohne angezeigte Tastenkürzel. Die Tasten funktionieren trotzdem: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Umschalt-S, Ctrl-P und Ctrl-Z. macOS hat dieselben Menüs plus Window, mit den üblichen Tastenkürzeln. |
-| **Keine Tabs** | Ein Fenster pro Dokument. |
+| **Keine Tabs unter Linux und Windows** | Dort ein Fenster pro Dokument. macOS hat Tabs. |
 | **Windows warnt vor dem Installationsprogramm** | Das heruntergeladene Installationsprogramm ist noch nicht signiert, daher zeigt SmartScreen beim ersten Mal *„Der Computer wurde durch Windows geschützt“*. [Installieren](install.md#windows) zeigt, wie Sie darüber hinwegkommen. Die Installation per PowerShell-Zeile ist nie betroffen. |
 
 Wenn Sie auf etwas stoßen, das *nicht* auf dieser Liste steht, [melden Sie es uns](../feedback.md).
@@ -61,7 +61,7 @@ Wenn Sie auf etwas stoßen, das *nicht* auf dieser Liste steht, [melden Sie es u
 
 ### In der Anwendung
 
-- **Tabs.** Die Fenster gibt es, und das Menü Window listet sie auf, aber sie lassen sich nicht in einem Fenster zusammenführen.
+- **Tabs unter Linux und Windows.** Dort ein Fenster pro Dokument, die die Taskleiste gruppiert.
 - **Eine weitergebbare Anwendung unter macOS.** `Libera.app` läuft aus Ihrer eigenen Kopie des Quellcodes und bettet weder Interpreter noch Komponenten ein. Windows hat eine: Sein Installationsprogramm bringt alles mit.
 - **Automatische Aktualisierungen** und **Code-Signatur**. macOS behandelt eine selbst gebaute `Libera.app` als Software eines nicht verifizierten Entwicklers. Windows warnt vor dem heruntergeladenen Installationsprogramm.
 - **Eine Offline-Hilfe**, lesbar ohne Browser und ohne Netz. Das Menü Help öffnet diese Website; About funktioniert offline. Siehe unten.

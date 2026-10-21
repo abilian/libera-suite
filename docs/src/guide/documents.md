@@ -23,6 +23,8 @@ libera ~/Documents/*.docx     # one window each
 
 You can also open a document from inside the document window, through **File ▸ Open** or **File ▸ Open Recent**. Either opens a new window; neither disturbs the document you already have open.
 
+**On macOS, documents can open as tabs** of one window. Libera Suite follows the system's setting, *Prefer tabs when opening documents* in System Settings ▸ Desktop & Dock, as every Mac document application does. Set to *Always*, each document opens as a tab. Otherwise it opens in a window of its own, and **Window ▸ Merge All Windows** gathers them. The **+** at the end of the tab bar opens the start window as a new tab, and the document you choose there takes its place. A tab can be dragged out into a window of its own.
+
 **Dropping a document** on any Libera Suite window, the start window included, opens it in a window of its own. An image dropped on a document is inserted into it.
 
 **File ▸ New** offers a Document, a Spreadsheet or a Presentation from any window, each in a window of its own. On macOS, `⌘N` makes one of the same kind as the front window. Inside the document window, you get the same choice from **File ▸ Create New**.
@@ -78,7 +80,7 @@ On macOS it is a real Mac menu bar, with the same items plus **Window**. The usu
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | New (of the front window's kind), Open: each in its own window |
+| `⌘N` `⌘O` | New (of the front window's kind), Open: each in its own window, or tab |
 | `⌘S` `⇧⌘S` | Save, Save As |
 | `⌘P` | Print |
 | `⌘W` | Close, asking about unsaved changes first |

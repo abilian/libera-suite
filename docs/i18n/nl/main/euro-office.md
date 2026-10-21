@@ -16,6 +16,6 @@ Die keuze heeft een aantal gevolgen.
 - **Correcties.** We bouwen alles uit de broncode van Euro-Office, met een [gepubliceerde reeks patches](/en/develop/patches/). Die gaat vooral over de converter, voor OpenDocument- en CSV-bestanden. De releases van Euro-Office bevatten die correcties vandaag niet.
 - **Licentie.** De applicatie valt onder Apache 2.0, en de componenten blijven onder de AGPL.
 
-Euro-Office Desktop heeft vandaag een paar functies die Libera Suite nog niet heeft: tabbladen, PDF-bewerking en formulieren, digitale handtekeningen, en verbinding met een Nextcloud-, ownCloud- of Seafile-server om samen te bewerken. [De roadmap](/en/develop/roadmap/) zegt wanneer ze komen.
+Euro-Office Desktop heeft vandaag een paar functies die Libera Suite nog niet heeft: tabbladen op Linux en Windows, PDF-bewerking en formulieren, digitale handtekeningen, en verbinding met een Nextcloud-, ownCloud- of Seafile-server om samen te bewerken. [De roadmap](/en/develop/roadmap/) zegt wanneer ze komen.
 
 **Kortom:** wie heel ONLYOFFICE Desktop in een Europees project wil, kiest terecht voor Euro-Office Desktop. Libera Suite gokt op iets anders: een lichtere applicatie, gemaakt van korte code die een klein team kan lezen en onderhouden, en die functies toevoegt zonder aan de bewerkingsengine te komen.

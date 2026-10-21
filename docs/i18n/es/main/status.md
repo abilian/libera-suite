@@ -16,7 +16,7 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 | **Corrección ortográfica** | Cinco idiomas, con sugerencias. Más abajo, los detalles. |
 | **En tu idioma** | Las aplicaciones siguen el idioma de tu sistema, y un documento nuevo parte de la plantilla en blanco de tu región: papel A4 en todas partes salvo en Estados Unidos, y corrección ortográfica en tu idioma. En español, francés, alemán e italiano también los siguen la barra de menús, la ventana de inicio y los diálogos; en cualquier otro idioma están en inglés. |
 | **Documentos recientes** | Archivo ▸ Abrir reciente recuerda los últimos 20. |
-| **Varios documentos a la vez** | También de tipos distintos, una ventana para cada uno: desde Archivo ▸ Nuevo o Archivo ▸ Abrir, con doble clic en el gestor de archivos o con `libera *.docx`. El tipo de archivo elige la aplicación. |
+| **Varios documentos a la vez** | También de tipos distintos, una ventana para cada uno, o en macOS una pestaña para cada uno cuando el sistema prefiere pestañas: desde Archivo ▸ Nuevo o Archivo ▸ Abrir, con doble clic en el gestor de archivos o con `libera *.docx`. El tipo de archivo elige la aplicación. |
 | **En el menú Inicio y en el menú de aplicaciones** | En Windows, el instalador añade Libera Suite al menú Inicio y al escritorio, y la incluye en *Abrir con* del Explorador de archivos. En Linux, el Flatpak la añade al menú de aplicaciones con su icono y sus asociaciones de archivos; `libera --launcher-install` hace lo mismo con cualquier otra instalación. |
 | **Una ventana de inicio** | `libera` sin argumentos: documento nuevo, abrir, documentos recientes y procedencia de los componentes. |
 | **Recuperación tras un cierre inesperado** | Los cambios sin guardar se te ofrecen la próxima vez que abres el documento. |
@@ -38,7 +38,7 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 | **Diagrams no puede guardar** | Abre un archivo `.vsdx` y lo muestra. El conversor no sabe escribir ningún formato de Visio: no hay nada que guardar ni una plantilla en blanco con la que empezar. |
 | **No se pueden editar PDF** | Los PDF solo se generan. Abrir uno para editarlo no está conectado. |
 | **Una barra de menús reducida, sin atajos visibles en Linux y Windows** | Linux y Windows tienen File, Edit, View y Help, dibujados en la ventana, sin atajos de teclado visibles. Las teclas funcionan igualmente: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Mayús-S, Ctrl-P y Ctrl-Z. macOS tiene los mismos menús más Window, con los atajos habituales. |
-| **Sin pestañas** | Una ventana por documento. |
+| **Sin pestañas en Linux ni Windows** | Allí, una ventana por documento. macOS tiene pestañas. |
 | **Windows avisa sobre el instalador** | El instalador descargado aún no está firmado, así que la primera vez SmartScreen muestra *«Windows protegió su PC»*. [Instalar](install.md#windows) explica cómo seguir adelante. La instalación con la línea de PowerShell nunca se encuentra con esto. |
 
 Si te encuentras con algo que *no* está en esta lista, [cuéntanoslo](../feedback.md).
@@ -61,7 +61,7 @@ Si te encuentras con algo que *no* está en esta lista, [cuéntanoslo](../feedba
 
 ### En la aplicación
 
-- **Pestañas.** Las ventanas existen y el menú Window las enumera, pero no se pueden reunir en una sola ventana.
+- **Pestañas en Linux y Windows.** Allí, una ventana por documento, que la barra de tareas agrupa.
 - **Una aplicación redistribuible en macOS.** `Libera.app` funciona desde tu propia copia del código y no incluye ni intérprete ni componentes. Windows tiene una: su instalador lo trae todo.
 - **Actualizaciones automáticas** y **firma de código**. macOS trata una `Libera.app` compilada por ti como software de un desarrollador no identificado. Windows avisa sobre el instalador descargado.
 - **Una ayuda sin conexión**, legible sin navegador ni red. El menú Help abre este sitio; About funciona sin conexión. Más abajo, los detalles.

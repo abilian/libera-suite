@@ -25,6 +25,8 @@ libera ~/Documents/*.docx     # una ventana para cada uno
 
 También puedes abrir un documento desde la ventana del documento, con **Archivo ▸ Abrir** o **Archivo ▸ Abrir reciente**. Los dos abren una ventana nueva y no tocan el documento que ya tienes abierto.
 
+**En macOS, los documentos pueden abrirse como pestañas** de una misma ventana. Libera Suite sigue el ajuste del sistema, *Preferir pestañas al abrir documentos* en Ajustes del Sistema ▸ Escritorio y Dock, como cualquier aplicación de documentos en Mac. Con *Siempre*, cada documento se abre en una pestaña. Si no, se abre en su propia ventana, y **Ventana ▸ Merge All Windows** las reúne. El **+** al final de la barra de pestañas abre la ventana de inicio en una pestaña nueva, y el documento que eliges ahí ocupa su lugar. Una pestaña se arrastra fuera para tener su propia ventana.
+
 **Un documento que sueltas** sobre una ventana de Libera Suite, incluida la ventana de inicio, se abre en una ventana propia. Una imagen que sueltas sobre un documento se inserta en él.
 
 **Archivo ▸ Nuevo** ofrece, desde cualquier ventana, un documento, una hoja de cálculo o una presentación, cada uno en su propia ventana. En macOS, `⌘N` crea uno del mismo tipo que la ventana en primer plano. En la propia ventana del documento, **Archivo ▸ Crear nuevo** te pregunta cuál de los tres quieres crear.
@@ -80,7 +82,7 @@ En macOS es una barra de menús de Mac de verdad, con los mismos elementos más 
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | Nuevo (del tipo de la ventana en primer plano), Abrir: cada uno en su propia ventana |
+| `⌘N` `⌘O` | Nuevo (del tipo de la ventana en primer plano), Abrir: cada uno en su propia ventana, o pestaña |
 | `⌘S` `⇧⌘S` | Guardar, Guardar como |
 | `⌘P` | Imprimir |
 | `⌘W` | Cerrar, preguntando antes qué hacer con los cambios sin guardar |

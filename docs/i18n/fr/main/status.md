@@ -16,7 +16,7 @@ L'interface de Libera Suite est en anglais : les noms des menus et des boutons s
 | **Correction orthographique** | Cinq langues, avec suggestions. Voir plus bas. |
 | **Dans votre langue** | Les applications suivent la langue de votre système, et un nouveau document part du modèle vierge de votre région : papier A4 partout sauf aux États-Unis, et correction orthographique dans votre langue. En français, en allemand, en italien et en espagnol, la barre de menus, la fenêtre d'accueil et les boîtes de dialogue suivent aussi ; dans toute autre langue, elles restent en anglais. |
 | **Documents récents** | Fichier ▸ Ouvrir un fichier récent retient les 20 derniers. |
-| **Plusieurs documents à la fois** | De tous types, une fenêtre chacun : par Fichier ▸ Nouveau ou Fichier ▸ Ouvrir, d'un double-clic dans le gestionnaire de fichiers, ou avec `libera *.docx`. Le type du fichier choisit l'application. |
+| **Plusieurs documents à la fois** | De tous types, une fenêtre chacun, ou sous macOS un onglet chacun quand le système préfère les onglets : par Fichier ▸ Nouveau ou Fichier ▸ Ouvrir, d'un double-clic dans le gestionnaire de fichiers, ou avec `libera *.docx`. Le type du fichier choisit l'application. |
 | **Dans le menu Démarrer et le menu des applications** | Sous Windows, l'installateur ajoute Libera Suite au menu Démarrer, sur le bureau et dans *Ouvrir avec* de l'Explorateur. Sous Linux, le Flatpak l'ajoute au menu des applications avec son icône et ses associations de fichiers ; `libera --launcher-install` fait de même pour toute autre installation. |
 | **Une fenêtre de démarrage** | `libera` seul : nouveau document, ouvrir, documents récents et provenance des composants. |
 | **Récupération après plantage** | Les modifications non enregistrées vous sont proposées à la prochaine ouverture du document. |
@@ -38,7 +38,7 @@ L'interface de Libera Suite est en anglais : les noms des menus et des boutons s
 | **Diagrams ne peut pas enregistrer** | Il ouvre un `.vsdx` et l'affiche. Le convertisseur ne sait écrire aucun format Visio : il n'y a donc rien à enregistrer, ni de modèle vierge pour commencer. |
 | **Pas de modification des PDF** | Les PDF sont seulement produits. L'ouverture d'un PDF pour le modifier n'est pas branchée. |
 | **Une barre de menus réduite, sans raccourcis affichés sous Linux et Windows** | Linux et Windows ont File, Edit, View et Help, dessinés dans la fenêtre, sans raccourci clavier affiché. Les touches fonctionnent pourtant : Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Maj-S, Ctrl-P et Ctrl-Z. macOS a les mêmes menus plus Window, avec les raccourcis habituels. |
-| **Pas d'onglets** | Une fenêtre par document. |
+| **Pas d'onglets sous Linux ni Windows** | Une fenêtre par document. macOS a les onglets. |
 | **Windows avertit au sujet de l'installateur** | L'installateur téléchargé n'est pas encore signé : la première fois, SmartScreen affiche *« Windows a protégé votre ordinateur »*. [Installer](install.md#windows) explique comment passer outre. L'installation par la ligne PowerShell n'y est jamais confrontée. |
 
 Si vous rencontrez un problème qui ne figure *pas* dans cette liste, [signalez-le-nous](../feedback.md).
@@ -61,7 +61,7 @@ Si vous rencontrez un problème qui ne figure *pas* dans cette liste, [signalez-
 
 ### Dans l'application
 
-- **Les onglets.** Les fenêtres existent et le menu Window les liste, mais elles ne peuvent pas être réunies dans une seule fenêtre.
+- **Les onglets sous Linux et Windows.** Une fenêtre par document, que la barre des tâches regroupe.
 - **Une application redistribuable sous macOS.** `Libera.app` fonctionne depuis votre propre copie du code et n'embarque ni interpréteur ni composants. Windows en a une : son installateur apporte tout.
 - **Les mises à jour automatiques** et **la signature du code**. macOS traite un `Libera.app` que vous avez construit comme un logiciel d'un développeur non identifié. Windows avertit au sujet de l'installateur téléchargé.
 - **Une aide hors ligne**, lisible sans navigateur ni réseau. Le menu Help ouvre ce site ; About fonctionne hors ligne. Voir plus bas.

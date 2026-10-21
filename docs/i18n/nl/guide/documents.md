@@ -25,6 +25,8 @@ libera ~/Documents/*.docx     # elk in een eigen venster
 
 Je kunt een document ook vanuit een open document openen, via **Bestand ▸ Openen** of **Bestand ▸ Recente openen**. Allebei openen ze een nieuw venster; het document dat je al open hebt, blijft ongemoeid.
 
+**Op macOS kunnen documenten als tabbladen** van één venster openen. Libera Suite volgt de systeeminstelling *Geef bij openen van documenten de voorkeur aan tabbladen* in Systeeminstellingen ▸ Bureaublad en Dock, zoals elk documentprogramma op de Mac. Staat die op *Altijd*, dan opent elk document als tabblad. Anders opent het in een eigen venster, en **Window ▸ Merge All Windows** voegt ze samen. De **+** aan het eind van de tabbladbalk opent het startvenster als nieuw tabblad, en het document dat je daar kiest neemt de plaats ervan in. Een tabblad sleep je naar buiten tot een eigen venster.
+
 **Een document dat je** op een venster van Libera Suite sleept, het startvenster inbegrepen, opent in een eigen venster. Een afbeelding die je op een document sleept, wordt erin ingevoegd.
 
 **File ▸ New** biedt vanuit elk venster een Document, een Spreadsheet of een Presentation aan, elk in een eigen venster. Op macOS maakt `⌘N` er een van dezelfde soort als het voorste venster. Binnen het document zelf krijg je dezelfde keuze via **Bestand ▸ Nieuw maken**.
@@ -80,7 +82,7 @@ Op macOS is het een echte Mac-menubalk, met dezelfde items plus **Window**. De g
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | New (van de soort van het voorste venster), Open: elk in een eigen venster |
+| `⌘N` `⌘O` | New (van de soort van het voorste venster), Open: elk in een eigen venster of tabblad |
 | `⌘S` `⇧⌘S` | Save, Save As |
 | `⌘P` | Print |
 | `⌘W` | Close, met eerst een vraag over niet-opgeslagen wijzigingen |

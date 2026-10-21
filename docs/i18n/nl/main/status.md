@@ -16,7 +16,7 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 | **Spellingcontrole** | Vijf talen, met suggesties. Zie hieronder. |
 | **In je eigen taal** | De componenten volgen de taal van je systeem, en een nieuw document begint met het lege sjabloon van je regio: A4-papier overal behalve in de VS, en spellingcontrole in je eigen taal als daar een woordenboek voor is (zie [Spellingcontrole](#spell-checking)). De menubalk, het startvenster en de dialoogvensters zijn in het Frans, Duits, Italiaans en Spaans vertaald; in het Nederlands zijn ze nog in het Engels. |
 | **Recente documenten** | File ▸ Open Recent onthoudt de laatste 20. |
-| **Meerdere documenten tegelijk** | Van elk type, elk in een eigen venster: via File ▸ New of File ▸ Open, door te dubbelklikken in je bestandsbeheerder, of met `libera *.docx`. Het bestandstype bepaalt welk programma het document opent. |
+| **Meerdere documenten tegelijk** | Van elk type, elk in een eigen venster, of op macOS elk in een eigen tabblad als het systeem tabbladen verkiest: via File ▸ New of File ▸ Open, door te dubbelklikken in je bestandsbeheerder, of met `libera *.docx`. Het bestandstype bepaalt welk programma het document opent. |
 | **In het menu Start en het toepassingenmenu** | Op Windows zet het installatieprogramma Libera Suite in het menu Start, op het bureaublad en onder *Openen met* in Verkenner. Op Linux voegt de Flatpak het met pictogram en bestandskoppelingen toe aan het toepassingenmenu, en `libera --launcher-install` doet hetzelfde voor elke andere installatie. |
 | **Een startvenster** | `libera` zonder argumenten: nieuw, openen, recent, en waar de componenten vandaan komen. |
 | **Herstel na een crash** | Niet-opgeslagen wijzigingen worden je teruggeboden wanneer je het document opnieuw opent. |
@@ -38,7 +38,7 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 | **Diagrams kan niet opslaan** | Het opent een `.vsdx` en toont die. De converter kan geen enkel Visio-formaat schrijven, dus er valt niets op te slaan en er is geen leeg sjabloon om mee te beginnen. |
 | **Geen pdf-bewerking** | Pdf's worden alleen geschreven. Een pdf openen om te bewerken is nog niet aangesloten. |
 | **Een beperkte menubalk, zonder zichtbare sneltoetsen op Linux en Windows** | Linux en Windows krijgen File, Edit, View en Help, getekend in het venster, en op geen van beide worden sneltoetsen getoond. De toetsen werken wel: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z. macOS krijgt die menu's plus Window, met de gebruikelijke sneltoetsen. |
-| **Geen tabbladen** | Eén venster per document. |
+| **Geen tabbladen op Linux en Windows** | Daar één venster per document. macOS heeft tabbladen. |
 | **Windows waarschuwt voor het installatieprogramma** | Het gedownloade installatieprogramma is nog niet digitaal ondertekend, dus SmartScreen zegt de eerste keer *„Windows heeft uw pc beschermd”*. [Installeren](install.md#windows) legt uit hoe je daarlangs komt. De installatie met één regel PowerShell heeft er nooit last van. |
 
 Loop je tegen iets aan dat *niet* op deze lijst staat, [laat het ons weten](../feedback.md).
@@ -61,7 +61,7 @@ Loop je tegen iets aan dat *niet* op deze lijst staat, [laat het ons weten](../f
 
 ### In de toepassing
 
-- **Tabbladen.** Vensters bestaan en het menu Window toont ze, maar ze kunnen niet in één venster worden samengevoegd.
+- **Tabbladen op Linux en Windows.** Daar één venster per document, die de taakbalk groepeert.
 - **Een toepassing voor macOS die je kunt doorgeven.** `Libera.app` draait vanuit je eigen kopie van de broncode en bevat geen interpreter en geen componenten. Windows heeft er wel een: het installatieprogramma brengt alles mee.
 - **Automatische updates** en **code-ondertekening**. macOS behandelt een `Libera.app` die je zelf hebt gebouwd als software van een onbekende ontwikkelaar. Windows waarschuwt voor het gedownloade installatieprogramma.
 - **Offline help**, leesbaar zonder browser of netwerk. Het menu Help opent deze site; About werkt offline. Zie hieronder.

@@ -14,7 +14,7 @@ Libera Suite is early. This page is a status list: it says what is built, what i
 | **Spell checking** | Five languages, with suggestions. See below. |
 | **In your language** | The applications follow your system's language, and a new document starts from your region's blank: A4 paper everywhere but the US, and spell-checked in your language. In French, German, Italian and Spanish, the menu bar, the start window and the dialogs follow too; in any other language they are in English. |
 | **Recent documents** | File ▸ Open Recent remembers the last 20. |
-| **Several documents at once** | Of any kind, one window each: from File ▸ New or File ▸ Open, by double-clicking in the file manager, or as `libera *.docx`. The file's type picks the application. |
+| **Several documents at once** | Of any kind, one window each, or on macOS one tab each when the system prefers tabs: from File ▸ New or File ▸ Open, by double-clicking in the file manager, or as `libera *.docx`. The file's type picks the application. |
 | **In the Start menu and the launcher** | On Windows, the installer puts Libera Suite in the Start menu, on the desktop and in Explorer's *Open with*. On Linux, the Flatpak adds it to the launcher with its icon and file associations, and `libera --launcher-install` does the same for any other install. |
 | **A start window** | `libera` on its own: new, open, recent, and where the components came from. |
 | **Crash recovery** | Unsaved edits are offered back the next time you open the document. |
@@ -36,7 +36,7 @@ Libera Suite is early. This page is a status list: it says what is built, what i
 | **Diagrams cannot save** | It opens `.vsdx` and shows it. The converter cannot write any Visio format, so there is nothing to save and no blank to start from. |
 | **No PDF editing** | PDFs are written only. Opening one for editing is not wired up. |
 | **A shallow menu bar, with no shortcuts shown on Linux or Windows** | Linux and Windows get File, Edit, View and Help, drawn in the window, with no key equivalents shown on any of them. The keys work all the same: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P and Ctrl-Z. macOS gets those menus plus Window, with the usual shortcuts. |
-| **No tabs** | One window per document. |
+| **No tabs on Linux or Windows** | One window per document there. macOS has tabs. |
 | **Windows warns about the installer** | The downloaded installer is not yet code-signed, so SmartScreen says *"Windows protected your PC"* the first time. [Install](install.md#windows) has the way past it. The one-line PowerShell install never meets it. |
 
 If you hit something that is *not* on this list, [tell us about it](../feedback.md).
@@ -59,7 +59,7 @@ If you hit something that is *not* on this list, [tell us about it](../feedback.
 
 ### In the application
 
-- **Tabs.** Windows exist and the Window menu lists them, but they cannot be merged into one window.
+- **Tabs on Linux and Windows.** One window per document there, which the taskbar groups.
 - **A redistributable application on macOS.** `Libera.app` runs from your own checkout and embeds no interpreter and no components. Windows has one: its installer brings everything.
 - **Automatic updates**, and **code signing**. macOS treats a `Libera.app` you have built as software from an unidentified developer. Windows warns about the downloaded installer.
 - **Offline help**, readable without a browser or a network. The Help menu opens this site; About works offline. See below.

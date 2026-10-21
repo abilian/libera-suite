@@ -25,6 +25,8 @@ libera ~/Documents/*.docx     # jedes in seinem Fenster
 
 Sie können ein Dokument auch aus dem Dokumentfenster heraus öffnen, über **Datei ▸ Öffnen** oder **Datei ▸ Zuletzt benutztes Dokument öffnen**. Beides öffnet ein neues Fenster und lässt das bereits geöffnete Dokument unberührt.
 
+**Unter macOS können sich Dokumente als Tabs** eines Fensters öffnen. Libera Suite folgt der Systemeinstellung *Beim Öffnen von Dokumenten Tabs bevorzugen* unter Systemeinstellungen ▸ Schreibtisch & Dock, wie jede Dokumentanwendung auf dem Mac. Steht sie auf *Immer*, öffnet sich jedes Dokument als Tab. Sonst öffnet es sich in einem eigenen Fenster, und **Fenster ▸ Merge All Windows** führt sie zusammen. Das **+** am Ende der Tableiste öffnet das Startfenster als neuen Tab, und das dort gewählte Dokument nimmt seinen Platz ein. Einen Tab ziehen Sie mit der Maus in ein eigenes Fenster.
+
 **Ein Dokument, das Sie** auf ein Fenster von Libera Suite ziehen, das Startfenster eingeschlossen, öffnet sich in einem eigenen Fenster. Ein Bild, das Sie auf ein Dokument ziehen, wird darin eingefügt.
 
 **Datei ▸ Neu** bietet aus jedem Fenster ein Dokument, eine Tabelle oder eine Präsentation an, jeweils in einem eigenen Fenster. Unter macOS erzeugt `⌘N` eines von der Art des vorderen Fensters. Im Dokumentfenster selbst fragt **Datei ▸ Neues Dokument erstellen**, welches der drei Sie anlegen möchten.
@@ -80,7 +82,7 @@ Unter macOS ist es eine echte Mac-Menüleiste, mit denselben Einträgen plus **F
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | Neu (von der Art des vorderen Fensters), Öffnen: jeweils in einem eigenen Fenster |
+| `⌘N` `⌘O` | Neu (von der Art des vorderen Fensters), Öffnen: jeweils in einem eigenen Fenster oder Tab |
 | `⌘S` `⇧⌘S` | Speichern, Speichern unter |
 | `⌘P` | Drucken |
 | `⌘W` | Schließen, zuvor Nachfrage zu nicht gespeicherten Änderungen |

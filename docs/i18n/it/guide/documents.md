@@ -25,6 +25,8 @@ libera ~/Documents/*.docx     # una finestra ciascuno
 
 Puoi anche aprire un documento dalla finestra del documento, con **File ▸ Apri** o **File ▸ Apri recenti**. Entrambi aprono una nuova finestra e lasciano stare il documento già aperto.
 
+**Su macOS i documenti possono aprirsi come schede** di un'unica finestra. Libera Suite segue l'impostazione del sistema, *Preferisci i pannelli quando apri i documenti* in Impostazioni di Sistema ▸ Scrivania e Dock, come ogni applicazione per documenti su Mac. Se è su *Sempre*, ogni documento si apre in una scheda. Altrimenti si apre in una finestra propria, e **Finestra ▸ Merge All Windows** le riunisce. Il **+** in fondo alla barra delle schede apre la finestra iniziale in una nuova scheda, e il documento che scegli lì ne prende il posto. Una scheda si trascina fuori in una finestra propria.
+
 **Un documento trascinato** su una finestra di Libera Suite, compresa la finestra iniziale, si apre in una finestra tutta sua. Un'immagine trascinata su un documento vi viene inserita.
 
 **File ▸ Nuovo** propone, da qualsiasi finestra, un documento, un foglio di calcolo o una presentazione, ciascuno nella propria finestra. Su macOS, `⌘N` ne crea uno dello stesso tipo della finestra in primo piano. Nella finestra del documento, **File ▸ Crea nuovo** ti chiede quale dei tre creare.
@@ -80,7 +82,7 @@ Su macOS è una vera barra dei menu del Mac, con le stesse voci più **Finestra*
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | Nuovo (del tipo della finestra in primo piano), Apri: ciascuno nella propria finestra |
+| `⌘N` `⌘O` | Nuovo (del tipo della finestra in primo piano), Apri: ciascuno nella propria finestra, o scheda |
 | `⌘S` `⇧⌘S` | Salva, Salva con nome |
 | `⌘P` | Stampa |
 | `⌘W` | Chiudi, chiedendo prima cosa fare delle modifiche non salvate |
