@@ -386,7 +386,7 @@
       async function loadPayload() {
         const info = await json("payload");
         const rows = [
-          [tr("Payload"), info.version || tr("unknown")],
+          [tr("Components"), info.version || tr("unknown")],
           [tr("Found via"), info.origin || "—"],
           [tr("Platform"), info.platform || "—"],
           [tr("Location"), info.root || "—"],
@@ -405,14 +405,14 @@
       document.getElementById("open").onclick = once(() =>
         host("open-document", ""),
       );
-      // Whole sentences, each its own: a language may not put "the editors"
-      // where English does.
-      section((reason) => tr("Could not load the editors: {reason}", { reason }), loadNew);
+      // Whole sentences, each its own: a language may not put "the
+      // applications" where English does.
+      section((reason) => tr("Could not load the applications: {reason}", { reason }), loadNew);
       section(
         (reason) => tr("Could not load your recent documents: {reason}", { reason }),
         loadRecent,
       );
-      section((reason) => tr("Could not load the payload: {reason}", { reason }), loadPayload);
+      section((reason) => tr("Could not load the details of the components: {reason}", { reason }), loadPayload);
     </script>
   </body>
 </html>
