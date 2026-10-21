@@ -30,6 +30,7 @@ from unittest import mock
 from libera_build import (
     bench as bench_,
     buildbox,
+    fidelity as fidelity_,
     flatpak,
     linux,
     matrix,
@@ -457,6 +458,10 @@ def bench(args: argparse.Namespace) -> Steps:
     return [Call(bench_.main, (list(args.rest),))]
 
 
+def fidelity(args: argparse.Namespace) -> Steps:
+    return [Call(fidelity_.main, (list(args.rest),))]
+
+
 # --- the parser ----------------------------------------------------------------
 
 
@@ -870,6 +875,13 @@ def add_others(groups: Groups) -> None:
             "bench DOC.docx --idle 20",
             "bench --app Libera.app",
         ),
+    )
+    p.set_defaults(passes_on=True)
+    p = groups.leaf(
+        "fidelity",
+        "the same pages from the same build, twice (libera_build/fidelity.py)",
+        fidelity,
+        epilog=examples("fidelity", "fidelity DOC.docx --runs 3"),
     )
     p.set_defaults(passes_on=True)
 
