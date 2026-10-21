@@ -157,12 +157,18 @@ def test_an_index_is_used_once_it_exists_and_never_when_switched_off(
 
 @pytest.fixture
 def builds(monkeypatch) -> list[pathlib.Path]:
-    """The indexes built, by a stand-in for allfontsgen that only makes the
-    folder."""
+    """The indexes built, by a stand-in for allfontsgen that lists no font.
+    Whole when it appears, as the real one's is: a window opening meanwhile
+    took a bare folder for an earlier index and read its missing list."""
     made: list[pathlib.Path] = []
 
     def build(_layout, index):
-        index.mkdir(parents=True)
+        building = index.with_name(".building-stand-in")
+        building.mkdir(parents=True)
+        (building / "AllFonts.js").write_text(
+            'window["__fonts_files"] = [];', encoding="utf-8"
+        )
+        building.rename(index)
         made.append(index)
         return 1
 
