@@ -177,6 +177,13 @@ PAYLOAD = Knob(
     "an unpacked payload to mount as is, when no artifacts match this checkout",
     "DIR",
 )
+# Not LANG: every shell here has one, and it would reach every container.
+LINUX_LANG = Knob(
+    "--lang",
+    "LINUX_LANG",
+    "the container's LANG, the language the host speaks there, e.g. fr_FR.UTF-8",
+    "LOCALE",
+)
 VOLUME = Knob(
     "--volume", "VOLUME", "a named Docker volume instead of --build-dir", "NAME"
 )
@@ -397,6 +404,7 @@ def linux_(args: argparse.Namespace) -> Steps:
         arch=given(args, ARCH),
         dist=path_given(args, DIST),
         payload=path_given(args, PAYLOAD),
+        lang=given(args, LINUX_LANG),
         pytest_args=tuple(args.rest),
     )
     return [Call(linux.run, (options,))]
@@ -742,7 +750,12 @@ def add_linux(groups: Groups) -> None:
         "linux",
         "this repository's checks on Linux, in a container: the one place they run",
         "All need a Linux payload: `payload container`, or --dist DIR.\n\n"
-        + examples("linux lint", "linux test -k bridge", "linux gui --arch arm64"),
+        + examples(
+            "linux lint",
+            "linux test -k bridge",
+            "linux gui --arch arm64",
+            "linux gui --lang fr_FR.UTF-8",
+        ),
     )
     for action, summary in (
         ("test", "the suite; anything after it goes to pytest"),
@@ -754,7 +767,7 @@ def add_linux(groups: Groups) -> None:
         ("shell", "a shell in the test container"),
         ("image", "build, or rebuild, the test image"),
     ):
-        p = g.command(action, summary, linux_, ARCH_HERE, DIST, PAYLOAD)
+        p = g.command(action, summary, linux_, ARCH_HERE, DIST, PAYLOAD, LINUX_LANG)
         p.set_defaults(action=action, passes_on=action == "test")
 
 

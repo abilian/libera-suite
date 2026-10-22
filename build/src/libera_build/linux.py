@@ -138,6 +138,7 @@ class LinuxOptions:
     arch: str | None = None  # default: this machine's
     dist: Path | None = None  # payload artifacts to install from
     payload: Path | None = None  # an unpacked payload, used as is
+    lang: str | None = None  # the container's LANG, which picks the host's language
     pytest_args: tuple[str, ...] = ()
 
 
@@ -202,7 +203,7 @@ def mounts_for(arch: str, dist: Path | None, payload: Path | None) -> list[Mount
     return mounts
 
 
-def env_for(payload: Path | None) -> dict[str, str]:
+def env_for(payload: Path | None, lang: str | None = None) -> dict[str, str]:
     env = {
         "XDG_DATA_HOME": "/state",
         "HOME": "/state",
@@ -215,6 +216,10 @@ def env_for(payload: Path | None) -> dict[str, str]:
     # this checkout's PAYLOAD_VERSION has moved ahead of every payload here.
     if payload:
         env["LIBERA_PAYLOAD"] = "/payload"
+    # The host reads LC_ALL, LC_MESSAGES, then LANG (host/language.py); the
+    # image sets none, so LANG alone decides.
+    if lang:
+        env["LANG"] = lang
     return env
 
 
@@ -262,7 +267,7 @@ def run(options: LinuxOptions, engine: Engine | None = None) -> int:
             ("-c", script_for(options)),
             arch,
             mounts=tuple(mounts_for(arch, dist, payload)),
-            env=env_for(payload),
+            env=env_for(payload, options.lang),
             workdir="/repo",
             interactive=interactive(),
             extra=("--pull=never",),

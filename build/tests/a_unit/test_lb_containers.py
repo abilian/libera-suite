@@ -102,6 +102,11 @@ def test_the_container_mounts_the_payload_and_artifacts_only_when_there(tmp_path
     assert "LIBERA_PAYLOAD" not in linux.env_for(None)
 
 
+def test_the_container_speaks_the_language_asked_for_and_no_other():
+    assert linux.env_for(None, "fr_FR.UTF-8")["LANG"] == "fr_FR.UTF-8"
+    assert "LANG" not in linux.env_for(None)
+
+
 def test_every_action_that_runs_the_suite_prepares_first():
     for action in ("test", "gui", "gui-test", "dialog"):
         script = linux.script_for(linux.LinuxOptions(action))
