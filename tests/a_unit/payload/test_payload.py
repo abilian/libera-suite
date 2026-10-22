@@ -25,6 +25,7 @@ import pytest
 from support import built_dist, repo_root
 
 from libera import payload
+from libera.cli import dispatch
 from libera.payload import PayloadError, locate
 
 REPO = repo_root()
@@ -493,6 +494,21 @@ def test_the_state_directory_is_this_accounts_alone(tmp_path, monkeypatch, befor
     monkeypatch.setattr(locate, "get_state_dir", lambda: state)
 
     locate.make_state_dir_private()
+
+    assert stat.S_IMODE(state.stat().st_mode) == 0o700
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="a POSIX mode")
+def test_every_command_starts_by_making_it_so(tmp_path, monkeypatch):
+    """The test above holds for the function; this one, for `libera` calling
+    it. Without it, the line could go and nothing would fail."""
+    state = tmp_path / "share" / "libera"
+    state.mkdir(parents=True)
+    state.chmod(0o755)
+    monkeypatch.setattr(locate, "get_state_dir", lambda: state)
+    monkeypatch.setattr(dispatch, "_choose_command", lambda _p, _a: lambda _a: 0)
+
+    assert dispatch.main(["--payload-status"]) == 0
 
     assert stat.S_IMODE(state.stat().st_mode) == 0o700
 
