@@ -104,7 +104,7 @@ def test_it_speaks_the_interface_language(start_window, monkeypatch):
     assert headings == [french["New"], french["Open"], french["Recent"]]
     kinds = start_window.locator("#new .kind").all_inner_texts()
     assert french["Spreadsheet"] in kinds
-    expect(start_window.locator("#payload dt").first).to_have_text(french["Payload"])
+    expect(start_window.locator("#payload dt").first).to_have_text(french["Components"])
 
 
 def test_new_asks_the_host_for_that_kind(start_window):
