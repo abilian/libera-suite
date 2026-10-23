@@ -20,7 +20,7 @@ Libera Suite is meant to replace Microsoft Office. We read that as one test: **a
 
 **Tabs on macOS.** Documents open as tabs of one window when the system prefers tabs (System Settings ▸ Desktop & Dock), as in every Mac document application. The **+** at the end of the tab bar opens the start window as a tab, and a tab can be dragged out into a window of its own. Built, and in 0.6.
 
-**Tabs on Linux and Windows, measured first.** Neither toolkit gives us macOS's tabs, so the only way there is several editors in one page, where a busy tab may hold up the others. 0.6 measures what that costs; building it, or not, follows from the numbers.
+**One window per document on Linux and Windows.** Neither toolkit gives us macOS's tabs, so the only way there would be several editors in one page. Measured on Linux, that saves about 15% of memory and costs the rest: the documents load one after another, a recalculation in one tab freezes all of them, and one crash closes them all. So Libera Suite keeps a window per document there, as LibreOffice and Microsoft Office do, and the system groups them.
 
 **The interface in every language the editors speak.** The editors are translated into more than 40 languages, and a test now loads Words, Tables and Slides in every one of them. Our own part (the menus, the start window, the dialogs) follows language by language, each once someone who speaks it has read it. Dutch is drafted and waits for its reader. A spelling dictionary comes with each language.
 

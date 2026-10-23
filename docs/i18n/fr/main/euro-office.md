@@ -16,6 +16,6 @@ Ce choix a plusieurs conséquences.
 - **Correctifs.** Nous compilons tout à partir des sources d'Euro-Office, avec une [série de correctifs publiée](/en/develop/patches/). Ils portent surtout sur le convertisseur, pour les fichiers OpenDocument et CSV. Les versions d'Euro-Office ne les contiennent pas aujourd'hui.
 - **Licence.** L'application est sous Apache 2.0, et les composants restent sous AGPL.
 
-Euro-Office Desktop a aujourd'hui quelques fonctions que Libera Suite n'a pas encore : les onglets sous Linux et Windows, l'édition de PDF et les formulaires, les signatures numériques, et la connexion à un serveur Nextcloud, ownCloud ou Seafile pour la co-édition. [La feuille de route](/en/develop/roadmap/) dit quand elles arrivent.
+Euro-Office Desktop a aujourd'hui quelques fonctions que Libera Suite n'a pas encore : l'édition de PDF et les formulaires, les signatures numériques, et la connexion à un serveur Nextcloud, ownCloud ou Seafile pour la co-édition. [La feuille de route](/en/develop/roadmap/) dit quand elles arrivent. Il a aussi les onglets sous Linux et Windows, où Libera Suite garde une fenêtre par document : dans une seule fenêtre, les documents partageraient un seul processus, et un document occupé retiendrait les autres.
 
 **En résumé :** pour retrouver tout ONLYOFFICE Desktop dans un projet européen, Euro-Office Desktop est le bon choix. Libera Suite fait un autre pari : une application plus légère, faite d'un code court qu'une petite équipe peut lire et maintenir, qui ajoute des fonctions sans toucher au moteur d'édition.
