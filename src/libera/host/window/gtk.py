@@ -20,7 +20,6 @@ from libera.host.window.portable import (
     Question,
     close_window,
     complete_startup,
-    find_key_window,
     make_window,
     on_quit,
     prepare,
@@ -166,3 +165,15 @@ def _run_dialog(
     if failure:
         raise failure[0]
     return answer[0] if answer else int(gtk.ResponseType.DELETE_EVENT)
+
+
+def find_key_window(windows: Sequence[Window]) -> Window | None:
+    """The window GTK says is active, or None.
+
+    Not pywebview's active_window(), which calls get_id() on GTK's answer and
+    raised whenever no window was active: at startup, and each time the focus
+    left the application, which a menu's Ctrl-N follows.
+    """
+    return next(
+        (w for w in windows if w.native is not None and w.native.is_active()), None
+    )

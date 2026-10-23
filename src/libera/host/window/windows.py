@@ -121,16 +121,15 @@ def find_front_session() -> Session | None:
 def find_front_window() -> Window | None:
     """The window a menu item or dialog should act on.
 
-    The window the toolkit says is in front, then pywebview's active window,
-    then the only window there is, because "no window" is never the right answer
-    while one is open.
+    The window the toolkit says is in front, then the first there is, because
+    "no window" is never the right answer while one is open.
     """
     if not webview.windows:
         return None
     # The key window is AppKit's to say, and AppKit is main-thread-only; the
     # menu, a new document and full screen ask from other threads.
     key = native.run_on_gui_thread(lambda: native.find_key_window(webview.windows))
-    return key or webview.active_window() or webview.windows[0]
+    return key or webview.windows[0]
 
 
 def copy_untitled(blank: Path, base: Path) -> Path:

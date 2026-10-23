@@ -49,7 +49,6 @@ absent one.
 
 from __future__ import annotations
 
-import threading
 from functools import partial
 from pathlib import Path
 
@@ -194,22 +193,14 @@ def install() -> None:
         return
     glib = backend.__dict__["glib"]  # the GTK backend's own GLib
 
-    def set_keys(front: apps.App) -> bool:
-        for name, keys in list_owned_keys(front).items():
+    def follow_front(*_: object) -> bool:
+        for name, keys in list_owned_keys(actions.choose_new_kind()).items():
             application.set_accels_for_action(f"app.{name}", keys)
         return False  # once: idle_add repeats a callback that returns true
 
-    # The front window's kind is asked off the GUI thread: pywebview answers
-    # active_window() through it.
-    def follow_front(*_: object) -> None:
-        threading.Thread(
-            target=lambda: glib.idle_add(set_keys, actions.choose_new_kind()),
-            daemon=True,
-        ).start()
-
-    def connect() -> bool:
+    def start() -> bool:
+        follow_front()
         application.connect("notify::active-window", follow_front)
         return False
 
-    follow_front()
-    glib.idle_add(connect)
+    glib.idle_add(start)

@@ -41,6 +41,19 @@ def test_the_key_window_is_asked_for_on_the_gui_thread(monkeypatch):
     assert window.windows.find_front_window() is shown
 
 
+def test_gtk_names_the_active_window_and_none_when_none_is():
+    """pywebview's active_window() raised on GTK whenever no window was
+    active, at startup and each time the focus left the application."""
+
+    def made(active: bool) -> SimpleNamespace:
+        return SimpleNamespace(native=SimpleNamespace(is_active=lambda: active))
+
+    behind, front = made(active=False), made(active=True)
+    unbuilt = SimpleNamespace(native=None)
+    assert gtk_window.find_key_window([unbuilt, behind, front]) is front
+    assert gtk_window.find_key_window([unbuilt, behind]) is None
+
+
 def test_a_reload_runs_on_the_thread_that_asked(monkeypatch):
     """Never the GUI thread: pywebview hands load_url over by itself."""
     ran_on: list[threading.Thread] = []

@@ -139,8 +139,9 @@ def make_window(
 
 
 def find_key_window(windows: Sequence[Window]) -> Window | None:
-    """Nothing beyond pywebview's own active_window(), which is asked next."""
-    return None
+    """pywebview's own active_window()."""
+    del windows
+    return webview.active_window()
 
 
 def set_fullscreen(window: Window, on: bool) -> None:

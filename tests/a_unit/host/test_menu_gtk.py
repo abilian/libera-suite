@@ -11,7 +11,6 @@ So build the bar here and look at it.
 
 from __future__ import annotations
 
-import threading
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -105,38 +104,27 @@ class FakeApplication:
     def __init__(self) -> None:
         self.accels: dict[str, list[str]] = {}
         self.on_front = None
-        self.done = threading.Event()
 
     def set_accels_for_action(self, name: str, keys: list[str]) -> None:
         self.accels[name] = keys
-        if name == "app._File_Close":  # the last `list_owned_keys` gives
-            self.done.set()
 
     def connect(self, signal: str, handler) -> None:
         assert signal == "notify::active-window"
         self.on_front = handler
 
 
-def install_with(monkeypatch, front: apps.App) -> FakeApplication:
+def test_ctrl_n_follows_the_window_that_comes_to_the_front(monkeypatch):
     application = FakeApplication()
     # The GUI loop, run at once: idle_add calls until the callback says no more.
-    glib = SimpleNamespace(idle_add=lambda f, *a: f(*a) and pytest.fail("repeats"))
+    glib = SimpleNamespace(idle_add=lambda f: f() and pytest.fail("repeats"))
     monkeypatch.setattr(webview, "guilib", SimpleNamespace(_app=application, glib=glib))
-    monkeypatch.setattr(actions, "choose_new_kind", lambda: front)
+    monkeypatch.setattr(actions, "choose_new_kind", lambda: apps.WORDS)
     gtk.install()
-    assert application.done.wait(5)
-    return application
-
-
-def test_ctrl_n_follows_the_window_that_comes_to_the_front(monkeypatch):
-    application = install_with(monkeypatch, apps.WORDS)
     assert application.accels["app._File_New_Document"] == ["<Control>n"]
 
-    application.done.clear()
     monkeypatch.setattr(actions, "choose_new_kind", lambda: apps.SLIDES)
     assert application.on_front is not None
     application.on_front()
-    assert application.done.wait(5)
     assert application.accels["app._File_New_Presentation"] == ["<Control>n"]
     assert application.accels["app._File_New_Document"] == []
 
