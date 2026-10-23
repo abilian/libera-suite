@@ -546,6 +546,45 @@ def test_a_text_file_saves_as_rtf_with_its_text(tmp_path):
     assert "après" in read_rtf_text(rtf)
 
 
+ODF_NS = (
+    'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
+    'xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" '
+    'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" '
+    'xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" '
+    'office:version="1.2"'
+)
+
+
+def test_an_odt_without_master_styles_keeps_its_styles(tmp_path):
+    """x2t's ODF reader skipped every style when styles.xml had no
+    office:master-styles, which is optional, and a generated FAQ came out
+    all in the default style. Patch 0169."""
+    document = tmp_path / "faq.odt"
+    with zipfile.ZipFile(document, "w") as odt:
+        odt.writestr("mimetype", "application/vnd.oasis.opendocument.text")
+        odt.writestr(
+            "styles.xml",
+            f"<office:document-styles {ODF_NS}><office:styles>"
+            '<style:style style:name="Titre" style:family="paragraph">'
+            '<style:text-properties fo:font-size="19pt" fo:font-weight="bold"/>'
+            "</style:style></office:styles></office:document-styles>",
+        )
+        odt.writestr(
+            "content.xml",
+            f"<office:document-content {ODF_NS}><office:body><office:text>"
+            '<text:p text:style-name="Titre">FAQ</text:p>'
+            "</office:text></office:body></office:document-content>",
+        )
+    faq = open_in(apps.WORDS, document, tmp_path / "session")
+    docx = tmp_path / "out.docx"
+
+    export(faq, docx, apps.WORDS.ids_by_ext["docx"], None)
+    styles = zipfile.ZipFile(docx).read("word/styles.xml").decode()
+    titre = re.search(r'<w:name w:val="Titre"/>.*?</w:style>', styles)
+    assert titre is not None
+    assert '<w:sz w:val="38"' in titre.group()
+
+
 def test_markdown_opens_and_saves(tmp_path):
     """x2t refused every .md without an encoding (rc 88)."""
     document = tmp_path / "notes.md"
