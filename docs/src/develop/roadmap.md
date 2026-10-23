@@ -14,31 +14,25 @@ Libera Suite is meant to replace Microsoft Office. We read that as one test: **a
 4. Something done daily is missing: tabs, a password-protected file, a signature, a PDF to fill in, a Visio diagram to edit.
 5. It is not clear who maintains it, or for how long.
 
-## Now: 0.5, the beta in other people's hands
+## Now: 0.6, tabs and every language
 
-The beta has been public since October 2026. 0.5 is about what its testers meet first.
+0.5 shipped on 20 October 2026, with the interface in French, German, Italian and Spanish, the fonts installed on the machine, and an editor page that sends nothing off the machine on its own. 0.6 is the first of the releases towards parity with Euro-Office Desktop, below.
 
-**The interface in your language.** The editor already has its own translations; the menus, the start window and the dialogs do not. 0.5 runs the whole application in the system's language, starting with French, German, Italian and Spanish, the languages this site has. A new document follows it too: today File ▸ New gives a US Letter page in American English, whatever the system says.
+**Tabs on macOS.** Documents open as tabs of one window when the system prefers tabs (System Settings ▸ Desktop & Dock), as in every Mac document application. The **+** at the end of the tab bar opens the start window as a tab, and a tab can be dragged out into a window of its own. Built, and in 0.6.
 
-**The fonts installed on your machine.** 0.5 makes the fonts installed on the machine visible to the editor and to the converter alike, so the screen and the PDF agree. Until then the editor saw only the fonts Libera Suite ships, and a document set in a font you had installed got a substitute.
+**Tabs on Linux and Windows, measured first.** Neither toolkit gives us macOS's tabs, so the only way there is several editors in one page, where a busy tab may hold up the others. 0.6 measures what that costs; building it, or not, follows from the numbers.
 
-**A save that loses the text is a failed save.** Every format Save As offers is now checked by reading the document's text back. The application itself will refuse a save whose result has lost the text, and keep the document recoverable.
+**The interface in every language the editors speak.** The editors are translated into more than 40 languages, and a test now loads Words, Tables and Slides in every one of them. Our own part (the menus, the start window, the dialogs) follows language by language, each once someone who speaks it has read it. Dutch is drafted and waits for its reader. A spelling dictionary comes with each language.
 
-**Libera Suite sends your documents nowhere on its own, by construction.** Today it is a promise about our code. 0.5 makes the editor's page unable to send anything off the machine. The one thing it still fetches is a picture a document links to by address rather than carrying, as every office suite does: that is the document's own reference, and only the picture comes back. The converter is measured the same way.
+**A fidelity harness.** The first stage of measuring how documents from outside look: a corpus of 30 Word documents, printed twice by the same build, gives the same pixels on macOS and on Linux. References from Word and a score come next, in 0.7.
 
-**Following Euro-Office's desktop release.** Euro-Office now publishes desktop builds of its own. Our editors move to the revisions behind them, so a bug fixed there is fixed here.
-
-**Old editor versions are removed.** Each update leaves the previous version's editors on disk, about 400 MB each. 0.5 removes the ones no copy of Libera Suite still uses.
-
-**Installs without a warning.** Three things wait on accounts and keys, and each ships in a 0.5.x as soon as it is ready: signing and notarisation on macOS, where Gatekeeper's prompt is a poor first five minutes; a `.flatpakref`, then Flathub; and code signing on Windows, so SmartScreen stops warning about the installer.
+**Installs without a warning.** Three things still wait on accounts and keys, and each ships as soon as it is ready: signing and notarisation on macOS, where Gatekeeper's prompt is a poor first five minutes; a `.flatpakref`, then Flathub; and code signing on Windows, so SmartScreen stops warning about the installer.
 
 ## Next: parity with Euro-Office Desktop
 
 Euro-Office publishes a desktop application of its own, built on the same editors as Libera Suite. Someone comparing the two should find nothing in it that is missing here, macros apart (see below). Every feature on this list exists upstream already, in the editors we ship or beside them, so the work is wiring each one to the host and testing it, not writing it. This is the order we do them in.
 
-**Tabs.** One window per document today. Several documents in one window needs real support: `newWindowForTab:` on macOS, its equivalent on Linux and Windows, and moving a document from one window to another.
-
-**The interface in every language the editors speak.** The editors are translated into 46 languages. 0.5 translates our own part (the menus, the start window, the dialogs) into four. The rest follow, each once a native speaker has read it: our part is small beside the editors'.
+**Tabs and every language** are under way, above.
 
 **PDF: editing and forms.** Upstream has a PDF editor and a form creator, which the payload leaves out because nothing routes to them yet. Both come in: annotating and editing a PDF, filling in a form and saving it, and creating one. A viewer alone would add little to the system's own, so PDF ships when saving holds up.
 
@@ -48,13 +42,13 @@ Euro-Office publishes a desktop application of its own, built on the same editor
 
 **Documents on a Nextcloud, ownCloud or Seafile server.** As in Euro-Office Desktop, a window on the server's own editors: the documents stay on that server, and editing with other people is that server's work. It is off until the user adds a server, and a local document's window never reaches the network either way.
 
-**Signed installers**, on macOS and Windows, are already in 0.5.x, above.
+**Signed installers**, on macOS and Windows, are above: each ships as soon as its account or key exists.
 
 ## Alongside
 
 **The host becomes a runtime.** The package splits in two: a host that runs apps, and the editors as one app among others. Nothing changes for a user. It comes when a second app does, or earlier if the boundary between the Apache-licensed host and the AGPL editors has to be shown in the code.
 
-**Fidelity, measured.** A document from outside that looks wrong is the third reason on the list. The editor is mature, so a wrong layout is more often our packaging (a font, a resource) than the engine. Only a measurement finds those: a corpus of test documents, reference PDFs exported from Word, a score per page, and a harness that gives the same pixels twice. The score then gates releases, and every document a user reports goes into the corpus.
+**Fidelity, measured.** A document from outside that looks wrong is the third reason on the list. The editor is mature, so a wrong layout is more often our packaging (a font, a resource) than the engine. Only a measurement finds those: a corpus of test documents, reference PDFs exported from Word, a score per page, and a harness that gives the same pixels twice, which 0.6 has. The score then gates releases, and every document a user reports goes into the corpus.
 
 ## Later, towards 1.0
 
