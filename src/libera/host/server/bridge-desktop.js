@@ -66,11 +66,11 @@
     postToHost("/__host__/close");
   }
 
-  // -- Ctrl-N, Ctrl-O and Ctrl-W off macOS -------------------------------------
+  // -- Ctrl-N, Ctrl-O and Ctrl-W on Windows -----------------------------------
   //
   // No menu bar fires them there and the editor handles none of them, so the
   // page runs what the editor's File tab would. The host says which keys
-  // (shortcuts.PAGE_RUNS) and sends none on macOS. Every frame installs its
+  // (shortcuts.PAGE_RUNS) and sends none on macOS or Linux, whose menu bars have them. Every frame installs its
   // own, on the window and capturing, because a keydown in the editor's iframe
   // never reaches the top document.
   const PAGE_KEYS = w.LIBERA_PAGE_KEYS || {};

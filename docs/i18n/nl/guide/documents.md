@@ -76,7 +76,7 @@ Een bestand dat al onder de nieuwe naam bestaat, wordt vervangen. Het bestand da
 
 ## De menubalk
 
-Op Linux en Windows zit de balk in het venster: **File**, **Edit**, **View** en **Help**, met in die laatste *Libera Help* en *About Libera Suite*. Wat het menu daar biedt, levert drie verschillen op. Geen enkel item toont een sneltoets, maar Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z doen wat de ⌘-toetsen hieronder op een Mac doen. **Open Recent** wordt opgebouwd wanneer de applicatie start, dus een document dat je vandaag opent, verschijnt er morgen in. Niets wordt grijs, dus Save zonder iets om op te slaan doet niets.
+Op Linux en Windows zit de balk in het venster: **File**, **Edit**, **View** en **Help**, met in die laatste *Libera Help* en *About Libera Suite*. Wat het menu daar biedt, levert drie verschillen op. Op Linux tonen New, Open en Close Ctrl-N, Ctrl-O en Ctrl-W, en geen ander item toont zijn toets; op Windows geen enkel. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z doen wat de ⌘-toetsen hieronder op een Mac doen. **Open Recent** wordt opgebouwd wanneer de applicatie start, dus een document dat je vandaag opent, verschijnt er morgen in. Niets wordt grijs, dus Save zonder iets om op te slaan doet niets.
 
 Op macOS is het een echte Mac-menubalk, met dezelfde items plus **Window**. De gebruikelijke sneltoetsen werken daar, of het document nu de focus heeft of niet:
 

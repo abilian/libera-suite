@@ -6,6 +6,10 @@ Two versions move here and they move independently. The **application** is this 
 
 ## [0.6.0] - Unreleased
 
+### Changed
+
+- **On Linux, the File menu shows its keys.** New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W beside them, and Ctrl-N makes a document of the front window's kind, as before. The editors' own keys, Ctrl-S, Ctrl-Z and the rest, stay theirs and are not shown, so that Ctrl-Z in a text field still undoes the field.
+
 ### Fixed
 
 - **An OpenDocument file without master styles keeps its styles.** Every paragraph of such a file opened in the default style, with no heading larger or bolder than the text, where LibreOffice shows them as written. The file is valid, and programs that write OpenDocument often leave master styles out.
