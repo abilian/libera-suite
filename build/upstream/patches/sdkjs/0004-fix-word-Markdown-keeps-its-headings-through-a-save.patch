@@ -1,0 +1,93 @@
+From 1ac037eb0a3aeaa3bf0eb79775d9825257c7fe77 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Sun, 25 Oct 2026 15:45:49 +0100
+Subject: [PATCH] fix(word): Markdown keeps its headings through a save
+
+The HTML writer, which x2t uses on the way to Markdown, made <hN> only
+of a paragraph whose style is named "heading N". A style based on a
+heading, or a paragraph given an outline level, came out as <p>, its
+text bold. Markdown read into a document gives its headings exactly such
+styles (text-3, based on h1), so a .md saved after editing turned every
+# Title into **Title**. Fall back on the paragraph's compiled outline
+level, levels 0 to 5, as Word's navigation pane does.
+
+A heading's text was also wrapped in <b> whenever its style is bold,
+which Markdown wrote as # **Title**; read again, that came back as a
+plain bold paragraph, so the second save lost the heading. Leave out
+the <b> when the heading is bold throughout.
+---
+ common/wordcopypaste.js | 44 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 44 insertions(+)
+
+diff --git a/common/wordcopypaste.js b/common/wordcopypaste.js
+index 37dafed409..16075be334 100644
+--- a/common/wordcopypaste.js
++++ b/common/wordcopypaste.js
+@@ -168,6 +168,36 @@ CopyElement.prototype.wrapChild = function(child){
+ 		child.addChild(this.aChildren[i]);
+ 	this.aChildren = [child];
+ };
++// Whether every piece of text under `oElement` is inside a `sName` element.
++function isAllTextIn(oElement, sName){
++	var bText = false;
++	for(var i = 0; i < oElement.aChildren.length; ++i){
++		var oChild = oElement.aChildren[i];
++		if(oChild.bText)
++			return false;
++		if(sName === oChild.sName)
++			bText = true;
++		else if(!isAllTextIn(oChild, sName))
++			return false;
++		else
++			bText = true;
++	}
++	return bText;
++}
++// Replace every `sName` element under `oElement` by its children.
++function unwrapCopyElements(oElement, sName){
++	var aChildren = [];
++	for(var i = 0; i < oElement.aChildren.length; ++i){
++		var oChild = oElement.aChildren[i];
++		if(!oChild.bText)
++			unwrapCopyElements(oChild, sName);
++		if(!oChild.bText && sName === oChild.sName)
++			aChildren = aChildren.concat(oChild.aChildren);
++		else
++			aChildren.push(oChild);
++	}
++	oElement.aChildren = aChildren;
++}
+ CopyElement.prototype.isEmptyChild = function(){
+ 	return 0 === this.aChildren.length;
+ };
+@@ -721,6 +751,15 @@ CopyProcessor.prototype =
+                     Para = new CopyElement("h" + nLevel);
+             }
+         }
++        // A style derived from a heading, or a paragraph given an outline level,
++        // is a heading too, as it is in Word's navigation pane: Markdown read
++        // into a document makes its headings such derived styles.
++        if(null == Para && PasteElementsId.g_bIsDocumentCopyPaste && Item.GetOutlineLvl)
++        {
++            var nOutlineLvl = Item.GetOutlineLvl();
++            if(undefined !== nOutlineLvl && null !== nOutlineLvl && 0 <= nOutlineLvl && nOutlineLvl < 6)
++                Para = new CopyElement("h" + (nOutlineLvl + 1));
++        }
+         if(null == Para)
+             Para = new CopyElement("p");
+ 
+@@ -833,6 +872,11 @@ CopyProcessor.prototype =
+         else
+         {
+ 			this.CopyRunContent(Item, Para, false);
++			// A heading bold throughout says nothing <hN> does not: written as
++			// <b> as well, it came back from Markdown as **bold** inside the
++			// heading, which the next read turned into a plain bold paragraph.
++			if (/^h[1-6]$/.test(Para.sName) && isAllTextIn(Para, "b"))
++				unwrapCopyElements(Para, "b");
+ 			//добавляем &nbsp; потому что параграфы без содержимого не копируются
+             if(Para.isEmptyChild())
+                 Para.addChild(new CopyElement("&nbsp;", true));
+-- 
+2.55.0
+
