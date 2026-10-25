@@ -90,7 +90,7 @@ Tracked changes and comments are attributed to a person, whose name is written i
 
 ### Fonts
 
-Libera Suite ships a core font set: Liberation, Carlito, Caladea, Open Sans and a few others, enough to render ordinary documents faithfully at 7 MB. The full set is 248 MB. A document that asks for a font outside that set uses the one installed on your machine, on screen and in its PDF, and gets a substitute only when your machine does not have it either. Libera Suite lists your fonts when it first starts, and again in the background whenever you install or remove one; the windows you open after that use the new list. Widening the set, particularly for CJK, is an open decision.
+Libera Suite ships a core font set: Liberation, Carlito, Caladea, Open Sans and a few others, enough to render ordinary documents faithfully at 7 MB. The full set is 248 MB. A document that asks for a font outside that set uses the one installed on your machine, on screen and in its PDF, and gets a substitute only when your machine does not have it either. Calibri, Cambria, Arial, Times New Roman and Courier New are the exception: when your machine does not have them, a document gets Carlito, Caladea or Liberation, which have the same widths, so its pages break where they do in Word, whatever else is installed. Libera Suite lists your fonts when it first starts, and again in the background whenever you install or remove one; the windows you open after that use the new list. Widening the set, particularly for CJK, is an open decision.
 
 ### Rendering fidelity
 

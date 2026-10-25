@@ -92,7 +92,7 @@ Los cambios registrados y los comentarios se atribuyen a una persona, cuyo nombr
 
 ### Fuentes
 
-Libera Suite incluye un conjunto básico de fuentes: Liberation, Carlito, Caladea, Open Sans y algunas más, suficientes para mostrar fielmente documentos corrientes, en 7 MB. El conjunto completo ocupa 248 MB. Un documento que pide una fuente que no está en este conjunto usa la instalada en tu máquina, en pantalla y en su PDF, y solo recibe una fuente sustituta si tu máquina tampoco la tiene. Libera Suite hace la lista de tus fuentes en el primer arranque, y de nuevo en segundo plano cada vez que instalas o quitas una; las ventanas que abras después usan la lista nueva. Está por decidir si se amplía el conjunto, sobre todo para el chino, el japonés y el coreano.
+Libera Suite incluye un conjunto básico de fuentes: Liberation, Carlito, Caladea, Open Sans y algunas más, suficientes para mostrar fielmente documentos corrientes, en 7 MB. El conjunto completo ocupa 248 MB. Un documento que pide una fuente que no está en este conjunto usa la instalada en tu máquina, en pantalla y en su PDF, y solo recibe una fuente sustituta si tu máquina tampoco la tiene. Calibri, Cambria, Arial, Times New Roman y Courier New son la excepción: si tu máquina no las tiene, un documento recibe Carlito, Caladea o Liberation, que tienen los mismos anchos, y sus páginas se cortan en los mismos puntos que en Word, sean cuales sean las demás fuentes instaladas. Libera Suite hace la lista de tus fuentes en el primer arranque, y de nuevo en segundo plano cada vez que instalas o quitas una; las ventanas que abras después usan la lista nueva. Está por decidir si se amplía el conjunto, sobre todo para el chino, el japonés y el coreano.
 
 ### Fidelidad de la presentación
 

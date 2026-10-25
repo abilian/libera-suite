@@ -16,12 +16,14 @@ built behind it.
 
 from __future__ import annotations
 
+import base64
 import functools
 import hashlib
 import logging
 import os
 import re
 import shutil
+import struct
 import sys
 import tempfile
 import threading
@@ -48,6 +50,27 @@ THUMBNAILS = "Images"
 BUILDING = threading.Lock()
 
 FONT_FILES = re.compile(r'window\["__fonts_files"\] = \[(.*?)\];', re.DOTALL)
+_INT = struct.Struct(
+    "<i"
+)  # allfontsgen's INT, little-endian on every platform we build
+SELECTION = re.compile(r'(window\["g_fonts_selection_bin"\] = ")([^"]*)(")')
+
+# The metric-compatible floor: each font we ship with the widths of a Windows
+# font, under that font's name. A machine without the Windows font would
+# otherwise substitute whatever scores best, and on a Mac Calibri went to Lato,
+# not Carlito: t05 of the fidelity corpus took 3 pages where Word takes 2.
+# Neither engine's list of look-alikes pairs Calibri with Carlito (sdkjs
+# map.js, core ApplicationFonts.h); both match a font's other names exactly.
+FLOOR = {
+    "Calibri": "Carlito",
+    "Cambria": "Caladea",
+    "Arial": "Liberation Sans",
+    "Times New Roman": "Liberation Serif",
+    "Courier New": "Liberation Mono",
+}
+# Part of every fingerprint: an index made before the floor was named has the
+# same font folders, and would otherwise be used as it is.
+PROCESSING = "floor-names-1"
 
 
 def is_wanted() -> bool:
@@ -170,6 +193,7 @@ def build(layout: locate.Layout, index: Path) -> int:
         if drawn < generate.THUMBNAILS:
             msg = f"allfontsgen drew {drawn} of {generate.THUMBNAILS} font thumbnails"
             raise PayloadError(msg)
+        put_floor_first(building)
         write_web_all_fonts(building / "AllFonts.js", building / WEB_ALL_FONTS)
         building.rename(index)
     finally:
@@ -208,6 +232,80 @@ def write_web_all_fonts(all_fonts: Path, web: Path) -> None:
     )
 
 
+def put_floor_first(index: Path) -> None:
+    """Name each font of the floor after the Windows font it stands in for,
+    unless the machine has that font, in both copies of the selection: x2t's
+    font_selection.bin and the editor's, inside AllFonts.js."""
+    selection = index / "font_selection.bin"
+    selection.write_bytes(add_floor_names(selection.read_bytes()))
+    all_fonts = index / "AllFonts.js"
+    text = all_fonts.read_text(encoding="utf-8")
+    found = SELECTION.search(text)
+    if found is None:
+        msg = f"no font selection in {all_fonts}"
+        raise PayloadError(msg)
+    named = base64.b64encode(add_floor_names(base64.b64decode(found.group(2))))
+    all_fonts.write_text(
+        text[: found.start(2)] + named.decode() + text[found.end(2) :],
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def add_floor_names(selection: bytes) -> bytes:
+    """A font selection in which each font of the floor also answers to the
+    name of the Windows font it stands in for, where no font has that name.
+
+    The format is allfontsgen's, version 2 (core's ApplicationFonts.cpp,
+    FromBuffer): a count, then a record per font, each its length (itself
+    included), its name, a count of other names and those names, then fields
+    this leaves alone. Strings are a length and UTF-8. Anything after the
+    records, x2t's table of character ranges, is kept as it is.
+    """
+    count = _INT.unpack_from(selection)[0]
+    records: list[tuple[str, list[str], bytes]] = []
+    at = _INT.size
+    for _ in range(count):
+        length = _INT.unpack_from(selection, at)[0]
+        name, cursor = _read_string(selection, at + _INT.size)
+        others: list[str] = []
+        named = _INT.unpack_from(selection, cursor)[0]
+        cursor += _INT.size
+        for _ in range(named):
+            other, cursor = _read_string(selection, cursor)
+            others.append(other)
+        records.append((name, others, selection[cursor : at + length]))
+        at += length
+    present = {n for name, others, _ in records for n in (name, *others)}
+    stands_in = {
+        ours: windows for windows, ours in FLOOR.items() if windows not in present
+    }
+    out = [_INT.pack(count)]
+    for name, others, rest in records:
+        names = [*others, stands_in[name]] if name in stands_in else others
+        body = (
+            _pack_string(name)
+            + _INT.pack(len(names))
+            + b"".join(_pack_string(n) for n in names)
+            + rest
+        )
+        out.append(_INT.pack(_INT.size + len(body)) + body)
+    out.append(selection[at:])
+    return b"".join(out)
+
+
+def _read_string(data: bytes, at: int) -> tuple[str, int]:
+    """The string whose length is at `at`, and where the next field starts."""
+    length = _INT.unpack_from(data, at)[0]
+    start = at + _INT.size
+    return data[start : start + length].decode(), start + length
+
+
+def _pack_string(text: str) -> bytes:
+    encoded = text.encode()
+    return _INT.pack(len(encoded)) + encoded
+
+
 def find_served(index: Path, path: str) -> Path | None:
     """The index's own version of a payload file the editor fetches, if it has
     one: the font list, and the font menu's pictures."""
@@ -220,14 +318,15 @@ def find_served(index: Path, path: str) -> Path | None:
 
 
 def make_fingerprint(layout: locate.Layout) -> str:
-    """What the index depends on, hashed: the payload's font list, and the
-    modification time of each folder of fonts, and of each folder in it.
+    """What the index depends on, hashed: how it is processed, the payload's
+    font list, and the modification time of each folder of fonts, and of each
+    folder in it.
 
     Installing or removing a font changes its folder's time. One level down
     as well, because Linux keeps a folder per family under /usr/share/fonts.
     A font replaced in place under the same name is not seen.
     """
-    seen = [f"{layout.all_fonts}|{_read_mtime(layout.all_fonts)}"]
+    seen = [PROCESSING, f"{layout.all_fonts}|{_read_mtime(layout.all_fonts)}"]
     tops = [*_get_payload_font_dirs(layout), *_get_system_dirs(), *_get_user_dirs()]
     for top in tops:
         if not top.is_dir():

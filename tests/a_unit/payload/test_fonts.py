@@ -6,7 +6,9 @@ What allfontsgen makes of a real machine is b_integration's.
 
 from __future__ import annotations
 
+import base64
 import os
+import struct
 import threading
 import time
 from typing import TYPE_CHECKING
@@ -292,3 +294,52 @@ def test_an_index_that_fails_does_not_fail_the_install(machine, monkeypatch):
     said: list[str] = []
     installer._index_installed_fonts(layout, said.append)
     assert said[-1] == "    not indexed: allfontsgen drew 2 of 10 font thumbnails"
+
+
+def selection(*records: tuple[str, list[str]], after: bytes = b"ranges") -> bytes:
+    """A font selection as allfontsgen writes it: a count, then per font its
+    record's length (itself included), its name, its other names, and fields
+    that stand here for the path, style and metrics; then the range table."""
+
+    def string(text: str) -> bytes:
+        return struct.pack("<i", len(text.encode())) + text.encode()
+
+    out = struct.pack("<i", len(records))
+    for name, others in records:
+        body = string(name) + struct.pack("<i", len(others))
+        body += b"".join(string(o) for o in others) + f"fields of {name}".encode()
+        out += struct.pack("<i", 4 + len(body)) + body
+    return out + after
+
+
+def test_a_missing_windows_font_is_answered_by_the_floor():
+    """Calibri went to the Lato installed on a Mac, not to Carlito, and a
+    document took a page more than in Word."""
+    got = fonts.add_floor_names(
+        selection(("Lato", []), ("Carlito", ["Carlito Regular"]))
+    )
+    assert got == selection(("Lato", []), ("Carlito", ["Carlito Regular", "Calibri"]))
+
+
+def test_a_windows_font_the_machine_has_keeps_its_name():
+    machine = selection(("Calibri", []), ("Carlito", []), ("Liberation Sans", []))
+    assert fonts.add_floor_names(machine) == selection(
+        ("Calibri", []), ("Carlito", []), ("Liberation Sans", ["Arial"])
+    )
+
+
+def test_the_editor_and_x2t_get_the_same_floor(tmp_path):
+    """x2t reads font_selection.bin; the editor, the same bytes in AllFonts.js."""
+    bare = selection(("Carlito", []), after=b"")
+    (tmp_path / "font_selection.bin").write_bytes(bare + b"ranges for x2t")
+    encoded = base64.b64encode(bare).decode()
+    (tmp_path / "AllFonts.js").write_text(
+        f'window["__all_fonts_js_version__"] = 2;\n'
+        f'window["g_fonts_selection_bin"] = "{encoded}";\n',
+        encoding="utf-8",
+    )
+    fonts.put_floor_first(tmp_path)
+    named = selection(("Carlito", ["Calibri"]), after=b"")
+    assert (tmp_path / "font_selection.bin").read_bytes() == named + b"ranges for x2t"
+    js = (tmp_path / "AllFonts.js").read_text(encoding="utf-8")
+    assert f'"{base64.b64encode(named).decode()}"' in js
