@@ -30,24 +30,6 @@
     console.log(`[libera:${TAG}] localStorage shimmed onto sessionStorage`);
   }
 
-  // -- mousewheel ---------------------------------------------------------------
-  // On a Mac, sdkjs listens for the legacy `mousewheel` event, while web-apps
-  // has listened for `wheel` since Euro-Office's d7edcbfd4e, and the
-  // spreadsheet puts both on #editor_sdk. A browser fires an element's
-  // `mousewheel` listeners only when it has no `wheel` listener, so the grid
-  // never scrolled. Elsewhere sdkjs asks for `wheel` itself, by this same test
-  // on the user agent, so turning `mousewheel` into `wheel` puts the Mac on the
-  // path Linux and Windows already take. The event is a WheelEvent either way,
-  // wheelDelta included.
-  if (/mac/i.test(w.navigator.userAgent)) {
-    for (const name of ["addEventListener", "removeEventListener"]) {
-      const original = w.EventTarget.prototype[name];
-      w.EventTarget.prototype[name] = function (type, ...rest) {
-        return original.call(this, type === "mousewheel" ? "wheel" : type, ...rest);
-      };
-    }
-  }
-
   // -- document media ---------------------------------------------------------
   // DesktopOfflineAppDocumentEndLoad forces the document URL to file://, and
   // images resolve against it, so an http-served page silently drops every
