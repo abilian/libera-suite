@@ -13,7 +13,7 @@ L'interface de Libera Suite est en anglais : les noms des menus et des boutons s
 | **Exporter** | Save As propose une liste de formats pour chaque application, PDF compris. Chaque format proposé est vérifié par une conversion réelle, dont le texte est relu. |
 | **Images** | Conservées à l'ouverture et à l'enregistrement ; Insertion ▸ Image fonctionne. |
 | **Imprimer** | Produit un PDF, demande où le conserver et l'ouvre dans votre lecteur de PDF. |
-| **Correction orthographique** | Cinq langues, avec suggestions. Voir plus bas. |
+| **Correction orthographique** | Six langues, avec suggestions. Voir plus bas. |
 | **Dans votre langue** | Les applications suivent la langue de votre système, et un nouveau document part du modèle vierge de votre région : papier A4 partout sauf aux États-Unis, et correction orthographique dans votre langue. La barre de menus, la fenêtre d'accueil et les boîtes de dialogue suivent aussi, dans toutes les langues que parlent les applications, et en arabe, en hébreu et en ourdou la fenêtre d'accueil se lit de droite à gauche. Seules les traductions française, allemande, italienne et espagnole ont été relues par un locuteur natif ; les autres sont des ébauches, et [les corrections sont bienvenues](../feedback.md). |
 | **Documents récents** | Fichier ▸ Ouvrir un fichier récent retient les 20 derniers. |
 | **Plusieurs documents à la fois** | De tous types, une fenêtre chacun, ou sous macOS un onglet chacun quand le système préfère les onglets : par Fichier ▸ Nouveau ou Fichier ▸ Ouvrir, d'un double-clic dans le gestionnaire de fichiers, ou avec `libera *.docx`. Le type du fichier choisit l'application. |
@@ -80,7 +80,7 @@ Il existe un menu **Aide**, sur toutes les plateformes, qui ouvre ce site dans v
 
 ### Correction orthographique
 
-Libera Suite fournit des dictionnaires pour **l'anglais (américain et britannique), le français, l'allemand, l'espagnol et l'italien** : 9,5 Mo, retenus parce que l'ensemble complet en pèse 327. Ajouter une langue demande une ligne dans `build/payload/dictionaries.txt` et une reconstruction des composants.
+Libera Suite fournit des dictionnaires pour **l'anglais (américain et britannique), le français, l'allemand, l'espagnol, l'italien et le néerlandais** : 12 Mo avec leurs licences, retenus parce que l'ensemble complet en pèse 327. Ajouter une langue demande une ligne dans `build/payload/dictionaries.txt` et une reconstruction des composants.
 
 Une langue sans dictionnaire n'est pas une erreur : ses mots sont simplement considérés comme corrects, comme dans l'application de bureau de l'amont. Les mots ajoutés par *Add to dictionary* sont conservés, pour tous les documents et toutes les langues.
 

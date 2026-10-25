@@ -116,7 +116,7 @@ Le immagini incorporate in un documento vengono conservate all'apertura e al sal
 
 Gli errori vengono sottolineati; il clic destro propone dei suggerimenti. Il dizionario usato dipende dalla **lingua del documento**, che imposti nella **barra di stato** in fondo alla finestra, documento per documento.
 
-Sono forniti dizionari per cinque lingue: inglese (americano e britannico), francese, tedesco, spagnolo e italiano. Una lingua senza dizionario non è un errore; le sue parole vengono semplicemente considerate corrette. Le parole aggiunte con *Add to dictionary* vengono conservate: da quel momento sono corrette in tutti i documenti e in tutte le lingue.
+Sono forniti dizionari per sei lingue: inglese (americano e britannico), francese, tedesco, spagnolo, italiano e olandese. Una lingua senza dizionario non è un errore; le sue parole vengono semplicemente considerate corrette. Le parole aggiunte con *Add to dictionary* vengono conservate: da quel momento sono corrette in tutti i documenti e in tutte le lingue.
 
 ## Il tuo nome nei documenti {#your-name-in-documents}
 

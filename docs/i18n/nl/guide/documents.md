@@ -116,7 +116,7 @@ Afbeeldingen die in een document zijn ingesloten, blijven bewaard bij openen en 
 
 Spelfouten worden onderstreept, en met de rechtermuisknop krijg je suggesties. Welk woordenboek gebruikt wordt, volgt **de taal van het document**, die je per document instelt in de **statusbalk** onder in het venster.
 
-Er worden woordenboeken voor vijf talen meegeleverd: Engels (VS en VK), Frans, Duits, Spaans en Italiaans. Een taal zonder woordenboek is geen fout; de woorden ervan gelden gewoon als juist. Woorden die je toevoegt met *Toevoegen aan woordenboek* blijven bewaard: vanaf dan zijn ze juist in elk document en elke taal.
+Er worden woordenboeken voor zes talen meegeleverd: Engels (VS en VK), Frans, Duits, Spaans, Italiaans en Nederlands. Een taal zonder woordenboek is geen fout; de woorden ervan gelden gewoon als juist. Woorden die je toevoegt met *Toevoegen aan woordenboek* blijven bewaard: vanaf dan zijn ze juist in elk document en elke taal.
 
 ## Je naam in documenten {#your-name-in-documents}
 

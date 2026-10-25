@@ -116,7 +116,7 @@ In ein Dokument eingebettete Bilder bleiben beim Öffnen und Speichern erhalten.
 
 Fehler werden unterstrichen; ein Rechtsklick bietet Vorschläge an. Welches Wörterbuch verwendet wird, richtet sich nach **der Sprache des Dokuments**, die Sie in der **Statusleiste** am unteren Fensterrand einstellen, für jedes Dokument einzeln.
 
-Mitgeliefert werden Wörterbücher für fünf Sprachen: Englisch (USA und Großbritannien), Französisch, Deutsch, Spanisch und Italienisch. Eine Sprache ohne Wörterbuch ist kein Fehler; ihre Wörter gelten schlicht als richtig. Wörter, die Sie über *Add to dictionary* hinzufügen, bleiben erhalten: Sie gelten von da an in allen Dokumenten und allen Sprachen als richtig.
+Mitgeliefert werden Wörterbücher für sechs Sprachen: Englisch (USA und Großbritannien), Französisch, Deutsch, Spanisch, Italienisch und Niederländisch. Eine Sprache ohne Wörterbuch ist kein Fehler; ihre Wörter gelten schlicht als richtig. Wörter, die Sie über *Add to dictionary* hinzufügen, bleiben erhalten: Sie gelten von da an in allen Dokumenten und allen Sprachen als richtig.
 
 ## Ihr Name in Dokumenten {#your-name-in-documents}
 

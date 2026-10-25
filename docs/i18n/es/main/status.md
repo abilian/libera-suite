@@ -13,7 +13,7 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 | **Exportar** | Save As ofrece una lista de formatos para cada aplicación, PDF incluido. Cada formato ofrecido se comprueba con una conversión real, cuyo texto se vuelve a leer. |
 | **Imágenes** | Se conservan al abrir y al guardar; Insertar ▸ Imagen funciona. |
 | **Imprimir** | Genera un PDF, pregunta dónde guardarlo y lo abre en tu visor de PDF. |
-| **Corrección ortográfica** | Cinco idiomas, con sugerencias. Más abajo, los detalles. |
+| **Corrección ortográfica** | Seis idiomas, con sugerencias. Más abajo, los detalles. |
 | **En tu idioma** | Las aplicaciones siguen el idioma de tu sistema, y un documento nuevo parte de la plantilla en blanco de tu región: papel A4 en todas partes salvo en Estados Unidos, y corrección ortográfica en tu idioma. También los siguen la barra de menús, la ventana de inicio y los diálogos, en todos los idiomas de las aplicaciones, y en árabe, hebreo y urdu la ventana de inicio se lee de derecha a izquierda. Solo las traducciones española, francesa, alemana e italiana las ha revisado un hablante nativo; las demás son borradores, y [las correcciones son bienvenidas](../feedback.md). |
 | **Documentos recientes** | Archivo ▸ Abrir reciente recuerda los últimos 20. |
 | **Varios documentos a la vez** | También de tipos distintos, una ventana para cada uno, o en macOS una pestaña para cada uno cuando el sistema prefiere pestañas: desde Archivo ▸ Nuevo o Archivo ▸ Abrir, con doble clic en el gestor de archivos o con `libera *.docx`. El tipo de archivo elige la aplicación. |
@@ -80,7 +80,7 @@ Hay un menú **Ayuda**, en todas las plataformas, que abre este sitio en tu nave
 
 ### Corrección ortográfica
 
-Libera Suite incluye diccionarios de **inglés (de Estados Unidos y del Reino Unido), francés, alemán, español e italiano**: 9,5 MB, elegidos porque el conjunto completo ocupa 327. Añadir un idioma requiere una línea en `build/payload/dictionaries.txt` y volver a compilar los componentes.
+Libera Suite incluye diccionarios de **inglés (de Estados Unidos y del Reino Unido), francés, alemán, español, italiano y neerlandés**: 12 MB con sus licencias, elegidos porque el conjunto completo ocupa 327. Añadir un idioma requiere una línea en `build/payload/dictionaries.txt` y volver a compilar los componentes.
 
 Un idioma sin diccionario no es un error: sus palabras simplemente se consideran correctas, como en la aplicación de escritorio del proyecto original. Las palabras añadidas con *Add to dictionary* se conservan, para todos los documentos y todos los idiomas.
 

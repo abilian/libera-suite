@@ -13,7 +13,7 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 | **Exportieren** | Save As bietet für jede Anwendung eine Formatliste an, PDF eingeschlossen. Jedes angebotene Format wird durch eine echte Konvertierung geprüft, deren Text danach wieder gelesen wird. |
 | **Bilder** | Bleiben beim Öffnen und Speichern erhalten; Einfügen ▸ Bild funktioniert. |
 | **Drucken** | Erzeugt ein PDF, fragt, wo es aufbewahrt werden soll, und öffnet es in Ihrem PDF-Betrachter. |
-| **Rechtschreibprüfung** | Fünf Sprachen, mit Vorschlägen. Siehe unten. |
+| **Rechtschreibprüfung** | Sechs Sprachen, mit Vorschlägen. Siehe unten. |
 | **In Ihrer Sprache** | Die Anwendungen folgen der Sprache Ihres Systems, und ein neues Dokument beginnt mit der leeren Vorlage Ihrer Region: A4-Papier überall außer in den USA, und Rechtschreibprüfung in Ihrer Sprache. Menüleiste, Startfenster und Dialoge folgen ebenfalls, in jeder Sprache der Anwendungen, und auf Arabisch, Hebräisch und Urdu ist das Startfenster von rechts nach links angeordnet. Nur die deutsche, französische, italienische und spanische Übersetzung hat ein Muttersprachler durchgesehen; die anderen sind Entwürfe, und [Korrekturen sind willkommen](../feedback.md). |
 | **Zuletzt verwendete Dokumente** | Datei ▸ Zuletzt verwendet merkt sich die letzten 20. |
 | **Mehrere Dokumente gleichzeitig** | Auch verschiedener Art, jedes in seinem Fenster, unter macOS jedes in seinem Tab, wenn das System Tabs bevorzugt: über Datei ▸ Neu oder Datei ▸ Öffnen, per Doppelklick im Dateimanager oder mit `libera *.docx`. Der Dateityp bestimmt die Anwendung. |
@@ -80,7 +80,7 @@ Es gibt ein Menü **Hilfe**, auf allen Plattformen, und es öffnet diese Website
 
 ### Rechtschreibprüfung
 
-Libera Suite liefert Wörterbücher für **Englisch (USA und Großbritannien), Französisch, Deutsch, Spanisch und Italienisch** mit: 9,5 MB, ausgewählt, weil der vollständige Satz 327 MB umfasst. Eine Sprache hinzuzufügen, erfordert eine Zeile in `build/payload/dictionaries.txt` und einen Neubau der Komponenten.
+Libera Suite liefert Wörterbücher für **Englisch (USA und Großbritannien), Französisch, Deutsch, Spanisch, Italienisch und Niederländisch** mit: 12 MB samt ihren Lizenzen, ausgewählt, weil der vollständige Satz 327 MB umfasst. Eine Sprache hinzuzufügen, erfordert eine Zeile in `build/payload/dictionaries.txt` und einen Neubau der Komponenten.
 
 Eine Sprache ohne Wörterbuch ist kein Fehler: Ihre Wörter gelten schlicht als richtig, wie in der Desktop-Anwendung des Upstream-Projekts. Über *Add to dictionary* hinzugefügte Wörter bleiben erhalten, für alle Dokumente und alle Sprachen.
 

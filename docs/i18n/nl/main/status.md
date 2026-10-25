@@ -13,7 +13,7 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 | **Exporteren** | Save As biedt per programma een lijst met formaten, pdf inbegrepen. Elk aangeboden formaat is gecontroleerd door er een document naar te converteren en de tekst ervan terug te lezen. |
 | **Afbeeldingen** | Blijven behouden bij openen en opslaan; Invoegen ▸ Afbeelding werkt. |
 | **Afdrukken** | Maakt een pdf, vraagt waar je die wilt bewaren en opent hem in je pdf-viewer. |
-| **Spellingcontrole** | Vijf talen, met suggesties. Zie hieronder. |
+| **Spellingcontrole** | Zes talen, met suggesties. Zie hieronder. |
 | **In je eigen taal** | De componenten volgen de taal van je systeem, en een nieuw document begint met het lege sjabloon van je regio: A4-papier overal behalve in de VS, en spellingcontrole in je eigen taal als daar een woordenboek voor is (zie [Spellingcontrole](#spell-checking)). De menubalk, het startvenster en de dialoogvensters volgen ook, in elke taal van de toepassingen, en in het Arabisch, Hebreeuws en Urdu loopt het startvenster van rechts naar links. Alleen de Franse, Duitse, Italiaanse en Spaanse vertaling is nagelezen door iemand met die taal als moedertaal; de andere, de Nederlandse inbegrepen, zijn concepten, en [verbeteringen zijn welkom](../feedback.md). |
 | **Recente documenten** | Bestand ▸ Recent openen onthoudt de laatste 20. |
 | **Meerdere documenten tegelijk** | Van elk type, elk in een eigen venster, of op macOS elk in een eigen tabblad als het systeem tabbladen verkiest: via Bestand ▸ Nieuw of Bestand ▸ Openen, door te dubbelklikken in je bestandsbeheerder, of met `libera *.docx`. Het bestandstype bepaalt welk programma het document opent. |
@@ -80,7 +80,7 @@ Er is een menu **Help**, op elk platform, en het opent deze site in je browser. 
 
 ### Spellingcontrole {#spell-checking}
 
-Libera Suite levert woordenboeken mee voor **Engels (VS en VK), Frans, Duits, Spaans en Italiaans**: 9,5 MB, gekozen omdat de volledige set 327 MB is. Een taal toevoegen kost één regel in `build/payload/dictionaries.txt` en een nieuwe build van de componenten.
+Libera Suite levert woordenboeken mee voor **Engels (VS en VK), Frans, Duits, Spaans, Italiaans en Nederlands**: 12 MB met hun licenties, gekozen omdat de volledige set 327 MB is. Een taal toevoegen kost één regel in `build/payload/dictionaries.txt` en een nieuwe build van de componenten.
 
 Een taal zonder woordenboek is geen fout: de woorden worden dan gewoon als correct beschouwd, zoals de eigen desktoptoepassing van upstream ook doet. Woorden die je toevoegt met *Toevoegen aan woordenboek* blijven bewaard, voor elk document en elke taal.
 

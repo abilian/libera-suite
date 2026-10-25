@@ -114,7 +114,7 @@ Images embedded in a document are preserved on open and save. **Insert ▸ Image
 
 Misspellings are underlined, and right-click offers suggestions. Which dictionary is used follows **the document's language**, which you set from the **status bar** at the bottom of the window, per document.
 
-Dictionaries for five languages ship: English (US and UK), French, German, Spanish and Italian. A language with no dictionary is not an error; its words are simply treated as correct. Words you add through *Add to dictionary* are kept: from then on they are correct in every document and every language.
+Dictionaries for six languages ship: English (US and UK), French, German, Spanish, Italian and Dutch. A language with no dictionary is not an error; its words are simply treated as correct. Words you add through *Add to dictionary* are kept: from then on they are correct in every document and every language.
 
 ## Your name in documents
 

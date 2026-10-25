@@ -116,7 +116,7 @@ Les images intégrées à un document sont conservées à l'ouverture et à l'en
 
 Les fautes sont soulignées ; le clic droit propose des suggestions. Le dictionnaire utilisé dépend de **la langue du document**, que vous réglez dans la **barre d'état** en bas de la fenêtre, pour chaque document.
 
-Des dictionnaires sont fournis pour cinq langues : l'anglais (américain et britannique), le français, l'allemand, l'espagnol et l'italien. Une langue sans dictionnaire n'est pas une erreur ; ses mots sont simplement considérés comme corrects. Les mots ajoutés par *Add to dictionary* sont conservés : ils sont désormais corrects dans tous les documents et toutes les langues.
+Des dictionnaires sont fournis pour six langues : l'anglais (américain et britannique), le français, l'allemand, l'espagnol, l'italien et le néerlandais. Une langue sans dictionnaire n'est pas une erreur ; ses mots sont simplement considérés comme corrects. Les mots ajoutés par *Add to dictionary* sont conservés : ils sont désormais corrects dans tous les documents et toutes les langues.
 
 ## Votre nom dans les documents {#your-name-in-documents}
 

@@ -13,7 +13,7 @@ L'interfaccia di Libera Suite è in inglese: menu e pulsanti sono citati qui com
 | **Esportare** | Save As propone un elenco di formati per ogni applicazione, PDF compreso. Ogni formato proposto è verificato con una conversione reale, di cui si rilegge il testo. |
 | **Immagini** | Conservate all'apertura e al salvataggio; Inserisci ▸ Immagine funziona. |
 | **Stampare** | Genera un PDF, chiede dove conservarlo e lo apre nel tuo lettore di PDF. |
-| **Controllo ortografico** | Cinque lingue, con suggerimenti. Vedi sotto. |
+| **Controllo ortografico** | Sei lingue, con suggerimenti. Vedi sotto. |
 | **Nella tua lingua** | Le applicazioni seguono la lingua del tuo sistema, e un nuovo documento parte dal modello vuoto della tua regione: carta A4 ovunque tranne che negli Stati Uniti, e controllo ortografico nella tua lingua. Seguono anche la barra dei menu, la finestra iniziale e le finestre di dialogo, in ogni lingua delle applicazioni, e in arabo, ebraico e urdu la finestra iniziale si legge da destra a sinistra. Solo le traduzioni italiana, francese, tedesca e spagnola sono state riviste da un madrelingua; le altre sono bozze, e [le correzioni sono benvenute](../feedback.md). |
 | **Documenti recenti** | File ▸ Apri recenti ricorda gli ultimi 20. |
 | **Più documenti insieme** | Anche di tipi diversi, una finestra ciascuno, o su macOS una scheda ciascuno quando il sistema preferisce le schede: da File ▸ Nuovo o File ▸ Apri, con un doppio clic nel gestore dei file o con `libera *.docx`. Il tipo di file sceglie l'applicazione. |
@@ -80,7 +80,7 @@ C'è un menu **Aiuto**, su tutte le piattaforme, che apre questo sito nel tuo br
 
 ### Controllo ortografico
 
-Libera Suite fornisce dizionari per **inglese (americano e britannico), francese, tedesco, spagnolo e italiano**: 9,5 MB, scelti perché l'insieme completo ne pesa 327. Aggiungere una lingua richiede una riga in `build/payload/dictionaries.txt` e una ricostruzione dei componenti.
+Libera Suite fornisce dizionari per **inglese (americano e britannico), francese, tedesco, spagnolo, italiano e olandese**: 12 MB con le loro licenze, scelti perché l'insieme completo ne pesa 327. Aggiungere una lingua richiede una riga in `build/payload/dictionaries.txt` e una ricostruzione dei componenti.
 
 Una lingua senza dizionario non è un errore: le sue parole vengono semplicemente considerate corrette, come nell'applicazione desktop del progetto originale. Le parole aggiunte con *Add to dictionary* vengono conservate, per tutti i documenti e tutte le lingue.
 

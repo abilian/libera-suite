@@ -11,7 +11,7 @@ Libera Suite is early. This page is a status list: it says what is built, what i
 | **Export** | Save As offers a format popup per application, PDF included. Every format offered is checked by converting a document to it and reading its text back. |
 | **Images** | Preserved on open and save; Insert ▸ Image works. |
 | **Print** | Renders to PDF, asks where to keep it, and opens it in your PDF viewer. |
-| **Spell checking** | Five languages, with suggestions. See below. |
+| **Spell checking** | Six languages, with suggestions. See below. |
 | **In your language** | The applications follow your system's language, and a new document starts from your region's blank: A4 paper everywhere but the US, and spell-checked in your language. The menu bar, the start window and the dialogs follow too, in every language the applications speak, and Arabic, Hebrew and Urdu lay the start window out right to left. Only the French, German, Italian and Spanish translations have been reviewed by a native speaker; the others are drafts, and [corrections are welcome](../feedback.md). |
 | **Recent documents** | File ▸ Open Recent remembers the last 20. |
 | **Several documents at once** | Of any kind, one window each, or on macOS one tab each when the system prefers tabs: from File ▸ New or File ▸ Open, by double-clicking in the file manager, or as `libera *.docx`. The file's type picks the application. |
@@ -78,7 +78,7 @@ There is a **Help** menu, on every platform, and it opens this site in your brow
 
 ### Spell checking
 
-Libera Suite ships dictionaries for **English (US and UK), French, German, Spanish and Italian**: 9.5 MB, chosen because the full set is 327 MB. Adding a language is one line in `build/payload/dictionaries.txt` and a rebuild of the components.
+Libera Suite ships dictionaries for **English (US and UK), French, German, Spanish, Italian and Dutch**: 12 MB with their licences, chosen because the full set is 327 MB. Adding a language is one line in `build/payload/dictionaries.txt` and a rebuild of the components.
 
 A language with no dictionary is not an error: its words are simply treated as correct, which is what upstream's own desktop application does. Words added through *Add to dictionary* are kept, for every document and every language.
 

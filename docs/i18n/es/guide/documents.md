@@ -116,7 +116,7 @@ Las imágenes incrustadas en un documento se conservan al abrir y al guardar. **
 
 Las faltas se subrayan; el clic derecho ofrece sugerencias. El diccionario que se usa depende del **idioma del documento**, que fijas en la **barra de estado** de la parte inferior de la ventana, documento a documento.
 
-Se incluyen diccionarios para cinco idiomas: inglés (de Estados Unidos y del Reino Unido), francés, alemán, español e italiano. Un idioma sin diccionario no es un error; sus palabras simplemente se consideran correctas. Las palabras que añades con *Add to dictionary* se conservan: desde ese momento son correctas en todos los documentos y en todos los idiomas.
+Se incluyen diccionarios para seis idiomas: inglés (de Estados Unidos y del Reino Unido), francés, alemán, español, italiano y neerlandés. Un idioma sin diccionario no es un error; sus palabras simplemente se consideran correctas. Las palabras que añades con *Add to dictionary* se conservan: desde ese momento son correctas en todos los documentos y en todos los idiomas.
 
 ## Tu nombre en los documentos {#your-name-in-documents}
 
