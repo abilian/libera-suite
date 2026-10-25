@@ -6,12 +6,22 @@ Two versions move here and they move independently. The **application** is this 
 
 ## [0.6.0] - Unreleased
 
+The first with payload **0.6**, so the editors are downloaded again once.
+
+### Added
+
+- **Our menus, start window and dialogs in every language the editors speak**, 44 in all, where they were in five and English everywhere else. Only the French, German, Italian and Spanish translations have been reviewed by a native speaker; the others are drafts, the status page says so, and corrections are welcome. Portuguese, Chinese and Serbian follow the editor's choice between their variants. In Arabic, Hebrew and Urdu the start window reads right to left. Help opens the documentation in English, French, German, Italian, Spanish or Dutch.
+- **Dutch spell-checking.** The editors ship the OpenTaal dictionary for Dutch, beside the English, French, German, Spanish and Italian ones, and each dictionary now comes with its licence.
+
 ### Changed
 
 - **On Linux, the File menu shows its keys.** New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W beside them, and Ctrl-N makes a document of the front window's kind, as before. The editors' own keys, Ctrl-S, Ctrl-Z and the rest, stay theirs and are not shown, so that Ctrl-Z in a text field still undoes the field.
 
+- **A missing font is replaced the way Word replaces it.** Calibri, Cambria, Arial, Times New Roman and Courier New go to Carlito, Caladea and Liberation, which have their widths, so a document's pages break where they do in Word, whatever else your machine has installed: on a Mac, Calibri used to go to an installed Lato. A font Word would not know either is set in Calibri's stand-in, as Word sets it in Calibri, where it used to get Liberation Sans. Wingdings, Webdings and Symbol characters are drawn as the symbols they stand for, where a missing Wingdings showed letters.
+
 ### Fixed
 
+- **Markdown keeps its headings.** A Markdown file opened, edited and saved turned every heading into a bold paragraph: `# Title` came back as `**Title**`.
 - **An OpenDocument file without master styles keeps its styles.** Every paragraph of such a file opened in the default style, with no heading larger or bolder than the text, where LibreOffice shows them as written. The file is valid, and programs that write OpenDocument often leave master styles out.
 
 ## [0.5.0] - 2026-10-20
