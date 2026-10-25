@@ -58,7 +58,7 @@ SELECTION = re.compile(r'(window\["g_fonts_selection_bin"\] = ")([^"]*)(")')
 # The metric-compatible floor: each font we ship with the widths of a Windows
 # font, under that font's name. A machine without the Windows font would
 # otherwise substitute whatever scores best, and on a Mac Calibri went to Lato,
-# not Carlito: t05 of the fidelity corpus took 3 pages where Word takes 2.
+# not Carlito, so a conversion's page count depended on what was installed.
 # Neither engine's list of look-alikes pairs Calibri with Carlito (sdkjs
 # map.js, core ApplicationFonts.h); both match a font's other names exactly.
 FLOOR = {
