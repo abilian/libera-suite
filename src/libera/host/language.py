@@ -28,7 +28,9 @@ from libera.payload import locate
 ENGLISH = "en"
 # The languages our own strings are in, one catalogue each under locale/,
 # keyed by the English. They are the documentation's editions too.
-TRANSLATED = ("fr", "de", "it", "es")
+# nl is not yet reviewed by a native speaker: it ships, and the status page
+# says so in every edition and asks for corrections.
+TRANSLATED = ("fr", "de", "it", "es", "nl")
 CATALOGUES = Path(__file__).with_name("locale")
 
 

@@ -24,9 +24,8 @@ PAGES = ("server/start-window.html", "server/bridge-desktop.js")
 MARKED = re.compile(r"\{\{(.+?)\}\}")
 TR = re.compile(r'\btr\(\s*("(?:[^"\\]|\\.)*")')
 PLACEHOLDER = re.compile(r"\{(\w+)\}")
-# Every catalogue there is, drafts included: one waiting for its review before
-# it joins TRANSLATED (nl) is held to the same keys, or it would fall behind
-# the English while it waits.
+# Every catalogue there is, drafts included: one not yet in TRANSLATED is held
+# to the same keys, or it would fall behind the English while it waits.
 CATALOGUES = sorted(f.stem for f in language.CATALOGUES.glob("*.json"))
 
 

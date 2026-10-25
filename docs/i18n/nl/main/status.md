@@ -2,28 +2,28 @@
 
 Libera Suite is jong. Deze pagina is een overzicht van de stand van zaken: wat af is, wat half af is en waar nog niet aan begonnen is.
 
-De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het Engels, de componenten in het Nederlands. Menu's en knoppen staan hier zoals je ze op het scherm ziet.
+De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het Nederlands, net als de componenten. Die vertaling van Libera Suite zelf is nog niet nagelezen door iemand met Nederlands als moedertaal: zie je een verkeerd of onhandig woord, [laat het ons weten](../feedback.md). Menu's en knoppen staan hier zoals je ze op het scherm ziet.
 
 ## Wat werkt
 
 | | |
 | :--- | :--- |
 | **Vier programma's** | Windows 10 en 11 op x64, Linux op x86_64 (arm64 met 0.4.1), macOS op Apple Silicon. Words, Tables en Slides bewerken; Diagrams leest Visio-bestanden. |
-| **Openen en opslaan** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Save, Save As, New. |
+| **Openen en opslaan** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Opslaan, Opslaan als, Nieuw. |
 | **Exporteren** | Save As biedt per programma een lijst met formaten, pdf inbegrepen. Elk aangeboden formaat is gecontroleerd door er een document naar te converteren en de tekst ervan terug te lezen. |
 | **Afbeeldingen** | Blijven behouden bij openen en opslaan; Invoegen ▸ Afbeelding werkt. |
 | **Afdrukken** | Maakt een pdf, vraagt waar je die wilt bewaren en opent hem in je pdf-viewer. |
 | **Spellingcontrole** | Vijf talen, met suggesties. Zie hieronder. |
-| **In je eigen taal** | De componenten volgen de taal van je systeem, en een nieuw document begint met het lege sjabloon van je regio: A4-papier overal behalve in de VS, en spellingcontrole in je eigen taal als daar een woordenboek voor is (zie [Spellingcontrole](#spell-checking)). De menubalk, het startvenster en de dialoogvensters zijn in het Frans, Duits, Italiaans en Spaans vertaald; in het Nederlands zijn ze nog in het Engels. |
-| **Recente documenten** | File ▸ Open Recent onthoudt de laatste 20. |
-| **Meerdere documenten tegelijk** | Van elk type, elk in een eigen venster, of op macOS elk in een eigen tabblad als het systeem tabbladen verkiest: via File ▸ New of File ▸ Open, door te dubbelklikken in je bestandsbeheerder, of met `libera *.docx`. Het bestandstype bepaalt welk programma het document opent. |
+| **In je eigen taal** | De componenten volgen de taal van je systeem, en een nieuw document begint met het lege sjabloon van je regio: A4-papier overal behalve in de VS, en spellingcontrole in je eigen taal als daar een woordenboek voor is (zie [Spellingcontrole](#spell-checking)). De menubalk, het startvenster en de dialoogvensters zijn in het Nederlands, Frans, Duits, Italiaans en Spaans vertaald; in elke andere taal zijn ze in het Engels. |
+| **Recente documenten** | Bestand ▸ Recent openen onthoudt de laatste 20. |
+| **Meerdere documenten tegelijk** | Van elk type, elk in een eigen venster, of op macOS elk in een eigen tabblad als het systeem tabbladen verkiest: via Bestand ▸ Nieuw of Bestand ▸ Openen, door te dubbelklikken in je bestandsbeheerder, of met `libera *.docx`. Het bestandstype bepaalt welk programma het document opent. |
 | **In het menu Start en het toepassingenmenu** | Op Windows zet het installatieprogramma Libera Suite in het menu Start, op het bureaublad en onder *Openen met* in Verkenner. Op Linux voegt de Flatpak het met pictogram en bestandskoppelingen toe aan het toepassingenmenu, en `libera --launcher-install` doet hetzelfde voor elke andere installatie. |
 | **Een startvenster** | `libera` zonder argumenten: nieuw, openen, recent, en waar de componenten vandaan komen. |
 | **Herstel na een crash** | Niet-opgeslagen wijzigingen worden je teruggeboden wanneer je het document opnieuw opent. |
 | **Een document dat elders open is** | Open je een document dat LibreOffice of een ander exemplaar van Libera Suite al open heeft, dan wordt het gemarkeerd als *vergrendeld voor bewerken*: je kunt het lezen en wijzigen, en bij opslaan wordt gevraagd waar, zodat het bestand van het andere exemplaar nooit wordt overschreven. Open je een document dat al in een venster staat, dan komt dat venster naar voren. Microsoft Office en Libera Suite zien elkaars vergrendelingen niet, dus een document dat in Word open is, is niet beschermd. |
-| **Sluiten vraagt eerst** | Een venster met niet-opgeslagen wijzigingen biedt Save, Don't Save of Cancel aan. |
-| **Een menubalk** | File, Edit, View en Help op elk platform. macOS voegt Window toe, en de gebruikelijke sneltoetsen. |
-| **Over** | Wie de componenten geschreven heeft, en onder welke licentie: `Bestand ▸ Over` in het documentvenster, en `Help ▸ About Libera Suite` op Linux en Windows. macOS zet het in het programmamenu. |
+| **Sluiten vraagt eerst** | Een venster met niet-opgeslagen wijzigingen biedt Opslaan, Niet opslaan of Annuleren aan. |
+| **Een menubalk** | Bestand, Bewerken, Weergave en Help op elk platform. macOS voegt Venster toe, en de gebruikelijke sneltoetsen. |
+| **Over** | Wie de componenten geschreven heeft, en onder welke licentie: `Bestand ▸ Over` in het documentvenster, en `Help ▸ Over Libera Suite` op Linux en Windows. macOS zet het in het programmamenu. |
 | **Instellingen blijven bewaard** | Thema, maateenheden, taal van de spellingcontrole en dergelijke staan na een herstart nog steeds goed. |
 | **Installatie van de componenten** | Van de server, of uit een lokale map met gebouwde artefacten. In beide gevallen wordt elk artefact gecontroleerd aan de hand van hashes die in de toepassing zelf zitten. |
 
@@ -37,7 +37,7 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 | **Gestart vanuit een terminal, toont het Dock „Python”** | Alleen wanneer je `libera` start vanuit een installatie met `pipx` of in een virtuele omgeving. Een symbool in het Dock krijgt de naam van de bundel waaruit het gestart is: hier die van de Python-interpreter, en daar kan niets in de toepassing iets aan veranderen. Het pictogram en de menubalk zijn hoe dan ook van ons; `Libera.app` toont gewoon Libera. Een document dat je op dat Python-symbool sleept, wordt in naam van Python geweigerd; het symbool van `Libera.app` neemt het wel aan. |
 | **Diagrams kan niet opslaan** | Het opent een `.vsdx` en toont die. De converter kan geen enkel Visio-formaat schrijven, dus er valt niets op te slaan en er is geen leeg sjabloon om mee te beginnen. |
 | **Geen pdf-bewerking** | Pdf's worden alleen geschreven. Een pdf openen om te bewerken is nog niet aangesloten. |
-| **Een beperkte menubalk, met weinig zichtbare sneltoetsen op Linux en geen op Windows** | Linux en Windows krijgen File, Edit, View en Help, getekend in het venster. Op Linux tonen New, Open en Close Ctrl-N, Ctrl-O en Ctrl-W, en geen ander item toont zijn toets; op Windows geen enkel. De toetsen werken wel: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z. macOS krijgt die menu's plus Window, met de gebruikelijke sneltoetsen. |
+| **Een beperkte menubalk, met weinig zichtbare sneltoetsen op Linux en geen op Windows** | Linux en Windows krijgen Bestand, Bewerken, Weergave en Help, getekend in het venster. Op Linux tonen Nieuw, Openen en Sluiten Ctrl-N, Ctrl-O en Ctrl-W, en geen ander item toont zijn toets; op Windows geen enkel. De toetsen werken wel: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z. macOS krijgt die menu's plus Window, met de gebruikelijke sneltoetsen. |
 | **Geen tabbladen op Linux en Windows** | Daar één venster per document. macOS heeft tabbladen. |
 | **Windows waarschuwt voor het installatieprogramma** | Het gedownloade installatieprogramma is nog niet digitaal ondertekend, dus SmartScreen zegt de eerste keer *„Windows heeft uw pc beschermd”*. [Installeren](install.md#windows) legt uit hoe je daarlangs komt. De installatie met één regel PowerShell heeft er nooit last van. |
 
@@ -45,7 +45,7 @@ Loop je tegen iets aan dat *niet* op deze lijst staat, [laat het ons weten](../f
 
 ## Half af
 
-**De menubalk op Linux en Windows.** Die wordt in het venster getekend, met File, Edit, View en Help, en elk item werkt. Op Linux tonen New, Open en Close hun sneltoets, en geen ander item; op Windows geen enkel. De gebruikelijke toetsen werken wel. Ctrl-N maakt een nieuw document van hetzelfde type en Ctrl-O opent er een. Ctrl-W sluit het venster en vraagt eerst wat er met niet-opgeslagen wijzigingen moet gebeuren. De eigen Ctrl-S, Ctrl-Shift-S (Opslaan als), Ctrl-P en Ctrl-Z van de componenten werken ook. Op Windows zijn Ctrl-N, Ctrl-O en Ctrl-W nog niet op een echte machine gecontroleerd. File ▸ New ▸ Document, Spreadsheet of Presentation werkt, net als de tegels New in het startvenster en het eigen tabblad Bestand van het document.
+**De menubalk op Linux en Windows.** Die wordt in het venster getekend, met Bestand, Bewerken, Weergave en Help, en elk item werkt. Op Linux tonen Nieuw, Openen en Sluiten hun sneltoets, en geen ander item; op Windows geen enkel. De gebruikelijke toetsen werken wel. Ctrl-N maakt een nieuw document van hetzelfde type en Ctrl-O opent er een. Ctrl-W sluit het venster en vraagt eerst wat er met niet-opgeslagen wijzigingen moet gebeuren. De eigen Ctrl-S, Ctrl-Shift-S (Opslaan als), Ctrl-P en Ctrl-Z van de componenten werken ook. Op Windows zijn Ctrl-N, Ctrl-O en Ctrl-W nog niet op een echte machine gecontroleerd. File ▸ New ▸ Document, Spreadsheet of Presentation werkt, net als de tegels New in het startvenster en het eigen tabblad Bestand van het document.
 
 **`Libera.app` op macOS.** `build/macos/macos-app.sh` bouwt hem. Hij opent een document als je erop dubbelklikt of het op zijn symbool in het Dock sleept, staat in *Open met* en toont het Libera-logo in het Dock. Maar het is een starter rond de interpreter waarmee hij gebouwd is (niets is ingebed, ondertekend of genotariseerd), dus nog niet iets wat je aan iemand anders kunt geven.
 
