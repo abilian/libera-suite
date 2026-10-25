@@ -107,6 +107,20 @@ def test_it_speaks_the_interface_language(start_window, monkeypatch):
     expect(start_window.locator("#payload dt").first).to_have_text(french["Components"])
 
 
+def test_it_is_laid_out_right_to_left_in_arabic(start_window, monkeypatch):
+    """The first kind of document on the right, its text from the right."""
+    monkeypatch.setattr(language, "get_language", lambda: "ar-EG")
+    start_window.reload()
+    start_window.wait_for_selector("#new button")
+
+    assert start_window.locator("html").get_attribute("dir") == "rtl"
+    first, second = start_window.locator("#new button").all()[:2]
+    assert first.bounding_box()["x"] > second.bounding_box()["x"]
+    # The tile first, so on the right, and the name ending where it begins.
+    kind = first.locator(".kind").bounding_box()
+    assert kind["x"] + kind["width"] <= first.locator(".tile").bounding_box()["x"]
+
+
 def test_new_asks_the_host_for_that_kind(start_window):
     """Clicking Spreadsheet has to reach the host as a spreadsheet.
 

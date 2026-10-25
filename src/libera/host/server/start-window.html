@@ -94,7 +94,7 @@
         border-radius: var(--radius);
         padding: 9px 12px;
         cursor: pointer;
-        text-align: left;
+        text-align: start;
       }
       button:hover { background: var(--highlight-button-hover); }
       button:focus-visible { outline: 2px solid var(--libera-suite); outline-offset: 1px; }
@@ -127,8 +127,12 @@
       /* The containing folder, not the whole path: a path reversed with
          direction:rtl to truncate on the left puts its leading slash at the
          far end, which reads as a trailing one. Right-truncating the folder
-         has no such trick in it, and the file name is already beside it. */
-      .recent .where { flex: 1 1 auto; min-width: 0; text-align: right;
+         has no such trick in it, and the file name is already beside it.
+         A path reads left to right in an Arabic or Hebrew window too, so its
+         own text keeps that order (plaintext), while the column sits at the
+         end of the row the window's direction gives it. */
+      .recent .where { flex: 1 1 auto; min-width: 0; text-align: end;
+        unicode-bidi: plaintext;
         color: var(--text-tertiary); overflow: hidden;
         text-overflow: ellipsis; white-space: nowrap; }
       .empty { color: var(--text-tertiary); }

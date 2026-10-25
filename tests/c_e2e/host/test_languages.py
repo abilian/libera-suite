@@ -43,6 +43,11 @@ def test_the_list_is_the_locales_the_payload_ships(editor):
     assert sorted(f.stem for f in folder.glob("*.json") if f.stem != "en") == LOCALES
 
 
+def test_every_language_the_editors_speak_has_a_catalogue_of_ours():
+    """Our menus, start window and dialogs in each of the editors' languages."""
+    assert set(LOCALES) <= set(language.TRANSLATED)
+
+
 @pytest.mark.parametrize("ext", ["docx", "xlsx", "pptx"])
 @pytest.mark.parametrize("tag", LOADED)
 def test_the_editor_loads_in_the_language_without_an_error(

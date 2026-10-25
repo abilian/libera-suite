@@ -36,9 +36,9 @@ def fill_in(page: str) -> str:
     """The start window in the interface language: its marked text translated,
     and the catalogue handed to its script, whose `tr` looks the rest up."""
     page = MARKED.sub(lambda m: html.escape(language.translate(m[1])), page)
-    page = page.replace(
-        '<html lang="en">', f'<html lang="{language.get_interface_language()}">'
-    )
+    lang = language.get_interface_language()
+    direction = "rtl" if lang in language.RIGHT_TO_LEFT else "ltr"
+    page = page.replace('<html lang="en">', f'<html lang="{lang}" dir="{direction}">')
     return page.replace(STRINGS, json.dumps(language.get_catalogue()))
 
 

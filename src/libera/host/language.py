@@ -27,11 +27,14 @@ from libera.payload import locate
 
 ENGLISH = "en"
 # The languages our own strings are in, one catalogue each under locale/,
-# keyed by the English. They are the documentation's editions too.
-# nl is not yet reviewed by a native speaker: it ships, and the status page
-# says so in every edition and asks for corrections.
-TRANSLATED = ("fr", "de", "it", "es", "nl")
+# keyed by the English and named as the editor names its own locale files
+# (`pt-pt`, `zh-tw`, `sr-cyrl` beside `pt`, `zh`, `sr`). Every one ships.
+# French, German, Italian and Spanish came with 0.5; the others are drafts no
+# native speaker has reviewed yet, which the status page says in every edition.
 CATALOGUES = Path(__file__).with_name("locale")
+TRANSLATED = tuple(sorted(f.stem for f in CATALOGUES.glob("*.json")))
+# Written right to left, among the editors' languages.
+RIGHT_TO_LEFT = ("ar", "he", "ur")
 
 
 @functools.cache
@@ -45,10 +48,18 @@ def get_language() -> str:
 
 
 def get_interface_language() -> str:
-    """The language of our own strings and of the documentation we link to:
-    the editor's, when it is one of TRANSLATED, else English. `en-FR` is `en`."""
-    base = get_language().split("-")[0].lower()
-    return base if base in TRANSLATED else ENGLISH
+    """The language of our own strings: the editor's, chosen as the editor
+    chooses its locale file, else English.
+
+    The tag's first two parts when there is a catalogue by that name (`pt-PT`
+    is `pt-pt`), else its first (`fr-CA` is `fr`, and `zh-Hant-TW` is `zh`, as
+    the editor has it: web-apps' common/locale.js, `_requireLang`).
+    """
+    parts = re.split(r"[-_]", get_language().lower())
+    for candidate in ("-".join(parts[:2]), parts[0]):
+        if candidate in TRANSLATED:
+            return candidate
+    return ENGLISH
 
 
 def translate(english: str, **values: object) -> str:

@@ -102,6 +102,28 @@ def test_english_needs_no_catalogue(monkeypatch) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("tag", "catalogue"),
+    [
+        ("pt-PT", "pt-pt"),
+        ("pt-BR", "pt"),
+        ("zh-TW", "zh-tw"),
+        # As the editor has it: `zh-hant` is not one of its files, so `zh`.
+        ("zh-Hant-TW", "zh"),
+        ("sr-Cyrl-RS", "sr-cyrl"),
+        ("sr_RS", "sr"),
+        ("fr-CA", "fr"),
+        ("en-FR", "en"),
+        ("tlh", "en"),
+    ],
+)
+def test_a_catalogue_is_chosen_as_the_editor_chooses_its_locale(
+    monkeypatch, tag: str, catalogue: str
+) -> None:
+    monkeypatch.setattr(language, "get_language", lambda: tag)
+    assert language.get_interface_language() == catalogue
+
+
 def test_a_translated_language_is_looked_up(monkeypatch) -> None:
     monkeypatch.setattr(language, "get_language", lambda: "fr-CA")
     assert language.get_interface_language() == "fr"
