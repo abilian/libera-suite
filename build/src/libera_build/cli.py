@@ -365,6 +365,10 @@ def app_macos(args: argparse.Namespace) -> Steps:
     ]
 
 
+def app_macos_launcher(_args: argparse.Namespace) -> Steps:
+    return [sh("macos/launcher.sh")]
+
+
 def app_flatpak(args: argparse.Namespace) -> Steps:
     options = FlatpakOptions(
         args.action, arch=given(args, ARCH) or host_arch(), dist=path_given(args, DIST)
@@ -720,11 +724,16 @@ def add_app(groups: Groups) -> None:
             "app macos --standalone", "app flatpak --arch arm64", "app flatpak-check"
         ),
     )
-    p = g.command("macos", "Libera.app, ad-hoc signed", app_macos)
+    p = g.command("macos", "Libera.app, unsigned", app_macos)
     p.add_argument(
         "--standalone",
         action="store_true",
         help="with Python, libera and the payload inside; default: runs this checkout",
+    )
+    g.command(
+        "macos-launcher",
+        "rebuild src/libera/macos/: the bundle's executable and icon, committed",
+        app_macos_launcher,
     )
     for name, action, summary in (
         ("flatpak", "build", "wheels, then the bundle, then the check"),

@@ -29,6 +29,7 @@ Quando un documento chiede un carattere che il vostro computer non ha, Libera Su
 
 ## Altre novità
 
+- **Su macOS, Libera Suite è tra le tue applicazioni.** Lo script di installazione mette `Libera.app` nella cartella Applicazioni, e `libera --launcher-install` fa lo stesso dopo Homebrew: il Finder la propone in *Apri con*, un doppio clic su un documento può aprirlo lì, e il Dock mostra Libera, dove mostrava Python.
 - **Il Markdown mantiene i titoli.** Un file Markdown aperto, modificato e salvato trasformava ogni titolo in un paragrafo in grassetto.
 - **Il controllo ortografico in olandese**, con il dizionario OpenTaal. Ogni dizionario ora arriva con la sua licenza.
 - **Su Linux, il menu File mostra le scorciatoie:** Nuovo, Apri e Chiudi mostrano Ctrl-N, Ctrl-O e Ctrl-W.

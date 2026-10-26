@@ -15,18 +15,24 @@
 // list of document types, before anything of ours saw it. Embedded, the
 // process stays this bundle's, with this bundle's document types.
 //
-//   clang -framework Cocoa -I<python include> <libpython> \
-//       -DLIBERA_PYTHON='"/path/to/python3"' launcher.m
+// One binary for every interpreter. It links no Python: it loads the library
+// the bundle's Info.plist names (LiberaPythonLibrary) and calls Py_BytesMain,
+// the one entry point whose signature has not changed since 3.8, as
+// `LiberaPython -m libera ...`. Linking at build time tied each bundle to the
+// interpreter of the machine that compiled it, so a user would have needed a
+// compiler to get Finder's Open With; this way the binary ships prebuilt in
+// the package (src/libera/macos/Libera) and `libera --launcher-install` only
+// writes the plist (src/libera/launcher/macos.py).
 //
-// LIBERA_PYTHON is the interpreter the bundle runs as. Absolute, it is a
-// virtualenv's python3 on the machine that built the bundle, whose pyvenv.cfg
-// is how the embedded interpreter finds its packages. Relative, it is inside
-// the bundle, under Contents, and the bundle carries everything
-// (STANDALONE=1 build/macos/macos-app.sh).
+// Both keys are absolute, or relative to Contents for a bundle that carries
+// its own interpreter (STANDALONE=1 build/macos/macos-app.sh). An absolute
+// LiberaPython is a virtualenv's python3, whose pyvenv.cfg is how the
+// embedded interpreter finds its packages: argv[0] is where it looks.
+//
+//   build/macos/launcher.sh    rebuilds src/libera/macos/Libera from this
 
-// First, as Python asks: it sets feature macros the system headers read.
-#include <Python.h>
 #import <Cocoa/Cocoa.h>
+#include <dlfcn.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -48,6 +54,17 @@ static BOOL gLaunched;
     gLaunched = YES;
 }
 @end
+
+static BOOL inside;
+
+// An Info.plist path, made absolute against Contents when it is not.
+static NSString *inContents(NSString *key) {
+    NSString *path = [[NSBundle mainBundle] objectForInfoDictionaryKey:key];
+    if (path == nil || [path isAbsolutePath]) return path;
+    inside = YES;
+    return [[[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"Contents"]
+        stringByAppendingPathComponent:path];
+}
 
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
@@ -101,13 +118,16 @@ int main(int argc, const char *argv[]) {
         // src/libera/host/apps.py -- and with no documents this opens the
         // start window, which is what double-clicking the icon should do.
         NSMutableArray<NSString *> *args = [NSMutableArray array];
-        NSString *python = @LIBERA_PYTHON;
-        BOOL inside = ![python isAbsolutePath];
-        if (inside)
-            python = [[[[NSBundle mainBundle] bundlePath]
-                stringByAppendingPathComponent:@"Contents"]
-                stringByAppendingPathComponent:python];
+        NSString *python = inContents(@"LiberaPython");
+        NSString *library = inContents(@"LiberaPythonLibrary");
+        if (python == nil || library == nil) {
+            NSLog(@"Libera: Info.plist names no interpreter; run libera --launcher-install");
+            return 1;
+        }
         [args addObject:python];
+        // Nothing is written into a bundle that carries its interpreter,
+        // which signing seals: its bytecode was compiled when it was built.
+        if (inside) [args addObject:@"-B"];
         [args addObject:@"-m"];
         [args addObject:@"libera"];
         [args addObjectsFromArray:gDocuments];
@@ -129,28 +149,22 @@ int main(int argc, const char *argv[]) {
             [args addObject:a];
         }
 
-        // The interpreter's own idea of where it is, set in its configuration
-        // rather than in PYTHONEXECUTABLE, which every child would inherit.
-        // From it comes everything else: the virtualenv beside it, and so
-        // the libera package. A library that cannot be loaded never gets
-        // here -- dyld stops the process first -- and the bundle has to be
-        // rebuilt (build/macos/macos-app.sh).
+        // A library that cannot be loaded leaves the bundle pointing at an
+        // interpreter that has gone (an upgrade, an uninstall): say so where
+        // Console shows it, since nothing else is listening.
+        void *python_lib = dlopen([library fileSystemRepresentation], RTLD_NOW | RTLD_GLOBAL);
+        if (python_lib == NULL) {
+            NSLog(@"Libera: %s; run libera --launcher-install again", dlerror());
+            return 1;
+        }
+        int (*run)(int, char **) = (int (*)(int, char **))dlsym(python_lib, "Py_BytesMain");
+        if (run == NULL) {
+            NSLog(@"Libera: %@ is not a Python library", library);
+            return 1;
+        }
         int count = (int)[args count];
         char **cargs = calloc(count + 1, sizeof(char *));
-        for (int i = 0; i < count; i++) cargs[i] = strdup([args[i] UTF8String]);
-
-        PyConfig config;
-        PyConfig_InitPythonConfig(&config);
-        // Nothing is written into a bundle, which signing seals: its
-        // bytecode was compiled when it was built.
-        if (inside) config.write_bytecode = 0;
-        PyStatus status =
-            PyConfig_SetBytesString(&config, &config.executable, [python UTF8String]);
-        if (!PyStatus_Exception(status))
-            status = PyConfig_SetBytesArgv(&config, count, cargs);
-        if (!PyStatus_Exception(status)) status = Py_InitializeFromConfig(&config);
-        PyConfig_Clear(&config);
-        if (PyStatus_Exception(status)) Py_ExitStatusException(status);
-        return Py_RunMain();
+        for (int i = 0; i < count; i++) cargs[i] = strdup([args[i] fileSystemRepresentation]);
+        return run(count, cargs);
     }
 }

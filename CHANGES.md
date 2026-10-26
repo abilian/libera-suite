@@ -11,6 +11,7 @@ The first with payload **0.6**, so the editors are downloaded again once.
 ### Added
 
 - **Our menus, start window and dialogs in every language the editors speak**, 44 in all, where they were in five and English everywhere else. Only the French, German, Italian and Spanish translations have been reviewed by a native speaker; the others are drafts, the status page says so, and corrections are welcome. Portuguese, Chinese and Serbian follow the editor's choice between their variants. In Arabic, Hebrew and Urdu the start window reads right to left. Help opens the documentation in English, French, German, Italian, Spanish or Dutch.
+- **On macOS, Libera Suite among your applications.** `libera --launcher-install` writes `Libera.app` into `~/Applications` around the Python of the install that runs it, where it did nothing on macOS, and the install script runs it there itself. Finder offers Libera Suite in Open With, a double-click on a document can open it, and the Dock says Libera, not Python. The bundle's executable links no Python: it loads the library its Info.plist names, so it ships prebuilt in the package, universal, and an install needs no compiler. `build/macos/macos-app.sh` writes its bundles the same way.
 - **Dutch spell-checking.** The editors ship the OpenTaal dictionary for Dutch, beside the English, French, German, Spanish and Italian ones, and each dictionary now comes with its licence.
 
 ### Changed

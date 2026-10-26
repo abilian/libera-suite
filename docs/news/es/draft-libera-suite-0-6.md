@@ -29,6 +29,7 @@ Cuando un documento pide una fuente que tu ordenador no tiene, Libera Suite la s
 
 ## Otros cambios
 
+- **En macOS, Libera Suite está entre tus aplicaciones.** El script de instalación pone `Libera.app` en tu carpeta Aplicaciones, y `libera --launcher-install` hace lo mismo después de Homebrew: el Finder la ofrece en *Abrir con*, un doble clic en un documento puede abrirlo en ella, y el Dock muestra Libera, donde mostraba Python.
 - **El Markdown conserva sus títulos.** Un archivo Markdown abierto, editado y guardado convertía cada título en un párrafo en negrita.
 - **Revisión ortográfica en neerlandés**, con el diccionario de OpenTaal. Cada diccionario viene ahora con su licencia.
 - **En Linux, el menú Archivo muestra sus atajos:** Nuevo, Abrir y Cerrar muestran Ctrl-N, Ctrl-O y Ctrl-W.

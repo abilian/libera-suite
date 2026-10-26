@@ -15,7 +15,7 @@ Libera Suite is early. This page is a status list: it says what is built, what i
 | **In your language** | The applications follow your system's language, and a new document starts from your region's blank: A4 paper everywhere but the US, and spell-checked in your language. The menu bar, the start window and the dialogs follow too, in every language the applications speak, and Arabic, Hebrew and Urdu lay the start window out right to left. Only the French, German, Italian and Spanish translations have been reviewed by a native speaker; the others are drafts, and [corrections are welcome](../feedback.md). |
 | **Recent documents** | File ▸ Open Recent remembers the last 20. |
 | **Several documents at once** | Of any kind, one window each, or on macOS one tab each when the system prefers tabs: from File ▸ New or File ▸ Open, by double-clicking in the file manager, or as `libera *.docx`. The file's type picks the application. |
-| **In the Start menu and the launcher** | On Windows, the installer puts Libera Suite in the Start menu, on the desktop and in Explorer's *Open with*. On Linux, the Flatpak adds it to the launcher with its icon and file associations, and `libera --launcher-install` does the same for any other install. |
+| **Among your applications** | On Windows, the installer puts Libera Suite in the Start menu, on the desktop and in Explorer's *Open with*. On Linux, the Flatpak adds it to the launcher with its icon and file associations, and `libera --launcher-install` does the same for any other install. On macOS, the install script puts `Libera.app` in your Applications folder, and `libera --launcher-install` does the same after Homebrew: Finder offers it in *Open With*, and the Dock shows its icon and name. |
 | **A start window** | `libera` on its own: new, open, recent, and where the components came from. |
 | **Crash recovery** | Unsaved edits are offered back the next time you open the document. |
 | **A document open elsewhere** | Opened while LibreOffice or another copy of Libera Suite has it, it is marked *locked for editing*: you can read and change it, and saving asks where, so the other copy's file is never written over. Opening a document a window already shows brings that window forward. Neither Microsoft Office nor Libera Suite sees the other's locks, so a document open in Word is not protected. |
@@ -31,8 +31,8 @@ Libera Suite is early. This page is a status list: it says what is built, what i
 
 | | |
 | :--- | :--- |
-| **macOS calls it an unidentified developer** | Only for a `Libera.app` you built yourself; it is not signed with a Developer ID, so Gatekeeper objects the first time. [Other ways to install](alt-install.md#a-double-clickable-application-on-macos) has the way past it. A `pip`, `pipx` or Homebrew install never meets it. |
-| **Run from a terminal, the Dock says "Python"** | Only when you start `libera` from a `pipx` or virtualenv install. A Dock tile is named after the bundle it was launched from: here, the Python interpreter's, which nothing in the application can change. The icon and the menu bar are ours either way; `Libera.app` says Libera. A document dropped on that Python tile is refused in Python's name; `Libera.app`'s tile takes it. |
+| **macOS calls it an unidentified developer** | Only for a `Libera.app` built from a source checkout; it is not signed with a Developer ID, so Gatekeeper objects the first time. [Other ways to install](alt-install.md#a-double-clickable-application-on-macos) has the way past it. A `pip`, `pipx` or Homebrew install never meets it. |
+| **Run from a terminal, the Dock says "Python"** | Only when you start `libera` in a terminal on macOS. A Dock tile is named after the bundle it was launched from: here, the Python interpreter's, which nothing in the application can change. The icon and the menu bar are ours either way; `Libera.app` says Libera. A document dropped on that Python tile is refused in Python's name; `Libera.app`'s tile takes it. |
 | **Diagrams cannot save** | It opens `.vsdx` and shows it. The converter cannot write any Visio format, so there is nothing to save and no blank to start from. |
 | **No PDF editing** | PDFs are written only. Opening one for editing is not wired up. |
 | **A shallow menu bar, with few shortcuts shown on Linux and none on Windows** | Linux and Windows get File, Edit, View and Help, drawn in the window. On Linux, New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W, and no other item shows its key; on Windows none does. The keys work all the same: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P and Ctrl-Z. macOS gets those menus plus Window, with the usual shortcuts. |
@@ -45,7 +45,7 @@ If you hit something that is *not* on this list, [tell us about it](../feedback.
 
 **The menu bar on Linux and Windows.** It is drawn inside the window, with File, Edit, View and Help, and every item works. On Linux, New, Open and Close show their keys, and no other item does; on Windows none does. The usual keys work all the same. Ctrl-N makes a new document of the same kind and Ctrl-O opens one. Ctrl-W closes the window, asking first about unsaved changes. The components' own Ctrl-S, Ctrl-Shift-S (Save As), Ctrl-P and Ctrl-Z work as well. On Windows, Ctrl-N, Ctrl-O and Ctrl-W have not yet been checked on a real machine. File ▸ New ▸ Document, Spreadsheet or Presentation works, as do the New tiles in the start window and the document's own File tab.
 
-**`Libera.app` on macOS.** `build/macos/macos-app.sh` builds it. It opens a document on a double-click or dropped on its Dock icon, appears in *Open With*, and shows the Libera mark in the Dock. But it is a launcher around the interpreter it was built with (nothing is embedded, signed or notarised), so it is not something you can hand to somebody else yet.
+**`Libera.app` on macOS.** The install script writes it into your Applications folder, and so does `libera --launcher-install` after any other install. It opens a document on a double-click or dropped on its Dock icon, appears in *Open With*, and shows the Libera mark in the Dock. But it is a launcher around the Python of your install (nothing is embedded, signed or notarised), so it is not something you can hand to somebody else yet.
 
 ## Not started
 
@@ -60,8 +60,8 @@ If you hit something that is *not* on this list, [tell us about it](../feedback.
 ### In the application
 
 - **Tabs on Linux and Windows.** One window per document there, which the taskbar groups.
-- **A redistributable application on macOS.** `Libera.app` runs from your own checkout and embeds no interpreter and no components. Windows has one: its installer brings everything.
-- **Automatic updates**, and **code signing**. macOS treats a `Libera.app` you have built as software from an unidentified developer. Windows warns about the downloaded installer.
+- **A redistributable application on macOS.** `Libera.app` runs the Python of your own install and embeds no interpreter and no components. Windows has one: its installer brings everything.
+- **Automatic updates**, and **code signing**. macOS treats a `Libera.app` built from a source checkout as software from an unidentified developer. Windows warns about the downloaded installer.
 - **Offline help**, readable without a browser or a network. The Help menu opens this site; About works offline. See below.
 
 ### Elsewhere

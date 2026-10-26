@@ -29,6 +29,7 @@ Quand un document demande une police absente de votre ordinateur, Libera Suite l
 
 ## Autres changements
 
+- **Sous macOS, Libera Suite figure parmi vos applications.** Le script d'installation place `Libera.app` dans votre dossier Applications, et `libera --launcher-install` fait de même après Homebrew : le Finder la propose dans *Ouvrir avec*, un double-clic sur un document peut l'y ouvrir, et le Dock affiche Libera, là où il affichait Python.
 - **Le Markdown garde ses titres.** Un fichier Markdown ouvert, modifié et enregistré transformait chaque titre en paragraphe gras.
 - **La vérification orthographique en néerlandais**, avec le dictionnaire OpenTaal. Chaque dictionnaire est désormais accompagné de sa licence.
 - **Sous Linux, le menu Fichier affiche ses raccourcis :** Nouveau, Ouvrir et Fermer montrent Ctrl-N, Ctrl-O et Ctrl-W.

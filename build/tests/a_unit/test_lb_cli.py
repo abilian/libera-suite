@@ -73,6 +73,7 @@ TOOLCHAIN = sh("engine/toolchain.sh", "check")
         (["payload", "patches"], [sh("engine/check-patches.sh")]),
         (["toolchain", "list"], [sh("engine/toolchain.sh", "list")]),
         (["app", "macos", "--standalone"], [sh("macos/macos-app.sh", STANDALONE="1")]),
+        (["app", "macos-launcher"], [sh("macos/launcher.sh")]),
     ],
 )
 def test_a_command_line_runs_its_scripts(argv, steps):

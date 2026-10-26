@@ -99,11 +99,20 @@ libera --launcher-remove     # para quitarla
 
 ## Una aplicación que se abra con doble clic en macOS {#a-double-clickable-application-on-macos}
 
-Todavía no hay una lista para usar. A partir de una copia del código fuente, puedes compilarte una:
+El script de instalación escribe una, `Libera.app`, en la carpeta Aplicaciones de tu carpeta de inicio. Después de cualquier otra instalación, como Homebrew, `pipx` o `uv tool`, este comando hace lo mismo:
+
+```sh
+libera --launcher-install
+libera --launcher-remove     # para quitarla
+```
+
+Abre los documentos con doble clic y muestra el icono de Libera en el Dock. Es un pequeño lanzador para el Python de la instalación que la escribió: después de desinstalarla, o de pasarla a otro Python, vuelve a ejecutar `libera --launcher-install`.
+
+A partir de una copia del código fuente, puedes compilar una para esa copia:
 
 ```sh
 build/macos/macos-app.sh          # compila build/out/Libera.app
 open build/out/Libera.app
 ```
 
-Abre los documentos con doble clic y muestra el icono de Libera en el Dock. Usa el Python con el que se compiló, así que depende de esa copia del código: déjala donde está; si la copia cambia de sitio, vuelve a compilarla. No está firmada: la primera vez, macOS dice **«no se puede abrir porque no se puede verificar el desarrollador»**. A partir de macOS 15, para seguir adelante, ve a *Ajustes del Sistema ▸ Privacidad y seguridad ▸ Abrir igualmente*.
+Usa el Python de esa copia del código, así que depende de ella: déjala donde está; si la copia cambia de sitio, vuelve a compilarla. No está firmada: la primera vez, macOS dice **«no se puede abrir porque no se puede verificar el desarrollador»**. A partir de macOS 15, para seguir adelante, ve a *Ajustes del Sistema ▸ Privacidad y seguridad ▸ Abrir igualmente*.

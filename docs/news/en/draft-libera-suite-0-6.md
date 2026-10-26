@@ -29,6 +29,7 @@ When a document asks for a font your computer doesn't have, Libera Suite now rep
 
 ## Other changes
 
+- **On macOS, Libera Suite is among your applications.** The install script puts `Libera.app` in your Applications folder, and `libera --launcher-install` does the same after Homebrew: Finder offers it in *Open With*, a double-click on a document can open it there, and the Dock says Libera, where it said Python.
 - **Markdown keeps its headings.** A Markdown file opened, edited and saved used to turn every heading into a bold paragraph.
 - **Dutch spell-checking**, with the OpenTaal dictionary. Each dictionary now comes with its licence.
 - **On Linux, the File menu shows its keys:** New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W.

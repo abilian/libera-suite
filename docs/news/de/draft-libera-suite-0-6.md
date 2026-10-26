@@ -29,6 +29,7 @@ Verlangt ein Dokument eine Schrift, die Ihr Computer nicht hat, ersetzt Libera S
 
 ## Weitere Änderungen
 
+- **Unter macOS ist Libera Suite bei Ihren Anwendungen.** Das Installationsskript legt `Libera.app` in Ihren Programme-Ordner, und `libera --launcher-install` tut dasselbe nach Homebrew: Der Finder bietet sie unter *Öffnen mit* an, ein Doppelklick auf ein Dokument kann es darin öffnen, und das Dock zeigt Libera, wo es Python zeigte.
 - **Markdown behält seine Überschriften.** Eine Markdown-Datei, geöffnet, bearbeitet und gespeichert, machte bisher aus jeder Überschrift einen fetten Absatz.
 - **Niederländische Rechtschreibprüfung**, mit dem Wörterbuch von OpenTaal. Jedes Wörterbuch kommt jetzt mit seiner Lizenz.
 - **Unter Linux zeigt das Menü Datei seine Tastenkürzel:** Neu, Öffnen und Schließen zeigen Strg-N, Strg-O und Strg-W.

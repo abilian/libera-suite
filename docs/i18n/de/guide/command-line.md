@@ -29,14 +29,14 @@ Der Befehl heißt unter Linux und macOS `libera`. Als Flatpak installiert lautet
 | `libera --payload-status` | wo die Komponenten liegen, ihre Version und der [Quellcode](../licence.md#corresponding-source), aus dem sie gebaut wurden |
 | `libera --payload-remove` | sie löschen. [Mehr](../main/install.md#uninstall) |
 
-## Das Anwendungsmenü unter Linux
+## Das Anwendungsmenü und Öffnen mit
 
 | | |
 | :--- | :--- |
-| `libera --launcher-install` | Libera Suite ins Anwendungsmenü aufnehmen, mit *Öffnen mit*. [Mehr](../main/alt-install.md#a-launcher-entry-on-linux) |
-| `libera --launcher-remove` | den Eintrag wieder entfernen |
+| `libera --launcher-install` | Libera Suite zu Ihren Anwendungen hinzufügen, mit *Öffnen mit*: unter Linux ins Anwendungsmenü ([mehr](../main/alt-install.md#a-launcher-entry-on-linux)), unter macOS als `Libera.app` in Ihren Programme-Ordner ([mehr](../main/alt-install.md#a-double-clickable-application-on-macos)). |
+| `libera --launcher-remove` | sie wieder entfernen |
 
-Das Flatpak erledigt das selbst.
+Das Flatpak, das Windows-Installationsprogramm und unter macOS das Installationsskript erledigen das selbst.
 
 ## Wenn etwas nicht klappt
 

@@ -99,11 +99,20 @@ libera --launcher-remove     # um ihn wieder zu entfernen
 
 ## Eine Anwendung zum Doppelklicken unter macOS {#a-double-clickable-application-on-macos}
 
-Eine fertige gibt es noch nicht. Aus einer Kopie des Quellcodes können Sie sich selbst eine bauen:
+Das Installationsskript legt eine an, `Libera.app`, im Programme-Ordner Ihres Benutzerordners. Nach jeder anderen Installation, etwa mit Homebrew, `pipx` oder `uv tool`, erledigt dieser Befehl dasselbe:
+
+```sh
+libera --launcher-install
+libera --launcher-remove     # um sie wieder zu entfernen
+```
+
+Sie öffnet Dokumente per Doppelklick und zeigt das Libera-Symbol im Dock. Sie ist ein kleiner Starter für das Python der Installation, die sie angelegt hat: Nachdem Sie diese deinstalliert oder auf ein anderes Python umgestellt haben, führen Sie `libera --launcher-install` erneut aus.
+
+Aus einer Kopie des Quellcodes können Sie eine für diese Kopie bauen:
 
 ```sh
 build/macos/macos-app.sh          # baut build/out/Libera.app
 open build/out/Libera.app
 ```
 
-Sie öffnet Dokumente per Doppelklick und zeigt das Libera-Symbol im Dock. Sie verwendet das Python, mit dem sie gebaut wurde, und gehört damit zu dieser Kopie des Quellcodes: Lassen Sie sie dort, und bauen Sie sie neu, wenn die Kopie umzieht. Sie ist nicht signiert, daher meldet macOS beim ersten Start **„kann nicht geöffnet werden, da der Entwickler nicht verifiziert werden kann“**. Ab macOS 15 kommen Sie darüber hinweg mit *Systemeinstellungen ▸ Datenschutz & Sicherheit ▸ Trotzdem öffnen*.
+Sie verwendet das Python dieser Kopie des Quellcodes und gehört damit zu ihr: Lassen Sie sie dort, und bauen Sie sie neu, wenn die Kopie umzieht. Sie ist nicht signiert, daher meldet macOS beim ersten Start **„kann nicht geöffnet werden, da der Entwickler nicht verifiziert werden kann“**. Ab macOS 15 kommen Sie darüber hinweg mit *Systemeinstellungen ▸ Datenschutz & Sicherheit ▸ Trotzdem öffnen*.

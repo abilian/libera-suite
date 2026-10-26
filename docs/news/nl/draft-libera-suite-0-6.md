@@ -29,6 +29,7 @@ Vraagt een document om een lettertype dat je computer niet heeft, dan vervangt L
 
 ## Andere wijzigingen
 
+- **Op macOS staat Libera Suite tussen je programma's.** Het installatiescript zet `Libera.app` in je map Programma's, en `libera --launcher-install` doet hetzelfde na Homebrew: de Finder biedt het aan onder *Open met*, een dubbelklik op een document kan het daarin openen, en het Dock toont Libera, waar het Python toonde.
 - **Markdown houdt zijn koppen.** Een Markdown-bestand dat je opende, bewerkte en bewaarde, maakte van elke kop een vette alinea.
 - **Nederlandse spellingcontrole**, met het woordenboek van OpenTaal. Elk woordenboek komt nu met zijn licentie.
 - **Op Linux toont het menu Bestand zijn sneltoetsen:** Nieuw, Openen en Sluiten tonen Ctrl-N, Ctrl-O en Ctrl-W.

@@ -29,14 +29,14 @@ The command is `libera`, on Linux and macOS. Installed as a Flatpak it is `flatp
 | `libera --payload-status` | where the components are, their version, and the [source](../licence.md#corresponding-source) they were built from |
 | `libera --payload-remove` | delete them. [More](../main/install.md#uninstall) |
 
-## Linux applications menu
+## Applications menu and Open With
 
 | | |
 | :--- | :--- |
-| `libera --launcher-install` | put Libera Suite in the applications menu, with *Open With*. [More](../main/alt-install.md#a-launcher-entry-on-linux) |
+| `libera --launcher-install` | put Libera Suite among your applications, with *Open With*: in the applications menu on Linux ([more](../main/alt-install.md#a-launcher-entry-on-linux)), as `Libera.app` in your Applications folder on macOS ([more](../main/alt-install.md#a-double-clickable-application-on-macos)). |
 | `libera --launcher-remove` | take it out again |
 
-The Flatpak does this itself.
+The Flatpak, the Windows installer and, on macOS, the install script do this themselves.
 
 ## When something goes wrong
 

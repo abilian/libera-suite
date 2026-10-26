@@ -29,14 +29,14 @@ De opdracht is `libera`, op Linux en macOS. Als Flatpak geïnstalleerd is het `f
 | `libera --payload-status` | waar de componenten staan, hun versie, en de [broncode](../licence.md#corresponding-source) waaruit ze gebouwd zijn |
 | `libera --payload-remove` | ze verwijderen. [Meer](../main/install.md#uninstall) |
 
-## Het toepassingenmenu op Linux
+## Het toepassingenmenu en Open met
 
 | | |
 | :--- | :--- |
-| `libera --launcher-install` | Libera Suite in het toepassingenmenu zetten, met *Openen met*. [Meer](../main/alt-install.md#a-launcher-entry-on-linux) |
+| `libera --launcher-install` | Libera Suite bij je programma's zetten, met *Openen met*: in het toepassingenmenu op Linux ([meer](../main/alt-install.md#a-launcher-entry-on-linux)), als `Libera.app` in je map Programma's op macOS ([meer](../main/alt-install.md#a-double-clickable-application-on-macos)). |
 | `libera --launcher-remove` | het er weer uit halen |
 
-De Flatpak doet dit zelf.
+De Flatpak, het Windows-installatieprogramma en, op macOS, het installatiescript doen dit zelf.
 
 ## Als er iets misgaat
 
