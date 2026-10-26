@@ -668,7 +668,7 @@ wheels = [
 
 [[package]]
 name = "libera"
-version = "0.6.0"
+version = "0.6.0rc1"
 source = { editable = "." }
 dependencies = [
     { name = "pywebview" },
