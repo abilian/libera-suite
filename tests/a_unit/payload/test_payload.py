@@ -40,8 +40,7 @@ def make_payload(root: Path) -> Path:
     (root / "web-apps").mkdir()
     (root / "empty").mkdir()
     (root / "empty" / "new.docx").write_bytes(b"PK\x03\x04")
-    (root / "AllFonts.js").write_text("window={}")
-    (root / "fonts").mkdir()
+    (root / "fonts-src").mkdir()
     return root
 
 
@@ -401,12 +400,11 @@ def _complete_payload(root):
         f"bin/x2t{locate.EXE}",
         "bin/DoctRenderer.config",
         "empty/new.docx",
-        "AllFonts.js",
     ):
         p = root / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text("x", encoding="utf-8")
-    for d in ("sdkjs", "web-apps", "fonts"):
+    for d in ("sdkjs", "web-apps", "fonts-src"):
         (root / d).mkdir(parents=True, exist_ok=True)
     return root
 

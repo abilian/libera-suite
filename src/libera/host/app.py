@@ -157,7 +157,7 @@ def run(
         # engine drew is otherwise unmeasurable -- see tests/d_gui/.
         shot=shot,
     )
-    logger.info("fonts: %s", first_session.fonts or "the payload's own")
+    logger.info("fonts: %s", first_session.fonts)
     configure(first_session)
 
     port = server.find_free_port()

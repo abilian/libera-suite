@@ -28,7 +28,7 @@ def serve_file(
     payload: pathlib.Path,
     path: str,
     if_none_match: str,
-    font_index: pathlib.Path | None = None,
+    font_index: pathlib.Path,
 ) -> Response:
     """A payload file, with the bridge spliced into every HTML page, the
     editor's iframe included.
@@ -39,11 +39,10 @@ def serve_file(
     Last-Modified. The tag is the file's full path, size and nanosecond mtime,
     so a different payload root, or a regenerated file, is a different tag.
 
-    With an index of the machine's fonts, the font list and the font menu's
-    pictures are the index's.
+    The font list and the font menu's pictures are the fonts' index's.
     """
     root, target = payload, payload / path
-    if font_index is not None and (own := fonts.find_served(font_index, path)):
+    if own := fonts.find_served(font_index, path):
         root, target = font_index, own
     if target.is_dir():
         target /= "index.html"
@@ -83,58 +82,17 @@ def _make_etag(path: pathlib.Path) -> str:
     return '"' + hashlib.sha256(identity).hexdigest()[:24] + '"'
 
 
-# allfontsgen --output-web XORs the first 32 bytes of every font with this key,
-# so a plain web server cannot hand out usable font files. The *web* loader
-# (Externals.js LoadFontArrayBuffer) undoes it; the *desktop* loader
-# (Local/common.js) does not, because ascdesktop://fonts/ serves the untouched
-# file from disk. We serve the web copies, so we undo it here.
-ODTTF_KEY = bytes([
-    0xA0,
-    0x66,
-    0xD6,
-    0x20,
-    0x14,
-    0x96,
-    0x47,
-    0xFA,
-    0x95,
-    0x69,
-    0xB8,
-    0x50,
-    0xB0,
-    0x41,
-    0x49,
-    0x48,
-])
-
-
-def _deobfuscated(data: bytes) -> bytes:
-    n = min(32, len(data))
-    head = bytes(b ^ ODTTF_KEY[i % 16] for i, b in enumerate(data[:n]))
-    return head + data[n:]
-
-
 @endpoint("GET", "fonts", prefix=True)
 def serve_font(r: Request) -> Response:
-    """A web font, with the obfuscation the web loader expects undone; or,
-    from an index of the machine's fonts, the font file its number names."""
-    if r.session.fonts is not None:
-        return _serve_installed_font(r.session.fonts, r.path)
-    f = r.session.layout.fonts / r.path
-    if not is_inside(r.session.layout.fonts, f):
-        raise Refused(404)
-    return Response(
-        body=_deobfuscated(f.read_bytes()), content_type="application/octet-stream"
-    )
-
-
-def _serve_installed_font(index: pathlib.Path, number: str) -> Response:
-    """The font at that place in the index, untouched: nothing obfuscated it.
+    """The font at that place in the fonts' index, untouched.
 
     A number and nothing else, so a page can reach no file the index does not
     list. isascii as well, because int() reads other scripts' digits too.
+    Not the web copies allfontsgen's --output-web makes, which it obfuscates
+    for the web loader to undo, and which a payload no longer carries.
     """
-    files = fonts.read_font_files(index / "AllFonts.js")
+    number = r.path
+    files = fonts.read_font_files(r.session.all_fonts)
     if not (number.isascii() and number.isdigit() and int(number) < len(files)):
         raise Refused(404)
     return Response(content_type="application/octet-stream", file=files[int(number)])

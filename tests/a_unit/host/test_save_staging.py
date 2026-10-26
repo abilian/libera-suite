@@ -24,7 +24,11 @@ from libera.host.session import Session
 @pytest.fixture
 def note(tmp_path):
     """A session with note.docx open, its Editor.bin in place."""
-    host = Session(payload=tmp_path / "payload", work=tmp_path / "state" / "s")
+    host = Session(
+        payload=tmp_path / "payload",
+        work=tmp_path / "state" / "s",
+        fonts=tmp_path / "fonts",
+    )
     sessions.configure(host)
     host.doc.mkdir(parents=True, exist_ok=True)
     (host.doc / "Editor.bin").write_bytes(b"DOCY;v10;0;")

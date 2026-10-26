@@ -47,8 +47,8 @@ class Session:
 
     payload: pathlib.Path
     work: pathlib.Path
-    # The index of the fonts installed on the machine this window was opened
-    # with (payload/fonts.py), or None for the payload's own fonts alone.
+    # The fonts' index this window was opened with (payload/fonts.py), or
+    # None for the payload's own fonts alone.
     fonts: pathlib.Path | None = None
     document: pathlib.Path | None = None
     shot: pathlib.Path | None = None
@@ -105,12 +105,13 @@ class Session:
     @property
     def all_fonts(self) -> pathlib.Path:
         """The AllFonts.js of filesystem paths, which x2t reads."""
-        return self.fonts / "AllFonts.js" if self.fonts else self.layout.all_fonts
+        return self.font_dir / "AllFonts.js"
 
     @property
     def font_dir(self) -> pathlib.Path:
-        """Where x2t finds font_selection.bin, which it calls its font folder."""
-        return self.fonts or self.layout.sdkjs_common
+        """The fonts' index, which is where x2t finds font_selection.bin, and
+        so what it calls its font folder."""
+        return self.fonts or fonts.get_shipped(self.layout)
 
     @property
     def unsaved_marker(self) -> pathlib.Path:

@@ -33,7 +33,13 @@ def serve(tmp_path):
 
     Every request binds a session before it looks at a path, so there is one.
     """
-    session.configure(Session(payload=tmp_path / "payload", work=tmp_path / "work"))
+    session.configure(
+        Session(
+            payload=tmp_path / "payload",
+            work=tmp_path / "work",
+            fonts=tmp_path / "fonts",
+        )
+    )
     servers = []
 
     def start(root):
@@ -62,9 +68,9 @@ def get(port, path, headers=None):
 def test_a_payload_file_says_revalidate_and_names_itself(serve, tmp_path):
     root = tmp_path / "payload"
     port = serve(root)
-    (root / "sdkjs" / "common" / "AllFonts.js").write_text("fonts = 32", "utf-8")
+    (root / "sdkjs" / "common" / "api.js").write_text("fonts = 32", "utf-8")
 
-    response, body = get(port, "/sdkjs/common/AllFonts.js")
+    response, body = get(port, "/sdkjs/common/api.js")
 
     assert body == b"fonts = 32"
     assert response.getheader("Cache-Control") == "no-cache"
@@ -77,11 +83,11 @@ def test_a_payload_file_says_revalidate_and_names_itself(serve, tmp_path):
 def test_an_unchanged_file_is_a_304(serve, tmp_path, caplog):
     root = tmp_path / "payload"
     port = serve(root)
-    (root / "sdkjs" / "common" / "AllFonts.js").write_text("fonts = 32", "utf-8")
-    first, _ = get(port, "/sdkjs/common/AllFonts.js")
+    (root / "sdkjs" / "common" / "api.js").write_text("fonts = 32", "utf-8")
+    first, _ = get(port, "/sdkjs/common/api.js")
 
     again, body = get(
-        port, "/sdkjs/common/AllFonts.js", {"If-None-Match": first.getheader("ETag")}
+        port, "/sdkjs/common/api.js", {"If-None-Match": first.getheader("ETag")}
     )
 
     assert again.status == 304
@@ -96,18 +102,18 @@ def test_another_payload_with_the_same_file_times_is_not_a_304(serve, tmp_path):
     old, new = tmp_path / "old", tmp_path / "new"
     old_port, new_port = serve(old), serve(new)
     for root, text in ((old, "fonts = 188"), (new, "fonts = 032")):
-        f = root / "sdkjs" / "common" / "AllFonts.js"
+        f = root / "sdkjs" / "common" / "api.js"
         f.write_text(text, "utf-8")
-    stamp = (old / "sdkjs" / "common" / "AllFonts.js").stat()
+    stamp = (old / "sdkjs" / "common" / "api.js").stat()
     os.utime(
-        new / "sdkjs" / "common" / "AllFonts.js",
+        new / "sdkjs" / "common" / "api.js",
         ns=(stamp.st_atime_ns, stamp.st_mtime_ns),
     )
-    cached, _ = get(old_port, "/sdkjs/common/AllFonts.js")
+    cached, _ = get(old_port, "/sdkjs/common/api.js")
 
     fresh, body = get(
         new_port,
-        "/sdkjs/common/AllFonts.js",
+        "/sdkjs/common/api.js",
         {
             "If-None-Match": cached.getheader("ETag"),
             # From a cache filled before the server stopped sending dates.

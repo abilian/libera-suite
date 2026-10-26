@@ -103,11 +103,6 @@ class Layout:
         return self.bin / "DoctRenderer.config"
 
     @property
-    def all_fonts(self) -> Path:
-        """The AllFonts.js of filesystem paths, which x2t reads."""
-        return self.root / "AllFonts.js"
-
-    @property
     def sdkjs(self) -> Path:
         return self.root / "sdkjs"
 
@@ -116,23 +111,9 @@ class Layout:
         return self.sdkjs / "common"
 
     @property
-    def web_all_fonts(self) -> Path:
-        """The AllFonts.js of web ids, which the editor loads."""
-        return self.sdkjs_common / "AllFonts.js"
-
-    @property
-    def font_thumbnails(self) -> Path:
-        return self.sdkjs_common / "Images"
-
-    @property
-    def fonts(self) -> Path:
-        """The web fonts, which allfontsgen writes and the editor fetches:
-        obfuscated copies, under numbers."""
-        return self.root / "fonts"
-
-    @property
     def fonts_src(self) -> Path:
-        """The fonts as shipped, which allfontsgen reads."""
+        """The fonts as shipped, which allfontsgen reads. Their index is not
+        here but in the state folder: see payload/fonts.py."""
         return self.root / "fonts-src"
 
     @property
@@ -326,7 +307,10 @@ def find_bundled_dir() -> Path | None:
 
 
 def is_complete(root: Path) -> bool:
-    """Everything the host needs, including what install generates."""
+    """Everything the host needs, including what install generates.
+
+    The fonts' index is not in it: the host builds that in the state folder
+    when it is missing (payload/fonts.py)."""
     layout = Layout(root)
     needed = [
         layout.x2t,
@@ -334,8 +318,7 @@ def is_complete(root: Path) -> bool:
         layout.sdkjs,
         layout.web_apps,
         layout.blanks / "new.docx",
-        layout.all_fonts,
-        layout.fonts,
+        layout.fonts_src,
     ]
     return all(p.exists() for p in needed)
 

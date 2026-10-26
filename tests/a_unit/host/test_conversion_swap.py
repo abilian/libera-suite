@@ -28,6 +28,7 @@ def edited(tmp_path) -> Session:
     found = Session(
         payload=tmp_path / "payload",
         work=tmp_path / "sessions" / "0",
+        fonts=tmp_path / "fonts",
         document=document,
         app=apps.WORDS,
     )

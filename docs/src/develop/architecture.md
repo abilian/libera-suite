@@ -62,7 +62,7 @@ Every one of these is a small HTTP endpoint. The conversions run in upstream's `
 
 `x2t` is the converter. For most formats it is C++ all the way down. For PDF it is not: `doctrenderer` embeds V8 and runs the editor's own JavaScript layout engine server-side, so the PDF you print is laid out by the same code that drew the screen.
 
-The PDF path needs the *real* font files and a font index with absolute paths to them. The obfuscated copies the browser downloads will not do. Get that wrong and it fails inside V8 with a JavaScript type error; get it half-wrong and it segfaults.
+The PDF path needs the *real* font files and a font index with absolute paths to them. The editor's own list, which names each font by a number, will not do. Get that wrong and it fails inside V8 with a JavaScript type error; get it half-wrong and it segfaults.
 
 ## The payload
 

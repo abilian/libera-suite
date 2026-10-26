@@ -19,6 +19,17 @@ from libera.host import app, locking
 from libera.host.convert import ConversionError
 from libera.host.session import SESSIONS, Session, configure
 from libera.host.window import windows
+from libera.payload import fonts
+
+
+@pytest.fixture
+def an_index(tmp_path, monkeypatch):
+    """A fonts' index that is not built: choosing one would run allfontsgen
+    out of a payload these tests do not have."""
+    monkeypatch.setattr(fonts, "choose", lambda _layout: tmp_path / "fonts")
+
+
+pytestmark = pytest.mark.usefixtures("an_index")
 
 
 @pytest.fixture

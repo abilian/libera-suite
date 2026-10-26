@@ -45,7 +45,11 @@ def run_together(work, args) -> None:
 
 @pytest.fixture
 def session(tmp_path):
-    made = Session(payload=tmp_path / "payload", work=tmp_path / "state" / "0")
+    made = Session(
+        payload=tmp_path / "payload",
+        work=tmp_path / "state" / "0",
+        fonts=tmp_path / "fonts",
+    )
     configure(made)
     return made
 
