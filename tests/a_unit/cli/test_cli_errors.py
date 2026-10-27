@@ -7,6 +7,7 @@ a payload download against an origin that does not exist yet.
 from __future__ import annotations
 
 import pathlib
+from argparse import Namespace
 
 import pytest
 from support import repo_root
@@ -185,10 +186,13 @@ def test_a_launch_with_no_terminal_is_told_in_a_window(monkeypatch, capsys):
     monkeypatch.setattr(commands.sys.stdin, "isatty", lambda: False)
     no_components(monkeypatch)
 
-    assert commands._resolve_payload() is None
+    monkeypatch.setattr(commands.gui, "explain_why_no_window", lambda: None)
+    monkeypatch.setattr(commands.instance, "hand_off", lambda _documents: False)
+
+    assert commands.run(commands.open_documents, Namespace(file=[], shot=None)) == 1
 
     assert shown, "nothing on screen, and nobody reading the terminal"
-    _heading, body, _command = shown[0]
+    _heading, body = shown[0]
     assert "pip install libera-core" in body[0]
     assert "pip install libera-core" in capsys.readouterr().err, "the printing stays"
 
@@ -201,7 +205,10 @@ def test_a_windowed_windows_build_has_no_stdin_at_all(monkeypatch, capsys):
     monkeypatch.setattr(commands.sys, "stdin", None)
     no_components(monkeypatch)
 
-    assert commands._resolve_payload() is None
+    monkeypatch.setattr(commands.gui, "explain_why_no_window", lambda: None)
+    monkeypatch.setattr(commands.instance, "hand_off", lambda _documents: False)
+
+    assert commands.run(commands.open_documents, Namespace(file=[], shot=None)) == 1
     assert shown, "nothing on screen"
 
 
@@ -226,7 +233,7 @@ def test_any_refusal_to_start_is_shown_when_there_is_no_terminal(
 
     assert code == 1
     assert "missing: AllFonts.js" in out.err
-    assert [paragraphs for _, paragraphs, _ in shown] == [["missing: AllFonts.js"]]
+    assert [paragraphs for _, paragraphs in shown] == [["missing: AllFonts.js"]]
 
 
 @pytest.mark.parametrize(
