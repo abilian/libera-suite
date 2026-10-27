@@ -27,9 +27,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 from unittest import mock
 
+from libera.payload import locate
 from libera_build import (
     bench as bench_,
     buildbox,
+    components,
     fidelity as fidelity_,
     flatpak,
     linux,
@@ -48,8 +50,9 @@ from libera_build.release.on import OnOptions, on
 from libera_build.release.plan import PHASES
 from libera_build.release.ship import ShipOptions, ship
 from libera_build.released_gui import ReleasedGuiOptions
-from libera_build.repo import REPO, build_root
+from libera_build.repo import REPO, build_root, dist as dist_of
 from libera_build.report import RefusedError
+from libera_build.versions import payload_version
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -198,6 +201,12 @@ WHEEL = Knob(
 DISTROS = Knob("--distros", "DISTROS", "images to try", '"IMAGE ..."')
 ARCHES = Knob("--arches", "ARCHES", "architectures to try", '"x86_64 arm64"')
 YES = Knob("--yes", "YES", "delete; without it, a dry run", switch=True)
+OUT = Knob(
+    "--out",
+    "OUT",
+    "where the wheels go; default $BUILD_ROOT/out/wheels/<version>",
+    "DIR",
+)
 
 
 def add_knobs(parser: argparse.ArgumentParser, *knobs: Knob) -> None:
@@ -459,6 +468,20 @@ def on_(args: argparse.Namespace) -> Steps:
         raise SystemExit(msg)
     options = OnOptions(args.platform, tuple(args.rest), update=args.update)
     return [Call(on, (options,))]
+
+
+def components_fill(args: argparse.Namespace) -> Steps:
+    dist = path_given(args, DIST) or dist_of(payload_version(REPO))
+    platform = locate.get_current_platform()
+    return [Call(components.fill, (REPO, dist, platform))]
+
+
+def components_wheels(args: argparse.Namespace) -> Steps:
+    version = payload_version(REPO)
+    dist = path_given(args, DIST) or dist_of(version)
+    out = path_given(args, OUT) or build_root() / "out" / "wheels" / version
+    stage = build_root() / "out" / "components"
+    return [Call(components.wheels, (REPO, dist, out, stage))]
 
 
 def tidy_(args: argparse.Namespace) -> Steps:
@@ -862,6 +885,34 @@ def add_release(groups: Groups) -> None:
     p.add_argument("--doc", metavar="FILE", help="the document to open")
 
 
+def add_components(groups: Groups) -> None:
+    g = groups.group(
+        "components",
+        "the components as Python packages: libera-core and libera-web",
+        "Their files are a build's artifacts, never git's: `fill` puts this\n"
+        "machine's into components/, which `uv sync` installs editable, and\n"
+        "`wheels` builds every platform's for PyPI.\n\n"
+        + examples("components fill", "components wheels"),
+    )
+    g.command(
+        "fill",
+        "put a build's artifacts into the workspace's two packages",
+        components_fill,
+        DIST,
+        epilog=examples(
+            "components fill", "components fill --dist $BUILD_ROOT/out/dist/0.6"
+        ),
+    )
+    g.command(
+        "wheels",
+        "build the core wheel of every platform in the artifacts, and the editors'",
+        components_wheels,
+        DIST,
+        OUT,
+        epilog=examples("components wheels", "components wheels --out /tmp/wheels"),
+    )
+
+
 def add_others(groups: Groups) -> None:
     p = groups.leaf(
         "on",
@@ -927,6 +978,7 @@ def make_parser() -> argparse.ArgumentParser:
     add_app(groups)
     add_linux(groups)
     add_release(groups)
+    add_components(groups)
     add_others(groups)
     commands = "\n".join(f"  {name:<24} {what}" for name, what in groups.listing)
     parser.epilog = (

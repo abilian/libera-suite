@@ -64,6 +64,14 @@ def stamp_bundled_manifest(root: Path, dist: Path) -> None:
     last release's ("manifest is for payload 0.4.1"). Each builder makes its
     own editors.tar.gz, so the one collected here will not do either.
     """
+    found = check_dist(root, dist)
+    shutil.copyfile(dist / "manifest.json", root / MANIFEST)
+    say(f"    manifest  payload {found}, from {dist}")
+
+
+def check_dist(root: Path, dist: Path) -> str:
+    """The payload version of the artifacts in `dist`, refused unless it is
+    the one this tree wants."""
     src = dist / "manifest.json"
     if not src.is_file():
         msg = f"no manifest.json in {dist}"
@@ -76,5 +84,4 @@ def stamp_bundled_manifest(root: Path, dist: Path) -> None:
             "  The application would refuse to load those editors."
         )
         raise RefusedError(msg)
-    shutil.copyfile(src, root / MANIFEST)
-    say(f"    manifest  payload {found}, from {dist}")
+    return found

@@ -25,6 +25,8 @@ from typing import TYPE_CHECKING
 import pytest
 from support import repo_root
 
+from libera.payload import fonts, locate
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -123,7 +125,8 @@ def test_the_font_menu_rows_are_as_high_as_allfontsgen_draws_them(live_payload):
     reported = re.search(r"GetFontThumbnailHeight: \(\) => (\d+)", BRIDGE.read_text())
     assert reported, "the bridge no longer reports the thumbnail height"
     height = int(reported[1])
-    images = live_payload / "sdkjs/common/Images"
+    # Drawn into the fonts' index, in the state folder, not into the payload.
+    images = fonts.get_shipped(locate.Layout.of(live_payload)) / "Images"
     # A PNG's height is the big-endian word at bytes 20-24 of its header.
     rows, extra = divmod(
         int.from_bytes((images / "fonts_thumbnail.png").read_bytes()[20:24]), height

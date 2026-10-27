@@ -1,0 +1,23 @@
+# The editors, with the fonts they ship, the dictionaries and the blank
+# documents: one wheel for every platform. The files are not in git:
+# `lb components fill` puts a build's into src/libera_web/.
+[project]
+name = "libera-web"
+# The payload version, which libera pins exactly; a test holds the three equal.
+version = "0.7"
+description = "Libera Suite's editors, fonts and dictionaries, built from Euro-Office sources"
+readme = "README.md"
+license = "AGPL-3.0-only"
+requires-python = ">=3.12"
+
+[project.urls]
+Source = "https://github.com/abilian/libera-suite"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/libera_web"]
+# Gitignored, and hatchling leaves VCS-ignored files out by default.
+artifacts = ["src/libera_web"]

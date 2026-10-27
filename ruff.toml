@@ -37,6 +37,12 @@ lint.extend-ignore = [
 ]
 
 [lint.extend-per-file-ignores]
+# hatchling loads a build hook as a file, by path, from the project's root: it
+# is no module of any package, and its `initialize` is the interface's.
+"components/core/hatch_build.py" = [
+    "INP001", # no package: hatchling reads it by path
+    "PLR6301", # initialize is BuildHookInterface's method, called on the instance
+]
 # stubs/ names what pyobjc and Bottle name. NSMenuItem, callAfter and
 # setAssociatedObject are Objective-C spellings, HTTPResponse is Bottle's, and a
 # stub that renamed them would describe a module that does not exist.
