@@ -98,7 +98,7 @@ class Manifest:
         return json.dumps(doc, indent=2) + "\n"
 
     @property
-    def commit(self) -> str:
+    def libera_commit(self) -> str:
         return self.source.get("libera_commit") or ""
 
     @property

@@ -148,7 +148,7 @@ def publish_problems(
             f"the manifest is for payload {manifest.payload_version}, this tree "
             f"for {payload_version}; run collect"
         )
-    stamped = manifest.commit
+    stamped = manifest.libera_commit
     if stamped != head:
         problems.append(
             f"the manifest was collected at {stamped[:9] or 'no commit'}, this "

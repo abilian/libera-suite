@@ -95,10 +95,10 @@ def status(root: Path, origin: Origin, dist: Path) -> None:
     stamped = root / repo.MANIFEST
     if stamped.is_file():
         found = Manifest.read(stamped)
-        known = repo.git(root, "cat-file", "-t", found.commit)[0] == 0
+        known = repo.git(root, "cat-file", "-t", found.libera_commit)[0] == 0
         say(f"    stamped for payload {found.payload_version}, built {found.built}")
         say(
-            f"    names commit {found.commit[:9]}"
+            f"    names commit {found.libera_commit[:9]}"
             + ("" if known else "  -- WHICH THIS REPOSITORY DOES NOT HAVE")
         )
         if found.dirty:

@@ -63,7 +63,7 @@ def test_a_machine_gets_its_own_core_and_the_shared_artifacts():
 
 
 def test_provenance_is_read_from_the_source():
-    assert FULL.commit == "d" * 40
+    assert FULL.libera_commit == "d" * 40
     assert not FULL.dirty
     assert FULL.core_platforms == ["linux-arm64", "macos-arm64"]
 
