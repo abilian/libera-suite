@@ -195,9 +195,11 @@ fetch_repo() {
 
     echo "==> $repo @ $sha"
     # By SHA, which GitHub serves for any commit it has. A tree cloned whole
-    # before this keeps its history and fetches nothing it already has.
+    # before this keeps its history and fetches nothing it already has. A
+    # mirror older than the pin falls back to upstream: it only saves traffic.
     git -C "$dst" cat-file -e "$sha^{commit}" 2>/dev/null ||
-        git -C "$dst" fetch --quiet --depth 1 origin "$sha" || {
+        git -C "$dst" fetch --quiet --depth 1 origin "$sha" ||
+        git -C "$dst" fetch --quiet --depth 1 "$(remote_base)/$repo.git" "$sha" || {
             echo "FATAL: could not fetch $repo @ $sha from $(git -C "$dst" remote get-url origin)" >&2
             echo "       Every repository in pins.toml is public, so a request" >&2
             echo "       for a username here is usually GitHub throttling" >&2
