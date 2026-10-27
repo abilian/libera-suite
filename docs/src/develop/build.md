@@ -157,8 +157,8 @@ The last layer checks the toolchain itself: every tool on `PATH`, `perl` with `F
 
 Two mounts:
 
-- **The build tree goes on a real disk**, at `$BUILD_ROOT/linux-<arch>`, beside the native one. It used to be a named Docker volume, which lives on the VM's disk (the Mac's internal one). A full build is around 30 GB: the first attempt died with `No space left on device` while `$BUILD_ROOT` had 295 GB free. `--volume NAME` puts the old behaviour back. V8 needs a case-sensitive filesystem, which is why `$BUILD_ROOT` is an external volume on macOS in the first place.
-- **`MIRROR=DIR` is optional and read-only.** It is a local clone to copy git objects from, which saves pulling 1.5 GB from GitHub; an existing `$BUILD_ROOT/src` serves. Without it the fetch clones from upstream and says so.
+- **The build tree goes on a real disk**, at `$BUILD_ROOT/linux-<arch>`, beside the native one. It used to be a named Docker volume, which lives on the VM's disk (the Mac's internal one). A full build was around 30 GB, before the fetch took only the pinned commits and the third-party work trees went once installed: the first attempt died with `No space left on device` while `$BUILD_ROOT` had 295 GB free. `--volume NAME` puts the old behaviour back. V8 needs a case-sensitive filesystem, which is why `$BUILD_ROOT` is an external volume on macOS in the first place. On macOS the core alone now peaks at 4.4 GB and leaves 2.4 GB (sources 0.9, the build 1.5), measured from an empty build root.
+- **`MIRROR=DIR` is optional and read-only.** It is a local clone to fetch the pinned commits from instead of GitHub; an existing `$BUILD_ROOT/src` serves. Each tree gets its pinned commit alone, with no history: 180 MB of git for core rather than 870.
 
 ## Windows
 
