@@ -125,6 +125,15 @@ def test_installed_components_are_found_as_two_folders(components) -> None:
     assert found.sdkjs == web / "sdkjs"
 
 
+def test_the_components_record_is_this_machines_platform(components) -> None:
+    """libera-web is every platform's, so its payload.json names none."""
+    web, _ = components
+    (web / "payload.json").write_text('{"payload_version": "0.7"}')
+    record = payload.resolve().read_record()
+    platform = locate.get_current_platform()
+    assert record == {"payload_version": "0.7", "platform": platform}
+
+
 def test_components_of_another_version_say_how_to_get_this_ones(
     components, monkeypatch
 ) -> None:

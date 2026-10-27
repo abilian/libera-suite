@@ -72,14 +72,14 @@ def serve_payload(r: Request) -> Response:
 
     # Unreadable is not the same as absent: a payload.json that will not parse
     # was shown as "local build", which is what a tree with none is told.
-    marker = r.session.layout.record
-    info = json.loads(marker.read_text(encoding="utf-8")) if marker.is_file() else {}
+    found = payload_mod.resolve()
+    info = found.read_record()
     body = {
         "root": str(r.session.payload),
-        # How this process found it -- LIBERA_PAYLOAD, a config file, or the
-        # installed copy -- which is not in payload.json because it is not a
-        # property of the payload.
-        "origin": payload_mod.resolve().origin,
+        # How this process found it -- LIBERA_PAYLOAD, a config file, the
+        # components or the installed copy -- which is not in payload.json
+        # because it is not a property of the payload.
+        "origin": found.origin,
         "version": info.get("payload_version") or language.translate("local build"),
         "platform": info.get("platform"),
         "built": info.get("built"),
