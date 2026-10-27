@@ -18,7 +18,7 @@ import pytest
 from libera.host.server.api import Refused, Request
 from libera.host.server.payload_files import serve_file, serve_font
 from libera.host.session import Session, configure, create_session
-from libera.payload import PayloadError, fonts, installer, locate
+from libera.payload import fonts, locate
 
 if TYPE_CHECKING:
     import pathlib
@@ -278,27 +278,6 @@ def test_a_new_window_gets_the_newest_index_not_the_first_windows(machine, build
     assert builds == [fonts.get_index_dir(layout)]
     assert create_session().fonts == fonts.get_index_dir(layout)
     assert first.fonts == shipped
-
-
-def test_installing_the_payload_indexes_the_machines_fonts(machine, builds):
-    layout, _ = machine
-    said: list[str] = []
-    installer._index_installed_fonts(layout, said.append)
-    assert builds == [fonts.get_index_dir(layout)]
-    assert said[-1] == "    1 fonts"
-
-
-def test_an_index_that_fails_does_not_fail_the_install(machine, monkeypatch):
-    layout, _ = machine
-
-    def fails(_layout, _index, *, machine=True):
-        msg = "allfontsgen drew 2 of 10 font thumbnails"
-        raise PayloadError(msg)
-
-    monkeypatch.setattr(fonts, "build", fails)
-    said: list[str] = []
-    installer._index_installed_fonts(layout, said.append)
-    assert said[-1] == "    not indexed: allfontsgen drew 2 of 10 font thumbnails"
 
 
 def selection(*records: tuple[str, list[str]], after: bytes = b"ranges") -> bytes:

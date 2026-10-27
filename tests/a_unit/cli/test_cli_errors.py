@@ -7,16 +7,15 @@ a payload download against an origin that does not exist yet.
 from __future__ import annotations
 
 import pathlib
-import urllib.error
 
 import pytest
 from support import repo_root
 
-from libera import cli, launcher, payload
+from libera import cli, launcher
 from libera.cli import commands
 from libera.host import app
 from libera.host.session import NotReadyError
-from libera.manifest import Manifest
+from libera.payload import PayloadError
 
 
 def run(argv, capsys):
@@ -47,7 +46,7 @@ def no_window(monkeypatch):
     # returns None there unconditionally -- which is why this was invisible
     # until the suite was first run on Linux.
     monkeypatch.setattr(cli.commands.gui, "explain_why_no_window", lambda: None)
-    monkeypatch.setattr(cli.commands, "_resolve_payload_or_offer", FakePayload)
+    monkeypatch.setattr(cli.commands, "_resolve_payload", FakePayload)
     monkeypatch.setattr(app, "run", fake_run)
     return opened
 
@@ -88,47 +87,6 @@ def test_a_missing_file_is_named(tmp_path, capsys, no_window):
     assert code == 1
     assert "no such file" in out.err
     assert "documents" not in no_window
-
-
-def test_unreachable_origin_prints_a_message(monkeypatch, tmp_path, capsys):
-    """The public origin does not exist yet, so this is what most people who
-    type `libera payload install` today will see."""
-    dns = urllib.error.URLError("nodename nor servname provided")
-
-    def boom(*args, **kwargs):
-        raise dns
-
-    # A manifest that covers whatever machine this is. Without it the install
-    # stops before it ever reaches the network -- "manifest has no core
-    # artifact for linux-arm64" on Linux, and on a clean checkout "this build
-    # ships no manifest" everywhere, because src/libera/manifest.json is
-    # written by dist.sh and is not in git. This test passed only on a machine
-    # that happened to have run a macOS dist.
-    monkeypatch.setattr(
-        payload.installer,
-        "read_bundled_manifest",
-        lambda: Manifest.from_dict({
-            "payload_version": payload.PAYLOAD_VERSION,
-            "artifacts": [
-                {
-                    "kind": "core",
-                    "platform": payload.get_current_platform(),
-                    "name": "core.tar.gz",
-                    "sha256": "0" * 64,
-                    "size": 1,
-                }
-            ],
-        }),
-    )
-    monkeypatch.setattr(payload.installer.urllib.request, "urlopen", boom)
-    monkeypatch.setattr(payload.locate, "get_data_dir", lambda: tmp_path / "data")
-
-    code, out = run(["--payload-install"], capsys)
-
-    assert code != 0
-    assert "Traceback" not in out.err
-    assert "nodename" in out.err
-    assert "--from DIR" in out.err
 
 
 def test_the_app_launcher_invokes_a_command_that_exists(capsys, no_window):
@@ -206,6 +164,14 @@ def test_the_window_is_still_reported_when_the_file_is_fine(
 # --- refusing to start, where there is no terminal to refuse into ------------
 
 
+def no_components(monkeypatch):
+    def refuse():
+        msg = "Libera Suite's components are not installed\n  pip install libera-core"
+        raise PayloadError(msg)
+
+    monkeypatch.setattr(commands.payload_mod, "resolve", refuse)
+
+
 def test_a_launch_with_no_terminal_is_told_in_a_window(monkeypatch, capsys):
     """The Fedora symptom: click the icon, it flashes, nothing happens.
 
@@ -217,14 +183,14 @@ def test_a_launch_with_no_terminal_is_told_in_a_window(monkeypatch, capsys):
     shown = []
     monkeypatch.setattr(commands.gui, "show_problem", lambda *a: shown.append(a))
     monkeypatch.setattr(commands.sys.stdin, "isatty", lambda: False)
+    no_components(monkeypatch)
 
-    assert commands._ask_to_install() is False
+    assert commands._resolve_payload() is None
 
     assert shown, "nothing on screen, and nobody reading the terminal"
-    heading, _body, command = shown[0]
-    assert "components" in heading
-    assert "--payload-install" in command
-    assert "--payload-install" in capsys.readouterr().err, "the printing stays too"
+    _heading, body, _command = shown[0]
+    assert "pip install libera-core" in body[0]
+    assert "pip install libera-core" in capsys.readouterr().err, "the printing stays"
 
 
 def test_a_windowed_windows_build_has_no_stdin_at_all(monkeypatch, capsys):
@@ -233,8 +199,9 @@ def test_a_windowed_windows_build_has_no_stdin_at_all(monkeypatch, capsys):
     shown = []
     monkeypatch.setattr(commands.gui, "show_problem", lambda *a: shown.append(a))
     monkeypatch.setattr(commands.sys, "stdin", None)
+    no_components(monkeypatch)
 
-    assert commands._ask_to_install() is False
+    assert commands._resolve_payload() is None
     assert shown, "nothing on screen"
 
 
@@ -265,8 +232,6 @@ def test_any_refusal_to_start_is_shown_when_there_is_no_terminal(
 @pytest.mark.parametrize(
     ("argv", "said"),
     [
-        (["--from", "dist"], "--from goes with --payload-install"),
-        (["--trust-manifest"], "--trust-manifest goes with --payload-install"),
         (["--port", "1234", "--payload-status"], "--port goes with --serve"),
     ],
 )
@@ -284,52 +249,6 @@ def test_an_option_of_another_command_is_refused(argv, said, capsys, no_window):
     assert said in capsys.readouterr().err
 
 
-def test_a_terminal_run_is_asked_rather_than_shown_a_window(monkeypatch):
-    """A window in front of somebody who is already looking at a prompt is rude."""
-    shown = []
-    monkeypatch.setattr(commands.gui, "show_problem", lambda *a: shown.append(a))
-    monkeypatch.setattr(commands.sys.stdin, "isatty", lambda: True)
-    monkeypatch.setattr("builtins.input", lambda _: "n")
-
-    assert commands._ask_to_install() is False
-    assert not shown
-
-
-def test_inside_the_flatpak_the_command_is_the_flatpak_one(monkeypatch):
-    """`libera` is not on the host's PATH when the application is a sandbox."""
-    monkeypatch.setenv("FLATPAK_ID", "eu.liberasuite.Libera")
-    assert (
-        commands._format_install_command()
-        == "flatpak run eu.liberasuite.Libera --payload-install"
-    )
-
-
-def test_outside_it_is_just_libera(monkeypatch):
-    monkeypatch.delenv("FLATPAK_ID", raising=False)
-    assert commands._format_install_command() == "libera --payload-install"
-
-
-def test_a_copy_installed_from_source_is_asked_too(monkeypatch, capsys):
-    """It used to refuse with three commands to choose from.
-
-    A checkout has no checksums of its own, and that made it say "this build
-    cannot fetch one", where the one thing wanted was a download. It now asks
-    like a release does, says first that the download site's checksums are
-    the ones it will check against, and a yes is the consent --trust-manifest
-    gives a script.
-    """
-    installs = []
-    monkeypatch.setattr(commands.payload_mod, "can_fetch", lambda: False)
-    monkeypatch.setattr(commands.payload_mod, "install", lambda **k: installs.append(k))
-    monkeypatch.setattr(commands.sys.stdin, "isatty", lambda: True)
-    monkeypatch.setattr("builtins.input", lambda _: "")
-
-    commands._offer_to_install()
-
-    assert installs == [{"trust_manifest": True}]
-    assert "installed from source" in capsys.readouterr().out
-
-
 def test_payload_status_names_the_root_where_the_scripts_read_it(
     monkeypatch, tmp_path, capsys
 ):
@@ -338,7 +257,7 @@ def test_payload_status_names_the_root_where_the_scripts_read_it(
     monkeypatch.setattr(
         commands.payload_mod,
         "resolve",
-        lambda: commands.payload_mod.Payload.found(tmp_path, "installed"),
+        lambda: commands.payload_mod.Payload.found(tmp_path, "LIBERA_PAYLOAD"),
     )
 
     code, out = run(["--payload-status"], capsys)
@@ -362,3 +281,27 @@ def test_the_launcher_options_are_in_the_help_only_where_they_work(
     with pytest.raises(SystemExit):
         cli.main(["--help"])
     assert ("--launcher-install" in capsys.readouterr().out) is listed
+
+
+def test_what_earlier_versions_downloaded_is_listed_then_removed(
+    monkeypatch, tmp_path, capsys
+):
+    """0.6 and earlier downloaded a payload per version, 400 MB each, which
+    this version never reads: the status says so, and the removal takes them."""
+    old = tmp_path / "payload"
+    (old / "0.6" / "bin").mkdir(parents=True)
+    (old / "0.6" / "bin" / "x2t").write_bytes(b"x" * 2_000_000)
+    monkeypatch.setattr(commands.payload_mod, "get_data_dir", lambda: old)
+    monkeypatch.setattr(
+        commands.payload_mod,
+        "resolve",
+        lambda: commands.payload_mod.Payload.found(tmp_path, "LIBERA_PAYLOAD"),
+    )
+
+    _, status = run(["--payload-status"], capsys)
+    assert "0.6         2 MB" in status.out
+    code, removal = run(["--payload-remove"], capsys)
+
+    assert code == 0
+    assert "(2 MB)" in removal.out
+    assert not old.exists()

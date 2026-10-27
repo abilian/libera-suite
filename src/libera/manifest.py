@@ -3,9 +3,10 @@ and the source they were built from.
 
 One definition for everyone who reads or writes it. build/engine/dist.sh writes it
 (`python3 -m libera.manifest stamp`), `lb release` reads it before publishing,
-and the installer verifies every download against the copy shipped in the
-wheel, which is what makes the origin untrusted storage. Each used to have its
-own idea of the format.
+and `lb components` takes the build's record from it. The installer of 0.6
+and earlier verified every download against the copy shipped in the wheel,
+which made the origin untrusted storage. Each used to have its own idea of
+the format.
 
 Python 3.10 and the standard library only, on purpose: dist.sh runs inside the
 build container, Ubuntu 22.04, whose Python is 3.10, and imports this from the

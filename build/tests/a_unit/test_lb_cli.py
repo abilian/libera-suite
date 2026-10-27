@@ -66,10 +66,6 @@ TOOLCHAIN = sh("engine/toolchain.sh", "check")
                 sh("engine/smoke.sh"),
             ],
         ),
-        (
-            ["payload", "install", "--from", "/d"],
-            [Step(("uv", "run", "libera", "--payload-install", "--from", "/d"))],
-        ),
         (["payload", "patches"], [sh("engine/check-patches.sh")]),
         (["toolchain", "list"], [sh("engine/toolchain.sh", "list")]),
         (["app", "macos", "--standalone"], [sh("macos/macos-app.sh", STANDALONE="1")]),
@@ -107,7 +103,10 @@ def test_an_unknown_phase_is_refused():
 
 
 # Commands that need arguments, and a line for each to plan with.
-NEEDS_ARGUMENTS = {"on": ["linux-arm64", "app", "flatpak-smoke"]}
+NEEDS_ARGUMENTS = {
+    "on": ["linux-arm64", "app", "flatpak-smoke"],
+    "components unpack": ["--into", "payload"],
+}
 
 
 def every_command_line() -> list[list[str]]:
@@ -243,7 +242,6 @@ def no_knobs(monkeypatch):
     "argv",
     [
         ["payload", "export"],
-        ["payload", "install"],
         ["payload", "container", "--versions"],
         ["release", "status"],
         ["release", "push"],
@@ -275,13 +273,6 @@ def test_the_payload_container_is_the_whole_build_or_one_script(no_knobs):
     assert call.args == ("dist.sh", ["--fonts", "core"])
     (call,) = cli.plan(["payload", "container", "--shell"])
     assert call.args == ("exec /bin/bash",)
-
-
-def test_install_without_a_source_takes_the_container_build(no_knobs):
-    (call,) = cli.plan(["payload", "install", "--arch", "arm64"])
-    assert call == cli.Call(
-        cli.install_exported, (BoxOptions(arch="arm64"),), env={"ARCH": "arm64"}
-    )
 
 
 def test_the_flatpak_defaults_to_this_machines_architecture(no_knobs):

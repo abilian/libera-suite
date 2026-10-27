@@ -11,6 +11,7 @@ import re
 
 from libera.host import apps, language
 from libera.host.server.api import Request, Response, answer_json, endpoint
+from libera.payload import locate
 
 
 @endpoint("GET", "start")
@@ -66,13 +67,9 @@ def serve_payload(r: Request) -> Response:
     payload's own payload.json, so a development tree reports that it
     knows nothing.
     """
-    # Imported here, since this is the only thing that wants the installer and
-    # `libera --serve` runs the host without it.
-    from libera import payload as payload_mod
-
     # Unreadable is not the same as absent: a payload.json that will not parse
     # was shown as "local build", which is what a tree with none is told.
-    found = payload_mod.resolve()
+    found = locate.resolve()
     info = found.read_record()
     body = {
         "root": str(r.session.payload),

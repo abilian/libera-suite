@@ -57,45 +57,77 @@ def fill_core(package: Path, dist: Path, platform: str, web: Path) -> None:
     """The core for `platform`, with DoctRenderer.config written for the
     editors at `web`."""
     _empty(package)
-    _unpack(dist / f"core-{platform}.tar.gz", package)
-    bin_dir = package / "bin"
-    if not any(bin_dir.glob("x2t*")):
-        msg = f"no x2t in core-{platform}.tar.gz, in {dist}"
-        raise RefusedError(msg)
-    _replace_links(bin_dir)
+    _unpack_core(package, dist, platform)
     generate.write_config(locate.Layout(web, package))
 
 
 def fill_web(package: Path, dist: Path) -> None:
-    """The editors, and the payload.json an installed payload has, from the
-    build's manifest: what --payload-status and the start window show, the
-    source among it, which the AGPL wants said. No platform: this wheel is
-    every platform's."""
+    """The editors, and the payload.json an installed payload has. No
+    platform in it: this wheel is every platform's."""
     _empty(package)
-    for name in ("editors.tar.gz", "fonts-core.tar.gz"):
-        _unpack(dist / name, package)
+    _unpack_web(package, dist, {})
+
+
+def unpack(dest: Path, dist: Path, platform: str) -> int:
+    """The whole payload in one folder, the core's bin/ beside the editors, as
+    a build tree has it: for LIBERA_PAYLOAD, and for the Windows installer,
+    which ships it beside the frozen application. Made aside and renamed into
+    place, so a folder that is there is whole."""
+    tmp = dest.with_name(f".{dest.name}.tmp")
+    shutil.rmtree(tmp, ignore_errors=True)
+    tmp.mkdir(parents=True)
+    _unpack_core(tmp, dist, platform)
+    _unpack_web(tmp, dist, {"platform": platform})
+    generate.write_config(locate.Layout(tmp, tmp))
+    shutil.rmtree(dest, ignore_errors=True)
+    tmp.rename(dest)
+    say(f"    unpacked the {platform} payload from {dist} into {dest}")
+    return 0
+
+
+def _unpack_core(into: Path, dist: Path, platform: str) -> None:
+    _unpack(dist / f"core-{platform}.tar.gz", into)
+    if not any((into / "bin").glob("x2t*")):
+        msg = f"no x2t in core-{platform}.tar.gz, in {dist}"
+        raise RefusedError(msg)
+    _replace_links(into / "bin")
+
+
+def _unpack_web(into: Path, dist: Path, extra: dict[str, str]) -> None:
+    """The editors and their fonts, and payload.json from the build's
+    manifest: what --payload-status and the start window show, the source
+    among it, which the AGPL wants said."""
     if not (dist / "manifest.json").is_file():
         msg = f"no manifest.json in {dist}"
         raise RefusedError(msg)
+    for name in ("editors.tar.gz", "fonts-core.tar.gz"):
+        _unpack(dist / name, into)
     manifest = Manifest.read(dist / "manifest.json")
     record = {
         "payload_version": manifest.payload_version,
+        **extra,
         "font_set": manifest.font_set,
         "built": manifest.built,
         "source": manifest.source,
     }
-    (package / "payload.json").write_text(
+    (into / "payload.json").write_text(
         json.dumps(record, indent=2) + "\n", encoding="utf-8"
     )
 
 
-def wheels(repo: Path, dist: Path, out: Path, stage_root: Path) -> int:
-    """Each platform's core wheel, then the editors', from the artifacts in
-    `dist`, which must be this tree's payload version: the wheels are named
-    for it. Staged in `stage_root`, out of the workspace, which uv would
-    otherwise take a project in it for a part of."""
+def wheels(
+    repo: Path,
+    dist: Path,
+    out: Path,
+    stage_root: Path,
+    platforms: list[str] | None = None,
+) -> int:
+    """The core wheel of each platform in `dist`, or of `platforms`, then the
+    editors', from artifacts that must be this tree's payload version: the
+    wheels are named for it. Staged in `stage_root`, out of the workspace,
+    which uv would otherwise take a project in it for a part of."""
     check_dist(repo, dist)
-    for platform in platforms_in(dist):
+    for platform in platforms or platforms_in(dist):
         step(f"libera-core for {platform}")
         package = stage(repo, CORE, stage_root / "core")
         fill_core(package, dist, platform, package.parent / "libera_web")

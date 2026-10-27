@@ -84,50 +84,37 @@ def _built_dists() -> list[Path]:
     return [dist for dist in candidates if (dist / "manifest.json").is_file()]
 
 
-def _installed_for_the_tests() -> Path | None:
-    """The payload this tree wants, installed into the suite's own cache.
+def _unpacked_for_the_tests() -> Path | None:
+    """This checkout's build artifacts, unpacked into the suite's own cache.
 
     The suite brings what it needs. It used to take any payload installed on
     the machine, whatever its version: a checkout wanting 0.4.1 ran against a
     0.2 left over in the data directory and reported its converter's old bugs
-    as failures. Installed by the same code as `libera --payload-install`,
-    which also writes this machine's paths, from this checkout's build
-    artifacts when there are some and from the origin otherwise, checked
-    against the manifest either way, in a directory no user's install
-    shares. Installed again when the artifacts were rebuilt under the same
-    version. None when there is nothing to install from: the tiers that need
-    it then skip, and the header says why.
+    as failures. Unpacked by `lb components unpack`, in a directory no user's
+    copy shares, and again when the artifacts were rebuilt under the same
+    version. None when there is nothing to unpack: the tiers that need it then
+    skip, and the header says why.
     """
+    from libera_build import components
+
     cache_home = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
     cache = cache_home / "libera-tests" / "payload" / payload.PAYLOAD_VERSION
     record = cache / "payload.json"
-    installed = (
+    unpacked = (
         json.loads(record.read_text(encoding="utf-8")).get("built")
         if payload.is_complete(cache) and record.is_file()
         else None
     )
-    sources: list[Path | None] = [*_built_dists(), None]  # None: the origin
-    for source in sources:
-        if source is not None:
-            built = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
-            if installed and installed == built.get("built"):
-                return cache
-        elif installed:
-            return cache
-        print(
-            f"installing payload {payload.PAYLOAD_VERSION} for the tests into"
-            f" {cache}, from {source or 'the origin'}",
-            file=sys.stderr,
-        )
-        try:
-            payload.install(
-                source=source, dest=cache, trust_manifest=True, say=lambda *_: None
-            )
-        except payload.PayloadError as e:
-            print(f"  not installed: {str(e).splitlines()[0]}", file=sys.stderr)
+    here = payload.get_current_platform()
+    for dist in _built_dists():
+        if not (dist / f"core-{here}.tar.gz").is_file():
             continue
-        if payload.is_complete(cache):
+        built = json.loads((dist / "manifest.json").read_text(encoding="utf-8"))
+        if unpacked and unpacked == built.get("built"):
             return cache
+        print(f"unpacking payload {dist} for the tests into {cache}", file=sys.stderr)
+        components.unpack(cache, dist, here)
+        return cache
     return None
 
 
@@ -136,7 +123,7 @@ try:
 except payload.PayloadError:
     # The build tree first: it is what this checkout built, so it is the
     # closest thing to the code under test.
-    found = _built_payload() or _installed_for_the_tests()
+    found = _built_payload() or _unpacked_for_the_tests()
     if found is not None:
         # Ahead of any import that resolves it, so the host under test agrees
         # with the fixtures about which payload this is.
@@ -156,8 +143,9 @@ def pytest_report_header() -> list[str]:
         return [
             "libera payload: NONE -- every tier above a_unit will skip",
             (
-                f"  wanted {payload.PAYLOAD_VERSION}, not installed, not built here,"
-                " and nothing to install it from: `make payload`, or LIBERA_PAYLOAD=DIR"
+                f"  wanted {payload.PAYLOAD_VERSION}: no components, not built here,"
+                " and no artifacts to unpack: `lb components fill`, `make payload`,"
+                " or LIBERA_PAYLOAD=DIR"
             ),
         ]
     found = PAYLOAD.read_record().get("payload_version", "unknown")
@@ -169,8 +157,8 @@ def pytest_report_header() -> list[str]:
 
 NEEDS_PAYLOAD = pytest.mark.skip(
     reason=(
-        "needs the payload this tree wants: not installed, not built here, and "
-        "nothing to install it from (see the header); `make payload`, or set LIBERA_PAYLOAD"
+        "needs the payload this tree wants: no components, not built here, and "
+        "no artifacts to unpack (see the header); `lb components fill`, or LIBERA_PAYLOAD"
     )
 )
 

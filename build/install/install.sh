@@ -119,11 +119,11 @@ OLD_VENV="$PREFIX/share/libera"
 # Does this command actually run? `--help` and not `--version`, because
 # `--version` arrived after 0.1.1 and this script has to work against whatever
 # the origin is serving, including the release before the one that added it.
-# --payload-install is in the help of every version there has ever been.
+# --payload-status is in the help of every version there has ever been.
 runs() {
     text="$("$@" --help 2>&1 || :)"
     case "$text" in
-    *--payload-install*) return 0 ;;
+    *--payload-status*) return 0 ;;
     esac
     printf '%s' "$text"
     return 1
@@ -407,6 +407,12 @@ install_pip() {
 }
 
 install_payload() {
+    # From 0.7 the components are packages, which came with libera, and the
+    # command that fetched them is gone. A release before it fetches its own.
+    case "$("$BIN/libera" --help 2>&1 || :)" in
+    *--payload-install*) ;;
+    *) return 0 ;;
+    esac
     if [ "$PAYLOAD" = no ]; then
         step "skipping the payload (--no-payload)"
         say "    fetch it later with:  libera --payload-install"

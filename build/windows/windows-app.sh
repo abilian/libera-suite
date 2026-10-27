@@ -3,8 +3,9 @@
 #
 #   sh build/windows/windows-app.sh          icon, freeze, installer
 #
-# Needs a built payload's artifacts (build/engine/dist.sh, into $OUT/dist/<version>)
-# and build/windows/windows-setup.ps1's tools, Inno Setup among them. Writes:
+# Needs a built payload's artifacts (build/engine/dist.sh, into $OUT/dist/<version>),
+# which it unpacks into the frozen tree, and build/windows/windows-setup.ps1's
+# tools, Inno Setup among them. Writes:
 #
 #   $OUT/windows/Libera Suite/                the frozen application
 #   $OUT/windows/Libera-Suite-Setup-<v>.exe   what a user downloads
@@ -102,12 +103,7 @@ VSVersionInfo(
 VER
 
 # --- freeze -----------------------------------------------------------------------
-# The payload's manifest goes into the application, as it goes into a release
-# wheel: the artifacts the installer carries are then checked against the
-# application's own copy, not trusted because they arrived beside it.
 echo "==> freeze ($PYINSTALLER, libera $APP_VERSION, payload $PAYLOAD_VERSION)"
-cp "$DIST/manifest.json" "$REPO/src/libera/manifest.json"
-trap 'rm -f "$REPO/src/libera/manifest.json"' EXIT
 rm -rf "$WORK/freeze" "$WORK/Libera Suite"
 (
     cd "$REPO"
@@ -120,22 +116,27 @@ rm -rf "$WORK/freeze" "$WORK/Libera Suite"
             "$(cygpath -w "$HERE/libera.spec")"
 )
 APP="$WORK/Libera Suite"
-for f in Libera.exe libera-cli.exe _internal/libera/manifest.json; do
+for f in Libera.exe libera-cli.exe; do
     [ -f "$APP/$f" ] || { echo "FATAL: the frozen tree has no $f" >&2; exit 1; }
 done
+
+# The payload beside it, where locate.find_bundled_dir() looks: a frozen
+# application has no site-packages for the components to be installed into.
+echo "==> payload"
+(cd "$REPO" && uv run lb components unpack --platform windows-x86_64 \
+    --dist "$(cygpath -w "$DIST")" --into "$(cygpath -w "$APP/share/libera/payload")")
 
 # The frozen program, asked what it is: an import that the analysis missed
 # fails here, at a prompt, rather than on a user's double-click.
 echo "==> the frozen application"
 "$APP/libera-cli.exe" -V
-# --payload-status reaches the payload code, which -V does not. Whether this
-# machine has a payload installed is not the question, so either answer
-# passes: where it is, or `libera:` and why not. A missed module is neither,
-# it is a traceback, and its exit status alone cannot tell it from "none".
+# --payload-status reaches the payload code, which -V does not, and says where
+# the payload was found: beside the application, or the bundle is broken. A
+# missed module is a traceback, and its exit status alone cannot tell it from
+# a payload not found.
 said="$("$APP/libera-cli.exe" --payload-status 2>&1)" || :
-if printf '%s\n' "$said" | grep -q Traceback \
-    || ! printf '%s\n' "$said" | grep -qE '^(payload|libera):'; then
-    echo "FATAL: the frozen application could not say where its payload is:" >&2
+if ! printf '%s\n' "$said" | grep -q '^found via: *bundled$'; then
+    echo "FATAL: the frozen application did not find the payload beside it:" >&2
     printf '%s\n' "$said" | sed 's/^/    /' >&2
     exit 1
 fi
@@ -153,7 +154,6 @@ MSYS2_ARG_CONV_EXCL='*' "$ISCC" /Q \
     "/DAppVersion=$APP_VERSION" \
     "/DAppNumbers=$APP_NUMBERS" \
     "/DAppDir=$(cygpath -w "$APP")" \
-    "/DPayloadDir=$(cygpath -w "$DIST")" \
     "/DIconFile=$(cygpath -w "$ICON")" \
     "/DAssociations=$(cygpath -w "$ASSOC")" \
     "/DOutputDir=$(cygpath -w "$WORK")" \

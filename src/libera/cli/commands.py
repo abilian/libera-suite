@@ -11,12 +11,10 @@ parsed.
 from __future__ import annotations
 
 import glob
-import os
 import platform
 import shutil
 import sys
 import tempfile
-import time
 from importlib.metadata import version
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -25,7 +23,7 @@ from libera import gui, launcher, payload as payload_mod
 from libera.host import apps, convert, instance, opening, server, session
 from libera.host.convert import ConversionError
 from libera.host.session import NotReadyError
-from libera.payload import NoPayloadError, PayloadError, fonts, prune
+from libera.payload import PayloadError, fonts
 
 if TYPE_CHECKING:
     import argparse
@@ -70,34 +68,6 @@ def _refuse(heading: str, paragraphs: list[str], command: str = "") -> None:
         gui.show_problem(heading, paragraphs, command)
 
 
-def install_payload(args: argparse.Namespace) -> int:
-    trust = args.trust_manifest
-    # A copy installed from source asks, in a terminal, rather than wanting
-    # an option nobody would guess; a script still says --trust-manifest.
-    if (
-        args.source is None
-        and not trust
-        and not payload_mod.can_fetch()
-        and _is_interactive()
-    ):
-        print(FROM_SOURCE)
-        if not _confirm("Download them now?"):
-            return 1
-        trust = True
-    try:
-        p = payload_mod.install(source=args.source, trust_manifest=trust)
-    except PayloadError as e:
-        return _fail(e)
-    print(f"Installed in {p.root}")
-    # The one moment a user is looking at this program in a terminal and has
-    # just finished setting it up. Only said here: the
-    # command is called payload-install, and writing to the desktop's own
-    # directories is not what that name promises.
-    if launcher.explain_unsupported() is None and not launcher.is_installed():
-        print("  for an icon and Open With: libera --launcher-install")
-    return 0
-
-
 def install_launcher(_args: argparse.Namespace) -> int:
     why = launcher.explain_unsupported()
     if why:
@@ -128,7 +98,7 @@ def show_payload_status(_args: argparse.Namespace) -> int:
         return _fail(e)
 
     record = _print_payload(p)
-    _print_installed_versions()
+    _print_old_payloads()
     # Corresponding source, per AGPL. A user holding this binary is entitled to
     # know exactly which revisions it was built from.
     source = record.get("source") or {}
@@ -143,19 +113,20 @@ def show_payload_status(_args: argparse.Namespace) -> int:
     return 0
 
 
-def _print_installed_versions() -> None:
-    """Every version in the payload folder, with when a copy last used it:
-    what a launch removes once nobody has, for prune.UNUSED_FOR."""
-    versions = prune.list_versions(payload_mod.get_data_dir())
-    if not versions:
+def _print_old_payloads() -> None:
+    """What 0.6 and earlier downloaded, which nothing reads any more."""
+    folder = payload_mod.get_data_dir()
+    old = sorted(folder.iterdir()) if folder.is_dir() else []
+    if not old:
         return
-    weeks = prune.UNUSED_FOR // (7 * prune.DAY)
-    print(f"installed: (each removed once unused for {weeks} weeks)")
-    for v in reversed(versions):
-        used = time.strftime("%Y-%m-%d", time.localtime(v.last_used))
-        size = prune.measure(v.root) / 1e6
-        this = "  (this version)" if v.name == payload_mod.PAYLOAD_VERSION else ""
-        print(f"  {v.name:<8} last used {used}  {size:4.0f} MB{this}")
+    print("downloaded by earlier versions, which this one does not use:")
+    for root in old:
+        print(f"  {root.name:<8} {_measure(root) / 1e6:4.0f} MB")
+    print("  remove them with:  libera --payload-remove")
+
+
+def _measure(root: Path) -> int:
+    return sum(f.stat().st_size for f in root.rglob("*") if f.is_file())
 
 
 def _print_payload(p: payload_mod.Payload) -> dict:
@@ -178,106 +149,25 @@ def _print_payload(p: payload_mod.Payload) -> dict:
 
 
 def remove_payload(_args: argparse.Namespace) -> int:
-    root = payload_mod.get_installed_dir()
-    if not root.exists():
-        print(f"nothing installed at {root}")
+    """Delete the payloads 0.6 and earlier downloaded: this version installs
+    its components as packages, and reads none of them."""
+    folder = payload_mod.get_data_dir()
+    if not folder.exists():
+        print(f"nothing to remove: no {folder}")
         return 0
-    shutil.rmtree(root)
-    print(f"removed {root}")
+    size = _measure(folder)
+    shutil.rmtree(folder)
+    print(f"removed {folder} ({size / 1e6:.0f} MB)")
     return 0
 
 
-def _resolve_payload_or_offer() -> payload_mod.Payload | None:
-    """Resolve the payload, offering to install it when there is none.
-
-    Nothing downloads behind the user's back: an interactive run asks, and a
-    non-interactive one prints the command and stops.
-    """
+def _resolve_payload() -> payload_mod.Payload | None:
+    """The payload, or None having said why there is none."""
     try:
         return payload_mod.resolve()
-    except NoPayloadError:
-        return _offer_to_install()
     except PayloadError as e:
         _refuse(CANNOT_START, [str(e)])
         return None
-
-
-def _offer_to_install() -> payload_mod.Payload | None:
-    """There are no components: fetch them if the user agrees.
-
-    A release checks the download against the checksums in its wheel. A copy
-    installed from source has none, and checks it against the download site's
-    own, which the question says before it is answered.
-    """
-    verified = payload_mod.can_fetch()
-    if not _ask_to_install(verified=verified):
-        return None
-    try:
-        return payload_mod.install(trust_manifest=not verified)
-    except PayloadError as e:
-        _refuse(CANNOT_START, [str(e)])
-        return None
-
-
-# Said before the question, in a copy that has no checksums of its own.
-FROM_SOURCE = (
-    "This copy of Libera Suite was installed from source, not from a release,"
-    " so it has no checksums of its own: the download will be checked against"
-    " the download site's."
-)
-
-
-def _format_install_command() -> str:
-    """The exact line to type, which is not the same inside the sandbox.
-
-    `libera` is not on the host's PATH when the application is a Flatpak, so
-    telling a Flatpak user to run it sends them nowhere. FLATPAK_ID is set for
-    every process inside the sandbox and is the app id the command needs.
-    """
-    app_id = os.environ.get("FLATPAK_ID")
-    if app_id:
-        return f"flatpak run {app_id} --payload-install"
-    return "libera --payload-install"
-
-
-def _ask_to_install(*, verified: bool = True) -> bool:
-    """Ask before downloading. A non-interactive run never does."""
-    command = _format_install_command()
-    if not _is_interactive():
-        # Reached only from open_documents, which has already been past
-        # gui.explain_why_no_window(), so a window can be opened here.
-        _refuse(
-            "Libera Suite needs its components",
-            [
-                (
-                    "The application is installed; its components "
-                    "are not. They are about 90 MB, downloaded once."
-                ),
-                "Run this, then start Libera Suite again:",
-            ],
-            command,
-        )
-        return False
-    print(
-        "Libera Suite needs its components (about 90 MB, downloaded"
-        " once), and does not have them yet."
-    )
-    if not verified:
-        print(FROM_SOURCE)
-    if not _confirm("Download them now?"):
-        print(f"  run `{command}` when you are ready.")
-        return False
-    return True
-
-
-def _confirm(question: str) -> bool:
-    """Yes unless told no; no when nobody can answer."""
-    try:
-        answer = input(f"{question} [Y/n] ").strip().lower()
-    except (EOFError, KeyboardInterrupt):
-        print()
-        return False
-    return answer in {"", "y", "yes"}
 
 
 def serve(args: argparse.Namespace) -> int:
@@ -285,7 +175,6 @@ def serve(args: argparse.Namespace) -> int:
     try:
         p = payload_mod.resolve()
         font_index = fonts.choose(p)
-        prune.note_use(p.root)
     except PayloadError as e:
         return _fail(e)
 
@@ -406,7 +295,6 @@ def convert_documents(args: argparse.Namespace) -> int:
         plan = plan_conversions(args)
         p = payload_mod.resolve()
         font_index = fonts.choose(p)
-        prune.note_use(p.root)
     except (CannotConvertError, PayloadError) as e:
         return _fail(e)
     if args.outdir:
@@ -521,7 +409,7 @@ def open_documents(args: argparse.Namespace) -> int:
     if cannot:
         return _fail(cannot)
 
-    p = _resolve_payload_or_offer()
+    p = _resolve_payload()
     if p is None:
         return 1
     return _run(p, documents, Path(args.shot).expanduser() if args.shot else None)

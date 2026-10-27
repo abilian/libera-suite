@@ -316,22 +316,6 @@ def print_exported(options: BoxOptions) -> int:
     return 0
 
 
-def payload_install(args: argparse.Namespace) -> Steps:
-    if args.source:
-        return [
-            Step(("uv", "run", "libera", "--payload-install", "--from", args.source))
-        ]
-    return [Call(install_exported, (box_options(args),))]
-
-
-def install_exported(options: BoxOptions) -> int:
-    """The container build's artifacts, installed the way a user installs."""
-    where = buildbox.Box(options).exported()
-    return run_step(
-        Step(("uv", "run", "libera", "--payload-install", "--from", str(where)))
-    )
-
-
 def payload_smoke(args: argparse.Namespace) -> Steps:
     return [sh("engine/smoke.sh", env=env_of(args))]
 
@@ -476,6 +460,12 @@ def components_fill(args: argparse.Namespace) -> Steps:
     return [Call(components.fill, (REPO, dist, platform))]
 
 
+def components_unpack(args: argparse.Namespace) -> Steps:
+    dist = path_given(args, DIST) or dist_of(payload_version(REPO))
+    platform = args.platform or locate.get_current_platform()
+    return [Call(components.unpack, (Path(args.into).expanduser(), dist, platform))]
+
+
 def components_wheels(args: argparse.Namespace) -> Steps:
     version = payload_version(REPO)
     dist = path_given(args, DIST) or dist_of(version)
@@ -587,11 +577,12 @@ def add_command(
 def add_payload(groups: Groups) -> None:
     g = groups.group(
         "payload",
-        "the editor payload: build it here or in a container, check it, install it",
+        "the editor payload: build it here or in a container, and check it",
         "Built here, the order is fetch, configure, core, assemble, then dist for\n"
         "the tarballs; `all` runs the five, then smoke, as `container` does in\n"
-        "the container. Each checks the toolchain first.\n\n"
-        + examples("payload all", "payload container --arch arm64", "payload install"),
+        "the container. Each checks the toolchain first. `lb components fill`\n"
+        "puts the artifacts where `uv sync` installs them.\n\n"
+        + examples("payload all", "payload container --arch arm64", "payload export"),
     )
     p = g.command(
         "fetch",
@@ -685,22 +676,6 @@ def add_payload(groups: Groups) -> None:
         BUILD_ROOT,
         BUILD_DIR,
         VOLUME,
-    )
-    p = g.command(
-        "install",
-        "install built artifacts the way a user would, every hash checked",
-        payload_install,
-        ARCH,
-        BUILD_ROOT,
-        BUILD_DIR,
-        VOLUME,
-        epilog=examples(
-            "payload install                  the container build's",
-            "payload install --from $BUILD_ROOT/out/dist/0.4   a native build's",
-        ),
-    )
-    p.add_argument(
-        "--from", dest="source", metavar="DIR", help="default: the container build's"
     )
     g.command(
         "smoke",
@@ -902,6 +877,22 @@ def add_components(groups: Groups) -> None:
         epilog=examples(
             "components fill", "components fill --dist $BUILD_ROOT/out/dist/0.6"
         ),
+    )
+    p = g.command(
+        "unpack",
+        "the whole payload in one folder, for LIBERA_PAYLOAD or a bundle",
+        components_unpack,
+        DIST,
+        epilog=examples(
+            "components unpack --into ~/payload",
+            "components unpack --into share/libera/payload --platform windows-x86_64",
+        ),
+    )
+    p.add_argument("--into", metavar="DIR", required=True, help="the folder to make")
+    p.add_argument(
+        "--platform",
+        choices=sorted(components.TAGS),
+        help="whose core; default this machine's",
     )
     g.command(
         "wheels",
