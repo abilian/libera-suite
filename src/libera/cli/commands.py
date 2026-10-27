@@ -23,7 +23,7 @@ from libera import gui, launcher, payload as payload_mod
 from libera.host import apps, convert, instance, opening, server, session
 from libera.host.convert import ConversionError
 from libera.host.session import NotReadyError
-from libera.payload import PayloadError, fonts
+from libera.payload import PayloadError, fonts, leftovers
 
 if TYPE_CHECKING:
     import argparse
@@ -115,18 +115,13 @@ def show_payload_status(_args: argparse.Namespace) -> int:
 
 def _print_old_payloads() -> None:
     """What 0.6 and earlier downloaded, which nothing reads any more."""
-    folder = payload_mod.get_data_dir()
-    old = sorted(folder.iterdir()) if folder.is_dir() else []
+    old = leftovers.find()
     if not old:
         return
     print("downloaded by earlier versions, which this one does not use:")
     for root in old:
-        print(f"  {root.name:<8} {_measure(root) / 1e6:4.0f} MB")
+        print(f"  {root.name:<8} {leftovers.measure(root) / 1e6:4.0f} MB")
     print("  remove them with:  libera --payload-remove")
-
-
-def _measure(root: Path) -> int:
-    return sum(f.stat().st_size for f in root.rglob("*") if f.is_file())
 
 
 def _print_payload(p: payload_mod.Payload) -> dict:
@@ -151,13 +146,12 @@ def _print_payload(p: payload_mod.Payload) -> dict:
 def remove_payload(_args: argparse.Namespace) -> int:
     """Delete the payloads 0.6 and earlier downloaded: this version installs
     its components as packages, and reads none of them."""
-    folder = payload_mod.get_data_dir()
-    if not folder.exists():
-        print(f"nothing to remove: no {folder}")
+    old = leftovers.find()
+    if not old:
+        print("nothing to remove: no earlier version left a payload here")
         return 0
-    size = _measure(folder)
-    shutil.rmtree(folder)
-    print(f"removed {folder} ({size / 1e6:.0f} MB)")
+    names = ", ".join(root.name for root in old)
+    print(f"removed {names} ({leftovers.remove() / 1e6:.0f} MB)")
     return 0
 
 

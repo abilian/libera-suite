@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 import urllib.request
 from urllib.parse import urlparse
 
@@ -23,6 +24,7 @@ from support import find_free_port, keyed, launch
 from libera import payload as payload_mod
 from libera.host import language, recents, server, session as sessions
 from libera.host.session import Session
+from libera.payload import leftovers
 
 # How long to watch for a request that must not come, after a sync point.
 ABSENCE = 1_000
@@ -260,3 +262,29 @@ def test_a_file_dragged_over_it_is_shown_to_be_welcome(start_window):
     )
 
     assert "dropping" in start_window.evaluate("document.body.className")
+
+
+@pytest.fixture(name="old_payload")
+def what_an_earlier_version_downloaded(tmp_path, monkeypatch):
+    """Before the window loads, which is when it asks."""
+    state = tmp_path / "state-folder"
+    monkeypatch.setattr(leftovers.locate, "get_state_dir", lambda: state)
+    (state / "payload" / "0.6").mkdir(parents=True)
+    (state / "payload" / "0.6" / "x2t").write_bytes(b"x" * 3_000_000)
+    return state
+
+
+def test_what_earlier_versions_left_is_offered_once(old_payload, start_window):
+    notice = start_window.locator("#old-payloads")
+    notice.wait_for(state="visible")
+    assert "3 MB" in notice.inner_text()
+
+    start_window.locator("#keep-old").click()
+
+    notice.wait_for(state="hidden")
+    asked = old_payload / leftovers.ASKED
+    deadline = time.monotonic() + 5
+    while not asked.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert asked.exists(), "the answer was not kept: it would be asked again"
+    assert (old_payload / "payload" / "0.6").is_dir(), "kept, as asked"
