@@ -104,7 +104,6 @@ def components(tmp_path: Path, monkeypatch) -> tuple[Path, Path]:
     monkeypatch.setattr(locate.importlib.metadata, "version", versions.__getitem__)
     monkeypatch.delenv("LIBERA_PAYLOAD", raising=False)
     monkeypatch.setattr(locate, "_read_configured_dir", lambda: None)
-    monkeypatch.setattr(locate, "find_bundled_dir", lambda: None)
     return web, core
 
 
@@ -216,42 +215,6 @@ def _complete_payload(root):
     for d in ("sdkjs", "web-apps", "fonts-src"):
         (root / d).mkdir(parents=True, exist_ok=True)
     return root
-
-
-def test_a_bundled_payload_is_found_under_the_same_prefix(monkeypatch, tmp_path):
-    """Searched upwards, not counted: the Flatpak runs the *runtime's* python,
-    so sys.prefix is /usr and says nothing about where the application went."""
-    prefix = tmp_path / "app"
-    _complete_payload(prefix / "share" / "libera" / "payload")
-    module = prefix / "lib" / "python3.13" / "site-packages" / "libera" / "payload"
-    module.mkdir(parents=True)
-    monkeypatch.setattr(locate, "__file__", str(module / "locate.py"))
-
-    assert locate.find_bundled_dir() == prefix / "share" / "libera" / "payload"
-
-
-def test_an_incomplete_one_is_not_a_payload(monkeypatch, tmp_path):
-    """Half an unpack is worse than none: it would be chosen and then fail."""
-    prefix = tmp_path / "app"
-    (prefix / "share" / "libera" / "payload").mkdir(parents=True)
-    module = prefix / "lib" / "python3.13" / "site-packages" / "libera" / "payload"
-    module.mkdir(parents=True)
-    monkeypatch.setattr(locate, "__file__", str(module / "locate.py"))
-
-    assert locate.find_bundled_dir() is None
-
-
-def test_the_bundled_one_wins_over_installed_components(
-    components, monkeypatch, tmp_path
-):
-    """The one that shipped with the application is the one made for it."""
-    bundled = _complete_payload(tmp_path / "bundled")
-    monkeypatch.setattr(locate, "find_bundled_dir", lambda: bundled)
-
-    found = locate.resolve()
-
-    assert found.root == bundled
-    assert found.origin == "bundled"
 
 
 # --- one Recent list, however the document was opened -----------------------

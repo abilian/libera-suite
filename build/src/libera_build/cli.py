@@ -27,7 +27,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 from unittest import mock
 
-from libera.payload import locate
 from libera_build import (
     bench as bench_,
     buildbox,
@@ -50,7 +49,7 @@ from libera_build.release.on import OnOptions, on
 from libera_build.release.plan import PHASES
 from libera_build.release.ship import ShipOptions, ship
 from libera_build.released_gui import ReleasedGuiOptions
-from libera_build.repo import REPO, build_root, dist as dist_of
+from libera_build.repo import REPO, build_root
 from libera_build.report import RefusedError
 from libera_build.versions import payload_version
 
@@ -458,12 +457,6 @@ def on_(args: argparse.Namespace) -> Steps:
     return [Call(on, (options,))]
 
 
-def components_unpack(args: argparse.Namespace) -> Steps:
-    dist = path_given(args, DIST) or dist_of(payload_version(REPO))
-    platform = args.platform or locate.get_current_platform()
-    return [Call(components.unpack, (Path(args.into).expanduser(), dist, platform))]
-
-
 def components_wheels(args: argparse.Namespace) -> Steps:
     version = payload_version(REPO)
     out = path_given(args, OUT) or build_root() / "out" / "wheels" / version
@@ -862,25 +855,8 @@ def add_components(groups: Groups) -> None:
         "components",
         "the components as Python packages: libera-core and libera-web",
         "`uv sync` builds this machine's from the pinned sources, and `wheels`\n"
-        "makes their wheels, for PyPI: run it on each platform. `unpack`\n"
-        "makes one folder of a build's artifacts.\n\n"
-        + examples("components wheels", "components unpack --into ~/payload"),
-    )
-    p = g.command(
-        "unpack",
-        "the whole payload in one folder, for LIBERA_PAYLOAD or a bundle",
-        components_unpack,
-        DIST,
-        epilog=examples(
-            "components unpack --into ~/payload",
-            "components unpack --into share/libera/payload --platform windows-x86_64",
-        ),
-    )
-    p.add_argument("--into", metavar="DIR", required=True, help="the folder to make")
-    p.add_argument(
-        "--platform",
-        choices=sorted(components.TAGS),
-        help="whose core; default this machine's",
+        "makes their wheels, for PyPI: run it on each platform.\n\n"
+        + examples("components wheels"),
     )
     g.command(
         "wheels",

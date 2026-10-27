@@ -152,7 +152,7 @@ class Layout:
 class Payload(Layout):
     """A usable payload, and how we came to be using it."""
 
-    # "LIBERA_PAYLOAD", "config", "bundled" or "components"
+    # "LIBERA_PAYLOAD", "config" or "components"
     origin: str
 
     @classmethod
@@ -306,29 +306,6 @@ def get_current_platform() -> str:
     return f"{system}-{machine}"
 
 
-def find_bundled_dir() -> Path | None:
-    """A payload shipped inside the application, under the same prefix.
-
-    The Windows installer ships one, beside the frozen application: it has no
-    site-packages for the components to be installed into. Every channel
-    that has one installs them as packages instead.
-
-    **Searched, not counted.** The Flatpak installed the wheel with
-    `--prefix=/app` and ran it under the *runtime's* interpreter, so
-    `sys.prefix` was `/usr` and said nothing about where the application went.
-    Walking up from this file looking for the directory answers the question
-    that actually matters -- is there a payload shipped alongside this
-    installation -- and it is right for any prefix layout, which is what the
-    `.dmg` will want. Counting parents would break the first time the package
-    moved; see notes/lessons-learned/data-and-paths.md.
-    """
-    for parent in Path(__file__).resolve().parents:
-        candidate = parent / "share" / "libera" / "payload"
-        if is_complete(candidate):
-            return candidate
-    return None
-
-
 @functools.cache
 def find_component(package: str) -> Path | None:
     """The folder of an installed component package, without importing it:
@@ -408,15 +385,6 @@ def resolve() -> Payload:
             )
             raise PayloadError(msg)
         return Payload.found(configured, "config")
-
-    # Before the installed one: a bundled payload shipped with this exact
-    # application and is guaranteed to match it, where an installed one is
-    # whatever some earlier run put there. Both are the same PAYLOAD_VERSION or
-    # neither is used at all, so this only decides which of two equals wins --
-    # and the one that cannot be half-upgraded should.
-    bundled = find_bundled_dir()
-    if bundled is not None:
-        return Payload.found(bundled, "bundled")
 
     components = find_components()
     if components is not None:

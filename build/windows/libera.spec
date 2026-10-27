@@ -26,9 +26,20 @@ for package in ("libera", "webview", "pythonnet", "clr_loader"):
     datas += d
     binaries += b
     hiddenimports += h
+# The components, as the packages `uv sync` built into the environment this
+# freezes: the host finds them by import, as it does in site-packages, and
+# their DoctRenderer.config names the editors by a relative path that holds
+# here too. Data only, nothing imports them, so the analysis would not follow.
+for package in ("libera_core", "libera_web"):
+    d, b, _ = collect_all(package)
+    datas += d
+    binaries += b
+hiddenimports += ["libera_core", "libera_web"]
 # `libera -V` reads its own version with importlib.metadata, which needs the
-# dist-info that a frozen tree does not carry unless asked.
-datas += copy_metadata("libera") + copy_metadata("pywebview")
+# dist-info that a frozen tree does not carry unless asked; the components'
+# too, whose versions the host checks against its own.
+for dist in ("libera", "pywebview", "libera-core", "libera-web"):
+    datas += copy_metadata(dist)
 
 a = Analysis(
     [os.path.join(SPECPATH, "entry.py")],

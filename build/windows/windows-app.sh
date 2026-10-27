@@ -3,9 +3,10 @@
 #
 #   sh build/windows/windows-app.sh          icon, freeze, installer
 #
-# Needs a built payload's artifacts (build/engine/dist.sh, into $OUT/dist/<version>),
-# which it unpacks into the frozen tree, and build/windows/windows-setup.ps1's
-# tools, Inno Setup among them. Writes:
+# Freezes the environment `uv run` syncs, which holds the components that
+# `uv sync` builds (an hour the first time, minutes after a `payload all`),
+# and needs build/windows/windows-setup.ps1's tools, Inno Setup among them.
+# Writes:
 #
 #   $OUT/windows/Libera Suite/                the frozen application
 #   $OUT/windows/Libera-Suite-Setup-<v>.exe   what a user downloads
@@ -24,7 +25,6 @@ REPO="$(cd "$BUILD/.." && pwd)"
 [ -n "$EXE" ] || { echo "FATAL: this builds the Windows application; run it on Windows" >&2; exit 1; }
 
 PAYLOAD_VERSION="$(payload_version "$REPO")"
-DIST="$OUT/dist/$PAYLOAD_VERSION"
 WORK="$OUT/windows"
 APP_VERSION="$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$REPO/pyproject.toml" | head -1)"
 # The numbers alone, for what Windows reads as a version: 0.4.0 of 0.4.0rc1.
@@ -44,12 +44,6 @@ done
 
 EDGE="/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
 [ -x "$EDGE" ] || { echo "FATAL: no Edge at $EDGE, which draws the icon" >&2; exit 1; }
-
-[ -f "$DIST/manifest.json" ] && [ -f "$DIST/core-windows-x86_64.tar.gz" ] || {
-    echo "FATAL: no Windows payload artifacts in $DIST" >&2
-    echo "       sh build/engine/build.sh build && sh build/engine/payload.sh && sh build/engine/dist.sh" >&2
-    exit 1
-}
 
 mkdir -p "$WORK"
 
@@ -120,23 +114,17 @@ for f in Libera.exe libera-cli.exe; do
     [ -f "$APP/$f" ] || { echo "FATAL: the frozen tree has no $f" >&2; exit 1; }
 done
 
-# The payload beside it, where locate.find_bundled_dir() looks: a frozen
-# application has no site-packages for the components to be installed into.
-echo "==> payload"
-(cd "$REPO" && uv run lb components unpack --platform windows-x86_64 \
-    --dist "$(cygpath -w "$DIST")" --into "$(cygpath -w "$APP/share/libera/payload")")
-
 # The frozen program, asked what it is: an import that the analysis missed
 # fails here, at a prompt, rather than on a user's double-click.
 echo "==> the frozen application"
 "$APP/libera-cli.exe" -V
 # --payload-status reaches the payload code, which -V does not, and says where
-# the payload was found: beside the application, or the bundle is broken. A
-# missed module is a traceback, and its exit status alone cannot tell it from
-# a payload not found.
+# the payload was found: the components frozen with it, or the bundle is
+# broken. A missed module is a traceback, and its exit status alone cannot
+# tell it from a payload not found.
 said="$("$APP/libera-cli.exe" --payload-status 2>&1)" || :
-if ! printf '%s\n' "$said" | grep -q '^found via: *bundled$'; then
-    echo "FATAL: the frozen application did not find the payload beside it:" >&2
+if ! printf '%s\n' "$said" | grep -q '^found via: *components$'; then
+    echo "FATAL: the frozen application did not find its components:" >&2
     printf '%s\n' "$said" | sed 's/^/    /' >&2
     exit 1
 fi
