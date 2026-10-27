@@ -35,6 +35,10 @@ esac
 BUILD_ROOT="${BUILD_ROOT:-$DEFAULT_BUILD_ROOT}"
 SRC="$BUILD_ROOT/src"
 OUT="$BUILD_ROOT/out"
+# The core's binaries: this tree's build, or, for libera-web's wheel, the
+# libera-core installed in its build environment, whose x2t makes the slide
+# themes (components/web/hatch_build.py).
+CORE_BIN="${CORE_BIN:-$OUT/core/bin}"
 
 # The payload version, out of the checkout at $1. The one shell reader of the
 # file the host reads with tomllib, so it takes what is between the quotes and
@@ -130,11 +134,11 @@ built() {
     exe="$1"
     shift
     bin_path="$PATH"
-    [ -n "$EXE" ] && bin_path="$(cygpath -u "$OUT/core/bin"):$PATH"
+    [ -n "$EXE" ] && bin_path="$(cygpath -u "$CORE_BIN"):$PATH"
     APPLICATION_NAME="${APPLICATION_NAME:-Libera Suite}" \
-    DYLD_LIBRARY_PATH="$OUT/core/bin" LD_LIBRARY_PATH="$OUT/core/bin" \
+    DYLD_LIBRARY_PATH="$CORE_BIN" LD_LIBRARY_PATH="$CORE_BIN" \
     PATH="$bin_path" \
-        "$OUT/core/bin/$exe$EXE" "$@"
+        "$CORE_BIN/$exe$EXE" "$@"
 }
 
 # A path a native Windows program will accept.

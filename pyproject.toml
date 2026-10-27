@@ -121,16 +121,17 @@ default-groups = ["dev", "e2e"]
 # pyproject.toml. In the dev group so that `make test` and `make lint` cover it;
 # never in the wheel, whose packages are src/libera only.
 #
-# components/ are the two component packages, installed editable here so that
-# `uv sync` gives the host its components before any is on PyPI. Their files
-# are a build's: `lb components fill`.
+# components/ are the two component packages. `uv sync` builds their wheels
+# from the pinned sources, as pip does where PyPI has no wheel for the
+# platform, and installs them as any other: not editable, since their files
+# are made by the build and are not in the project.
 [tool.uv.workspace]
 members = ["build", "components/core", "components/web"]
 
 [tool.uv.sources]
 libera-build = { workspace = true }
-libera-core = { workspace = true }
-libera-web = { workspace = true }
+libera-core = { workspace = true, editable = false }
+libera-web = { workspace = true, editable = false }
 
 [tool.mypy]
 # The same stubs ty and pyrefly use. See stubs/README.md.

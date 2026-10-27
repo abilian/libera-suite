@@ -81,7 +81,7 @@ else
     echo "==> JS build jobs: $BUILD_JOBS (from $(usable_gb) GB usable)"
 fi
 
-[ -x "$OUT/core/bin/x2t$EXE" ] || { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
+[ -x "$CORE_BIN/x2t$EXE" ] || { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
 for repo in sdkjs web-apps; do
     [ -d "$SRC/$repo" ] || { echo "FATAL: no $SRC/$repo -- run build.sh fetch $repo" >&2; exit 1; }
 done
@@ -273,9 +273,9 @@ CHECK
 if [ -n "$EXE" ]; then
     rm -rf "$PAYLOAD/bin"
     MSYS2_ARG_CONV_EXCL='*' cmd /c mklink /J \
-        "$(cygpath -w "$PAYLOAD/bin")" "$(cygpath -w "$OUT/core/bin")" >/dev/null
+        "$(cygpath -w "$PAYLOAD/bin")" "$(cygpath -w "$CORE_BIN")" >/dev/null
 else
-    ln -sfn "$OUT/core/bin" "$PAYLOAD/bin"
+    ln -sfn "$CORE_BIN" "$PAYLOAD/bin"
 fi
 [ -f "$PAYLOAD/bin/x2t$EXE" ] || { echo "FATAL: $PAYLOAD/bin does not reach x2t" >&2; exit 1; }
 
@@ -359,7 +359,7 @@ echo "==> DoctRenderer.config"
 # winpath, because x2t.exe reads this file and MSYS only rewrites arguments,
 # never file contents: /c/b/... in here is a path no Windows program can open.
 P="$(winpath "$PAYLOAD")"
-cat > "$OUT/core/bin/DoctRenderer.config" <<CONF
+cat > "$CORE_BIN/DoctRenderer.config" <<CONF
 <Settings>
 <file>$P/sdkjs/common/Native/native.js</file>
 <file>$P/sdkjs/common/Native/jquery_native.js</file>

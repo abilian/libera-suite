@@ -43,10 +43,3 @@ src/libera/manifest.json
 
 # An inventory of build hosts (build/builders.toml.example is the template).
 build/builders.toml
-
-# The components' files, which `lb components fill` puts there from a build:
-# everything in the two packages but their __init__.py.
-/components/core/src/libera_core/*
-!/components/core/src/libera_core/__init__.py
-/components/web/src/libera_web/*
-!/components/web/src/libera_web/__init__.py
