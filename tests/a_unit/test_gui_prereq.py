@@ -56,7 +56,6 @@ def test_an_unknown_distribution_is_told_what_to_ask_for():
     assert "pacman" not in hint
     assert "PyGObject" in hint
     assert "typelib" in hint
-    assert "Flatpak" in hint, "the one route that needs none of it"
 
 
 def test_a_distribution_we_do_know_is_matched_through_id_like():
@@ -125,8 +124,8 @@ def test_a_virtualenv_that_cannot_see_the_system_packages_is_told_so(
     already installed is worse than no advice at all.
 
     The environment is pinned to a pipx one here because the *answer* depends
-    on it -- a checkout is told to edit its own pyvenv.cfg instead, which is
-    the test below. Leaving it unpinned meant this asserted on whatever
+    on it -- a checkout is told to recreate its own instead, which is the
+    test below. Leaving it unpinned meant this asserted on whatever
     virtualenv the suite happened to be running in.
     """
     (linux_without_gtk / "pipx_metadata.json").write_text("{}", encoding="utf-8")
@@ -134,8 +133,10 @@ def test_a_virtualenv_that_cannot_see_the_system_packages_is_told_so(
     message = gui.explain_why_no_window()
 
     assert message is not None
+    assert message.startswith("Libera Suite cannot open a window."), "the failure first"
     assert "--system-site-packages" in message, "the flag is the whole answer"
     assert "apt install" not in message, "they have the packages; that is the point"
+    assert "install.sh" in message, "and the Flatpak, which needs none of it"
 
 
 def test_the_same_failure_in_a_checkout_is_told_something_it_can_act_on(
@@ -145,7 +146,7 @@ def test_the_same_failure_in_a_checkout_is_told_something_it_can_act_on(
     message = gui.explain_why_no_window()
 
     assert message is not None
-    assert "pyvenv.cfg" in message
+    assert "uv venv --clear --system-site-packages --python /usr/bin/python3" in message
     assert "pipx uninstall" not in message, "there is nothing installed to remove"
 
 
@@ -171,27 +172,28 @@ def test_a_virtualenv_on_another_python_is_told_that_instead(
     assert OURS in message, "and which one this copy is on"
 
 
-def test_a_checkout_on_another_python_is_not_told_to_uv_venv(
+def test_a_checkout_on_another_python_is_told_to_keep_uv_python(
     linux_without_gtk, monkeypatch
 ):
-    """The advice has to survive the next command in it.
+    """The advice has to survive the next command after it.
 
     `uv venv --python X --system-site-packages` followed by `uv sync` was the
     first answer here and it undid itself: uv rebuilds the environment when the
     interpreter it wants differs from the one the venv is on, so the sync threw
     the venv away, restored the project's pinned version, and cleared
-    include-system-site-packages. Measured -- the venv came back on 3.12 with
-    the flag off. UV_PYTHON is read ahead of .python-version, so nothing gets
-    rebuilt and the pyvenv.cfg line stays.
+    include-system-site-packages. Measured again with uv 0.13: with UV_PYTHON
+    set the flag survives the sync, and the next `uv run` without it rebuilds
+    on the pinned version, flag off. UV_PYTHON is read ahead of
+    .python-version, so it has to come first and stay.
     """
     monkeypatch.setattr(gui, "_find_system_python_for_gtk", lambda: ANOTHER_PYTHON)
 
     message = gui.explain_why_no_window()
 
     assert message is not None
-    assert "UV_PYTHON=/usr/bin/python3" in message
-    assert "pyvenv.cfg" in message, "and the flag, which uv does not set for you"
-    assert "uv venv" not in message, "that is the advice that undid itself"
+    exported = message.index("export UV_PYTHON=/usr/bin/python3")
+    assert exported < message.index("uv venv --clear --system-site-packages")
+    assert "Keep UV_PYTHON set" in message, "or the next uv run undoes it"
 
 
 def test_the_probe_asks_the_same_question_as_the_check(monkeypatch):
@@ -242,10 +244,26 @@ def test_packages_actually_missing_still_names_them(linux_without_gtk, monkeypat
     message = gui.explain_why_no_window()
 
     assert message is not None
-    assert "pip cannot install" in message
-    assert "again" in message, "a message with no next step is half a message"
-    # Both halves: the packages, and the reason installing them may not be
-    # enough on its own.
+    assert "not installed" in message
+    assert "install.sh" in message, "the Flatpak needs none of it"
+    assert "--system-site-packages" not in message, "this one already sees them"
+
+
+def test_packages_missing_from_an_isolated_virtualenv_say_both_halves(
+    linux_without_gtk, monkeypatch
+):
+    """Installing the packages is not enough when the environment cannot see
+    them: the message names both steps, or the user installs, retries, and
+    meets the next message."""
+    monkeypatch.setattr(gui, "_find_system_python_for_gtk", lambda: None)
+    (linux_without_gtk / "pyvenv.cfg").write_text(
+        "include-system-site-packages = false\n", encoding="utf-8"
+    )
+
+    message = gui.explain_why_no_window()
+
+    assert message is not None
+    assert "not installed" in message
     assert "--system-site-packages" in message
 
 
@@ -272,17 +290,27 @@ def test_a_uv_tool_install_is_recognised_by_its_receipt(tmp_path):
     assert gui.detect_venv_kind(str(tmp_path)) == "uv-tool"
 
 
-def test_the_advice_names_the_file_to_edit_for_a_checkout(monkeypatch, tmp_path):
-    """A path the reader can paste, not a description of one."""
+def test_a_uvx_run_is_recognised_by_uv_s_cache(tmp_path):
+    """`uvx libera` runs from ~/.cache/uv/archive-v0/..., which has no receipt;
+    taken for a checkout, it was told to recreate a folder in uv's cache."""
+    (tmp_path / "CACHEDIR.TAG").write_text("", encoding="utf-8")
+    assert gui.detect_venv_kind(str(tmp_path)) == "uvx"
+
+
+def test_the_advice_for_a_checkout_is_uv_s(monkeypatch, tmp_path):
     monkeypatch.setattr(sys, "prefix", str(tmp_path))
-    advice = gui._explain_how_to_open_the_virtualenv()
-    assert f"{tmp_path}/pyvenv.cfg" in advice
+    advice = gui._explain_how_to_reach_the_system("/usr/bin/python3", same_version=True)
+    assert "uv venv --clear --system-site-packages" in advice
+    assert "uv sync" in advice
     assert "pipx" not in advice, "a checkout has nothing to uninstall"
 
 
-def test_the_advice_for_uv_tool_sends_you_somewhere_that_works(monkeypatch, tmp_path):
-    """`uv tool` has no --system-site-packages, so the answer is another tool."""
-    (tmp_path / "uv-receipt.toml").write_text("", encoding="utf-8")
+@pytest.mark.parametrize("left", ["uv-receipt.toml", "CACHEDIR.TAG"])
+def test_the_advice_for_uv_sends_you_somewhere_that_works(monkeypatch, tmp_path, left):
+    """Neither `uv tool` nor `uvx` has --system-site-packages, so the answer is
+    another tool."""
+    (tmp_path / left).write_text("", encoding="utf-8")
     monkeypatch.setattr(sys, "prefix", str(tmp_path))
-    advice = gui._explain_how_to_open_the_virtualenv()
-    assert "pipx install --system-site-packages libera" in advice
+    advice = gui._explain_how_to_reach_the_system("/usr/bin/python3", same_version=True)
+    assert "pipx install --python /usr/bin/python3 --system-site-packages" in advice
+    assert "uv venv" not in advice
