@@ -10,6 +10,9 @@ that way: a test that replaces `get_data_dir` replaces it for every caller.
 
 from __future__ import annotations
 
+import functools
+import importlib.metadata
+import importlib.util
 import json
 import os
 import platform
@@ -79,15 +82,35 @@ class NoPayloadError(PayloadError):
 
 @dataclass(frozen=True)
 class Layout:
-    """Where each part of a payload is, under its root: the one place that
-    says. It was spelled out in four modules, the two AllFonts.js among them,
-    which are not interchangeable."""
+    """Where each part of a payload is: the one place that says. It was
+    spelled out in four modules.
+
+    Two roots. `root` holds the editors, their fonts and blanks, which the
+    server serves; `core` holds `bin/`, the converter. They are one folder in
+    a build tree and in a payload downloaded by 0.6 and earlier, and two
+    packages when the components are installed as such: libera_web and
+    libera_core.
+    """
 
     root: Path
+    core: Path
+
+    @classmethod
+    def of(cls, root: Path) -> Layout:
+        """The layout of the payload whose editors are at `root`: its own
+        `bin/`, unless it is the installed libera_web, whose core is the
+        installed libera_core."""
+        if root != find_component("libera_web"):
+            return cls(root, root)
+        core = find_component("libera_core")
+        if core is None:
+            msg = f"libera-web is installed, in {root}, but not libera-core"
+            raise PayloadError(msg)
+        return cls(root, core)
 
     @property
     def bin(self) -> Path:
-        return self.root / "bin"
+        return self.core / "bin"
 
     @property
     def x2t(self) -> Path:
@@ -132,9 +155,15 @@ class Layout:
 
 @dataclass(frozen=True)
 class Payload(Layout):
-    """A usable payload directory, and how we came to be using it."""
+    """A usable payload, and how we came to be using it."""
 
-    origin: str  # "LIBERA_PAYLOAD", "config", "bundled", or "installed"
+    # "LIBERA_PAYLOAD", "config", "bundled", "components" or "installed"
+    origin: str
+
+    @classmethod
+    def found(cls, root: Path, origin: str) -> Payload:
+        layout = Layout.of(root)
+        return cls(layout.root, layout.core, origin)
 
     def read_record(self) -> dict:
         f = self.record
@@ -306,12 +335,49 @@ def find_bundled_dir() -> Path | None:
     return None
 
 
+@functools.cache
+def find_component(package: str) -> Path | None:
+    """The folder of an installed component package, without importing it:
+    there is nothing in it to run."""
+    spec = importlib.util.find_spec(package)
+    if spec is None or spec.origin is None:
+        return None
+    return Path(spec.origin).parent
+
+
+def find_components() -> Payload | None:
+    """The components installed as packages, as `pip install libera` brings
+    them from 0.7 on: libera-web and libera-core, in exactly this host's
+    version, which its own requirements pin."""
+    web = find_component("libera_web")
+    if web is None:
+        return None
+    for name in ("libera-web", "libera-core"):
+        try:
+            version = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            version = None
+        if version != PAYLOAD_VERSION:
+            there = f"{name} {version} is installed" if version else f"no {name}"
+            msg = (
+                f"{there}, and this version of Libera Suite needs"
+                f" {PAYLOAD_VERSION}\n"
+                f"  install it:   pip install {name}=={PAYLOAD_VERSION}"
+            )
+            raise PayloadError(msg)
+    found = Payload.found(web, "components")
+    if not is_complete(web):
+        msg = f"the components installed in {web.parent} are incomplete"
+        raise PayloadError(msg)
+    return found
+
+
 def is_complete(root: Path) -> bool:
     """Everything the host needs, including what install generates.
 
     The fonts' index is not in it: the host builds that in the state folder
     when it is missing (payload/fonts.py)."""
-    layout = Layout(root)
+    layout = Layout.of(root)
     needed = [
         layout.x2t,
         layout.doctrenderer_config,
@@ -337,7 +403,7 @@ def resolve() -> Payload:
                 " (run build/engine/payload.sh?)"
             )
             raise PayloadError(msg)
-        return Payload(root, "LIBERA_PAYLOAD")
+        return Payload.found(root, "LIBERA_PAYLOAD")
 
     configured = _read_configured_dir()
     if configured:
@@ -347,7 +413,7 @@ def resolve() -> Payload:
                 "is not a complete payload"
             )
             raise PayloadError(msg)
-        return Payload(configured, "config")
+        return Payload.found(configured, "config")
 
     # Before the installed one: a bundled payload shipped with this exact
     # application and is guaranteed to match it, where an installed one is
@@ -356,11 +422,17 @@ def resolve() -> Payload:
     # and the one that cannot be half-upgraded should.
     bundled = find_bundled_dir()
     if bundled is not None:
-        return Payload(bundled, "bundled")
+        return Payload.found(bundled, "bundled")
+
+    # Before the downloaded one, which an earlier version may have left: these
+    # came with this host, pinned to its version.
+    components = find_components()
+    if components is not None:
+        return components
 
     installed = get_installed_dir()
     if is_complete(installed):
-        return Payload(installed, "installed")
+        return Payload.found(installed, "installed")
 
     msg = (
         f"Libera Suite's components are not installed"

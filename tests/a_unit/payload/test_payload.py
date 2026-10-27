@@ -90,6 +90,65 @@ def test_missing_payload_says_what_to_do(tmp_path: Path, monkeypatch) -> None:
         payload.resolve()
 
 
+@pytest.fixture
+def components(tmp_path: Path, monkeypatch) -> tuple[Path, Path]:
+    """libera_web and libera_core installed as packages, in this host's
+    version, and nothing else that resolve() would take first."""
+    site = tmp_path / "site-packages"
+    web, core = site / "libera_web", site / "libera_core"
+    for folder in ("sdkjs", "web-apps", "fonts-src", "empty"):
+        (web / folder).mkdir(parents=True)
+    (web / "empty" / "new.docx").write_bytes(b"PK\x03\x04")
+    (core / "bin").mkdir(parents=True)
+    (core / "bin" / f"x2t{locate.EXE}").write_text("#!/bin/sh\n")
+    (core / "bin" / "DoctRenderer.config").write_text("<Settings/>")
+    packages = {"libera_web": web, "libera_core": core}
+    monkeypatch.setattr(locate, "find_component", packages.get)
+    versions = {
+        "libera-web": payload.PAYLOAD_VERSION,
+        "libera-core": payload.PAYLOAD_VERSION,
+    }
+    monkeypatch.setattr(locate.importlib.metadata, "version", versions.__getitem__)
+    monkeypatch.delenv("LIBERA_PAYLOAD", raising=False)
+    monkeypatch.setattr(locate, "_read_configured_dir", lambda: None)
+    monkeypatch.setattr(locate, "find_bundled_dir", lambda: None)
+    return web, core
+
+
+def test_installed_components_are_found_as_two_folders(components) -> None:
+    web, core = components
+    found = payload.resolve()
+    assert found.origin == "components"
+    assert found.root == web
+    assert found.x2t.parent == core / "bin"
+    assert found.sdkjs == web / "sdkjs"
+
+
+def test_components_of_another_version_say_how_to_get_this_ones(
+    components, monkeypatch
+) -> None:
+    """The host pins them, so this is a broken environment, not a choice:
+    neither is used, and no download of the old payload is offered."""
+    versions = {"libera-web": payload.PAYLOAD_VERSION, "libera-core": "0.1"}
+    monkeypatch.setattr(locate.importlib.metadata, "version", versions.__getitem__)
+    with pytest.raises(PayloadError, match=r"libera-core 0\.1 is installed") as raised:
+        payload.resolve()
+    assert f"pip install libera-core=={payload.PAYLOAD_VERSION}" in str(raised.value)
+    assert not isinstance(raised.value, payload.NoPayloadError)
+
+
+def test_the_editors_without_the_converter_are_refused(components, monkeypatch):
+    web, _ = components
+    monkeypatch.setattr(locate, "find_component", {"libera_web": web}.get)
+    with pytest.raises(PayloadError, match="but not libera-core"):
+        payload.resolve()
+
+
+def test_a_payload_folder_is_its_own_core(tmp_path: Path) -> None:
+    root = make_payload(tmp_path / "p")
+    assert locate.Layout.of(root) == locate.Layout(root, root)
+
+
 def test_generated_files_count_as_required(tmp_path: Path) -> None:
     """An unpacked-but-not-generated payload is not usable."""
     root = make_payload(tmp_path / "p")

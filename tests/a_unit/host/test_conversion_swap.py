@@ -146,6 +146,7 @@ def test_an_x2t_that_hangs_is_a_failed_conversion(edited, monkeypatch):
         raise convert.subprocess.TimeoutExpired(cmd, kwargs["timeout"])
 
     monkeypatch.setattr(convert.subprocess, "run", hangs)
+    monkeypatch.setattr(convert.generate, "make_code_cache_dir", lambda _: edited.work)
 
     with pytest.raises(convert.ConversionError, match="did not finish"):
         convert.convert_to_editor_bin(edited, edited.document)

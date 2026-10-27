@@ -7,7 +7,9 @@ index it builds lives in the state folder (payload/fonts.py).
 
 from __future__ import annotations
 
+import hashlib
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -31,7 +33,7 @@ def generate(root: Path) -> None:
     when it starts with "./". It names no AllFonts.js: every conversion passes
     the index's own as m_sAllFontsPath, which x2t takes over the config's.
     """
-    layout = locate.Layout(root)
+    layout = locate.Layout.of(root)
     if not layout.x2t.is_file():
         msg = f"no x2t at {layout.x2t}: the core artifact is incomplete"
         raise PayloadError(msg)
@@ -50,6 +52,31 @@ def generate(root: Path) -> None:
         "</Settings>\n",
         encoding="utf-8",
     )
+
+
+def make_code_cache_dir(layout: locate.Layout) -> Path:
+    """The folder doctrenderer keeps V8's code cache in, made if need be: the
+    compiled editor scripts, 8 MB each, which halve a PDF export.
+
+    It wrote them beside the scripts, into the payload, until core patch 0034
+    let DOCTRENDERER_CACHE_DIR name a folder. One folder per converter -- its
+    version, where it is, and when its x2t was written -- because a cache is
+    V8's, for one build of it. Made, it clears the others, which no
+    converter in use reads.
+    """
+    x2t = layout.x2t
+    key = f"{locate.PAYLOAD_VERSION}|{x2t}|{x2t.stat().st_mtime_ns}"
+    folder = (
+        locate.get_state_dir()
+        / "code-cache"
+        / hashlib.sha256(key.encode()).hexdigest()[:16]
+    )
+    if not folder.is_dir():
+        folder.mkdir(parents=True)
+        for other in folder.parent.iterdir():
+            if other != folder:
+                shutil.rmtree(other, ignore_errors=True)
+    return folder
 
 
 def run_allfontsgen(layout: locate.Layout, *args: str) -> None:

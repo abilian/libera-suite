@@ -338,7 +338,7 @@ def test_payload_status_names_the_root_where_the_scripts_read_it(
     monkeypatch.setattr(
         commands.payload_mod,
         "resolve",
-        lambda: commands.payload_mod.Payload(tmp_path, "installed"),
+        lambda: commands.payload_mod.Payload.found(tmp_path, "installed"),
     )
 
     code, out = run(["--payload-status"], capsys)

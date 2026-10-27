@@ -110,8 +110,8 @@ def build_font_index(home: Path) -> None:
     """The index of the machine's fonts, in a scratch home, built now."""
     script = (
         "from libera import payload\n"
-        "from libera.payload import fonts, locate\n"
-        "layout = locate.Layout(payload.resolve().root)\n"
+        "from libera.payload import fonts\n"
+        "layout = payload.resolve()\n"
         "if fonts.is_wanted():\n"
         "    fonts.build(layout, fonts.get_index_dir(layout))\n"
     )

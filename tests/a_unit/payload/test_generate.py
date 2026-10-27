@@ -9,6 +9,7 @@ fonts, which an editor then shows as a box for every glyph.
 
 from __future__ import annotations
 
+import os
 import sys
 import threading
 import time
@@ -37,7 +38,7 @@ def make_payload_with_allfontsgen(tmp_path: Path, script: str) -> Path:
 
 
 def build_shipped(root: Path) -> int:
-    layout = locate.Layout(root)
+    layout = locate.Layout.of(root)
     return fonts.build(layout, fonts.get_shipped_dir(layout), machine=False)
 
 
@@ -98,7 +99,7 @@ def test_a_font_for_each_source_and_every_thumbnail_is_an_index(tmp_path, state)
     )
 
     assert build_shipped(root) == 32
-    index = fonts.get_shipped_dir(locate.Layout(root))
+    index = fonts.get_shipped_dir(locate.Layout.of(root))
     assert index.is_relative_to(state), "the index was written into the payload"
     assert (index / fonts.WEB_ALL_FONTS).is_file()
 
@@ -139,6 +140,26 @@ def test_the_converter_configuration_names_the_payload_relatively(tmp_path):
     assert "<allfonts>" not in config
 
 
+def test_each_converter_has_a_code_cache_of_its_own(tmp_path, state):
+    """V8's code cache is for one build of V8: a converter rebuilt or
+    upgraded gets a new folder, and the old one goes."""
+    root = make_payload_with_allfontsgen(tmp_path, "exit 0")
+    x2t = root / "bin" / "x2t"
+    x2t.write_bytes(b"one build")
+    layout = locate.Layout.of(root)
+    first = generate.make_code_cache_dir(layout)
+    (first / "word-sdk-all.cache").write_bytes(b"compiled")
+    assert generate.make_code_cache_dir(layout) == first
+    assert (first / "word-sdk-all.cache").is_file()
+
+    os.utime(x2t, ns=(0, x2t.stat().st_mtime_ns + 10**9))
+    second = generate.make_code_cache_dir(layout)
+
+    assert second != first
+    assert second.is_relative_to(state)
+    assert list(second.parent.iterdir()) == [second]
+
+
 def test_a_quit_stops_the_allfontsgen_still_running(tmp_path):
     """A font index builds on a daemon thread, which a quit ends, and its
     allfontsgen ran on without it."""
@@ -150,7 +171,7 @@ def test_a_quit_stops_the_allfontsgen_still_running(tmp_path):
 
     def build():
         try:
-            generate.run_allfontsgen(locate.Layout(root))
+            generate.run_allfontsgen(locate.Layout.of(root))
         except PayloadError as e:
             failed.append(e)
 

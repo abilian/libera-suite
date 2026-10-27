@@ -146,7 +146,7 @@ def run(
     # even with no document shown, so there has to be one to answer for.
     timeline.mark("host")
     prune.note_use(payload_root)
-    layout = locate.Layout(payload_root)
+    layout = locate.Layout.of(payload_root)
     first_session = Session(
         payload=payload_root,
         work=new_work(work),
