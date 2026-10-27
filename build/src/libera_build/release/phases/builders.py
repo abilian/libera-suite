@@ -35,11 +35,6 @@ def arch_suffix(b: Builder) -> str:
     return f" --arch {b.arch}" if b.arch else ""
 
 
-def version_dist(b: Builder, version: str) -> str:
-    """That version's directory on the builder, for a command line there."""
-    return remote_path(f"{dist_of(b)}/{version}")
-
-
 def build_command(b: Builder) -> str:
     """What a builder runs to leave its core, and the shared pair, in its dist
     directory. On Linux, the container, whose glibc decides the oldest
@@ -59,13 +54,13 @@ class Bundle:
     files: tuple[str, ...]
 
 
-def bundle_of(b: Builder, app: str, payload_dist: str) -> Bundle | None:
+def bundle_of(b: Builder, app: str) -> Bundle | None:
     """A Flatpak per Linux architecture; the installer on Windows, with the
     SHA-256 that install.ps1 checks the download against. None for a Mac:
     macOS ships through Homebrew, which builds from source."""
     if b.platform.startswith("linux-"):
         return Bundle(
-            f"app flatpak --dist {payload_dist}{arch_suffix(b)}",
+            f"app flatpak{arch_suffix(b)}",
             (f"build/out/{bundle_name(app, b.arch or '')}",),
         )
     if b.platform.startswith("windows-"):
@@ -94,13 +89,8 @@ def bundles(ctx: Context) -> None:
     whose seccomp filter is built for the architecture it runs on, and
     qemu-user does not carry one across. See notes/15-builders.md.
     """
-    version = versions.payload_version(ctx.root)
     app = versions.app_version(ctx.root)
-    made = {
-        b: bundle
-        for b in ctx.remotes
-        if (bundle := bundle_of(b, app, version_dist(b, version)))
-    }
+    made = {b: bundle for b in ctx.remotes if (bundle := bundle_of(b, app))}
     if not made:
         say("    no remote builders that make a bundle; nothing to do")
         return

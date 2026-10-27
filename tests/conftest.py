@@ -15,11 +15,8 @@ Run specific test types:
 from __future__ import annotations
 
 import atexit
-import json
 import os
-import platform
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 
@@ -53,7 +50,7 @@ def _built_payload() -> Path | None:
     It records no version, so it is trusted as this checkout's own. A
     container build's tree is not one of these: its `bin` links to
     /build/out/core/bin and its generated files name /build, paths that exist
-    only inside the container. Its artifacts are, below.
+    only inside the container.
 
     The candidates are build/engine/common.sh's, in its order
     (`support.build_roots`), because a fallback that fires on one platform
@@ -66,64 +63,12 @@ def _built_payload() -> Path | None:
     return None
 
 
-def _built_dists() -> list[Path]:
-    """This checkout's build artifacts for the version it wants, native or
-    from the container: tarballs and their manifest, which install anywhere."""
-    arch = {"x86_64": "amd64", "aarch64": "arm64", "arm64": "arm64"}.get(
-        platform.machine(), platform.machine()
-    )
-    version = payload.PAYLOAD_VERSION
-    candidates = [
-        dist
-        for root in build_roots()
-        for dist in (
-            root / "out" / "dist" / version,
-            root / f"linux-{arch}" / "out" / "dist" / version,
-        )
-    ]
-    return [dist for dist in candidates if (dist / "manifest.json").is_file()]
-
-
-def _unpacked_for_the_tests() -> Path | None:
-    """This checkout's build artifacts, unpacked into the suite's own cache.
-
-    The suite brings what it needs. It used to take any payload installed on
-    the machine, whatever its version: a checkout wanting 0.4.1 ran against a
-    0.2 left over in the data directory and reported its converter's old bugs
-    as failures. Unpacked by `lb components unpack`, in a directory no user's
-    copy shares, and again when the artifacts were rebuilt under the same
-    version. None when there is nothing to unpack: the tiers that need it then
-    skip, and the header says why.
-    """
-    from libera_build import components
-
-    cache_home = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
-    cache = cache_home / "libera-tests" / "payload" / payload.PAYLOAD_VERSION
-    record = cache / "payload.json"
-    unpacked = (
-        json.loads(record.read_text(encoding="utf-8")).get("built")
-        if payload.is_complete(cache) and record.is_file()
-        else None
-    )
-    here = payload.get_current_platform()
-    for dist in _built_dists():
-        if not (dist / f"core-{here}.tar.gz").is_file():
-            continue
-        built = json.loads((dist / "manifest.json").read_text(encoding="utf-8"))
-        if unpacked and unpacked == built.get("built"):
-            return cache
-        print(f"unpacking payload {dist} for the tests into {cache}", file=sys.stderr)
-        components.unpack(cache, dist, here)
-        return cache
-    return None
-
-
 try:
     PAYLOAD = payload.resolve()
 except payload.PayloadError:
     # The build tree first: it is what this checkout built, so it is the
     # closest thing to the code under test.
-    found = _built_payload() or _unpacked_for_the_tests()
+    found = _built_payload()
     if found is not None:
         # Ahead of any import that resolves it, so the host under test agrees
         # with the fixtures about which payload this is.
@@ -143,9 +88,8 @@ def pytest_report_header() -> list[str]:
         return [
             "libera payload: NONE -- every tier above a_unit will skip",
             (
-                f"  wanted {payload.PAYLOAD_VERSION}: no components, not built here,"
-                " and no artifacts to unpack: `uv sync`, `make payload`,"
-                " or LIBERA_PAYLOAD=DIR"
+                f"  wanted {payload.PAYLOAD_VERSION}: no components and not built"
+                " here: `uv sync`, `make payload`, or LIBERA_PAYLOAD=DIR"
             ),
         ]
     found = PAYLOAD.read_record().get("payload_version", "unknown")
@@ -157,8 +101,8 @@ def pytest_report_header() -> list[str]:
 
 NEEDS_PAYLOAD = pytest.mark.skip(
     reason=(
-        "needs the payload this tree wants: no components, not built here, and "
-        "no artifacts to unpack (see the header); `uv sync`, or LIBERA_PAYLOAD"
+        "needs the payload this tree wants: no components and not built here "
+        "(see the header); `uv sync`, or LIBERA_PAYLOAD"
     )
 )
 

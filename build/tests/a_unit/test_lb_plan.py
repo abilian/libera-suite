@@ -130,12 +130,12 @@ def test_each_platform_builds_its_core_its_own_way():
 
 
 def test_each_platform_bundles_what_its_users_download():
-    flatpak = builders.bundle_of(ARM, "0.4.0", "~/d/0.4")
+    flatpak = builders.bundle_of(ARM, "0.4.0")
     assert flatpak == builders.Bundle(
-        "app flatpak --dist ~/d/0.4 --arch arm64",
+        "app flatpak --arch arm64",
         ("build/out/libera-0.4.0-arm64.flatpak",),
     )
-    installer = builders.bundle_of(WINDOWS, "0.4.0", "C:/b/out/dist/0.4")
+    installer = builders.bundle_of(WINDOWS, "0.4.0")
     setup = "build/out/bundles/Libera-Suite-Setup-0.4.0.exe"
     assert installer == builders.Bundle("app windows", (setup, f"{setup}.sha256"))
-    assert builders.bundle_of(MAC, "0.4.0", "~/d/0.4") is None
+    assert builders.bundle_of(MAC, "0.4.0") is None

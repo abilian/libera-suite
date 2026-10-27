@@ -177,7 +177,13 @@ BUILD_DIR = Knob(
 PAYLOAD = Knob(
     "--payload",
     "PAYLOAD",
-    "an unpacked payload to mount as is, when no artifacts match this checkout",
+    "a payload folder to mount as is, instead of the component wheels",
+    "DIR",
+)
+WHEELS = Knob(
+    "--wheels",
+    "WHEELS",
+    "the component wheels to install; default $BUILD_ROOT/out/wheels/<version>",
     "DIR",
 )
 # Not LANG: every shell here has one, and it would reach every container.
@@ -363,9 +369,7 @@ def app_macos_launcher(_args: argparse.Namespace) -> Steps:
 
 
 def app_flatpak(args: argparse.Namespace) -> Steps:
-    options = FlatpakOptions(
-        args.action, arch=given(args, ARCH) or host_arch(), dist=path_given(args, DIST)
-    )
+    options = FlatpakOptions(args.action, arch=given(args, ARCH) or host_arch())
     return [Call(flatpak.run, (options,))]
 
 
@@ -399,7 +403,7 @@ def linux_(args: argparse.Namespace) -> Steps:
     options = LinuxOptions(
         action=args.action,
         arch=given(args, ARCH),
-        dist=path_given(args, DIST),
+        wheels=path_given(args, WHEELS),
         payload=path_given(args, PAYLOAD),
         lang=given(args, LINUX_LANG),
         pytest_args=tuple(args.rest),
@@ -462,10 +466,8 @@ def components_unpack(args: argparse.Namespace) -> Steps:
 
 def components_wheels(args: argparse.Namespace) -> Steps:
     version = payload_version(REPO)
-    dist = path_given(args, DIST) or dist_of(version)
     out = path_given(args, OUT) or build_root() / "out" / "wheels" / version
-    stage = build_root() / "out" / "components"
-    return [Call(components.wheels, (REPO, dist, out, stage))]
+    return [Call(components.wheels, (REPO, out))]
 
 
 def tidy_(args: argparse.Namespace) -> Steps:
@@ -736,7 +738,7 @@ def add_app(groups: Groups) -> None:
         ("flatpak-shell", "shell", "a shell in the builder container"),
         ("flatpak-versions", "versions", "what the builder image is pinned to"),
     ):
-        p = g.command(name, summary, app_flatpak, ARCH_HERE, DIST)
+        p = g.command(name, summary, app_flatpak, ARCH_HERE)
         p.set_defaults(action=action)
     g.command("windows", "the Windows installer, on Windows", app_windows)
     g.command(
@@ -750,7 +752,8 @@ def add_linux(groups: Groups) -> None:
     g = groups.group(
         "linux",
         "this repository's checks on Linux, in a container: the one place they run",
-        "All need a Linux payload: `payload container`, or --dist DIR.\n\n"
+        "The suite needs this architecture's component wheels, which\n"
+        "`components wheels` makes on a Linux machine, or a --payload DIR.\n\n"
         + examples(
             "linux lint",
             "linux test -k bridge",
@@ -768,7 +771,7 @@ def add_linux(groups: Groups) -> None:
         ("shell", "a shell in the test container"),
         ("image", "build, or rebuild, the test image"),
     ):
-        p = g.command(action, summary, linux_, ARCH_HERE, DIST, PAYLOAD, LINUX_LANG)
+        p = g.command(action, summary, linux_, ARCH_HERE, WHEELS, PAYLOAD, LINUX_LANG)
         p.set_defaults(action=action, passes_on=action == "test")
 
 
@@ -858,9 +861,9 @@ def add_components(groups: Groups) -> None:
     g = groups.group(
         "components",
         "the components as Python packages: libera-core and libera-web",
-        "`uv sync` builds this machine's from the pinned sources; `wheels`\n"
-        "builds every platform's for PyPI from a build's artifacts, and\n"
-        "`unpack` makes one folder of them.\n\n"
+        "`uv sync` builds this machine's from the pinned sources, and `wheels`\n"
+        "makes their wheels, for PyPI: run it on each platform. `unpack`\n"
+        "makes one folder of a build's artifacts.\n\n"
         + examples("components wheels", "components unpack --into ~/payload"),
     )
     p = g.command(
@@ -881,9 +884,8 @@ def add_components(groups: Groups) -> None:
     )
     g.command(
         "wheels",
-        "build the core wheel of every platform in the artifacts, and the editors'",
+        "this machine's core wheel and the editors', built from the pinned sources",
         components_wheels,
-        DIST,
         OUT,
         epilog=examples("components wheels", "components wheels --out /tmp/wheels"),
     )

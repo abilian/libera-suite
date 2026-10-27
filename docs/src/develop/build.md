@@ -73,7 +73,7 @@ lb payload dist                 # the distributable tarballs and their manifest
 
 Each is a thin wrapper over the script of the same name in `build/`; run those directly when you want to pass something the target does not.
 
-`uv sync` does the same itself. The two component packages, `components/core` and `components/web`, are workspace members whose build hooks build their wheels from the pinned sources, as pip does where PyPI has no wheel for the platform: libera-core's from the core built in `$BUILD_ROOT` (building it there is not yet part of the hook), libera-web's with that core's x2t, which makes the slide themes. uv keeps the wheels and builds them again only when what they are built from changes: the pins, the patch queue, the scripts in `build/engine/`. A first `uv sync` on a machine with a built core takes about two minutes; the next one, nothing.
+`uv sync` does the same itself. The two component packages, `components/core` and `components/web`, are workspace members whose build hooks build their wheels from the pinned sources, as pip does where PyPI has no wheel for the platform: libera-core's in `$BUILD_ROOT`, in the build container on Linux, libera-web's with that core's x2t, which makes the slide themes. `lb components wheels` makes the same two wheels on purpose, for PyPI: run it on each platform. uv keeps the wheels and builds them again only when what they are built from changes: the pins, the patch queue, the scripts in `build/engine/`. A first `uv sync` builds the core, about an hour, with no output but uv's spinner; `lb payload all` first shows the build as it goes. With a built core it takes a few minutes, and the next one nothing.
 
 Or skip packaging entirely while developing and point at the build tree:
 
@@ -120,7 +120,7 @@ lb payload container               # fetch, configure, core, payload, dist, smok
 lb payload export                  # the artifacts out of the volume, and where they are
 ```
 
-`payload export` copies the tarballs out of the container's volume and prints where it put them. On the Mac, whose own components are macOS binaries, `lb linux test` unpacks them inside the container.
+`payload export` copies the tarballs out of the container's volume and prints where it put them. `lb linux test` installs the component wheels of its architecture, which `lb components wheels` makes on a Linux machine of it; the Mac's own are macOS binaries.
 
 Underneath, the same container takes one step at a time:
 

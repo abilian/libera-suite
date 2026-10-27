@@ -85,21 +85,28 @@ def test_under_selinux_a_run_asks_not_to_be_relabelled():
     assert argv[5:7] == ["--security-opt", "label=disable"]
 
 
-def test_the_newest_complete_payload_is_by_number(tmp_path, monkeypatch):
-    for version in ("0.9", "0.10", "0.11"):
-        (tmp_path / version).mkdir()
-    monkeypatch.setattr(linux.locate, "is_complete", lambda d: d.name != "0.11")
-    assert linux.newest_complete_payload(tmp_path).name == "0.10"
-    assert linux.newest_complete_payload(tmp_path / "none") is None
-
-
-def test_the_container_mounts_the_payload_and_artifacts_only_when_there(tmp_path):
-    names = [m.target for m in linux.mounts_for("arm64", tmp_path / "missing", None)]
+def test_the_container_mounts_the_wheels_or_the_payload_it_was_given(tmp_path):
+    names = [m.target for m in linux.mounts_for("arm64", None, None)]
     assert names == ["/repo", "/venv", "/state"]
-    names = [m.target for m in linux.mounts_for("arm64", tmp_path, tmp_path)]
-    assert names == ["/repo", "/venv", "/state", "/payload", "/dist"]
+    names = [m.target for m in linux.mounts_for("arm64", tmp_path, None)]
+    assert names == ["/repo", "/venv", "/state", "/wheels"]
+    names = [m.target for m in linux.mounts_for("arm64", None, tmp_path)]
+    assert names == ["/repo", "/venv", "/state", "/payload"]
     assert linux.env_for(tmp_path)["LIBERA_PAYLOAD"] == "/payload"
     assert "LIBERA_PAYLOAD" not in linux.env_for(None)
+
+
+def test_the_suite_takes_the_wheels_of_its_architecture_only(tmp_path):
+    """A Mac's own wheels are macOS binaries: the folder counts only with a
+    Linux core of the container's architecture in it."""
+    (tmp_path / "libera_core-0.7-py3-none-macosx_14_0_arm64.whl").touch()
+    options = linux.LinuxOptions("test", wheels=tmp_path)
+
+    with pytest.raises(RefusedError, match="no libera-core wheel for linux-x86_64"):
+        linux.choose_payload(options, "amd64")
+
+    (tmp_path / "libera_core-0.7-py3-none-manylinux_2_35_x86_64.whl").touch()
+    assert linux.choose_payload(options, "amd64") == (tmp_path, None)
 
 
 def test_the_container_speaks_the_language_asked_for_and_no_other():

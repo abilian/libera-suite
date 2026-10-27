@@ -20,17 +20,14 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
-from libera_build import buildbox, components, repo, versions
+from libera.payload import locate
+from libera_build import components, versions
 from libera_build.artifacts import bundle_name
 from libera_build.containers import Engine, Mount, Run, interactive, linux_platform
 from libera_build.process import run_quietly
 from libera_build.repo import REPO
 from libera_build.report import RefusedError, say, step
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 APP_ID = "eu.liberasuite.Libera"
 WORK = REPO / "build" / "flatpak"
@@ -50,7 +47,6 @@ MUST_HAVE = (
 class FlatpakOptions:
     action: str  # build, wheels, check, smoke, shell, versions, clean
     arch: str = "amd64"
-    dist: Path | None = None  # the payload artifacts to bundle
 
 
 def dockerfile_sum() -> str:
@@ -111,14 +107,6 @@ class Builder:
         self.volume = f"libera-flatpak-{self.arch}"
         self.app = versions.app_version(REPO)
         self.bundle = bundle_name(self.app, self.arch)
-        # The container build's artifacts first, as `lb linux` takes them: a
-        # Linux builder builds its payload in the container, so its own
-        # out/dist is empty, and `ship` passes --dist where a hand run did not.
-        self.dist = (
-            options.dist
-            or buildbox.exported_dist(self.arch)
-            or repo.dist(versions.payload_version(REPO))
-        )
 
     # --- the container ---------------------------------------------------------
 
@@ -211,18 +199,20 @@ class Builder:
         """The offline wheel set, assembled aside and moved into place: a set
         that is present but half-filled is worse than one that is absent."""
         step("wheels, for a build with no network")
+        # The components are built for this machine, so it must be the
+        # bundle's platform: a Mac would hand the Flatpak a macOS core.
+        if (here := locate.get_current_platform()) != linux_platform(self.arch):
+            msg = (
+                f"the {self.arch} Flatpak carries a core built where it is made,\n"
+                f"  and this is {here}: lb on {linux_platform(self.arch)} app flatpak"
+            )
+            raise RefusedError(msg)
         tmp = WORK / "wheels.tmp"
         shutil.rmtree(tmp, ignore_errors=True)
         tmp.mkdir(parents=True)
-        # The components first, this architecture's core and the editors, from
-        # the artifacts: `pip wheel` finds them there rather than on PyPI.
-        components.wheels(
-            REPO,
-            self.dist,
-            tmp,
-            repo.build_root() / "out" / "components",
-            [linux_platform(self.arch)],
-        )
+        # The components first, this machine's core and the editors, built from
+        # the pinned sources: `pip wheel` finds them there rather than on PyPI.
+        components.wheels(REPO, tmp)
         # libera itself, built here: it is pure Python. Into the scratch
         # directory with --out-dir, and never `rm -rf dist && uv build`, which
         # once deleted the sdist a release had just made.
