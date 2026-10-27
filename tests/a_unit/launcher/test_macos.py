@@ -45,9 +45,17 @@ def test_the_plist_names_this_interpreter(home):
     macos.install()
     plist = read_plist()
     assert plist["LiberaPython"] == sys.executable
-    assert Path(plist["LiberaPythonLibrary"]).is_file()
     assert plist["CFBundleExecutable"] == "Libera"
     assert "LSMinimumSystemVersion" not in plist
+
+
+@pytest.mark.skipif(
+    sys.platform != "darwin",
+    reason="a macOS interpreter's library: Debian's python3 links it statically",
+)
+def test_the_plist_names_a_library_that_is_there(home):
+    macos.install()
+    assert Path(read_plist()["LiberaPythonLibrary"]).is_file()
 
 
 def test_it_offers_to_open_all_three_kinds(home):
