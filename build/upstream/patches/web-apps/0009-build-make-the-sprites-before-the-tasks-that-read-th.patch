@@ -1,0 +1,62 @@
+From e672ecbe9da05a5e9128e2a71799153f8cc1df92 Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Wed, 28 Oct 2026 09:33:46 +0100
+Subject: [PATCH] build: make the sprites before the tasks that read them
+
+deploy-sprites.js writes the toolbar sprites and formats@2.5x.svg into
+the source tree, and deploy-common runs svgo over the same folders. In
+one parallel phase, deploy-common now and then read a sprite half
+written and failed on "Unclosed root tag". The sprites now get a phase
+of their own, before Phase 1; it takes under a second.
+---
+ build/scripts/build-pipeline.js | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/build/scripts/build-pipeline.js b/build/scripts/build-pipeline.js
+index f45e118da0..62d7a323de 100755
+--- a/build/scripts/build-pipeline.js
++++ b/build/scripts/build-pipeline.js
+@@ -18,8 +18,10 @@
+ //   THEME            default: euro-office
+ //
+ // Phase layout (wall-clock optimised):
++//   Sprites — alone, first:
++//     sprites           (writes the sprites into the source tree Phase 1 reads)
+ //   Phase 1 — all parallel:
+-//     sprites.sh, deploy-common, deploy-html, deploy-reporter,
++//     deploy-common, deploy-html, deploy-reporter,
+ //     deploy-embed, webpack ×6, mobile ×4
+ //   Phase 2 — sequential after Phase 1:
+ //     deploy-mobile     (copies mobile output from source tree to BUILD_ROOT)
+@@ -261,10 +263,18 @@ async function main() {
+         task('verify-replacements', node, ['scripts/verify-replacements.mjs']),
+     ]);
+ 
++    // ---- sprites: before anything reads the source tree ---------------------
++    // deploy-sprites.js writes apps/*/main/resources/img/toolbar/icons.svg and
++    // doc-formats/formats@2.5x.svg into the source tree, and deploy-common runs
++    // svgo over those folders: run beside it, deploy-common read a sprite half
++    // written ("formats@2.5x.svg:1:8192: Unclosed root tag").
++    const pSprites = await phase('Sprites', [
++        task('sprites', node, ['scripts/deploy-sprites.js']),
++    ]);
++
+     // ---- phase 1: all independent work in parallel --------------------------
+ 
+     const phase1Tasks = [
+-        task('sprites',           node,   ['scripts/deploy-sprites.js']),
+         task('deploy-common',     node,   ['scripts/deploy-common.js']),
+         task('deploy-html',       node,   ['scripts/deploy-html.js']),
+         task('deploy-reporter',   node,   ['scripts/deploy-reporter.js']),
+@@ -337,7 +347,7 @@ async function main() {
+ 
+     // ---- summary -------------------------------------------------------------
+ 
+-    const all = [...p0, install, ...p1, ...pMobile, ...p2, ...p3, ...p4];
++    const all = [...p0, ...pSprites, install, ...p1, ...pMobile, ...p2, ...p3, ...p4];
+     const wallMs = Date.now() - wallStart;
+ 
+     const longestLabel = Math.max(...all.map(r => r.label.length));
+-- 
+2.55.0
+
