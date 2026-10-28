@@ -21,7 +21,10 @@ class Core(BuildHookInterface):
         if version == "editable":
             return
         build_data["pure_python"] = False
-        repo = Path(self.root).parents[1]
+        # An sdist carries the repository's build files at their own paths.
+        repo = Path(self.root)
+        if not (repo / "build").is_dir():
+            repo = repo.parents[1]
         sys.path[:0] = [str(repo / "build" / "src"), str(repo / "src")]
         from libera_build import components
 

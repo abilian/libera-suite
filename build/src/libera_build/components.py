@@ -146,20 +146,23 @@ def unpack_web(into: Path, dist: Path, extra: dict[str, str]) -> None:
 
 def wheels(repo: Path, out: Path) -> int:
     """This machine's core wheel, and the editors': `uv build` of the two
-    projects, whose hooks build them from the pinned sources. The editors'
-    build takes the core wheel just made, not the workspace's, which uv would
-    build a second time."""
+    projects, whose hooks build them from the pinned sources. The core's sdist
+    too, which is what builds the wheel, so that every run tests it: it is
+    what pip builds where PyPI has no wheel. The editors' build takes the core
+    wheel just made, not the workspace's, which uv would build a second time."""
     step("libera-core")
     run_here(_uv_build(repo / CORE, out), "building libera-core", cwd=repo)
     step("libera-web")
-    argv = _uv_build(repo / WEB, out, "--no-sources", "--find-links", str(out))
+    argv = _uv_build(
+        repo / WEB, out, "--wheel", "--no-sources", "--find-links", str(out)
+    )
     run_here(argv, "building libera-web", cwd=repo)
     say(f"\n    the wheels are in {out}")
     return 0
 
 
 def _uv_build(project: Path, out: Path, *extra: str) -> list[str]:
-    return ["uv", "build", "--wheel", "--out-dir", str(out), *extra, str(project)]
+    return ["uv", "build", "--out-dir", str(out), *extra, str(project)]
 
 
 def _unpack(tarball: Path, dest: Path) -> None:
