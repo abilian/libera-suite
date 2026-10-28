@@ -7,7 +7,7 @@ being wrong about, and no other check in the tree would notice if it stopped.
 
 Runs in the builder container, against the bundle alone: the payload is inside
 it, so this exercises what a user gets rather than one the test put there.
-Two assertions, both on content:
+Three assertions, all on content:
 
 - `libera --serve` prints a URL. serve runs opening.open_document --
   which runs x2t -- before it prints anything, and reports NotReadyError
@@ -15,6 +15,9 @@ Two assertions, both on content:
 - the page it serves carries all three bridge scripts. A 200 holding
   upstream's own HTML would mean the splice quietly stopped happening, which
   is the kind of failure that looks like success.
+- a text file converted to docx holds the text, and that docx converted to
+  PDF has an embedded font and text operators: the PDF is sdkjs running in
+  V8, the part of the converter most likely to mind a different userland.
 
 The blank comes out of the payload, so nothing here needs a source tree inside
 the sandbox. Converting it is what File > New does.
@@ -32,11 +35,17 @@ import subprocess
 import sys
 import time
 import urllib.request
+import zipfile
+import zlib
 from pathlib import Path
 
 APP_ID = "eu.liberasuite.Libera"
 BRIDGE = ("bridge-runtime.js", "bridge-page.js", "bridge-desktop.js")
 TIMEOUT = 180
+TEXT = "Converted in the Flatpak sandbox"
+# Under the home folder, which the bundle may write (--filesystem=home), so
+# the files the sandbox writes are read here at the same path.
+WORK = Path.home() / "flatpak-smoke"
 
 IN_SANDBOX = """
 set -eu
@@ -47,6 +56,55 @@ blank=$(find "$root" -name new.docx | head -1)
 cp "$blank" "$HOME/smoke.docx"
 exec libera --serve "$HOME/smoke.docx"
 """
+
+
+CONVERT = f"""
+set -eu
+cd "$0"
+printf '%s\\n' "{TEXT}" > convert.txt
+libera --convert convert.txt -t docx
+libera --convert convert.docx -t pdf
+"""
+
+
+def inflated(stream: bytes) -> bytes:
+    try:
+        return zlib.decompress(stream)
+    except zlib.error:
+        return b""
+
+
+def pdf_shows_text(pdf: Path) -> bool:
+    """smoke.sh's test: a page, an embedded font and text operators. A PDF of
+    the right size with no glyphs in it is the failure that looks like success."""
+    raw = pdf.read_bytes()
+    streams = re.findall(rb"stream\r?\n(.*?)endstream", raw, re.DOTALL)
+    body = b"".join(inflated(stream) for stream in streams)
+    return bool(
+        re.search(rb"/Type\s*/Page[^s]", raw)
+        and b"/FontFile2" in raw
+        and re.search(rb"\].*?TJ|\(.*?\)\s*Tj", body, re.DOTALL)
+    )
+
+
+def convert() -> int:
+    WORK.mkdir(exist_ok=True)
+    done = subprocess.run(
+        ["flatpak", "run", "--command=sh", APP_ID, "-c", CONVERT, str(WORK)],
+        capture_output=True,
+        text=True,
+        timeout=TIMEOUT,
+        check=False,
+    )
+    if done.returncode:
+        return fail("libera --convert failed in the sandbox", done.stdout + done.stderr)
+    with zipfile.ZipFile(WORK / "convert.docx") as docx:
+        if TEXT not in docx.read("word/document.xml").decode("utf-8"):
+            return fail("the docx converted in the sandbox lacks its text")
+    if not pdf_shows_text(WORK / "convert.pdf"):
+        return fail("the PDF converted in the sandbox shows no text")
+    print("    text -> docx -> pdf in the sandbox, the text in each")
+    return 0
 
 
 def fail(message: str, log: str = "") -> int:
@@ -98,6 +156,8 @@ def main() -> int:
         except subprocess.TimeoutExpired:
             serving.kill()
 
+    if status := convert():
+        return status
     print("PASS")
     return 0
 
