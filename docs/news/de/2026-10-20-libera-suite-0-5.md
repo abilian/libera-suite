@@ -3,7 +3,7 @@ date: 2026-10-20
 description: Libera Suite 0.5 spricht Ihre Sprache, zeigt Dokumente in den Schriften, die auf Ihrem Computer installiert sind, öffnet sie schneller und räumt nach ihren eigenen Updates auf.
 ---
 
-# Libera Suite 0.5: in Ihrer Sprache, mit Ihren Schriften
+# Libera Suite 0.5: Ihre Sprache und Ihre Schriften
 
 Libera Suite 0.5 ist erschienen. Sie folgt jetzt der Sprache Ihres Systems und zeigt ein Dokument in den Schriften, die auf Ihrem Computer installiert sind.
 
@@ -35,7 +35,7 @@ Das Fenster eines Dokuments öffnet sich jetzt sofort, während das Dokument noc
 - **Alte Komponenten werden entfernt.** Jedes Update ließ bisher die vorige Version auf der Festplatte, jeweils etwa 400 MB. Eine Version, die vier Wochen lang nicht benutzt wurde, wird jetzt entfernt.
 - **Korrekturen.** Das Schriftmenü zeigt jeden Namen vollständig. Eine `.xlsb`-Arbeitsmappe öffnet sich, statt als leere Präsentation. Unter macOS bleiben nach dem Beenden mit Cmd-Q keine Dokumente mehr gesperrt. Unter Windows zeigt die Liste „Zuletzt verwendet“ den Namen jedes Dokuments und verliert keine Einträge mehr.
 
-## Was wegfällt
+## Entfernt
 
 - **Speichern als `.xlsb`.** Das Schreiben einer solchen Datei stürzte unter Linux ab. Speichern Sie stattdessen als `.xlsx`; Excel öffnet beide.
 - **Linux auf arm64, vorerst.** Von 0.5 gibt es keinen arm64-Build. Das Installationsskript installiert auf diesen Rechnern 0.4.1; eine spätere Version unterstützt arm64 wieder.

@@ -3,7 +3,7 @@ date: 2026-10-26
 description: Libera Suite 0.6 spricht jede Sprache ihrer Anwendungen, setzt Dokumente wie Word, wenn eine Schrift fehlt, behält Markdown-Überschriften und prüft niederländische Rechtschreibung.
 ---
 
-# Libera Suite 0.6: jede Sprache, und Seiten, die umbrechen wie in Word
+# Libera Suite 0.6: 44 Sprachen und bessere Unterstützung für macOS
 
 Libera Suite 0.6 ist erschienen. Ihre Menüs und Fenster sprechen jetzt alle 44 Sprachen ihrer Anwendungen, und ein Dokument, dessen Schriften Ihnen fehlen, wird gesetzt wie in Word.
 
@@ -19,7 +19,7 @@ Seit 0.5 folgen die Anwendungen der Sprache Ihres Systems, Menüleiste, Startfen
 
 Nur die deutsche, französische, italienische und spanische Übersetzung hat ein Muttersprachler durchgesehen. Die anderen sind Entwürfe: Ist ein Wort in Ihrer Sprache falsch oder holprig, [schreiben Sie uns](../feedback.md), und Ihre Korrektur kommt in die nächste Version.
 
-## Seiten, die umbrechen wie in Word
+## Ersatz für fehlende Schriften
 
 Verlangt ein Dokument eine Schrift, die Ihr Computer nicht hat, ersetzt Libera Suite sie jetzt wie Word:
 
@@ -35,7 +35,7 @@ Verlangt ein Dokument eine Schrift, die Ihr Computer nicht hat, ersetzt Libera S
 - **Unter Linux zeigt das Menü Datei seine Tastenkürzel:** Neu, Öffnen und Schließen zeigen Strg-N, Strg-O und Strg-W.
 - **Eine OpenDocument-Datei ohne Masterseiten-Stile behält ihre Stile**, wo bisher jeder Absatz im Standardstil geöffnet wurde.
 
-## Was gleich bleibt
+## Unverändert
 
 - **Linux auf arm64** installiert weiterhin 0.4.1: Von 0.6 gibt es noch keinen arm64-Build.
 

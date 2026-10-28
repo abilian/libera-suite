@@ -3,7 +3,7 @@ date: 2026-10-12
 description: Libera Suite 0.4 segnala un documento già aperto altrove, in Libera Suite o in LibreOffice, rende più fedelmente i file OpenDocument e aggiunge il trascinamento, un dizionario personale e la conversione da riga di comando.
 ---
 
-# Libera Suite 0.4: più sicura in una cartella condivisa, più fedele a OpenDocument
+# Libera Suite 0.4: blocco dei documenti e fedeltà a OpenDocument
 
 Libera Suite 0.4 è disponibile. Protegge un documento aperto da qualcun altro, in Libera Suite come in LibreOffice. I suoi editor leggono e scrivono con più precisione i formati OpenDocument.
 

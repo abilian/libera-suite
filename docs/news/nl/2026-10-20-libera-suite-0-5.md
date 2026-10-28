@@ -3,7 +3,7 @@ date: 2026-10-20
 description: Libera Suite 0.5 spreekt jouw taal, toont documenten in de lettertypen die op je computer zijn geïnstalleerd, opent ze sneller en ruimt na haar eigen updates op.
 ---
 
-# Libera Suite 0.5: in jouw taal, met jouw lettertypen
+# Libera Suite 0.5: jouw taal en jouw lettertypen
 
 Libera Suite 0.5 is uit. Ze volgt nu de taal van je systeem en toont een document in de lettertypen die op je computer zijn geïnstalleerd.
 
@@ -35,7 +35,7 @@ Het venster van een document opent nu meteen, terwijl het document nog wordt voo
 - **Oude componenten worden verwijderd.** Elke update liet tot nu toe de vorige versie op schijf staan, telkens ongeveer 400 MB. Een versie die vier weken door niets is gebruikt, wordt nu verwijderd.
 - **Correcties.** Het lettertypemenu toont elke naam volledig. Een `.xlsb`-werkmap opent, waar die vroeger als lege presentatie opende. Op macOS blijven na afsluiten met Cmd-Q geen documenten meer vergrendeld. Op Windows toont de lijst *Recent* de naam van elk document en raakt ze geen items meer kwijt.
 
-## Wat verdwijnt
+## Verwijderd
 
 - **Opslaan als `.xlsb`.** Het schrijven ervan liep vast op Linux. Sla in plaats daarvan op als `.xlsx`; Excel opent beide.
 - **Linux op arm64, voorlopig.** Er is geen arm64-build van 0.5. Het installatiescript installeert 0.4.1 op die machines; een latere versie bouwt weer voor arm64.

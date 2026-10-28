@@ -3,7 +3,7 @@ date: 2026-10-26
 description: Libera Suite 0.6 parla tutte le lingue delle sue applicazioni, impagina come Word quando manca un carattere, mantiene i titoli Markdown e controlla l'ortografia olandese.
 ---
 
-# Libera Suite 0.6: tutte le lingue, e pagine che vanno a capo come in Word
+# Libera Suite 0.6: 44 lingue e un migliore supporto per macOS
 
 Libera Suite 0.6 è disponibile. I suoi menu e le sue finestre parlano ora le 44 lingue delle sue applicazioni, e un documento di cui non avete i caratteri si impagina come in Word.
 
@@ -19,7 +19,7 @@ Dalla 0.5 le applicazioni seguono la lingua del vostro sistema, ma la barra dei 
 
 Solo le traduzioni italiana, francese, tedesca e spagnola sono state riviste da un madrelingua. Le altre sono bozze: se una parola nella vostra lingua è sbagliata o goffa, [scriveteci](../feedback.md), e la vostra correzione entrerà nella versione successiva.
 
-## Pagine che vanno a capo come in Word
+## Sostituti per i caratteri mancanti
 
 Quando un documento chiede un carattere che il vostro computer non ha, Libera Suite ora lo sostituisce come Word:
 
@@ -35,7 +35,7 @@ Quando un documento chiede un carattere che il vostro computer non ha, Libera Su
 - **Su Linux, il menu File mostra le scorciatoie:** Nuovo, Apri e Chiudi mostrano Ctrl-N, Ctrl-O e Ctrl-W.
 - **Un file OpenDocument senza stili di pagina master mantiene i suoi stili**, dove ogni paragrafo si apriva nello stile predefinito.
 
-## Cosa resta uguale
+## Senza modifiche
 
 - **Linux su arm64** installa ancora la 0.4.1: non c'è ancora una build arm64 della 0.6.
 

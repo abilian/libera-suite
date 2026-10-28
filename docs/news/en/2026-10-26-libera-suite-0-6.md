@@ -3,9 +3,9 @@ date: 2026-10-26
 description: Libera Suite 0.6 speaks every language its applications do, lays out documents the way Word does when a font is missing, keeps Markdown headings, and spell-checks Dutch.
 ---
 
-# Libera Suite 0.6: every language, and pages that break where Word breaks them
+# Libera Suite 0.6: 44 languages and better support for macOS
 
-Libera Suite 0.6 is out. Its menus and windows now speak all 44 languages of its applications, and a document whose fonts you don't have lays out the way it does in Word.
+Libera Suite 0.6 is out. The menus and windows now speak all 44 languages of the applications. A document whose fonts you don't have now lays out the way it does in Word.
 
 Libera Suite is a free and open-source office suite for Windows, macOS and Linux: Libera Words for text, Libera Tables for spreadsheets, Libera Slides for presentations, and Libera Diagrams, a viewer for Visio drawings. It opens and saves the formats of Microsoft Office and LibreOffice, on your own computer, with no account or cloud service.
 
@@ -17,9 +17,9 @@ Already using it? Quit Libera Suite if it's running, then run the installer or t
 
 Since 0.5 the applications follow your system's language, but the menu bar, the start window and the dialogs did so only in French, German, Italian and Spanish. They now follow in all 44 languages, from Arabic to Vietnamese, and in Arabic, Hebrew and Urdu the start window reads right to left.
 
-Only the French, German, Italian and Spanish translations have been reviewed by a native speaker. The others are drafts: if a word in your language is wrong or awkward, [tell us](../feedback.md), and your correction goes into the next version.
+Only the French, German, Italian and Spanish translations have been reviewed by a native speaker. The others are drafts. If a word in your language is wrong or awkward, [tell us](../feedback.md) and your correction goes into the next version.
 
-## Pages that break where Word breaks them
+## Stand-ins for missing fonts
 
 When a document asks for a font your computer doesn't have, Libera Suite now replaces it the way Word does:
 
@@ -29,13 +29,13 @@ When a document asks for a font your computer doesn't have, Libera Suite now rep
 
 ## Other changes
 
-- **On macOS, Libera Suite is among your applications.** The install script puts `Libera.app` in your Applications folder, and `libera --launcher-install` does the same after Homebrew: Finder offers it in *Open With*, a double-click on a document can open it there, and the Dock says Libera, where it said Python.
-- **Markdown keeps its headings.** A Markdown file opened, edited and saved used to turn every heading into a bold paragraph.
+- **On macOS, Libera Suite is among your applications.** The install script puts `Libera.app` in your Applications folder, and `libera --launcher-install` does the same after Homebrew: Finder offers it in *Open With* and a double-click on a document can open it there. The Dock says Libera, where it said Python.
+- **Markdown keeps headings.** A Markdown file opened, edited and saved used to turn every heading into a bold paragraph.
 - **Dutch spell-checking**, with the OpenTaal dictionary. Each dictionary now comes with its licence.
-- **On Linux, the File menu shows its keys:** New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W.
-- **An OpenDocument file without master styles keeps its styles**, where every paragraph used to open in the default style.
+- **On Linux, the File menu shows shortcuts:** New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W.
+- **An OpenDocument file without master styles keeps the styles it has**, where every paragraph used to open in the default style.
 
-## What stays the same
+## Unchanged
 
 - **Linux on arm64** still installs 0.4.1: there is no arm64 build of 0.6 yet.
 
@@ -43,6 +43,6 @@ When a document asks for a font your computer doesn't have, Libera Suite now rep
 
 ## Tell us
 
-Libera Suite is young, and every report counts. The most useful one is a document that comes out wrong, attached to your message with the output of `libera --diagnose`. [Feedback](../feedback.md) says how to reach us.
+Libera Suite is young: every report counts. The most useful one is a document that comes out wrong, attached to your message with the output of `libera --diagnose`. [Feedback](../feedback.md) says how to reach us.
 
 *Abilian*

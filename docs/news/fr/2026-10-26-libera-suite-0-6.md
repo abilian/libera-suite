@@ -3,7 +3,7 @@ date: 2026-10-26
 description: Libera Suite 0.6 parle toutes les langues de ses applications, met en page comme Word quand une police manque, garde les titres Markdown et vérifie l'orthographe en néerlandais.
 ---
 
-# Libera Suite 0.6 : toutes les langues, et des pages qui se coupent comme dans Word
+# Libera Suite 0.6 : 44 langues et une meilleure prise en charge de macOS
 
 Libera Suite 0.6 est disponible. Ses menus et ses fenêtres parlent désormais les 44 langues de ses applications, et un document dont vous n'avez pas les polices se met en page comme dans Word.
 
@@ -19,7 +19,7 @@ Depuis la 0.5, les applications suivent la langue de votre système, mais la bar
 
 Seules les traductions française, allemande, italienne et espagnole ont été relues par un locuteur natif. Les autres sont des ébauches : si un mot de votre langue est faux ou maladroit, [écrivez-nous](../feedback.md), et votre correction entrera dans la version suivante.
 
-## Des pages qui se coupent comme dans Word
+## Le remplacement des polices manquantes
 
 Quand un document demande une police absente de votre ordinateur, Libera Suite la remplace désormais comme Word :
 

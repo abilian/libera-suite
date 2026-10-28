@@ -5,7 +5,7 @@ description: Libera Suite, a free office suite for Linux, Windows and macOS, ent
 
 # Libera Suite enters public beta
 
-**Libera Suite** is a free office suite for Linux, Windows and macOS. It includes a word processor, a spreadsheet, a presentation program and a viewer for Visio files. It runs on your computer, with no account, no online service and no telemetry. It opens and saves the Microsoft Office and OpenDocument formats. Its public beta starts today.
+**Libera Suite** is a free office suite for Linux, Windows and macOS. It includes a word processor, a spreadsheet, a presentation program and a viewer for Visio files. It runs on your computer, without an account, an online service or telemetry. It opens and saves the Microsoft Office and OpenDocument formats. Its public beta starts today.
 
 [Install Libera Suite](../main/install.md){ .md-button .md-button--primary }
 
@@ -24,7 +24,7 @@ A Word, Excel or PowerPoint file opens with its layout: fonts, images, tables an
 
 The four applications share a start window with your recent documents, spell checking in five languages, PDF export, printing, and recovery of your work after a crash.
 
-## Free software, at no cost
+## Free software at no cost
 
 Libera Suite asks for no licence and no subscription. You can install it on as many computers as you like and keep it for as long as you like. It depends on no server of ours to work.
 
@@ -36,7 +36,7 @@ Libera Suite reads and writes your documents on your disk and sends them nowhere
 
 It goes online to download the Euro-Office components when you install it. [The documentation lists](../index.md#what-leaves-your-machine) every connection it makes, and the source code lets you check.
 
-## How to install it
+## Installation
 
 - **Linux** (x86_64 and arm64): one command in the terminal, which installs a Flatpak package when Flatpak is present.
 - **macOS** (Apple Silicon): one command in the terminal, with Homebrew or without it.
@@ -56,9 +56,9 @@ If you choose software for an organisation, tell us which features it would need
 
 [Feedback](../feedback.md) explains how to write to us.
 
-## Who develops it
+## Abilian and Euro-Office
 
-Libera Suite is developed by [Abilian](https://abilian.com), a French free software company. It is built on the components of [Euro-Office](https://github.com/Euro-Office), a fork of [ONLYOFFICE](https://www.onlyoffice.com/), the software of Ascensio System SIA. Those components provide the document engine and the format support. Abilian wrote the desktop application that hosts them: the windows, the menus, opening and saving files, and the packaging.
+Libera Suite is developed by [Abilian](https://abilian.com), a French free software company. It is built on the components of [Euro-Office](https://github.com/Euro-Office), a fork of [ONLYOFFICE](https://www.onlyoffice.com/), the software of Ascensio System SIA. The document engine and the format support come from those components. Abilian wrote the desktop application that hosts them: the windows, the menus, opening and saving files, and the packaging.
 
 We build the Euro-Office components from their source, at fixed revisions. The fixes we apply to them are [published and explained](../develop/patches.md).
 
