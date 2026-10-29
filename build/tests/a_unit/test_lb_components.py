@@ -142,3 +142,26 @@ def test_a_build_folder_on_a_missing_volume_asks_for_build_root(monkeypatch, tmp
     monkeypatch.setenv("BUILD_ROOT", str(tmp_path / "no-volume" / "euro-office-build"))
     with pytest.raises(RefusedError, match="set BUILD_ROOT"):
         components.build_core(REPO, tmp_path)
+
+
+class RanError(Exception):
+    pass
+
+
+def test_a_build_here_checks_the_toolchain_before_it_fetches(monkeypatch, tmp_path):
+    def capture(argv, *args, **kwargs):
+        raise RanError(argv[-1])
+
+    monkeypatch.setattr(
+        components.locate, "get_current_platform", lambda: "macos-arm64"
+    )
+    monkeypatch.setattr(components, "source_problems", lambda *_, **__: ["unfetched"])
+    monkeypatch.setattr(components, "run_here", capture)
+    monkeypatch.setenv("BUILD_ROOT", str(tmp_path))
+    with pytest.raises(RanError) as ran:
+        components.build_core(REPO, tmp_path)
+    steps = str(ran.value).splitlines()
+    assert steps[1:3] == [
+        "build/engine/toolchain.sh check",
+        "build/engine/build.sh fetch core",
+    ]
