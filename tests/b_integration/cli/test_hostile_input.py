@@ -1,7 +1,8 @@
-"""A converted document cannot make x2t read a file or the network for it.
+"""A converted document cannot make x2t read a file or the network for it,
+nor take it to gigabytes.
 
-The converter is libxml2 2.9.2, called with its default options, which
-resolve no external entity; this holds it there. Measured on 2026-10-29,
+The converter's XML parser is libxml2 2.9.14, called with its default
+options, which resolve no external entity; this holds it there. Measured on 2026-10-29,
 notes/plans/converter-hardening.md (probe 1): neither a file nor a URL was
 read, and the external DTD was not fetched.
 """
@@ -10,6 +11,7 @@ from __future__ import annotations
 
 import http.server
 import re
+import struct
 import threading
 import zipfile
 
@@ -114,3 +116,49 @@ def test_nested_parameter_entities_cost_nothing(
     cli.main(["--convert", "laughs.docx", "-t", "txt"])
 
     assert "held" not in capsys.readouterr().err
+
+
+def test_a_part_larger_than_its_package_says_is_read_no_further(
+    tmp_path, monkeypatch, live_payload, capsys
+):
+    """The host refuses a package by the sizes it declares (check_package),
+    so one that understates them gets to x2t. x2t's unzip reads a part no
+    further than its declared size: word/document.xml with 768 MB of spaces
+    after it, declared at 1 MB, converts in a second in x2t's usual 220 MB
+    (notes/plans/converter-hardening.md). Declared honestly, the same part
+    took 465 MB at 384 MB, so the lowered cap stops an x2t that reads it all."""
+    monkeypatch.setattr(convert, "X2T_MEMORY", 500 << 20)
+    name = "word/document.xml"
+    with zipfile.ZipFile(live_payload / "empty" / apps.WORDS.blank) as z:
+        parts = {n: z.read(n) for n in z.namelist() if not n.endswith("/")}
+    document, n = re.subn(
+        r"(<w:body>).*?(<w:sectPr\b)",
+        lambda m: m[1] + "<w:p><w:r><w:t>kept</w:t></w:r></w:p>" + m[2],
+        parts.pop(name).decode(),
+        flags=re.DOTALL,
+    )
+    assert n == 1
+    package = tmp_path / "understated.docx"
+    with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as z:
+        for part, data in parts.items():
+            z.writestr(part, data)
+        with z.open(name, "w") as member:
+            member.write(document.encode())
+            for _ in range(12):
+                member.write(b" " * (64 << 20))
+    said = 1 << 20
+    data = bytearray(package.read_bytes())
+    # The size in the part's local header, then in the central directory.
+    for signature, field, header in ((b"PK\x03\x04", 22, 30), (b"PK\x01\x02", 24, 46)):
+        at = data.find(signature)
+        while data[at + header : at + header + len(name)] != name.encode():
+            at = data.find(signature, at + 4)
+        struct.pack_into("<I", data, at + field, said)
+    package.write_bytes(data)
+    assert zipfile.ZipFile(package).getinfo(name).file_size == said
+    monkeypatch.chdir(tmp_path)
+
+    assert cli.main(["--convert", package.name, "-t", "txt"]) == 0
+
+    assert "held" not in capsys.readouterr().err
+    assert "kept" in (tmp_path / "understated.txt").read_text(encoding="utf-8-sig")
