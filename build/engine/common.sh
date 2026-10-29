@@ -220,7 +220,11 @@ generate_fonts() {
            "$payload/sdkjs/common/Images"/fonts_thumbnail*
     mkdir -p "$payload/fonts" "$payload/sdkjs/common/Images"
     # Where the host finds the fonts to index, as in an installed payload,
-    # whose fonts-src is a copy of some of them (dist.sh).
+    # whose fonts-src is a copy of some of them (dist.sh). Removed first: Git
+    # Bash's ln -s copies, and ln -f will not replace the directory it copied
+    # last time, so the second build of the editors on Windows stopped here
+    # ("cannot overwrite directory"). rm on a link removes the link alone.
+    rm -rf "$payload/fonts-src"
     ln -sfn "$CORE_FONTS" "$payload/fonts-src"
 
     echo "==> allfontsgen ($CORE_FONTS)"
