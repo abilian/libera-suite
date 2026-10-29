@@ -595,6 +595,40 @@ def test_markdown_opens_and_saves(tmp_path):
     assert "cœur 🎯" in document.read_text(encoding="utf-8")
 
 
+MHT = (
+    b"MIME-Version: 1.0\r\n"
+    b'Content-Type: multipart/related; type="text/html"; boundary="b"\r\n\r\n'
+    b"--b\r\nContent-Type: text/html\r\n"
+    b"Content-Transfer-Encoding: quoted-printable\r\n"
+    b"Content-Location: https://example.invalid/\r\n\r\n"
+    b'<html><head><meta charset=3D"utf-8"></head>'
+    b"<body><p>Un mot et c=C5=93ur</p></body></html>\r\n--b--\r\n"
+)
+FB2 = (
+    '<?xml version="1.0" encoding="utf-8"?>'
+    '<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">'
+    "<description><title-info><book-title>T</book-title></title-info>"
+    "</description><body><section><p>Un mot et cœur</p></section></body>"
+    "</FictionBook>"
+).encode()
+
+
+@pytest.mark.parametrize(("ext", "content"), [("mht", MHT), ("fb2", FB2)])
+def test_a_format_that_needs_an_encoding_opens(tmp_path, ext, content):
+    """Words listed .mht and .fb2 and never opened either: x2t refused them
+    without an encoding (rc 88), as it did .md. A web page as a browser saves
+    it, quoted-printable UTF-8, and a FictionBook; Words writes neither, so
+    each goes out as text."""
+    document = tmp_path / f"page.{ext}"
+    document.write_bytes(content)
+    page = open_in(apps.WORDS, document, tmp_path / "session")
+    text = tmp_path / "page.txt"
+
+    export(page, text, apps.WORDS.ids_by_ext["txt"], None)
+
+    assert "Un mot et cœur" in text.read_text(encoding="utf-8-sig")
+
+
 # --- x2t's CSV reader skipped a character every 500,000 --------------------
 #
 # CSVReader drops the text it has read once it passes 500,000 characters, and
