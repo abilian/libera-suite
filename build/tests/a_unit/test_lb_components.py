@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 def test_the_components_are_the_payload_version_and_libera_pins_it():
-    """One version, in four places: a component that is not the payload
+    """One version, in five places: a component that is not the payload
     version is refused at start, and a pin that is not it cannot install."""
     repo = REPO
     want = versions.payload_version(repo)
@@ -28,6 +28,9 @@ def test_the_components_are_the_payload_version_and_libera_pins_it():
     pins = tomllib.loads((repo / "pyproject.toml").read_text())["project"]
     assert f"libera-core=={want}" in pins["dependencies"]
     assert f"libera-web=={want}" in pins["dependencies"]
+    # libera-web's build runs the core's x2t, so it pins the core too.
+    web = tomllib.loads((repo / components.WEB / "pyproject.toml").read_text())
+    assert f"libera-core=={want}" in web["build-system"]["requires"]
 
 
 def make_tarball(path: Path, files: dict[str, bytes], links: dict[str, str]) -> None:
