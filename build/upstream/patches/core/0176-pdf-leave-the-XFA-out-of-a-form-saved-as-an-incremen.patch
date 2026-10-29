@@ -1,0 +1,35 @@
+From eaa5d0022c51353fdd3fbd6ff5fd16e45c9415cc Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Thu, 29 Oct 2026 22:24:06 +0100
+Subject: [PATCH] pdf: leave the XFA out of a form saved as an incremental
+ update
+
+Saving a PDF rewrites the catalog's AcroForm dictionary, and copied its
+/XFA along. On a hybrid form, one with an XFA beside its fields as the
+IRS's are, the fields are what an edit changes, and Acrobat shows the
+XFA: a filled form showed there as it was. Merging and splitting pages
+already leave the XFA out; the incremental update now does too, and
+readers see the form by its fields.
+---
+ PdfFile/PdfEditor.cpp | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/PdfFile/PdfEditor.cpp b/PdfFile/PdfEditor.cpp
+index e378b82339..266c264db9 100644
+--- a/PdfFile/PdfEditor.cpp
++++ b/PdfFile/PdfEditor.cpp
+@@ -1116,8 +1116,9 @@ bool CPdfEditor::IncrementalUpdates()
+ 				}
+ 				else if (strcmp("Fields", chKey) == 0)
+ 					oAcroForm.dictGetVal(nIndex, &oTemp2);
+-				else if (strcmp("NeedAppearances", chKey) == 0)
+-				{
++				else if (strcmp("NeedAppearances", chKey) == 0 || strcmp("XFA", chKey) == 0)
++				{ // XFA too: the fields are what an edit changes, and a reader that
++				  // shows the XFA, Acrobat, would show the form as it was
+ 					oTemp2.free();
+ 					continue;
+ 				}
+-- 
+2.55.0
+
