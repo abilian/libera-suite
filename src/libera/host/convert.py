@@ -116,8 +116,15 @@ DELIMITERS = {"\t": 1, ";": 2, ",": 4}
 CSV_SUFFIXES = {".csv", ".tsv"}
 # Plain text, which x2t writes in the encoding it is told to.
 TEXT_SUFFIXES = {*CSV_SUFFIXES, ".txt", ".md"}
-# The raw DOCY and XLSY streams the editor opens.
-CANVAS_WORD, CANVAS_SPREADSHEET = 8193, 8194
+# The raw DOCY, XLSY and PPTY streams the editor opens, by editor, and how
+# each stream begins. Diagrams has its own, which the host never names.
+CANVAS_WORD, CANVAS_SPREADSHEET, CANVAS_PRESENTATION = 8193, 8194, 8195
+CANVASES = {
+    "word": CANVAS_WORD,
+    "cell": CANVAS_SPREADSHEET,
+    "slide": CANVAS_PRESENTATION,
+}
+SIGNATURES = {"word": b"DOCY", "cell": b"XLSY", "slide": b"PPTY"}
 
 
 def is_utf8(data: bytes) -> bool:
@@ -263,11 +270,12 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
     suffix = src.suffix.lower()
     if suffix in CSV_SUFFIXES:
         run = run_x2t(session, str(write_csv_open_job(session, src, editor_bin)))
-    elif suffix in {".md", ".mht", ".fb2", ".epub"}:
+    elif suffix in {".md", ".mht", ".fb2", ".epub", ".doc"}:
         # Refused without an encoding, like a CSV: rc 88. None had ever
-        # opened, though Words has listed all four since the start. An EPUB
-        # was probed first, as an archive: nothing it names outside itself is
-        # read or written (notes/plans/converter-hardening.md).
+        # opened, though Words has listed all five since the start, .doc
+        # (Word 97-2003) included. An EPUB was probed first, as an archive:
+        # nothing it names outside itself is read or written
+        # (notes/plans/converter-hardening.md).
         job = write_job(
             session,
             "open.xml",
@@ -278,18 +286,21 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
             m_nCsvTxtEncoding=UTF_8,
         )
         run = run_x2t(session, str(job))
-    elif suffix == ".xlsb":
-        # The three-argument form takes an .xlsb for a presentation and writes
-        # an empty one (PPTY), exit 0: no .xlsb ever opened, Excel's included.
-        xlsb = write_job(
+    elif suffix in {".xlsb", ".fods", ".fodp"}:
+        # The three-argument form picks the kind of document itself, and
+        # picked wrong for these, exit 0 each time: an .xlsb as an empty
+        # presentation (PPTY), so no .xlsb ever opened, Excel's included; a
+        # flat ODF spreadsheet or presentation as a text document (DOCY),
+        # which then saved as nothing but PDF. The job names the editor's own.
+        job = write_job(
             session,
             "open.xml",
             m_sFileFrom=src,
             m_sFileTo=editor_bin,
-            m_nFormatTo=CANVAS_SPREADSHEET,
+            m_nFormatTo=CANVASES[session.editor.doctype],
             m_sFontDir=session.font_dir,
         )
-        run = run_x2t(session, str(xlsb))
+        run = run_x2t(session, str(job))
     else:
         run = run_x2t(
             session,
@@ -301,6 +312,15 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
         logger.error("open failed rc=%s\n%s", run.returncode, choose_x2t_output(run))
         shutil.rmtree(staged, ignore_errors=True)
         msg = f"x2t could not convert {src.name} (exit status {run.returncode})"
+        raise ConversionError(msg)
+    # Another kind of document than the editor's is a wrong guess (above),
+    # however it exits: the editor would open it as nothing, or as garbage.
+    expected = SIGNATURES.get(session.editor.doctype)
+    with editor_bin.open("rb") as stream:
+        found = stream.read(4)
+    if expected is not None and found != expected:
+        shutil.rmtree(staged, ignore_errors=True)
+        msg = f"x2t read {src.name} as another kind of document"
         raise ConversionError(msg)
     shutil.rmtree(session.doc, ignore_errors=True)
     staged.rename(session.doc)

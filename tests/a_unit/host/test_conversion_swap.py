@@ -48,7 +48,8 @@ def make_x2t_fail(monkeypatch) -> None:
 
 
 def make_x2t_write(monkeypatch, content: bytes) -> None:
-    """x2t's three-argument form: the second argument is what it writes."""
+    """x2t's three-argument form: the second argument is what it writes. A
+    Words session, so what it writes starts as a text document does."""
 
     def run(_session, *args):
         convert.pathlib.Path(args[1]).write_bytes(content)
@@ -68,12 +69,25 @@ def test_a_failed_conversion_leaves_the_session_as_it_was(edited, monkeypatch):
 
 
 def test_a_conversion_that_works_replaces_the_document_and_its_log(edited, monkeypatch):
-    make_x2t_write(monkeypatch, b"converted")
+    make_x2t_write(monkeypatch, b"DOCY converted")
 
     convert.convert_to_editor_bin(edited, edited.document)
 
-    assert edited.editor_bin.read_bytes() == b"converted"
+    assert edited.editor_bin.read_bytes() == b"DOCY converted"
     assert not edited.change_log
+
+
+def test_another_kind_of_document_is_a_failed_conversion(edited, monkeypatch):
+    """x2t's three-argument form picks the kind of document itself, and took
+    a flat ODF spreadsheet for a text document, exit 0: Tables then opened it
+    as nothing. What it writes has to be the editor's own kind."""
+    make_x2t_write(monkeypatch, b"PPTY a presentation")
+
+    with pytest.raises(convert.ConversionError, match="another kind of document"):
+        convert.convert_to_editor_bin(edited, edited.document)
+
+    assert edited.editor_bin.read_bytes() == b"as opened"
+    assert edited.change_log
 
 
 def test_a_reload_that_cannot_reopen_its_fold_keeps_the_edits(edited, monkeypatch):
@@ -174,9 +188,9 @@ def test_no_edit_is_taken_between_a_folds_export_and_its_return(edited, monkeypa
         staged.write_bytes(b"merged")
 
     monkeypatch.setattr(convert, "export", export)
-    make_x2t_write(monkeypatch, b"folded")
+    make_x2t_write(monkeypatch, b"DOCY folded")
 
     window.windows.fold_changes_in(edited)
 
     assert taken == [False]
-    assert edited.editor_bin.read_bytes() == b"folded"
+    assert edited.editor_bin.read_bytes() == b"DOCY folded"
