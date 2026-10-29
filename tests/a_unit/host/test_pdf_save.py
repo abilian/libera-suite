@@ -69,6 +69,19 @@ def test_a_save_that_writes_the_original_fails(annotated, tmp_path, monkeypatch)
         convert.export(annotated, tmp_path / "saved.pdf", 513, None)
 
 
+def test_a_certified_pdf_says_so(opened, tmp_path, monkeypatch):
+    """Two of LibreOffice's test PDFs are certified (/DocMDP), and x2t saved
+    neither one's comment. "Saved none of the changes" alone does not say
+    why; the signature is the likely reason, so the message names it."""
+    certified = b"%PDF-1.7\n<< /Perms << /DocMDP 5 0 R >> >>\n%%EOF\n"
+    opened.editor_bin.write_bytes(certified)
+    opened.change_log.record("a comment", None, 1)
+    make_x2t_write(monkeypatch, certified)
+
+    with pytest.raises(convert.ConversionError, match="certification signature"):
+        convert.export(opened, tmp_path / "saved.pdf", 513, None)
+
+
 def test_a_save_with_the_changes_appended_succeeds(annotated, tmp_path, monkeypatch):
     saved = ORIGINAL + b"% an incremental update\n%%EOF\n"
     make_x2t_write(monkeypatch, saved)
