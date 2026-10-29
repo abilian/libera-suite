@@ -7,9 +7,10 @@ build/upstream/pins.toml            the upstream revisions, by hash
 build/upstream/patches/core/
 build/upstream/patches/web-apps/
 build/upstream/patches/sdkjs/
+build/upstream/patches/libxml2/
 ```
 
-The pins follow Euro-Office's own desktop releases: the revisions its `DesktopEditors` repository names for a release are the ones we build.
+The pins follow Euro-Office's own desktop releases: the revisions its `DesktopEditors` repository names for a release are the ones we build. One pin is not Euro-Office's: libxml2, the XML parser the converter reads every document with. Core keeps a copy of it, about release 2.9.4, and a 6 KB document of nested entities took that copy to 3.9 GB of memory; we build core against libxml2 2.9.14 instead, from its own repository, whose address is under `[urls]` in `pins.toml`.
 
 `build/engine/build.sh fetch` resets each repository to its pinned hash, cleans it, and applies the series with `git am`, which does not fuzz. A patch that has stopped applying is news: investigate it.
 
@@ -25,7 +26,7 @@ It also makes the AGPL obligation concrete: the corresponding source for a relea
 
 - *macOS.* Upstream ported the build from qmake to CMake and the port dropped the Mac branches. We put them back in a series of about twenty patches; Euro-Office has since built macOS itself, and the queue keeps only what its build still lacks: `memalign`, which macOS does not have, for openjpeg (`0018`), and two V8 build options of our own (`0009`, `0010`).
 - *Windows.* Boost's engine built with a named toolset (`0022`), an external OpenSSL from vcpkg (`0024`), a namespace cryptopp no longer has (`0025`), and one C runtime for every DLL, V8 included, because core's libraries hand `FILE*` handles to one another (`0028`).
-- *Elsewhere in the build.* Third-party builders that stream their output (`0023`), doctrenderer against an OpenSSL without MD2 (`0026`), and `hypotf` bound to its old glibc version so the Linux core loads on RHEL 9 (`0032`).
+- *Elsewhere in the build.* Third-party builders that stream their output (`0023`), doctrenderer against an OpenSSL without MD2 (`0026`), `hypotf` bound to its old glibc version so the Linux core loads on RHEL 9 (`0032`), and libxml2 taken from the pinned checkout rather than core's own copy (`0172`).
 - *The converter.* A large CSV read whole (`0029`), characters outside the BMP (`0030`), no empty row after a UTF-8 CSV (`0031`), the last section of an RTF written (`0033`), and the code cache of the editors' scripts kept in a folder the host names, not written beside the scripts (`0034`).
 - *OpenDocument* (`0101` onwards). Fixes to reading and writing `.odt`, `.ods` and `.odp`, each found against LibreOffice's own test documents.
 
@@ -36,6 +37,8 @@ Two are security fixes, from ElixirOffice's fork of `web-apps`, for places where
 The two other `sdkjs` patches choose fonts, and come from ElixirOffice's fork of `sdkjs` (AGPL, like the components), each naming the commit it was taken from. `0002` substitutes a missing font the way Word does: a metric-compatible font first (Carlito for Calibri, Caladea for Cambria, Liberation for Arial, Times New Roman and Courier New), and Calibri, hence Carlito, for a font Word would not know either. `0003` draws the characters of a missing Symbol, Wingdings or Webdings as the Unicode symbols they stand for, where they came out as letters.
 
 `0004` is ours: Markdown keeps its headings through a save. Markdown read into a document gives each heading a style derived from a heading style, which the HTML writer, on the way back to Markdown, did not recognise, so `# Title` came back as `**Title**`. It now writes a heading by its outline level, and leaves out a bold that covers the whole heading.
+
+**`libxml2`: 2 patches.** Core builds libxml2 from a list of its sources, without libxml2's own build system, so the first writes the version header that system would have written. The second carries over the one change core's copy makes that matters to us: with `XML_ERROR_DISABLE_MODE`, which core's build defines, libxml2 writes no parser messages to the converter's error output.
 
 ## One idea per patch
 
