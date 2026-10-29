@@ -3,9 +3,9 @@
 Every request the page makes goes to the host
 on 127.0.0.1, and the host's Content-Security-Policy is what makes that hold
 whatever the editor's code would like to do. Upstream's bundles still carry an
-analytics loader. The one exception is a picture a document links to by its
-web address, which is the document's own reference (notes/plans/release-0.5.md,
-item D).
+analytics loader. A picture a document links to by its web address is no
+exception: x2t fetches it when it converts the document, and the page gets it
+inside Editor.bin (notes/plans/converter-hardening.md).
 """
 
 from __future__ import annotations
@@ -56,10 +56,12 @@ def test_an_editor_reaches_nothing_but_the_host(editor_with, tmp_path, ext):
     assert refused(editor.page) == []
 
 
-def test_a_picture_the_document_links_to_is_fetched(editor_with, tmp_path):
-    """The exception: a picture by its web address, which is the document's
-    own reference. x2t fetches a Markdown document's; the page may fetch
-    others. Either way it arrives, and the policy refuses nothing."""
+def test_a_picture_the_document_links_to_is_fetched_by_the_converter(
+    editor_with, tmp_path
+):
+    """x2t fetches it, and the page asks for nothing: a picture the page
+    loads from the same address itself is refused, which is what keeps a
+    script in the page from sending anything out in a picture's address."""
     picture = next((payload_mod.resolve().root / "sdkjs").rglob("*.png")).read_bytes()
     asked: list[str] = []
 
@@ -77,16 +79,28 @@ def test_a_picture_the_document_links_to_is_fetched(editor_with, tmp_path):
     port = find_free_port()
     elsewhere = http.server.ThreadingHTTPServer(("127.0.0.1", port), Pictures)
     threading.Thread(target=elsewhere.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{port}/picture.png"
     document = tmp_path / "linked.md"
-    document.write_text(
-        f"# Linked\n\n![a picture](http://127.0.0.1:{port}/picture.png)\n",
-        encoding="utf-8",
-    )
+    document.write_text(f"# Linked\n\n![a picture]({url})\n", encoding="utf-8")
     try:
         editor = editor_with([], document=document, init_script=WATCH_POLICY)
         editor.wait_for_nothing()
+        assert asked == ["/picture.png"]
+        assert refused(editor.page) == []
+        assert any(
+            name.endswith("/media/image1.png")
+            for name in editor.frame.evaluate(
+                "() => Object.keys(Asc.editor.ImageLoader.map_image_index)"
+            )
+        )
+
+        editor.frame.evaluate(
+            "(u) => new Promise((done) => { const i = new Image();"
+            " i.onload = i.onerror = done; i.src = u; })",
+            url + "?from-the-page",
+        )
     finally:
         elsewhere.shutdown()
 
-    assert "/picture.png" in asked
-    assert refused(editor.page) == []
+    assert asked == ["/picture.png"]
+    assert refused(editor.page) == [f"img-src {url}?from-the-page"]
