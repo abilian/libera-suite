@@ -9,6 +9,7 @@ for x2t, allocating what x2t would.
 from __future__ import annotations
 
 import os
+import pathlib
 import sys
 import time
 import zipfile
@@ -18,6 +19,15 @@ import pytest
 from libera.host import convert, desktop
 from libera.host.convert import ConversionError
 
+# A venv's python.exe on Windows is a launcher that runs the real interpreter as
+# its own child, so what the stand-in holds would be its grandchild's, which
+# the watchdog does not look at (measured: 0 MB against 306). x2t is started
+# directly, so the stand-in is too.
+PYTHON = (
+    str(pathlib.Path(sys.base_prefix, "python.exe"))
+    if sys.platform == "win32"
+    else sys.executable
+)
 # Touches every page, so the memory is resident, not merely reserved.
 HOLD = (
     "import time; b = bytearray({mb} << 20); b[::4096] = b'x' * len(b[::4096]);"
@@ -30,7 +40,7 @@ def test_a_converter_holding_too_much_is_stopped(monkeypatch):
     start = time.monotonic()
 
     with pytest.raises(ConversionError, match="more than 100 MB"):
-        convert.run_watched([sys.executable, "-c", HOLD.format(mb=300)], {**os.environ})
+        convert.run_watched([PYTHON, "-c", HOLD.format(mb=300)], {**os.environ})
 
     assert time.monotonic() - start < 10
 
@@ -41,7 +51,7 @@ def test_a_converter_past_its_time_is_stopped(monkeypatch):
 
     with pytest.raises(ConversionError, match="did not finish in 1 s"):
         convert.run_watched(
-            [sys.executable, "-c", "import time; time.sleep(30)"], {**os.environ}
+            [PYTHON, "-c", "import time; time.sleep(30)"], {**os.environ}
         )
 
     assert time.monotonic() - start < 10
@@ -51,7 +61,7 @@ def test_a_converter_within_bounds_gives_its_output(monkeypatch):
     monkeypatch.setattr(convert, "X2T_MEMORY", 1 << 30)
     done = convert.run_watched(
         [
-            sys.executable,
+            PYTHON,
             "-c",
             HOLD.format(mb=20).replace("time.sleep(30)", "print('done')"),
         ],
