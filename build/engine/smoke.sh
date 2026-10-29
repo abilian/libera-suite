@@ -126,4 +126,44 @@ if not (pages and fonts and shown):
     raise SystemExit(1)
 PY
 
+echo "==> x2t pdf + a comment -> pdf (the PDF editor's save, replayed)"
+# What saving a PDF is: the change log replayed onto the original, appended as
+# an incremental update. smoke-pdf/ is one comment the PDF editor made on
+# sample.pdf (2026-10-29), its log as the editor wrote it but for the account
+# name it carried; .txt, because a change log is not JSON (each entry ends in
+# a comma). When the replay fails -- drawingfile_native.js missing from
+# sdkjs/pdf, for one -- x2t writes the original and exits 0, so the check is
+# that the comment is there, after the original's bytes.
+SMOKE_PDF="$(dirname "$0")/smoke-pdf"
+if [ ! -d "$PAYLOAD/sdkjs/pdf" ]; then
+    echo "    SKIPPED (this payload has no sdkjs/pdf)"
+else
+mkdir -p "$W/pdfdoc/changes"
+cp "$SMOKE_PDF/sample.pdf" "$W/pdfdoc/Editor.bin"
+cp "$SMOKE_PDF/changes0.txt" "$W/pdfdoc/changes/changes0.json"
+cat > "$W/pdfjob.xml" <<XML
+<?xml version="1.0" encoding="utf-8"?>
+<TaskQueueDataConvert>
+  <m_sFileFrom>$(winpath "$W/pdfdoc/Editor.bin")</m_sFileFrom>
+  <m_sFileTo>$(winpath "$W/annotated.pdf")</m_sFileTo>
+  <m_nFormatTo>513</m_nFormatTo>
+  <m_bFromChanges>true</m_bFromChanges>
+  <m_bDontSaveAdditional>true</m_bDontSaveAdditional>
+  <m_sAllFontsPath>$(winpath "$PAYLOAD/AllFonts.js")</m_sAllFontsPath>
+  <m_sFontDir>$(winpath "$CORE_FONTS")</m_sFontDir>
+</TaskQueueDataConvert>
+XML
+built x2t "$W/pdfjob.xml" >"$W/pdfsave.log" 2>&1 || fail "pdf save failed; see $W/pdfsave.log"
+py - "$SMOKE_PDF/sample.pdf" "$W/annotated.pdf" <<'PY' || fail "the comment was not saved: x2t wrote the original"
+import re, sys
+original, saved = (open(p, "rb").read() for p in sys.argv[1:])
+update = saved[len(original):]
+found = re.search(rb"/Contents \((.*?)\)\s*/", update, re.S)
+text = found.group(1).replace(rb"\000", b"\0").decode("utf-16", "replace") if found else ""
+print(f"    {len(original)} -> {len(saved)} bytes, comment: {text!r}")
+if not (saved.startswith(original) and b"/Subtype /Text" in update and "zqx-smoke-comment" in text):
+    raise SystemExit(1)
+PY
+fi
+
 echo "PASS"
