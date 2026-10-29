@@ -38,6 +38,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # rejected by anything at run time -- the desktop silently ignores it and the
 # application simply never appears in the launcher. desktop-file-validate is
 # the only thing that says why, and the test skips where it is absent.
+#
+# poppler-utils for the tests that read a PDF: pdftotext for its text, and
+# pdftoppm to draw a page, which is how test_hostile_input.py sees a picture
+# from the user's disk painted into one. Both skip without it, and did here.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates curl git make \
@@ -46,6 +50,7 @@ RUN apt-get update \
         python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
         xvfb xauth x11-utils scrot \
         desktop-file-utils \
+        poppler-utils \
         locales \
     && rm -rf /var/lib/apt/lists/*
 
