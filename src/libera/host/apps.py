@@ -62,6 +62,9 @@ class App:
     recent_id: int
     save_formats: tuple[tuple[str, str], ...]
     blank: str | None = None
+    # Whether x2t turns the document into Editor.bin. The PDF editor reads the
+    # PDF itself, so for it the file is copied as it is.
+    converted: bool = True
 
     @property
     def editable(self) -> bool:
@@ -194,7 +197,26 @@ DIAGRAMS = App(
     save_formats=(),
 )
 
-ALL = (WORDS, TABLES, SLIDES, DIAGRAMS)
+PDFS = App(
+    name="pdfs",
+    title="Libera PDF",
+    noun="PDF",
+    doctype="pdf",
+    ext="pdf",
+    opens=frozenset(["pdf"]),
+    # A PDF saves as itself and as nothing else: x2t replays the change log
+    # onto the original and appends the result as an incremental update.
+    # Upstream refuses Save As to another editor's format, and so does
+    # saving.plan_save.
+    formats={0: ("pdf", 513), 513: ("pdf", 513)},
+    # FILE_CROSSPLATFORM_PDF, the id the PDF editor's Recent list files a PDF
+    # under.
+    recent_id=513,
+    save_formats=(("PDF (.pdf)", "pdf"),),
+    converted=False,
+)
+
+ALL = (WORDS, TABLES, SLIDES, DIAGRAMS, PDFS)
 BY_NAME = {app.name: app for app in ALL}
 
 

@@ -143,27 +143,28 @@ fi  # the core
 if [ "$ONLY" != "core" ]; then
 
 # --- editors, platform-neutral ------------------------------------------------
-# Words, Tables, Slides and Diagrams. pdfeditor is left out: nothing routes to
-# it yet (see src/libera/host/apps.py).
+# Words, Tables, Slides, Diagrams and the PDF editor, which runs on Words'
+# bundle with sdkjs/pdf, the engine x2t also needs to save a PDF
+# (drawingfile_native.js: without it a save writes the original).
 echo "==> editors"
 mkdir -p "$STAGE/web-apps/apps" "$STAGE/sdkjs"
 cp -R "$PAYLOAD/web-apps/vendor" "$STAGE/web-apps/"
-for d in api common documenteditor spreadsheeteditor presentationeditor visioeditor; do
+for d in api common documenteditor spreadsheeteditor presentationeditor visioeditor pdfeditor; do
     cp -R "$PAYLOAD/web-apps/apps/$d" "$STAGE/web-apps/apps/"
 done
-for d in documenteditor spreadsheeteditor presentationeditor visioeditor; do
+for d in documenteditor spreadsheeteditor presentationeditor visioeditor pdfeditor; do
     # The desktop suite needs main/ only; mobile, forms and embed are the web
     # product's other entry points and nothing here links to them.
     rm -rf "$STAGE/web-apps/apps/$d/mobile" \
            "$STAGE/web-apps/apps/$d/forms" \
            "$STAGE/web-apps/apps/$d/embed"
-    # 500 MB of help across the four, in eight languages, which nothing can
+    # 500 MB of help across the editors, in eight languages, which nothing can
     # reach: upstream hardcodes canHelp = false. It is also ONLYOFFICE's
     # manual, not ours. When Libera Suite has its own documentation this comes back
     # -- see notes/04-plan.md.
     rm -rf "$STAGE/web-apps/apps/$d/main/resources/help"
 done
-for d in common word cell slide visio vendor; do
+for d in common word cell slide visio pdf vendor; do
     cp -R "$PAYLOAD/sdkjs/$d" "$STAGE/sdkjs/"
 done
 # Internet Explorer's fallbacks, loaded only where there is no WebAssembly

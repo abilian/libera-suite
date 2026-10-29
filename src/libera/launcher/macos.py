@@ -80,6 +80,10 @@ DOCUMENT_TYPES = {
         "org.openxmlformats.presentationml.presentation",
         "org.oasis-open.opendocument.presentation",
     ),
+    # Alternate like the rest, and for PDF above all: the owner chose to be
+    # offered in Open With, never to take PDF from Preview
+    # (notes/plans/release-0.7.md).
+    "PDF Document": ("com.adobe.pdf",),
 }
 
 

@@ -58,11 +58,19 @@ def test_the_plist_names_a_library_that_is_there(home):
     assert Path(read_plist()["LiberaPythonLibrary"]).is_file()
 
 
-def test_it_offers_to_open_all_three_kinds(home):
+def test_it_offers_to_open_every_kind_and_owns_none(home):
+    """Alternate, PDF above all: offered in Open With, never taking PDF from
+    the system's viewer, which the owner chose (notes/plans/release-0.7.md)."""
     macos.install()
     kinds = {t["CFBundleTypeName"]: t for t in read_plist()["CFBundleDocumentTypes"]}
-    assert set(kinds) == {"Word Document", "Spreadsheet", "Presentation"}
+    assert set(kinds) == {
+        "Word Document",
+        "Spreadsheet",
+        "Presentation",
+        "PDF Document",
+    }
     assert {t["LSHandlerRank"] for t in kinds.values()} == {"Alternate"}
+    assert kinds["PDF Document"]["LSItemContentTypes"] == ["com.adobe.pdf"]
     assert (
         "org.openxmlformats.spreadsheetml.sheet"
         in (kinds["Spreadsheet"]["LSItemContentTypes"])
