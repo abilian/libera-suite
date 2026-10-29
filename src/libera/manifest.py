@@ -64,7 +64,7 @@ class Manifest:
     artifacts: tuple[Artifact, ...]
     built: str | None = None
     font_set: str | None = None
-    # pins, libera_commit, libera_dirty, repositories, upstream. Kept as the
+    # pins, urls, libera_commit, libera_dirty, repositories, upstream. Kept as the
     # mapping it is in the file: `libera --payload-status` prints it whole.
     source: dict = field(default_factory=dict)
 
@@ -143,16 +143,16 @@ def describe(path: Path) -> Artifact:
     return Artifact(path.name, kind, platform, path.stat().st_size, hash_file(path))
 
 
-def read_pins(pins_toml: Path) -> dict[str, str]:
-    """The [repos] table of build/upstream/pins.toml, read by hand: there is no
-    tomllib in 3.10."""
+def read_pins(pins_toml: Path, table: str = "repos") -> dict[str, str]:
+    """A table of build/upstream/pins.toml, [repos] unless told otherwise, read
+    by hand: there is no tomllib in 3.10."""
     pins = {}
     section = None
     for raw in pins_toml.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if line.startswith("["):
             section = line.strip("[]")
-        elif section == "repos" and "=" in line and not line.startswith("#"):
+        elif section == table and "=" in line and not line.startswith("#"):
             key, _, value = line.partition("=")
             pins[key.strip()] = value.split("#")[0].strip().strip('"')
     return pins
@@ -185,6 +185,8 @@ def stamp(
         artifacts=tuple(describe(p) for p in sorted(dist.glob("*.tar.gz"))),
         source={
             "pins": read_pins(repo / "build" / "upstream" / "pins.toml"),
+            # The pinned repositories that are not under `upstream`: libxml2.
+            "urls": read_pins(repo / "build" / "upstream" / "pins.toml", "urls"),
             "libera_commit": _git(repo, "rev-parse", "HEAD"),
             "libera_dirty": bool(_git(repo, "status", "--porcelain")),
             "repositories": list(REPOSITORIES),

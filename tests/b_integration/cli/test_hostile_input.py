@@ -16,7 +16,7 @@ import zipfile
 import pytest
 
 from libera import cli
-from libera.host import apps
+from libera.host import apps, convert
 
 MARKER = "zqx-file-content-7731"
 
@@ -79,3 +79,38 @@ def test_external_entities_are_not_read(tmp_path, monkeypatch, live_payload, lis
     assert "end" in text
     assert MARKER not in text
     assert asked == []
+
+
+def test_nested_parameter_entities_cost_nothing(
+    tmp_path, monkeypatch, live_payload, capsys
+):
+    """CVE-2021-3541: each parameter entity names the one before it twice,
+    so the last is 2^40 references. libxml2 before 2.9.11 expands them, and
+    took x2t to 3.9 GB on 6 KB (notes/plans/converter-hardening.md); 2.9.14
+    stops early. The host's cap is lowered so that an x2t that still expands
+    them is stopped, and says so, in a second or two."""
+    monkeypatch.setattr(convert, "X2T_MEMORY", 500 << 20)
+    with zipfile.ZipFile(live_payload / "empty" / apps.WORDS.blank) as z:
+        parts = {n: z.read(n) for n in z.namelist() if not n.endswith("/")}
+    subset = '<!ENTITY % pe_1 "<!---->">' + "".join(
+        f'<!ENTITY % pe_{i} "&#37;pe_{i - 1};<!---->&#37;pe_{i - 1};">'
+        for i in range(2, 41)
+    )
+    document = parts["word/document.xml"].decode()
+    document = re.sub(
+        r"(<\?xml[^>]*\?>)",
+        lambda m: m[1] + f"<!DOCTYPE w:document [{subset}%pe_40;]>",
+        document,
+    )
+    assert "%pe_40;" in document
+    parts["word/document.xml"] = document.encode()
+    with zipfile.ZipFile(tmp_path / "laughs.docx", "w") as z:
+        for name, data in parts.items():
+            z.writestr(name, data)
+    monkeypatch.chdir(tmp_path)
+
+    # Converted, or refused as malformed: either is the parser's call. Held
+    # past the cap is the expansion running.
+    cli.main(["--convert", "laughs.docx", "-t", "txt"])
+
+    assert "held" not in capsys.readouterr().err

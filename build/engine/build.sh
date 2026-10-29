@@ -37,6 +37,14 @@ remote_base() {
     sed -n 's/^base *= *"\(.*\)".*/\1/p' "$BUILD/upstream/pins.toml" | head -1
 }
 
+# Where a repository is fetched from: its own address under [urls], else
+# Euro-Office's.
+repo_url() {
+    url="$(sed -n '/^\[urls\]/,/^\[[a-z]/p' "$BUILD/upstream/pins.toml" |
+        sed -n "s/^$1 *= *\"\(.*\)\".*/\1/p" | head -1)"
+    echo "${url:-$(remote_base)/$1.git}"
+}
+
 # depot_tools shells out to gsutil, which picks up ~/.boto and then fails on
 # stale credentials even for public buckets -- and --no_auth no longer has any
 # effect. Point it at an empty config so it uses the anonymous path. This is a
@@ -172,7 +180,7 @@ fetch_repo() {
     dst="$SRC/$repo"
 
     if [ ! -d "$dst/.git" ]; then
-        src="$(remote_base)/$repo.git"
+        src="$(repo_url "$repo")"
         [ -d "$MIRROR/$repo/.git" ] && src="$MIRROR/$repo"
         echo "==> clone $repo from $src"
         # Only the pinned commit is fetched, below: the history is 0.9 GB of
@@ -199,7 +207,7 @@ fetch_repo() {
     # mirror older than the pin falls back to upstream: it only saves traffic.
     git -C "$dst" cat-file -e "$sha^{commit}" 2>/dev/null ||
         git -C "$dst" fetch --quiet --depth 1 origin "$sha" ||
-        git -C "$dst" fetch --quiet --depth 1 "$(remote_base)/$repo.git" "$sha" || {
+        git -C "$dst" fetch --quiet --depth 1 "$(repo_url "$repo")" "$sha" || {
             echo "FATAL: could not fetch $repo @ $sha from $(git -C "$dst" remote get-url origin)" >&2
             echo "       Every repository in pins.toml is public, so a request" >&2
             echo "       for a username here is usually GitHub throttling" >&2
@@ -330,6 +338,17 @@ cmd_configure() {
         set -- "-DEO_CORE_OPENSSL_DIR=$openssl_prefix"
         echo "==> $1"
     fi
+
+    # libxml2 from its own pin, not the copy core keeps (about 2.9.4, which a
+    # 6 KB document took to 3.9 GB): core patch 0172 reads this, and fetch
+    # applies the libxml2 queue, which writes its xmlversion.h. Absent, core
+    # would silently build its own copy, so its absence stops the build.
+    [ -f "$SRC/libxml2/include/libxml/xmlversion.h" ] || {
+        echo "FATAL: no libxml2 at $SRC/libxml2 -- run build.sh fetch libxml2" >&2
+        exit 1
+    }
+    set -- "$@" "-DEO_CORE_LIBXML2_DIR=$(winpath "$SRC/libxml2")"
+    echo "==> libxml2: $SRC/libxml2 @ $(git -C "$SRC/libxml2" rev-parse --short HEAD)"
 
     # Links get a ninja pool of their own on Windows, sized by memory, apart
     # from the compile job count. Measured on a 4-core, 8 GB machine: link.exe
