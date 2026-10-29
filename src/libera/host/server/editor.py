@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from libera import timeline
 from libera.host import desktop, hooks, instance, language, shortcuts
-from libera.host.desktop import lookup_local_user
+from libera.host.desktop import editor_user_id, lookup_local_user
 from libera.host.server import diagnostics
 from libera.host.server.api import NO_CONTENT, Refused, Request, Response, endpoint
 
@@ -209,7 +209,7 @@ def make_editor_url(port: int, session: Session, title: str) -> str:
     The key goes no further than this first request, whose answer sets the
     cookie that brings it from then on: see `admission`.
     """
-    user_id, user_name = lookup_local_user()
+    user_name = lookup_local_user()[1]
     app = session.editor
     mode = "edit" if app.editable else "view"
     ext = pathlib.Path(title).suffix.lstrip(".").lower() or app.ext
@@ -220,7 +220,7 @@ def make_editor_url(port: int, session: Session, title: str) -> str:
         f"&title={urllib.parse.quote(title)}"
         f"&filetype={ext}&session={urllib.parse.quote(session.id)}"
         f"&key={instance.TOKEN}"
-        f"&userid={urllib.parse.quote(user_id)}"
+        f"&userid={editor_user_id()}"
         f"&username={urllib.parse.quote(user_name)}"
     )
 

@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import uuid
 
 from libera.payload import locate
 
@@ -210,6 +211,26 @@ def _copy_xattrs(source: pathlib.Path, dest: pathlib.Path) -> None:
             for name in os.listxattr(source):
                 with contextlib.suppress(OSError):
                     os.setxattr(dest, name, os.getxattr(source, name))
+
+
+@functools.cache
+def editor_user_id() -> str:
+    """The id the editor is given for you: random, made once, kept.
+
+    The PDF editor writes it into every annotation, as /OUserID, so the login
+    it used to be went out in each PDF saved. It has to stay the same from one
+    session to the next, since it is how an annotation is known as yours;
+    nothing else reads it, a lock file naming the login from
+    `lookup_local_user`.
+    """
+    path = locate.get_state_dir() / "editor-user-id"
+    with contextlib.suppress(FileNotFoundError):
+        if found := path.read_text(encoding="utf-8").strip():
+            return found
+    made = uuid.uuid4().hex
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(made, encoding="utf-8")
+    return made
 
 
 @functools.cache
