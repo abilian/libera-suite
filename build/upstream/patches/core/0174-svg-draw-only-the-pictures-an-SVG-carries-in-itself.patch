@@ -1,0 +1,137 @@
+From 6add268870345832e05906e7014927e0f772393e Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Mon, 19 Oct 2026 14:09:32 +0200
+Subject: [PATCH] svg: draw only the pictures an SVG carries in itself
+
+An SVG's <image> that was not a data: URL was read as a file relative
+to the converter's working folder, ../ included. An SVG inside a
+document could so draw a picture from the user's disk into a PDF made
+from it. <image> now takes an embedded PNG or JPEG only, and draws
+nothing for anything else.
+
+Found in our core on 2026-10-29: a .docx carrying such an SVG converted
+to a PDF with the local picture drawn in it.
+
+Taken from ElixirOffice's fork, https://github.com/leag1234/core,
+commit af262195d6c79214a27ff76e6e768434857f6d1f (a snapshot of their
+0.2.2); CImage.cpp only.
+---
+ .../raster/Metafile/svg/SvgObjects/CImage.cpp | 83 +++++++------------
+ 1 file changed, 31 insertions(+), 52 deletions(-)
+
+diff --git a/DesktopEditor/raster/Metafile/svg/SvgObjects/CImage.cpp b/DesktopEditor/raster/Metafile/svg/SvgObjects/CImage.cpp
+index 67ade014ca..ec4e93d4ec 100644
+--- a/DesktopEditor/raster/Metafile/svg/SvgObjects/CImage.cpp
++++ b/DesktopEditor/raster/Metafile/svg/SvgObjects/CImage.cpp
+@@ -1,12 +1,9 @@
+ #include "CImage.h"
+ 
+ #include "../CSvgFile.h"
+-#include "../../graphics/Image.h"
++#include "../../../../graphics/Image.h"
+ #include "../../../BgraFrame.h"
+-#include "../../../../common/Path.h"
+-#include "../../../../common/ProcessEnv.h"
+ #include "../../../../common/Base64.h"
+-#include "../../../../common/File.h"
+ 
+ namespace SVG
+ {
+@@ -32,10 +29,39 @@ namespace SVG
+ 
+ 	bool CImage::Draw(IRenderer *pRenderer, const CSvgFile *pFile, CommandeMode oMode, const TSvgStyles *pOtherStyles, const CRenderedObject* pContexObject) const
+ 	{
++		// SVG resources are embedded; never resolve href against a host directory.
++		const std::wstring pngPrefix = L"data:image/png;base64,";
++		const std::wstring jpegPrefix = L"data:image/jpeg;base64,";
++		size_t offset;
++		if (m_wsHref.compare(0, pngPrefix.size(), pngPrefix) == 0)
++			offset = pngPrefix.size();
++		else if (m_wsHref.compare(0, jpegPrefix.size(), jpegPrefix) == 0)
++			offset = jpegPrefix.size();
++		else
++			return false;
++		const std::wstring wsImageData = m_wsHref.substr(offset);
++		if (wsImageData.empty() || wsImageData.size() > 256 * 1024 * 1024)
++			return false;
++		int decodedSize = NSBase64::Base64DecodeGetRequiredLength(wsImageData.size());
++		if (decodedSize <= 0)
++			return false;
++		BYTE* pBuffer = new(std::nothrow) BYTE[decodedSize];
++		if (NULL == pBuffer)
++			return false;
++		if (!NSBase64::Base64Decode(wsImageData.c_str(), wsImageData.size(), pBuffer, &decodedSize) || decodedSize <= 0)
++		{
++			delete[] pBuffer;
++			return false;
++		}
++		DWORD ulSize = static_cast<DWORD>(decodedSize);
++
+ 		Aggplus::CMatrix oOldTransform;
+ 
+-		if (m_wsHref.empty() || !StartPath(pRenderer, pFile, oOldTransform, oMode))
++		if (!StartPath(pRenderer, pFile, oOldTransform, oMode))
++		{
++			delete[] pBuffer;
+ 			return false;
++		}
+ 
+ 		TBounds oBounds = (NULL != m_pParent) ? m_pParent->GetBounds() : TBounds{0., 0., 0., 0.};
+ 
+@@ -47,53 +73,6 @@ namespace SVG
+ 		double dWidth  = m_oRect.m_oWidth .ToDouble(NSCSS::Pixel, dParentWidth);
+ 		double dHeight = m_oRect.m_oHeight.ToDouble(NSCSS::Pixel, dParentHeight);
+ 
+-		BYTE* pBuffer = NULL;
+-		DWORD ulSize = 0;
+-		size_t unStart = m_wsHref.find(L"data:image");
+-
+-		if (std::wstring::npos != unStart)
+-		{
+-			size_t unType = m_wsHref.find(L";base64", unStart);
+-
+-			if (std::wstring::npos == unType)
+-				return false;
+-
+-			const std::wstring wsImageType = m_wsHref.substr(unStart + 11, unType - unStart - 11);
+-
+-			if (L"png" != wsImageType && L"jpeg" != wsImageType)
+-				return false;
+-	
+-			std::wstring wsImageData = m_wsHref.substr(unType + 8, m_wsHref.length() - unType - 8);
+-			ulSize = NSBase64::Base64DecodeGetRequiredLength(wsImageData.length());
+-
+-			pBuffer = new(std::nothrow) BYTE[ulSize];
+-
+-			if (NULL == pBuffer)
+-				return false;
+-
+-			NSBase64::Base64Decode(wsImageData.c_str(), wsImageData.length(), pBuffer, &(int&)ulSize);
+-		}
+-		#ifndef METAFILE_DISABLE_FILESYSTEM
+-		else
+-		{
+-			std::wstring wsFilePath = NSSystemPath::ShortenPath(m_wsHref);
+-	
+-			bool bIsAllowExternalLocalFiles = true;
+-			if (NSProcessEnv::IsPresent(NSProcessEnv::Converter::gc_allowPrivateIP))
+-				bIsAllowExternalLocalFiles = NSProcessEnv::GetBoolValue(NSProcessEnv::Converter::gc_allowPrivateIP);
+-
+-			if (!bIsAllowExternalLocalFiles && wsFilePath.length() >= 3 && L"../" == wsFilePath.substr(0, 3))
+-				return false;
+-	
+-			wsFilePath = pFile->GetWorkingDirectory() + L'/' + wsFilePath;
+-	
+-			if (!NSFile::CFileBinary::Exists(wsFilePath) || !NSFile::CFileBinary::ReadAllBytes(wsFilePath, &pBuffer, ulSize))
+-				return false;
+-		}
+-		#endif
+-
+-		if (NULL == pBuffer)
+-			return false;
+ 
+ 		CBgraFrame oBgraFrame;
+ 		oBgraFrame.Decode(pBuffer, ulSize);
+-- 
+2.55.0
+

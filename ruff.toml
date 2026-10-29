@@ -377,6 +377,12 @@ lint.extend-ignore = [
     "S404", # subprocess import
     "S603", # pdftotext found by shutil.which, argv form, no shell
 ]
+# test_hostile_input.py draws a PDF's page with pdftoppm, to see whether a
+# picture from the user's disk was painted into it.
+"tests/b_integration/cli/test_hostile_input.py" = [
+    "S404", # subprocess import
+    "S603", # pdftoppm found by shutil.which, argv form, no shell
+]
 # test_save_staging.py tags a document with /usr/bin/xattr, the way Finder
 # would, since Python has no extended-attribute calls on macOS.
 "tests/a_unit/host/test_save_staging.py" = [

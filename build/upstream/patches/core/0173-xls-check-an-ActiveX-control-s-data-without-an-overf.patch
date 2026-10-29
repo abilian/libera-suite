@@ -1,0 +1,38 @@
+From 59f57882b0b98a051a1af42d715a5096f3f75e17 Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Mon, 19 Oct 2026 14:09:32 +0200
+Subject: [PATCH] xls: check an ActiveX control's data without an overflowing
+ sum
+
+Before copying a control's data out of the workbook's control stream,
+the converter checked that lPosInCtlStm + cbBufInCtlStm fit in the
+stream. Both come from the file, and a sum that overflows passes the
+check, so the copy read past the buffer into the converted file. The
+check is now two comparisons that cannot overflow.
+
+Found unfixed in our core on 2026-10-29; upstream has the other
+bounds fixes of the same commit.
+
+Taken from ElixirOffice's fork, https://github.com/leag1234/core,
+commit af262195d6c79214a27ff76e6e768434857f6d1f (a snapshot of their
+0.2.2); the one line in XlsConverter.cpp only.
+---
+ MsBinaryFile/XlsFile/Converter/XlsConverter.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/MsBinaryFile/XlsFile/Converter/XlsConverter.cpp b/MsBinaryFile/XlsFile/Converter/XlsConverter.cpp
+index d32db623d1..b451636600 100644
+--- a/MsBinaryFile/XlsFile/Converter/XlsConverter.cpp
++++ b/MsBinaryFile/XlsFile/Converter/XlsConverter.cpp
+@@ -2537,7 +2537,7 @@ void XlsConverter::convert(XLS::Obj * obj)
+ 			std::wstring objectId_bin = xlsx_context->get_mediaitems().add_control_activeX(target_bin);
+ 
+ 			NSFile::CFileBinary file;
+-			if(xls_global_info->controls_data.second >= obj->pictFmla.lPosInCtlStm + obj->pictFmla.cbBufInCtlStm)
++			if (obj->pictFmla.lPosInCtlStm <= xls_global_info->controls_data.second && obj->pictFmla.cbBufInCtlStm <= xls_global_info->controls_data.second - obj->pictFmla.lPosInCtlStm)
+ 			{
+ 				if ( file.CreateFileW(xlsx_context->get_mediaitems().activeX_path() + target_bin) )
+ 				{
+-- 
+2.55.0
+

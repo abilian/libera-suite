@@ -9,11 +9,15 @@ read, and the external DTD was not fetched.
 
 from __future__ import annotations
 
+import hashlib
 import http.server
 import re
+import shutil
 import struct
+import subprocess
 import threading
 import zipfile
+import zlib
 
 import pytest
 
@@ -162,3 +166,149 @@ def test_a_part_larger_than_its_package_says_is_read_no_further(
 
     assert "held" not in capsys.readouterr().err
     assert "kept" in (tmp_path / "understated.txt").read_text(encoding="utf-8-sig")
+
+
+IMAGE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
+SVG_BLIP = "{96DAC541-7B7A-43D3-8B79-37D633B846F1}"
+
+
+def png(size: int = 64, rgb: bytes = b"\0\0\xff") -> bytes:
+    """A PNG of `size` x `size` pixels of one colour, blue by default: the
+    picture on the user's disk."""
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        body = kind + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body))
+
+    rows = b"".join(b"\0" + rgb * size for _ in range(size))
+    header = struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0)
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", header)
+        + chunk(b"IDAT", zlib.compress(rows))
+        + chunk(b"IEND", b"")
+    )
+
+
+def picture_docx(live_payload, path, blip: str, rels: str, media: dict) -> None:
+    """The blank with one picture, drawn by `blip`, whose relationships are
+    `rels`, and `media` added to the package."""
+    with zipfile.ZipFile(live_payload / "empty" / apps.WORDS.blank) as z:
+        parts = {n: z.read(n) for n in z.namelist() if not n.endswith("/")}
+    drawing = (
+        "<w:p><w:r><w:drawing><wp:inline>"
+        '<wp:extent cx="914400" cy="914400"/><wp:docPr id="901" name="p"/>'
+        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        '<pic:nvPicPr><pic:cNvPr id="901" name="p"/><pic:cNvPicPr/></pic:nvPicPr>'
+        f"<pic:blipFill>{blip}<a:stretch><a:fillRect/></a:stretch></pic:blipFill>"
+        '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/>'
+        '</a:xfrm><a:prstGeom prst="rect"/></pic:spPr>'
+        "</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
+    )
+    document, n = re.subn(
+        r"(<w:body>)", lambda m: m[1] + drawing, parts["word/document.xml"].decode()
+    )
+    assert n == 1
+    parts["word/document.xml"] = document.encode()
+    relations = parts["word/_rels/document.xml.rels"].decode()
+    parts["word/_rels/document.xml.rels"] = relations.replace(
+        "</Relationships>", rels + "</Relationships>"
+    ).encode()
+    types = parts["[Content_Types].xml"].decode()
+    for ext, mime in (("png", "image/png"), ("svg", "image/svg+xml")):
+        if f'Extension="{ext}"' not in types:
+            types = types.replace(
+                "</Types>", f'<Default Extension="{ext}" ContentType="{mime}"/></Types>'
+            )
+    parts["[Content_Types].xml"] = types.encode()
+    parts.update(media)
+    with zipfile.ZipFile(path, "w") as z:
+        for name, data in parts.items():
+            z.writestr(name, data)
+
+
+def blue_in_pdf(pdf) -> int:
+    """How many pixels of the PDF's first page, drawn at 50 dpi, are blue. The pictures here are 1 inch square, about 2,500 of them; the
+    page has none otherwise. A drawn picture is not always a picture in the
+    PDF: x2t paints an SVG's into the page, so this looks at the page."""
+    pdftoppm = shutil.which("pdftoppm")
+    if pdftoppm is None:
+        pytest.skip("no pdftoppm to draw the PDF's page")
+    page = subprocess.run(
+        [pdftoppm, "-r", "50", "-f", "1", "-l", "1", str(pdf)],
+        capture_output=True,
+        check=True,
+    ).stdout
+    # P6, width, height, maximum value, then the pixels, three bytes each.
+    _, width, height, _ = page.split(maxsplit=4)[:4]
+    pixels = page[-int(width) * int(height) * 3 :]
+    # Near blue, not exactly: drawn, 0 0 255 comes out 0 0 253.
+    return sum(
+        1
+        for i in range(0, len(pixels), 3)
+        if pixels[i] < 32 and pixels[i + 1] < 32 and pixels[i + 2] > 223
+    )
+
+
+def test_a_picture_linked_to_a_local_file_is_not_read(
+    tmp_path, monkeypatch, live_payload
+):
+    """A picture whose relationship is external and names a path on the
+    user's disk was copied into the .docx and .odt written from the
+    document, byte for byte, and drawn into a PDF: opening it and sending it
+    back sent the picture along. Core 0175 reads an external picture from a
+    web address only (notes/plans/converter-hardening.md)."""
+    secret = tmp_path / "private" / "photo.png"
+    secret.parent.mkdir()
+    secret.write_bytes(png())
+    picture_docx(
+        live_payload,
+        tmp_path / "linked.docx",
+        '<a:blip r:link="rIdLinked"/>',
+        f'<Relationship Id="rIdLinked" Type="{IMAGE}" Target="{secret}"'
+        ' TargetMode="External"/>',
+        {},
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert cli.main(["--convert", "linked.docx", "-o", "out.docx"]) == 0
+    assert cli.main(["--convert", "linked.docx", "-t", "pdf"]) == 0
+
+    digest = hashlib.sha256(secret.read_bytes()).digest()
+    with zipfile.ZipFile(tmp_path / "out.docx") as z:
+        assert all(hashlib.sha256(z.read(n)).digest() != digest for n in z.namelist())
+    assert blue_in_pdf(tmp_path / "linked.pdf") == 0
+
+
+def test_an_svg_draws_no_file_it_names(tmp_path, monkeypatch, live_payload):
+    """An SVG's <image> was read as a file relative to x2t's folder, ../
+    included, and drawn into a PDF. Core 0174 draws only a picture the SVG
+    carries. The fallback beside it, as Word stores one, is red."""
+    secret = tmp_path / "photo.png"
+    secret.write_bytes(png())
+    up = "../" * 30 + str(secret).lstrip("/")
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg"'
+        ' xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100">'
+        f'<image href="{up}" xlink:href="{up}" width="100" height="100"/></svg>'
+    )
+    picture_docx(
+        live_payload,
+        tmp_path / "svg.docx",
+        '<a:blip r:embed="rIdPng"><a:extLst><a:ext uri="' + SVG_BLIP + '">'
+        '<asvg:svgBlip xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/'
+        'SVG/main" r:embed="rIdSvg"/></a:ext></a:extLst></a:blip>',
+        f'<Relationship Id="rIdPng" Type="{IMAGE}" Target="media/fallback.png"/>'
+        f'<Relationship Id="rIdSvg" Type="{IMAGE}" Target="media/picture.svg"/>',
+        {
+            "word/media/fallback.png": png(1, b"\xff\0\0"),
+            "word/media/picture.svg": svg.encode(),
+        },
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert cli.main(["--convert", "svg.docx", "-t", "pdf"]) == 0
+
+    assert blue_in_pdf(tmp_path / "svg.pdf") == 0

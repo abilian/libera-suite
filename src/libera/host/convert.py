@@ -208,8 +208,9 @@ def write_csv_open_job(
 # budget: a 4 MB file wrote 4 GB, and a 3 MB one held 3.1 GB
 # (notes/plans/converter-hardening.md). The largest legitimate package
 # measured says 72 MB: the 200,000-row spreadsheet behind X2T_MEMORY. The
-# sizes are the package's own word and can lie; the budget in the converter
-# itself, with the payload that brings libxml2 2.9.14, counts the real bytes.
+# sizes are the package's own word, and that is enough: x2t's unzip reads a
+# part no further than its declared size, so a package that understates them
+# unpacks no further either (tests/b_integration/cli/test_hostile_input.py).
 PACKAGE_LIMIT = 1 << 30
 
 
