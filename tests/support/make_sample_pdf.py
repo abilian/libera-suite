@@ -13,18 +13,56 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+FONT = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+
+
 def make_pdf(path: Path, text: str) -> None:
     stream = f"BT /F1 24 Tf 72 720 Td ({text}) Tj ET".encode()
+    write_pdf(
+        path,
+        [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            (
+                b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R"
+                b" /Resources << /Font << /F1 5 0 R >> >> >>"
+            ),
+            b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+            FONT,
+        ],
+    )
+
+
+# What each page of make_nested_pdf inherits from its parent: MediaBox
+# (width, height) and Rotate. Neither is on the page itself.
+NESTED = ((200, 200, 0), (600, 400, 90), (300, 500, 180))
+
+
+def make_nested_pdf(path: Path) -> None:
+    """Three pages, each the only child of its own Pages node, from which it
+    inherits its size and rotation; page N reads "Page N"."""
+    count = len(NESTED)
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        (
-            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R"
-            b" /Resources << /Font << /F1 5 0 R >> >> >>"
-        ),
-        b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Type /Pages /Kids [%s] /Count %d >>"
+        % (b" ".join(b"%d 0 R" % (4 + 3 * n) for n in range(count)), count),
+        FONT,
     ]
+    for n, (width, height, rotate) in enumerate(NESTED):
+        node = 4 + 3 * n
+        stream = f"BT /F1 24 Tf 20 20 Td (Page {n + 1}) Tj ET".encode()
+        objects += [
+            b"<< /Type /Pages /Parent 2 0 R /Kids [%d 0 R] /Count 1"
+            b" /MediaBox [0 0 %d %d] /Rotate %d >>" % (node + 1, width, height, rotate),
+            b"<< /Type /Page /Parent %d 0 R /Contents %d 0 R"
+            b" /Resources << /Font << /F1 3 0 R >> >> >>" % (node, node + 2),
+            b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+        ]
+    write_pdf(path, objects)
+
+
+def write_pdf(path: Path, objects: list[bytes]) -> None:
+    """Object N is objects[N - 1]; the first is the catalogue."""
     out = b"%PDF-1.4\n"
     offsets = []
     for number, body in enumerate(objects, 1):
