@@ -1,0 +1,50 @@
+From 7650032dde3510022e7abf66ae73150b37b603eb Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Fri, 30 Oct 2026 18:06:00 +0100
+Subject: [PATCH 182/182] pdf: an incremental update that cannot start writes
+ nothing
+
+When setting up the update failed, the edits after it went into a
+document never set up, and closing appended an update with nothing in
+it. Now each edit fails and closing copies the original.
+---
+ PdfFile/PdfEditor.cpp | 10 ++++++++++
+ PdfFile/PdfEditor.h   |  1 +
+ 2 files changed, 11 insertions(+)
+
+diff --git a/PdfFile/PdfEditor.cpp b/PdfFile/PdfEditor.cpp
+index b53b32bc2b..fed44c0ea0 100644
+--- a/PdfFile/PdfEditor.cpp
++++ b/PdfFile/PdfEditor.cpp
+@@ -1006,6 +1006,16 @@ bool CPdfEditor::IncrementalUpdates()
+ 		return true;
+ 
+ 	m_nMode = Mode::WriteAppend;
++	if (StartIncrementalUpdates())
++		return true;
++	// The edits after a failed start went into a document never set up, and
++	// closing wrote an update with nothing in it. Without the mode each edit
++	// fails, and closing copies the original, which a caller can tell.
++	m_nMode = Mode::Unknown;
++	return false;
++}
++bool CPdfEditor::StartIncrementalUpdates()
++{
+ 	PDFDoc* pPDFDocument = m_pReader->GetPDFDocument(0);
+ 	XRef* xref = pPDFDocument->getXRef();
+ 	PdfWriter::CDocument* pDoc = m_pWriter->GetDocument();
+diff --git a/PdfFile/PdfEditor.h b/PdfFile/PdfEditor.h
+index b086ac0656..9e164b75a8 100644
+--- a/PdfFile/PdfEditor.h
++++ b/PdfFile/PdfEditor.h
+@@ -104,6 +104,7 @@ public:
+ 
+ private:
+ 	bool IncrementalUpdates();
++	bool StartIncrementalUpdates();
+ 	void NewFrom();
+ 	void GetPageTree(XRef* xref, Object* pPagesRefObj, PdfWriter::CPageTree* pPageParent = NULL);
+ 	bool SplitPages(const int* arrPageIndex, unsigned int unLength, PDFDoc* _pDoc, int nStartRefID);
+-- 
+2.55.0
+
