@@ -9,7 +9,6 @@ them back into a file where `saving` says it goes.
 from __future__ import annotations
 
 import csv
-import filecmp
 import logging
 import os
 import pathlib
@@ -435,19 +434,24 @@ def _export(
     # replay fails, x2t writes the original and exits 0: with its script
     # missing, before the changes reached the log, on a PDF certified against
     # changes (notes/plans/release-0.7.md, item B). A save with changes that
-    # comes back as the original saved none of them.
-    if (
-        from_changes
-        and not session.editor.converted
-        and filecmp.cmp(staged, doc / "Editor.bin", shallow=False)
-    ):
-        logger.error("export failed: x2t wrote %s without the changes", staged.name)
-        msg = f"x2t saved none of the changes to {staged.name}"
-        # The likely reason, when there is one to name: both certified PDFs
-        # tried were refused so, whatever their signature permitted.
-        if b"/DocMDP" in (doc / "Editor.bin").read_bytes():
-            msg += ", which carries a certification signature"
-        raise ConversionError(msg)
+    # comes back as the original saved none of them. Every save measured, a
+    # page removed, added, rotated or moved included, appended the changes to
+    # the original's bytes; one that rewrote them may have lost what it did not
+    # rewrite, and a signature over them with it, so it fails too.
+    if from_changes and not session.editor.converted:
+        original, saved = (doc / "Editor.bin").read_bytes(), staged.read_bytes()
+        if saved == original:
+            logger.error("export failed: x2t wrote %s without the changes", staged.name)
+            msg = f"x2t saved none of the changes to {staged.name}"
+            # The likely reason, when there is one to name: both certified
+            # PDFs tried were refused so, whatever their signature permitted.
+            if b"/DocMDP" in original:
+                msg += ", which carries a certification signature"
+            raise ConversionError(msg)
+        if not saved.startswith(original):
+            logger.error("export failed: x2t rewrote %s", staged.name)
+            msg = f"x2t rewrote {staged.name} instead of adding the changes to it"
+            raise ConversionError(msg)
     # x2t converts text to UTF-8 through a buffer sized one unit per character,
     # while a character outside the BMP, an emoji say, needs two. The conversion
     # fails, x2t falls back to one byte per character, Latin-1 in effect, and
