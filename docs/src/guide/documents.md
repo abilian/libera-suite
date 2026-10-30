@@ -9,7 +9,7 @@ libera ~/Documents/budget.xlsx
 libera ~/Documents/network.vsdx
 ```
 
-**The document decides which application you get.** There is no command to pick one, in the same way there is no command to pick a text editor for a `.txt`: you open the document and the right application comes up. An `.xlsx` opens in Tables, a `.pptx` in Slides, a `.vsdx` in Diagrams.
+**The document decides which application you get.** There is no command to pick one, in the same way there is no command to pick a text editor for a `.txt`: you open the document and the right application comes up. An `.xlsx` opens in Tables, a `.pptx` in Slides, a `.vsdx` in Diagrams, a `.pdf` in Libera PDF.
 
 ![The start window, with a New tile for each of Document, Spreadsheet and Presentation, an Open button, and a Recent list of three documents.](../assets/start.png)
 
@@ -109,6 +109,21 @@ That is the choice for now: the viewer you already have gives you page ranges, p
 ## Images
 
 Images embedded in a document are preserved on open and save. **Insert ▸ Image** adds an image from disk.
+
+## PDFs
+
+A `.pdf` opens in **Libera PDF**. Libera Suite is offered in *Open With* for a PDF, never as the default: a double-click still opens it in your usual viewer.
+
+- **Comment.** The **Comment** tab has *Text Comment*, *Highlight*, a pen, shapes and a text box.
+- **Fill in a form.** Click a field and type, tick a box, choose from a list. Many official forms are made with Adobe LiveCycle Designer and carry a second copy of the form that only Acrobat reads. Saving leaves that copy out, so that Acrobat shows the values you filled in, as other readers do.
+- **Change the pages.** Right-click a page for *Insert blank page after*, *Delete page* and *Rotate page*. Drag a page's thumbnail to move it.
+- **Change a line of text**, with *Edit PDF*, then *Edit Text*. Use it for small corrections. The new words are set in one of our fonts when the PDF's own cannot be used, and a line that grows does not reflow: what no longer fits goes to a line of its own.
+
+**Saving adds to the file.** Your changes are written after the PDF's original content, which stays exactly as it was. A signature that permits comments therefore stays valid for what it signed. A PDF saves only as a PDF.
+
+**Two kinds of PDF cannot be saved yet.** A PDF certified against any change, and a PDF that asks for a password to open: it opens once you give the password, and you can read and comment it, but saving it comes in a later version. Either way the save fails and says so, the file is left as it was, and your changes stay in the window.
+
+Creating a form is not possible yet, nor converting a PDF into a document.
 
 ## Spell checking
 

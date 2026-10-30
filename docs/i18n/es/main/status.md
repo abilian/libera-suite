@@ -8,9 +8,10 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 
 | | |
 | :--- | :--- |
-| **Cuatro aplicaciones** | Windows 10 y 11 en x64, Linux en x86_64 (arm64 con la 0.4.1), macOS en Apple Silicon. Words, Tables y Slides editan; Diagrams lee archivos de Visio. |
+| **Cinco aplicaciones** | Windows 10 y 11 en x64, Linux en x86_64 (arm64 con la 0.4.1), macOS en Apple Silicon. Words, Tables y Slides editan; Diagrams lee archivos de Visio; Libera PDF comenta, rellena y reorganiza PDF. |
 | **Abrir y guardar** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Save, Save As, New. |
 | **Exportar** | Save As ofrece una lista de formatos para cada aplicación, PDF incluido. Cada formato ofrecido se comprueba con una conversión real, cuyo texto se vuelve a leer. |
+| **PDF** | Comentarios, resaltados y dibujos, formularios rellenados, páginas añadidas, eliminadas, giradas y movidas, pequeñas correcciones de texto. Al guardar, tus cambios van después del original, que queda como estaba. [Trabajar con documentos](../guide/documents.md#pdfs) tiene el detalle. |
 | **Imágenes** | Se conservan al abrir y al guardar; Insertar ▸ Imagen funciona. |
 | **Imprimir** | Genera un PDF, pregunta dónde guardarlo y lo abre en tu visor de PDF. |
 | **Corrección ortográfica** | Seis idiomas, con sugerencias. Más abajo, los detalles. |
@@ -36,7 +37,8 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 | **macOS habla de un desarrollador no identificado** | Solo con una `Libera.app` compilada desde una copia del código fuente: no está firmada con un Developer ID, así que Gatekeeper la bloquea la primera vez. [Otras formas de instalar](alt-install.md#a-double-clickable-application-on-macos) explica cómo seguir adelante. Una instalación con `pip`, `pipx` o Homebrew nunca se encuentra con esto. |
 | **Iniciada desde un terminal, el Dock dice «Python»** | Solo cuando inicias `libera` en un terminal en macOS. Un icono del Dock toma el nombre del paquete de aplicación desde el que se inició, aquí el del intérprete de Python, y la aplicación no puede cambiarlo. El icono y la barra de menús son los nuestros en cualquier caso; `Libera.app` muestra Libera. Un documento que sueltas sobre ese icono de Python se rechaza en nombre de Python; el icono de `Libera.app` lo acepta. |
 | **Diagrams no puede guardar** | Abre un archivo `.vsdx` y lo muestra. El conversor no sabe escribir ningún formato de Visio: no hay nada que guardar ni una plantilla en blanco con la que empezar. |
-| **No se pueden editar PDF** | Los PDF solo se generan. Abrir uno para editarlo no está conectado. |
+| **El texto editado de un PDF no se recompone** | Una línea cambiada con *Editar texto* conserva su anchura, así que las palabras nuevas pasan a una línea propia, en una de nuestras fuentes cuando no se puede usar la del PDF. |
+| **Algunos PDF no se pueden guardar** | Uno certificado contra cualquier cambio, y uno que pide una contraseña para abrirse. El guardado falla con un mensaje general, y el archivo queda como estaba. |
 | **Una barra de menús reducida, con pocos atajos visibles en Linux y ninguno en Windows** | Linux y Windows tienen File, Edit, View y Help, dibujados en la ventana. En Linux, Nuevo, Abrir y Cerrar muestran Ctrl-N, Ctrl-O y Ctrl-W, y ningún otro elemento muestra su tecla; en Windows, ninguno. Las teclas funcionan igualmente: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Mayús-S, Ctrl-P y Ctrl-Z. macOS tiene los mismos menús más Window, con los atajos habituales. |
 | **Sin pestañas en Linux ni Windows** | Allí, una ventana por documento. macOS tiene pestañas. |
 | **Windows avisa sobre el instalador** | El instalador descargado aún no está firmado, así que la primera vez SmartScreen muestra *«Windows protegió su PC»*. [Instalar](install.md#windows) explica cómo seguir adelante. La instalación con la línea de PowerShell nunca se encuentra con esto. |
@@ -53,7 +55,7 @@ Si te encuentras con algo que *no* está en esta lista, [cuéntanoslo](../feedba
 
 ### En la ventana del documento
 
-- **Documentos protegidos con contraseña.** Ni abrirlos ni guardarlos.
+- **Documentos protegidos con contraseña.** Un PDF que pide contraseña se abre y no se guarda; ningún otro tipo se abre.
 - **Firmas digitales.**
 - **Combinar correspondencia.**
 - **Complementos.** Desactivados en el proyecto original de este fork, así que el panel nunca aparece.
@@ -69,7 +71,7 @@ Si te encuentras con algo que *no* está en esta lista, [cuéntanoslo](../feedba
 ### En otros ámbitos
 
 - **Editar diagramas.** Diagrams abre un archivo `.vsdx` y lo muestra. El conversor no sabe escribir ningún formato de Visio: no hay nada que guardar ni una plantilla en blanco con la que empezar.
-- **Editar PDF.** El proyecto original tiene un editor de PDF; los componentes que instala Libera Suite todavía no lo incluyen, porque nada lo abriría.
+- **Formularios PDF propios.** Libera PDF rellena un formulario; crear uno no está construido.
 - **Colaboración, almacenamiento en la nube, cuentas, telemetría.** Nada de esto está hecho ni en marcha. [La hoja de ruta](/en/develop/roadmap/), en inglés, describe cómo sería cada uno si llegara. [Qué sale de tu máquina](../index.md#what-leaves-your-machine) recoge todo el uso de la red por parte de la aplicación.
 
 ## Notas sobre algunas carencias

@@ -11,7 +11,7 @@ libera ~/Documents/budget.xlsx
 libera ~/Documents/netzwerk.vsdx
 ```
 
-**Das Dokument bestimmt, welche Anwendung Sie bekommen.** Es gibt keinen Befehl, eine auszuwählen, so wie man auch keinen Texteditor für eine `.txt`-Datei auswählt: Sie öffnen das Dokument, und die richtige Anwendung erscheint. Eine `.xlsx`-Datei öffnet sich in Tables, eine `.pptx`-Datei in Slides, eine `.vsdx`-Datei in Diagrams.
+**Das Dokument bestimmt, welche Anwendung Sie bekommen.** Es gibt keinen Befehl, eine auszuwählen, so wie man auch keinen Texteditor für eine `.txt`-Datei auswählt: Sie öffnen das Dokument, und die richtige Anwendung erscheint. Eine `.xlsx`-Datei öffnet sich in Tables, eine `.pptx`-Datei in Slides, eine `.vsdx`-Datei in Diagrams, eine `.pdf`-Datei in Libera PDF.
 
 ![Das Startfenster mit je einer Kachel New für Document, Spreadsheet und Presentation, einer Schaltfläche Open und einer Liste Recent mit drei Dokumenten.](../assets/start.png)
 
@@ -111,6 +111,21 @@ Das ist vorerst die Wahl: Der Betrachter, den Sie schon haben, bietet Seitenbere
 ## Bilder
 
 In ein Dokument eingebettete Bilder bleiben beim Öffnen und Speichern erhalten. **Einfügen ▸ Bild** fügt ein Bild von der Festplatte ein.
+
+## PDFs {#pdfs}
+
+Eine `.pdf`-Datei öffnet sich in **Libera PDF**. Libera Suite wird für ein PDF unter *Öffnen mit* angeboten, nie als Standard: Ein Doppelklick öffnet es weiterhin in Ihrem gewohnten Betrachter.
+
+- **Kommentieren.** Die Registerkarte **Kommentar** bietet *Textkommentar*, *Markieren*, einen Stift, Formen und ein Textfeld.
+- **Ein Formular ausfüllen.** Klicken Sie in ein Feld und tippen Sie, kreuzen Sie ein Kästchen an, wählen Sie aus einer Liste. Viele amtliche Formulare sind mit Adobe LiveCycle Designer erstellt und tragen eine zweite Kopie des Formulars, die nur Acrobat liest. Beim Speichern wird diese Kopie weggelassen, damit Acrobat die eingetragenen Werte zeigt, wie andere Programme auch.
+- **Die Seiten ändern.** Ein Rechtsklick auf eine Seite bietet *Leere Seite einfügen nach*, *Seite löschen* und *Seite drehen*. Ziehen Sie die Miniatur einer Seite, um sie zu verschieben.
+- **Eine Textzeile ändern**, mit *PDF bearbeiten*, dann *Text bearbeiten*. Das ist für kleine Korrekturen gedacht. Die neuen Wörter werden in einer unserer Schriften gesetzt, wenn die des PDFs nicht verwendet werden kann, und eine Zeile, die länger wird, bricht nicht neu um: Was nicht mehr passt, kommt in eine eigene Zeile.
+
+**Speichern ergänzt die Datei.** Ihre Änderungen werden hinter den ursprünglichen Inhalt des PDFs geschrieben, der genau so bleibt, wie er war. Eine Signatur, die Kommentare erlaubt, bleibt daher für das gültig, was sie signiert hat. Ein PDF wird nur als PDF gespeichert.
+
+**Zwei Arten von PDFs lassen sich noch nicht speichern.** Ein PDF, das gegen jede Änderung zertifiziert ist, und ein PDF, das beim Öffnen ein Kennwort verlangt: Es öffnet sich, sobald Sie das Kennwort angeben, und Sie können es lesen und kommentieren, aber das Speichern kommt in einer späteren Version. In beiden Fällen schlägt das Speichern fehl und sagt es, die Datei bleibt, wie sie war, und Ihre Änderungen bleiben im Fenster.
+
+Ein Formular zu erstellen ist noch nicht möglich, ebenso wenig, ein PDF in ein Dokument umzuwandeln.
 
 ## Rechtschreibprüfung {#spell-checking}
 

@@ -11,7 +11,7 @@ libera ~/Documents/presupuesto.xlsx
 libera ~/Documents/red.vsdx
 ```
 
-**Es el documento el que decide qué aplicación obtienes.** No hay ningún comando para elegir uno, igual que no se elige un editor de texto para abrir un `.txt`: abres el documento y aparece la aplicación adecuada. Un `.xlsx` se abre en Tables, un `.pptx` en Slides, un `.vsdx` en Diagrams.
+**Es el documento el que decide qué aplicación obtienes.** No hay ningún comando para elegir uno, igual que no se elige un editor de texto para abrir un `.txt`: abres el documento y aparece la aplicación adecuada. Un `.xlsx` se abre en Tables, un `.pptx` en Slides, un `.vsdx` en Diagrams, un `.pdf` en Libera PDF.
 
 ![La ventana de inicio, con una tarjeta New para cada uno de Document, Spreadsheet y Presentation, un botón Open y una lista Recent de tres documentos.](../assets/start.png)
 
@@ -111,6 +111,21 @@ Por ahora esa es la opción elegida: el visor que ya tienes te da intervalos de 
 ## Imágenes
 
 Las imágenes incrustadas en un documento se conservan al abrir y al guardar. **Insertar ▸ Imagen** añade una imagen desde el disco.
+
+## PDF {#pdfs}
+
+Un `.pdf` se abre en **Libera PDF**. Libera Suite se ofrece en *Abrir con* para un PDF, nunca como predeterminado: un doble clic lo sigue abriendo en tu visor de siempre.
+
+- **Comentar.** La pestaña **Comentario** ofrece *Comentario de texto*, *Resaltar*, un lápiz, formas y un cuadro de texto.
+- **Rellenar un formulario.** Haz clic en un campo y escribe, marca una casilla, elige de una lista. Muchos formularios oficiales se hacen con Adobe LiveCycle Designer y llevan una segunda copia del formulario que solo lee Acrobat. Al guardar se deja fuera esa copia, para que Acrobat muestre los valores que rellenaste, como hacen los demás lectores.
+- **Cambiar las páginas.** Un clic derecho en una página ofrece *Insertar página en blanco después*, *Eliminar página* y *Girar página*. Arrastra la miniatura de una página para moverla.
+- **Cambiar una línea de texto**, con *Editar PDF* y luego *Editar texto*. Sirve para correcciones pequeñas. Las palabras nuevas se componen en una de nuestras fuentes cuando no se puede usar la del PDF, y una línea que crece no se recompone: lo que ya no cabe pasa a una línea propia.
+
+**Guardar añade al archivo.** Tus cambios se escriben después del contenido original del PDF, que queda exactamente como estaba. Por eso una firma que permite comentarios sigue siendo válida para lo que firmó. Un PDF solo se guarda como PDF.
+
+**Dos tipos de PDF no se pueden guardar todavía.** Un PDF certificado contra cualquier cambio, y un PDF que pide una contraseña para abrirse: se abre cuando das la contraseña, y puedes leerlo y comentarlo, pero guardarlo llegará en una versión posterior. En ambos casos el guardado falla y lo dice, el archivo queda como estaba y tus cambios siguen en la ventana.
+
+Todavía no se puede crear un formulario, ni convertir un PDF en un documento.
 
 ## Corrección ortográfica {#spell-checking}
 
