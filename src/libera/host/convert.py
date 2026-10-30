@@ -381,6 +381,20 @@ def _link_or_copy(src: str, dst: str) -> None:
         shutil.copy2(src, dst)
 
 
+def _passwords(session: Session) -> dict[str, str]:
+    """A PDF's password for x2t, to open the PDF with and to save it under.
+
+    Both, and the same: given an opening password alone, x2t takes the empty
+    saving one for a change of password, and rewrites the whole PDF to remove
+    it (measured 2026-10-30). The job file holding it is in the export's own
+    directory, which mkdtemp makes readable by its owner alone, and which goes
+    when the export does.
+    """
+    if not session.password or session.editor.converted:
+        return {}
+    return {"m_sPassword": session.password, "m_sSavePassword": session.password}
+
+
 def _export(
     session: Session,
     snapshot: pathlib.Path,
@@ -413,6 +427,7 @@ def _export(
         m_sAllFontsPath=session.all_fonts,
         m_sFontDir=session.font_dir,
         **options,
+        **_passwords(session),
     )
     # Whatever is there already would pass the check below for x2t's output.
     # File > Reload exports to the same name every time, so an export that

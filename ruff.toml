@@ -310,6 +310,8 @@ lint.extend-ignore = [
     "E501", # line too long in test assertions
     "N802", # naming
     "S310", # urlopen on a loopback URL the fixture just built is the point
+    "S105", # a password a test opens its own fixture with is no secret
+    "S106", # the same, passed as an argument
 ]
 # test_desktop.py runs desktop-file-validate over the entry it just wrote,
 # because a faulty desktop file is ignored in silence and that tool is the only
@@ -355,6 +357,12 @@ lint.extend-ignore = [
 "tests/c_e2e/**/*.py" = [
     "S404", # subprocess import
     "S603", # subprocess call
+]
+# editor_with's factory takes one keyword per thing a test may vary about the
+# window it opens: the document, a lock, the fonts, a script, a password.
+"tests/c_e2e/host/conftest.py" = [
+    "PLR0913", # too many arguments
+    "PLR0917", # too many positional arguments
 ]
 # tests/d_gui starts the shipped CLI and lets it open real windows: the same
 # argv-form subprocess call, for the one thing a browser cannot stand in for.

@@ -123,7 +123,7 @@ Een `.pdf` opent in **Libera PDF**. Libera Suite wordt voor een pdf aangeboden o
 
 **Opslaan voegt toe aan het bestand.** Je wijzigingen worden achter de oorspronkelijke inhoud van de pdf geschreven, die precies blijft zoals hij was. Een handtekening die opmerkingen toestaat, blijft dus geldig voor wat ze ondertekende. Een pdf wordt alleen als pdf opgeslagen.
 
-**Twee soorten pdf's kunnen nog niet worden opgeslagen.** Een pdf die tegen elke wijziging is gecertificeerd, en een pdf die bij het openen om een wachtwoord vraagt: hij opent zodra je het wachtwoord geeft, en je kunt hem lezen en van opmerkingen voorzien, maar opslaan komt in een latere versie. In beide gevallen mislukt het opslaan en wordt dat gezegd, blijft het bestand zoals het was, en blijven je wijzigingen in het venster.
+**Een pdf die om een wachtwoord vraagt** opent zodra je het wachtwoord geeft, en wordt met je wijzigingen opgeslagen, nog steeds met hetzelfde wachtwoord. **Een pdf die tegen elke wijziging is gecertificeerd, kan niet worden opgeslagen**: het opslaan mislukt en dat wordt gezegd, het bestand blijft zoals het was, en je wijzigingen blijven in het venster.
 
 Een formulier maken kan nog niet, en een pdf omzetten naar een document ook niet.
 

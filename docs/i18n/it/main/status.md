@@ -38,7 +38,7 @@ L'interfaccia di Libera Suite è in inglese: menu e pulsanti sono citati qui com
 | **Avviata da un terminale, il Dock dice «Python»** | Solo quando avvii `libera` in un terminale su macOS. Un'icona del Dock prende il nome del pacchetto applicativo da cui è stata avviata, qui quello dell'interprete Python, e l'applicazione non può cambiarlo. Icona e barra dei menu sono comunque le nostre; `Libera.app` mostra Libera. Un documento trascinato su quell'icona di Python viene rifiutato a nome di Python; l'icona di `Libera.app` lo accetta. |
 | **Diagrams non può salvare** | Apre un file `.vsdx` e lo mostra. Il convertitore non sa scrivere alcun formato Visio: non c'è quindi nulla da salvare né un modello vuoto da cui partire. |
 | **Il testo modificato di un PDF non si ricompone** | Una riga modificata con *Modifica Testo* mantiene la sua larghezza, quindi le parole nuove vanno su una riga a sé, in uno dei nostri caratteri quando quello del PDF non si può usare. |
-| **Alcuni PDF non si possono salvare** | Uno certificato contro ogni modifica, e uno che chiede una password per aprirsi. Il salvataggio non riesce con un messaggio generico, e il file resta com'era. |
+| **I PDF certificati non si possono salvare** | Un PDF certificato contro ogni modifica. Il salvataggio non riesce con un messaggio generico, e il file resta com'era. |
 | **Una barra dei menu ridotta, con poche scorciatoie mostrate su Linux e nessuna su Windows** | Linux e Windows hanno File, Edit, View e Help, disegnati nella finestra. Su Linux, Nuovo, Apri e Chiudi mostrano Ctrl-N, Ctrl-O e Ctrl-W, e nessun'altra voce mostra il suo tasto; su Windows nessuna. I tasti funzionano comunque: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Maiusc-S, Ctrl-P e Ctrl-Z. macOS ha gli stessi menu più Window, con le solite scorciatoie. |
 | **Niente schede su Linux e Windows** | Lì una finestra per documento. macOS ha le schede. |
 | **Windows avverte sul programma di installazione** | Il programma di installazione scaricato non è ancora firmato, quindi la prima volta SmartScreen mostra *«PC protetto da Windows»*. [Installare](install.md#windows) spiega come andare avanti. L'installazione con la riga PowerShell non incontra mai il problema. |
@@ -55,7 +55,7 @@ Se incontri qualcosa che *non* è in questo elenco, [segnalacelo](../feedback.md
 
 ### Nella finestra del documento
 
-- **Documenti protetti da password.** Un PDF che chiede una password si apre e non si salva; nessun altro tipo si apre.
+- **Documenti protetti da password.** Un PDF che chiede una password si apre e si salva, conservandola; nessun altro tipo si apre, e a nessun documento si può dare una password.
 - **Firme digitali.**
 - **Stampa unione.**
 - **Plugin.** Disattivati nel progetto originale di questo fork, quindi il pannello non compare mai.

@@ -9,7 +9,10 @@ result: an incremental update, measured on 2026-10-29
 
 from __future__ import annotations
 
+import json
+import logging
 import re
+import shutil
 import time
 
 import pytest
@@ -21,6 +24,7 @@ from support import (
     make_pdf,
     render,
 )
+from support.paths import repo_root
 
 from libera import payload as payload_mod
 from libera.host import convert, session as sessions
@@ -210,3 +214,46 @@ def test_a_filled_field_keeps_its_value_to_itself(
     assert mark in latest(number)
     assert mark not in latest(other)
     assert mark not in latest(8), "written where every field inherits it"
+
+
+def test_a_pdf_with_a_password_saves_still_encrypted(
+    editor_with, tmp_path, needs_the_pdf_editor, caplog
+):
+    """The PDF editor reads a PDF itself and asks for its password, then hands
+    it to every save, which the bridge dropped: x2t, given none, could not
+    open the PDF and wrote it as it was. Given the password to open with
+    alone, it rewrote the PDF without its encryption. Now both, the same: the
+    comment is appended to the original, encrypted as the rest is, and the
+    password is in no log and no report (2026-10-30).
+
+    protected.pdf is AES-256 with the password "secret", made by pypdf.
+    """
+    password = "secret"
+    pdf = tmp_path / "Protected.pdf"
+    shutil.copy(repo_root() / "build" / "engine" / "smoke-pdf" / "protected.pdf", pdf)
+    original = pdf.read_bytes()
+    caplog.set_level(logging.DEBUG)
+    editor = editor_with([], document=pdf, password=password)
+    session = next(iter(sessions.SESSIONS.values()))
+
+    editor.frame.evaluate(
+        "(m) => { const d = new Asc.asc_CCommentDataWord(null); d.asc_putText(m);"
+        " d.asc_putUserName('Tester'); return Asc.editor.asc_addComment(d); }",
+        MARK,
+    )
+    deadline = time.monotonic() + 10
+    while not session.change_log and time.monotonic() < deadline:
+        time.sleep(0.2)
+    with editor.answered("save") as saved:
+        editor.press("ControlOrMeta+s")
+    assert saved.value.json()["error"] == 0
+
+    data = pdf.read_bytes()
+    assert data.startswith(original)
+    update = data[len(original) :]
+    assert b"/Subtype /Text" in update
+    assert b"/Encrypt" in update
+    # Encrypted as the rest is: the mark, in UTF-16, is nowhere in clear.
+    assert b"\\000".join(bytes([c]) for c in MARK.encode()) not in update
+    assert password not in json.dumps(editor.reported())
+    assert password not in caplog.text

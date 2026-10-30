@@ -14,7 +14,7 @@ import re
 
 import pytest
 
-from libera.host import apps, convert
+from libera.host import apps, convert, saving
 from libera.host.session import Session, configure
 
 ORIGINAL = b"%PDF-1.4\n% the original\n%%EOF\n"
@@ -108,3 +108,47 @@ def test_a_pdf_saved_unchanged_may_be_the_original(opened, tmp_path, monkeypatch
     convert.export(opened, tmp_path / "saved.pdf", 513, None)
 
     assert (tmp_path / "saved.pdf").read_bytes() == ORIGINAL
+
+
+def job_of_save(session, tmp_path, monkeypatch) -> str:
+    """The job x2t was given for a save."""
+    jobs = []
+
+    def run(_session, job):
+        text = convert.pathlib.Path(job).read_text(encoding="utf-8")
+        jobs.append(text)
+        target = re.search(r"<m_sFileTo>(.*?)</m_sFileTo>", text)
+        assert target is not None
+        convert.pathlib.Path(target.group(1)).write_bytes(ORIGINAL + b"% update\n")
+        return convert.subprocess.CompletedProcess([], 0, "", "")
+
+    monkeypatch.setattr(convert, "run_x2t", run)
+    convert.export(session, tmp_path / "saved.pdf", 513, None)
+    (job,) = jobs
+    return job
+
+
+def test_a_pdf_with_a_password_is_saved_under_the_same(
+    annotated, tmp_path, monkeypatch
+):
+    """Given the password to open with alone, x2t took the empty one to save
+    under for a change, and rewrote the PDF without its encryption."""
+    annotated.password = "s<cret"
+
+    job = job_of_save(annotated, tmp_path, monkeypatch)
+
+    assert "<m_sPassword>s&lt;cret</m_sPassword>" in job
+    assert "<m_sSavePassword>s&lt;cret</m_sSavePassword>" in job
+
+
+def test_a_pdf_without_one_names_none(annotated, tmp_path, monkeypatch):
+    assert "Password" not in job_of_save(annotated, tmp_path, monkeypatch)
+
+
+def test_the_password_is_in_no_repr(annotated):
+    request = saving.SaveRequest.from_body({"fileType": 513, "password": "s<cret"})
+
+    assert request.password == "s<cret"
+    annotated.password = "s<cret"
+    assert "s<cret" not in repr(request)
+    assert "s<cret" not in repr(annotated)

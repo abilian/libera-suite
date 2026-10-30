@@ -121,7 +121,7 @@ A `.pdf` opens in **Libera PDF**. Libera Suite is offered in *Open With* for a P
 
 **Saving adds to the file.** Your changes are written after the PDF's original content, which stays exactly as it was. A signature that permits comments therefore stays valid for what it signed. A PDF saves only as a PDF.
 
-**Two kinds of PDF cannot be saved yet.** A PDF certified against any change, and a PDF that asks for a password to open: it opens once you give the password, and you can read and comment it, but saving it comes in a later version. Either way the save fails and says so, the file is left as it was, and your changes stay in the window.
+**A PDF that asks for a password** opens once you give it, and saves with your changes, still under the same password. **A PDF certified against any change cannot be saved**: the save fails and says so, the file is left as it was, and your changes stay in the window.
 
 Creating a form is not possible yet, nor converting a PDF into a document.
 

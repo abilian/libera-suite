@@ -166,6 +166,13 @@ class Editor:
             for frame in self.page.frames
         )
 
+    def give_password(self, password: str) -> None:
+        """Answer the dialog a PDF that asks for a password opens with: the
+        editor reads the PDF itself, and asks before the document is ready."""
+        dialog = self.page.frame_locator("iframe").locator("input[type=password]")
+        dialog.fill(password, timeout=READY)
+        self.page.frame_locator("iframe").get_by_role("button", name="OK").click()
+
     @property
     def frame(self):
         """The editor's own frame, inside the wrapper page."""
@@ -229,6 +236,7 @@ def editor_with(tmp_path, sample_document, monkeypatch):
         locked_by: str | None = None,
         fonts: Path | None = None,
         init_script: str | None = None,
+        password: str | None = None,
     ) -> Editor:
         document = document or sample_document
         httpd, port, opened = _open(owned, document, locked_by, fonts)
@@ -256,6 +264,8 @@ def editor_with(tmp_path, sample_document, monkeypatch):
             page.add_init_script(init_script)
         editor = Editor(page, port)  # before the page loads: it watches requests
         page.goto(server.make_editor_url(port, opened, document.name))
+        if password is not None:
+            editor.give_password(password)
         editor.wait_until_ready()
         return editor
 

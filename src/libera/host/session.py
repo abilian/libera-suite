@@ -78,6 +78,11 @@ class Session:
     # The conversion of the document, while its window loads the editor
     # (opening.convert_behind); asking for Editor.bin waits for it.
     converting: threading.Thread | None = field(default=None, repr=False)
+    # The password of a PDF that asks for one. The editor reads the PDF itself
+    # and asks for it, and hands it over with each save; kept here so that a
+    # save on close, which the editor takes no part in, has it too. In memory
+    # only: never written, never logged.
+    password: str = field(default="", repr=False)
 
     @property
     def id(self) -> str:

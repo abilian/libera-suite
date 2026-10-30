@@ -38,7 +38,7 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 | **Gestart vanuit een terminal, toont het Dock „Python”** | Alleen wanneer je `libera` op macOS in een terminal start. Een symbool in het Dock krijgt de naam van de bundel waaruit het gestart is: hier die van de Python-interpreter, en daar kan niets in de toepassing iets aan veranderen. Het pictogram en de menubalk zijn hoe dan ook van ons; `Libera.app` toont gewoon Libera. Een document dat je op dat Python-symbool sleept, wordt in naam van Python geweigerd; het symbool van `Libera.app` neemt het wel aan. |
 | **Diagrams kan niet opslaan** | Het opent een `.vsdx` en toont die. De converter kan geen enkel Visio-formaat schrijven, dus er valt niets op te slaan en er is geen leeg sjabloon om mee te beginnen. |
 | **Gewijzigde pdf-tekst loopt niet opnieuw door** | Een regel gewijzigd met *Tekst bewerken* houdt zijn breedte, dus nieuwe woorden komen op een eigen regel, in een van onze lettertypen als dat van de pdf niet te gebruiken is. |
-| **Sommige pdf's kunnen niet worden opgeslagen** | Een die tegen elke wijziging is gecertificeerd, en een die bij het openen om een wachtwoord vraagt. Het opslaan mislukt met een algemene melding, en het bestand blijft zoals het was. |
+| **Gecertificeerde pdf's kunnen niet worden opgeslagen** | Een pdf die tegen elke wijziging is gecertificeerd. Het opslaan mislukt met een algemene melding, en het bestand blijft zoals het was. |
 | **Een beperkte menubalk, met weinig zichtbare sneltoetsen op Linux en geen op Windows** | Linux en Windows krijgen Bestand, Bewerken, Weergave en Help, getekend in het venster. Op Linux tonen Nieuw, Openen en Sluiten Ctrl-N, Ctrl-O en Ctrl-W, en geen ander item toont zijn toets; op Windows geen enkel. De toetsen werken wel: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z. macOS krijgt die menu's plus Window, met de gebruikelijke sneltoetsen. |
 | **Geen tabbladen op Linux en Windows** | Daar één venster per document. macOS heeft tabbladen. |
 | **Windows waarschuwt voor het installatieprogramma** | Het gedownloade installatieprogramma is nog niet digitaal ondertekend, dus SmartScreen zegt de eerste keer *„Windows heeft uw pc beschermd”*. [Installeren](install.md#windows) legt uit hoe je daarlangs komt. De installatie met één regel PowerShell heeft er nooit last van. |
@@ -55,7 +55,7 @@ Loop je tegen iets aan dat *niet* op deze lijst staat, [laat het ons weten](../f
 
 ### In het documentvenster
 
-- **Documenten met een wachtwoord.** Een pdf die om een wachtwoord vraagt, opent en kan niet worden opgeslagen; geen ander soort opent.
+- **Documenten met een wachtwoord.** Een pdf die om een wachtwoord vraagt, opent en wordt opgeslagen, met zijn wachtwoord; geen ander soort opent, en geen enkel document kan een wachtwoord krijgen.
 - **Digitale handtekeningen.**
 - **Afdruk samenvoegen.**
 - **Plug-ins.** In deze fork upstream uitgeschakeld, dus het paneel verschijnt nooit.
