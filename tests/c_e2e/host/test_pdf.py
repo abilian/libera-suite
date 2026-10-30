@@ -13,7 +13,14 @@ import re
 import time
 
 import pytest
-from support import NESTED, make_nested_pdf, make_pdf, render
+from support import (
+    FORM_FIELDS,
+    NESTED,
+    make_form_pdf,
+    make_nested_pdf,
+    make_pdf,
+    render,
+)
 
 from libera import payload as payload_mod
 from libera.host import convert, session as sessions
@@ -137,3 +144,69 @@ def test_pages_moved_keep_what_they_inherit(
         (b"0 0 %d %d" % (width, height), b"%d" % rotate)
         for width, height, rotate in reversed(NESTED)
     ]
+
+
+def type_into(editor, rect: tuple[int, int, int, int], text: str) -> None:
+    """Click a field from its rectangle, in points from the bottom of a US
+    Letter page, type, and click away: what a person does."""
+    editor.frame.wait_for_function(
+        "() => Asc.editor.getPDFDoc().GetAllWidgets().length > 0"
+    )
+    # Where the viewer draws the page: centred, at its own size in pixels.
+    left, top, scale = editor.frame.evaluate(
+        "() => { const v = Asc.editor.getDocumentRenderer(), p = v.drawingPages[0];"
+        " return [(v.width - p.W) / 2, p.Y - v.scrollY, p.W / v.file.pages[0].W]; }"
+    )
+    viewer = editor.frame.locator("#id_viewer").bounding_box()
+    assert viewer is not None
+    x1, y1, x2, y2 = rect
+    editor.page.mouse.click(
+        viewer["x"] + left + (x1 + x2) / 2 * scale,
+        viewer["y"] + top + (792 - (y1 + y2) / 2) * scale,
+    )
+    editor.page.keyboard.type(text, delay=50)
+    editor.page.mouse.click(viewer["x"] + 5, viewer["y"] + 5)
+
+
+def test_a_filled_field_keeps_its_value_to_itself(
+    editor_with, tmp_path, needs_the_pdf_editor
+):
+    """A field's value is written on the field. x2t wrote it on the first
+    ancestor that already had a value, here the form's empty one, which
+    every field under it inherits: each field of a Cerfa then read as the
+    one name typed (measured on cerfa 14011, 2026-10-30; core 0179)."""
+    pdf = tmp_path / "Form.pdf"
+    make_form_pdf(pdf)
+    original = pdf.read_bytes()
+    editor = editor_with([], document=pdf)
+    session = next(iter(sessions.SESSIONS.values()))
+    (number, _, rect), (other, _, _) = FORM_FIELDS
+
+    type_into(editor, rect, MARK)
+    # Typing sends changes before the value is committed, when the field
+    # loses the focus; a save in between has no value to write.
+    deadline = time.monotonic() + 10
+    size = -1
+    while time.monotonic() < deadline:
+        committed = editor.frame.evaluate(
+            "() => Asc.editor.getPDFDoc().GetField('form.name').GetParentValue()"
+        )
+        now = session.change_log.path.stat().st_size if session.change_log else 0
+        if committed == MARK and now and now == size:
+            break
+        size = now
+        time.sleep(0.5)
+    saved = tmp_path / "saved.pdf"
+    convert.export(session, saved, 513, None)
+
+    data = saved.read_bytes()
+    assert data.startswith(original)
+    mark = b"\\000".join(bytes([c]) for c in MARK.encode())
+
+    def latest(n: int) -> bytes:
+        start = data.rindex(b"\n%d 0 obj" % n)
+        return data[start : data.index(b"endobj", start)]
+
+    assert mark in latest(number)
+    assert mark not in latest(other)
+    assert mark not in latest(8), "written where every field inherits it"
