@@ -140,7 +140,8 @@ if [ ! -d "$PAYLOAD/sdkjs/pdf" ]; then
 else
 # hybrid.pdf is a form with an /XFA beside its fields, as the IRS's are: the
 # save rewrites the form's dictionary and has to leave the XFA out (core
-# 0176), or Acrobat, which shows the XFA, shows the form as it was.
+# 0176), or Acrobat, which shows the XFA, shows the form as it was. It
+# also has an Info dictionary, whose Creator the save has to keep.
 for doc in sample hybrid; do
 rm -rf "$W/pdfdoc" && mkdir -p "$W/pdfdoc/changes"
 cp "$SMOKE_PDF/$doc.pdf" "$W/pdfdoc/Editor.bin"
@@ -170,6 +171,12 @@ print(f"    {sys.argv[3]}.pdf: {len(original)} -> {len(saved)} bytes, comment: {
 if not (saved.startswith(original) and b"/Subtype /Text" in update and "zqx-smoke-comment" in text):
     raise SystemExit(1)
 if sys.argv[3] == "hybrid" and (xfa or b"/AcroForm" not in update):
+    raise SystemExit(1)
+# Its Creator is a hex string unlike its Producer: the save used to replace
+# it with the Producer, or with ours when it was hex (core 0177).
+creator = b"/Creator <FEFF" + "Writer Smoke".encode("utf-16-be").hex().upper().encode() + b">"
+if sys.argv[3] == "hybrid" and creator not in update:
+    print("    hybrid.pdf: the Creator was not kept", file=sys.stderr)
     raise SystemExit(1)
 PY
 done
