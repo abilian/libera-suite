@@ -906,9 +906,12 @@ def add_others(groups: Groups) -> None:
     p.set_defaults(passes_on=True)
     p = groups.leaf(
         "fidelity",
-        "the same pages from the same build, twice (libera_build/fidelity.py)",
+        "the same pages from the same build twice, and scored against references"
+        " (libera_build/fidelity.py)",
         fidelity,
-        epilog=examples("fidelity", "fidelity DOC.docx --runs 3"),
+        epilog=examples(
+            "fidelity", "fidelity DOC.docx --runs 3", "fidelity --ref refs/word-web"
+        ),
     )
     p.set_defaults(passes_on=True)
 
