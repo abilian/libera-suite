@@ -133,7 +133,7 @@ Een document dat met een wachtwoord is beveiligd, door Word, LibreOffice of Libe
 
 **De eigen beveiliging van LibreOffice 26 kan nog niet worden gelezen.** Standaard versleutelt LibreOffice 26 een OpenDocument-bestand op een manier die Libera Suite niet leest, en Libera Suite zegt dat in plaats van om het wachtwoord te vragen. LibreOffice schrijft de oudere versleuteling, die Libera Suite wel leest, als de ODF-formaatversie op 1.3 staat.
 
-**Bestand ▸ Beveiligen** geeft een document een wachtwoord met *Wachtwoord toevoegen*, en biedt *Verander wachtwoord* en *Wachtwoord verwijderen* zodra het er een heeft. Elk slaat het document meteen op. Het wordt aangeboden voor Word-, Excel-, PowerPoint- en OpenDocument-bestanden, de formaten die een wachtwoord kunnen dragen. Een pdf kan nog geen wachtwoord krijgen, en het zijne niet veranderen.
+**Bestand ▸ Beveiligen** geeft een document een wachtwoord met *Wachtwoord toevoegen*, en biedt *Verander wachtwoord* en *Wachtwoord verwijderen* zodra het er een heeft. Elk slaat het document meteen op. Het wordt aangeboden voor Word-, Excel-, PowerPoint-, OpenDocument- en pdf-bestanden, de formaten die een wachtwoord kunnen dragen. Een nieuw wachtwoord herschrijft een pdf helemaal: Beveiligen wordt daarom niet aangeboden voor een ondertekende pdf, waarvan de handtekeningen dat niet zouden overleven, noch voor een pdf waarvan de auteur afdrukken, kopiëren of bewerken heeft beperkt, omdat het nieuwe wachtwoord die beperkingen zou opheffen, noch voor een pdf die een deel van zichzelf onversleuteld laat, dat het herschrijven zou beschadigen.
 
 ## Spellingcontrole {#spell-checking}
 

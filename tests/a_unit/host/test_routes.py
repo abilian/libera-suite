@@ -15,6 +15,7 @@ API = {
     ("GET", "opened"),
     ("POST", "password"),
     ("GET", "current"),
+    ("POST", "opening-password"),
     ("POST", "changes"),
     ("POST", "modified"),
     ("POST", "save"),

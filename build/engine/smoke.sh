@@ -194,6 +194,39 @@ if sys.argv[3] == "hybrid" and creator not in update:
     raise SystemExit(1)
 PY
 done
+
+# File > Protect on a PDF: protected.pdf's password changed, then the new one
+# removed. The change copied each stream's Length of bytes, its ciphertext's,
+# from a decrypted stream shorter than that, and padded every one with 0xFF
+# (core 0185); it kept the old encryption dictionary too (0187). Removed, the
+# streams are in clear, padding and all.
+pdfpass() { # from to opening-and-saving-password-elements
+cat > "$W/pdfpass.xml" <<XML
+<?xml version="1.0" encoding="utf-8"?>
+<TaskQueueDataConvert>
+  <m_sFileFrom>$(winpath "$1")</m_sFileFrom>
+  <m_sFileTo>$(winpath "$2")</m_sFileTo>
+  <m_nFormatTo>513</m_nFormatTo>
+  <m_bDontSaveAdditional>true</m_bDontSaveAdditional>
+  $3
+  <m_sAllFontsPath>$(winpath "$PAYLOAD/AllFonts.js")</m_sAllFontsPath>
+  <m_sFontDir>$(winpath "$CORE_FONTS")</m_sFontDir>
+</TaskQueueDataConvert>
+XML
+built x2t "$W/pdfpass.xml" >"$W/pdfpass.log" 2>&1 || fail "$(basename "$2"): x2t failed; see $W/pdfpass.log"
+}
+pdfpass "$SMOKE_PDF/protected.pdf" "$W/changed.pdf" "<m_sPassword>secret</m_sPassword><m_sSavePassword>zqx-new</m_sSavePassword>"
+pdfpass "$W/changed.pdf" "$W/removed.pdf" "<m_sPassword>zqx-new</m_sPassword>"
+py - "$W/changed.pdf" "$W/removed.pdf" <<'PY' || fail "a PDF's change of password padded its streams or kept the old encryption"
+import re, sys
+changed, removed = (open(p, "rb").read() for p in sys.argv[1:3])
+streams = re.findall(rb"stream\r?\n(.*?)\r?\nendstream", removed, re.S)
+padded = [s for s in streams if s.endswith(b"\xff\xff\xff\xff")]
+print(f"    password changed, then removed: {len(streams)} streams, {len(padded)} padded, "
+      f"{changed.count(b'/Filter /Standard')} encryption dictionary")
+if not streams or padded or b"/Encrypt" in removed or changed.count(b"/Filter /Standard") != 1:
+    raise SystemExit(1)
+PY
 fi
 
 echo "PASS"

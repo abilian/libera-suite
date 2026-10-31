@@ -95,6 +95,12 @@ class Session:
     # editor takes no part in: a save without it is written unprotected. In
     # memory only: never written but into x2t's job, never logged.
     password: str = field(default="", repr=False)
+    # The password Editor.bin opens with, for a PDF, whose Editor.bin is the
+    # file as it was opened, encrypted as it was: the editor reports it once
+    # the PDF is open (server/document.take_opening_password). A save opens
+    # the PDF with it and gives the file `password`, so the two differ after
+    # File > Protect changes it.
+    opened_with: str = field(default="", repr=False)
     # Set while the editor is to ask for the document's password: x2t's exit,
     # 90 for none given or 91 for a wrong one, and what tries the one typed
     # (opening.ask_password).
@@ -225,6 +231,7 @@ class Session:
         """Another document is coming into this session: the password was the
         last one's. Kept, every save of the next would be encrypted with it."""
         self.password = ""
+        self.opened_with = ""
         self.password_asked = None
 
     def mark_modified(self, modified: bool) -> None:

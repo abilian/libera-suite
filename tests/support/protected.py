@@ -115,3 +115,31 @@ def read_odf_parts(path: pathlib.Path, password: str) -> dict[str, tuple[bytes, 
             assert len(text) == int(_attribute(entry, "size")), name.group(1)
             parts[name.group(1)] = (text, pad)
     return parts
+
+
+def pdf_opens_with(path: pathlib.Path, password: str) -> bool:
+    """Whether `password` opens a PDF x2t encrypted, AES-256 (revision 6),
+    checked as a reader checks it: Algorithm 2.A against the last /U."""
+    found = re.findall(rb"/U\s*<([0-9A-Fa-f]{96})>", path.read_bytes())
+    user = bytes.fromhex(found[-1].decode())
+    return _hash_2b(password.encode()[:127], user[32:40], b"") == user[:32]
+
+
+def _hash_2b(password: bytes, salt: bytes, extra: bytes) -> bytes:
+    """ISO 32000-2, Algorithm 2.B."""
+    key = hashlib.sha256(password + salt + extra).digest()
+    rounds = 0
+    while True:
+        block = (password + key + extra) * 64
+        encryptor = Cipher(algorithms.AES(key[:16]), modes.CBC(key[16:32])).encryptor()
+        out = encryptor.update(block) + encryptor.finalize()
+        digest = (hashlib.sha256, hashlib.sha384, hashlib.sha512)[sum(out[:16]) % 3]
+        key = digest(out).digest()
+        rounds += 1
+        if rounds >= 64 and out[-1] <= rounds - 32:
+            return key[:32]
+
+
+def pdf_streams(path: pathlib.Path) -> list[bytes]:
+    """Every stream of a PDF in clear, as the file has it."""
+    return re.findall(rb"stream\r?\n(.*?)\r?\nendstream", path.read_bytes(), re.DOTALL)

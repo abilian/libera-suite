@@ -25,6 +25,7 @@ from support import (
     render,
 )
 from support.paths import repo_root
+from support.protected import pdf_opens_with
 
 from libera import payload as payload_mod
 from libera.host import convert, session as sessions
@@ -47,8 +48,9 @@ def test_a_pdf_opens_and_shows_its_text(editor_with, tmp_path, needs_the_pdf_edi
 
     assert "pdfeditor" in editor.frame.url
     assert editor.report()["errors"] == []
-    # No File > Protect: x2t's change of a PDF's password pads every stream.
-    assert not editor.frame.evaluate("() => Asc.editor.asc_isProtectionSupport()")
+    # File > Protect: it has no signature, no restrictions to lift, and
+    # nothing left in clear.
+    assert editor.frame.evaluate("() => Asc.editor.asc_isProtectionSupport()")
     # What was drawn, not what was parsed: the document area only, so the
     # toolbar's icons cannot pass for text.
     shot = tmp_path / "page.png"
@@ -261,3 +263,33 @@ def test_a_pdf_with_a_password_saves_still_encrypted(
     assert any("LocalFileSave" in line for line in editor.console)
     assert not [line for line in editor.console if password in line]
     assert password not in caplog.text
+
+
+def test_file_protect_changes_then_removes_a_pdfs_password(
+    editor_with, tmp_path, needs_the_pdf_editor
+):
+    """The editor reports the password it opened the PDF with, which x2t
+    opens Editor.bin with, and the file gets the one File > Protect set:
+    a rewrite, where a save otherwise appends."""
+    new = "zqx-New-Pass-9"
+    pdf = tmp_path / "Protected.pdf"
+    shutil.copy(repo_root() / "build" / "engine" / "smoke-pdf" / "protected.pdf", pdf)
+    editor = editor_with([], document=pdf, password="secret")
+    session = next(iter(sessions.SESSIONS.values()))
+    deadline = time.monotonic() + 10
+    while session.opened_with != "secret" and time.monotonic() < deadline:
+        time.sleep(0.2)
+    assert session.opened_with == "secret"
+    assert editor.frame.evaluate("() => Asc.editor.asc_isProtectionSupport()")
+
+    with editor.answered("save") as saved:
+        editor.frame.evaluate("(p) => Asc.editor.asc_setCurrentPassword(p)", new)
+    assert saved.value.json()["error"] == 0
+    assert pdf_opens_with(pdf, new)
+    assert not pdf_opens_with(pdf, "secret")
+
+    with editor.answered("save") as saved:
+        editor.frame.evaluate("() => Asc.editor.asc_resetPassword()")
+    assert saved.value.json()["error"] == 0
+    assert b"/Encrypt" not in pdf.read_bytes()
+    assert not [line for line in editor.console if new in line or "secret" in line]
