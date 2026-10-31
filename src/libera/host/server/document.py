@@ -12,7 +12,7 @@ import mimetypes
 import pathlib
 import shutil
 
-from libera.host import desktop, hooks, saving
+from libera.host import convert, desktop, hooks, saving
 from libera.host.convert import ConversionError
 from libera.host.server import diagnostics
 from libera.host.server.api import (
@@ -44,7 +44,12 @@ def _hand_over(r: Request) -> Response:
     if asked is not None:
         return answer_json({"needPassword": asked.code})
     data = r.session.editor_bin.read_bytes()
-    return answer_json({"b64": base64.b64encode(data).decode(), "len": len(data)})
+    opened = {"b64": base64.b64encode(data).decode(), "len": len(data)}
+    if r.session.password and r.session.editor.converted:
+        # The editor's own is gone after a reload, and its next save, which
+        # carries the editor's, would remove the document's protection.
+        opened["password"] = r.session.password
+    return answer_json(opened)
 
 
 @endpoint("POST", "password")
@@ -65,7 +70,14 @@ def take_password(r: Request) -> Response:
 def serve_current(r: Request) -> Response:
     """The path of the document this window has open."""
     p = r.session.read_current_document()
-    return answer_json({"path": str(p) if p else ""})
+    # Whether File > Protect is offered: in a format x2t encrypts, so that a
+    # password set is one the file gets. The PDF editor's is not: x2t's change
+    # of a PDF's password pads every stream it copies with 0xFF
+    # (notes/plans/release-0.8.md).
+    protectable = r.session.editor.converted and (
+        p is None or p.suffix.lower() in convert.ENCRYPTABLE
+    )
+    return answer_json({"path": str(p) if p else "", "protectable": protectable})
 
 
 @endpoint("GET", "media", prefix=True)

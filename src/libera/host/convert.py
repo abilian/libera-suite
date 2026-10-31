@@ -438,6 +438,17 @@ def _link_or_copy(src: str, dst: str) -> None:
         shutil.copy2(src, dst)
 
 
+# What x2t encrypts when given a password (measured 2026-10-30 and 31: every
+# OOXML and OpenDocument format the editors write); the rest it writes in
+# clear. PDF too, which File > Protect does not offer (server/document.py).
+ENCRYPTABLE = frozenset({
+    *(".docx", ".docm", ".dotx", ".dotm"),
+    *(".xlsx", ".xlsm", ".xltx", ".xltm"),
+    *(".pptx", ".pptm", ".ppsx", ".ppsm", ".potx", ".potm"),
+    *(".odt", ".ott", ".ods", ".ots", ".odp", ".otp"),
+})
+
+
 def _passwords(session: Session) -> dict[str, str]:
     """A protected document's password for x2t, to save it under.
 

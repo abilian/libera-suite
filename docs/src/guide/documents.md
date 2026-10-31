@@ -131,7 +131,7 @@ A document protected by a password, by Word, LibreOffice or Libera Suite, asks f
 
 **LibreOffice 26's own protection cannot be read yet.** By default, LibreOffice 26 encrypts an OpenDocument file in a way Libera Suite does not read, and Libera Suite says so instead of asking for the password. LibreOffice writes the older encryption, which Libera Suite reads, when its ODF format version is set to 1.3.
 
-Giving a document a password, or changing or removing one, is not possible yet.
+**File ▸ Protect** gives a document a password with *Add password*, and has *Change password* and *Delete password* once it has one. Each saves the document at once. It is offered for Word, Excel, PowerPoint and OpenDocument files, the formats that can carry a password. A PDF cannot be given a password yet, nor have its own changed.
 
 ## Spell checking
 

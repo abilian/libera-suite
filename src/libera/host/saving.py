@@ -48,9 +48,11 @@ class SaveRequest:
     file_type: int = 0
     save_as: bool = False
     printing: bool = False
-    # A PDF's password, which LocalFileSave is handed; out of the repr, so
-    # that no log of a request shows it.
-    password: str = field(default="", repr=False)
+    # The document's password as the editor has it, which LocalFileSave is
+    # handed with every save: "" for none, a new one after File > Protect.
+    # None for a save the editor takes no part in, one on close, which keeps
+    # the session's. Out of the repr, so that no log of a request shows it.
+    password: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_body(cls, body: dict) -> SaveRequest:
@@ -63,7 +65,7 @@ class SaveRequest:
             file_type=file_type,
             save_as="saveas=true" in str(body.get("params") or ""),
             printing=bool(body.get("isPrint")),
-            password=str(body.get("password") or ""),
+            password=None if body.get("password") is None else str(body["password"]),
         )
 
 
@@ -276,14 +278,26 @@ def save_document(
     `may_ask` is False on the GUI thread, where the save panel would wait for
     itself: a save that needs to ask where fails there instead.
     """
-    app = session.editor
     refused = _refuses_to_save(session)
     if refused:
         logger.warning("save refused: %s", refused)
         return {"error": SaveOutcome.DECLINED}
-
-    if request.password:
+    # The password the save carries is the document's from now on, File >
+    # Protect's new one or "" after Delete password; but only once it is on
+    # disk. Kept after a cancelled or failed save, the next save, a print or
+    # the one on close, wrote it under a password that never took.
+    previous = session.password
+    if request.password is not None:
         session.password = request.password
+    outcome = _save(session, request, may_ask=may_ask)
+    if outcome["error"] != SaveOutcome.SAVED:
+        session.password = previous
+    return outcome
+
+
+def _save(session: Session, request: SaveRequest, *, may_ask: bool) -> dict:
+    """save_document, once the session may be saved and has its password."""
+    app = session.editor
     open_file = session.read_current_document()
     untitled = open_file is not None and is_inside(session.scratch, open_file)
     plan = plan_save(

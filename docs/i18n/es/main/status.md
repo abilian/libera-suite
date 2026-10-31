@@ -12,7 +12,7 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 | **Abrir y guardar** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Save, Save As, New. |
 | **Exportar** | Save As ofrece una lista de formatos para cada aplicación, PDF incluido. Cada formato ofrecido se comprueba con una conversión real, cuyo texto se vuelve a leer. |
 | **PDF** | Comentarios, resaltados y dibujos, formularios rellenados, páginas añadidas, eliminadas, giradas y movidas, pequeñas correcciones de texto. Al guardar, tus cambios van después del original, que queda como estaba. [Trabajar con documentos](../guide/documents.md#pdfs) tiene el detalle. |
-| **Documentos con contraseña** | Los documentos, hojas de cálculo, presentaciones y PDF protegidos con contraseña la piden, y al guardar se conserva. [Trabajar con documentos](../guide/documents.md#passwords) tiene los detalles. |
+| **Documentos con contraseña** | Los documentos, hojas de cálculo, presentaciones y PDF protegidos con contraseña la piden, y al guardar se conserva. Archivo ▸ Proteger pone una, la cambia o la quita, salvo en un PDF. [Trabajar con documentos](../guide/documents.md#passwords) tiene los detalles. |
 | **Imágenes** | Se conservan al abrir y al guardar; Insertar ▸ Imagen funciona. |
 | **Imprimir** | Genera un PDF, pregunta dónde guardarlo y lo abre en tu visor de PDF. |
 | **Corrección ortográfica** | Seis idiomas, con sugerencias. Más abajo, los detalles. |
@@ -57,7 +57,7 @@ Si te encuentras con algo que *no* está en esta lista, [cuéntanoslo](../feedba
 
 ### En la ventana del documento
 
-- **Poner una contraseña a un documento**, o cambiarla o quitarla. Un documento que ya tiene una se abre y se guarda, conservándola.
+- **Poner una contraseña a un PDF**, o cambiar o quitar la suya. Un PDF que ya tiene una se abre y se guarda, conservándola; los documentos, hojas de cálculo y presentaciones tienen Archivo ▸ Proteger.
 - **Firmas digitales.**
 - **Combinar correspondencia.**
 - **Complementos.** Desactivados en el proyecto original de este fork, así que el panel nunca aparece.

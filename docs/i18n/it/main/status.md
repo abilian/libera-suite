@@ -12,7 +12,7 @@ L'interfaccia di Libera Suite è in inglese: menu e pulsanti sono citati qui com
 | **Aprire e salvare** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Save, Save As, New. |
 | **Esportare** | Save As propone un elenco di formati per ogni applicazione, PDF compreso. Ogni formato proposto è verificato con una conversione reale, di cui si rilegge il testo. |
 | **PDF** | Commenti, evidenziazioni e disegni, moduli compilati, pagine aggiunte, eliminate, ruotate e spostate, piccole correzioni di testo. Il salvataggio aggiunge le tue modifiche dopo l'originale, che resta com'era. [Lavorare con i documenti](../guide/documents.md#pdfs) ha i dettagli. |
-| **Documenti protetti da password** | Documenti, fogli di calcolo, presentazioni e PDF protetti da password la chiedono, e il salvataggio la conserva. [Lavorare con i documenti](../guide/documents.md#passwords) ha i dettagli. |
+| **Documenti protetti da password** | Documenti, fogli di calcolo, presentazioni e PDF protetti da password la chiedono, e il salvataggio la conserva. File ▸ Proteggi ne dà una, la cambia o la toglie, tranne che per un PDF. [Lavorare con i documenti](../guide/documents.md#passwords) ha i dettagli. |
 | **Immagini** | Conservate all'apertura e al salvataggio; Inserisci ▸ Immagine funziona. |
 | **Stampare** | Genera un PDF, chiede dove conservarlo e lo apre nel tuo lettore di PDF. |
 | **Controllo ortografico** | Sei lingue, con suggerimenti. Vedi sotto. |
@@ -57,7 +57,7 @@ Se incontri qualcosa che *non* è in questo elenco, [segnalacelo](../feedback.md
 
 ### Nella finestra del documento
 
-- **Dare una password a un documento**, o cambiarla o toglierla. Un documento che ne ha una si apre e si salva, conservandola.
+- **Dare una password a un PDF**, o cambiare o togliere la sua. Un PDF che ne ha una si apre e si salva, conservandola; documenti, fogli di calcolo e presentazioni hanno File ▸ Proteggi.
 - **Firme digitali.**
 - **Stampa unione.**
 - **Plugin.** Disattivati nel progetto originale di questo fork, quindi il pannello non compare mai.

@@ -47,6 +47,8 @@ def test_a_pdf_opens_and_shows_its_text(editor_with, tmp_path, needs_the_pdf_edi
 
     assert "pdfeditor" in editor.frame.url
     assert editor.report()["errors"] == []
+    # No File > Protect: x2t's change of a PDF's password pads every stream.
+    assert not editor.frame.evaluate("() => Asc.editor.asc_isProtectionSupport()")
     # What was drawn, not what was parsed: the document area only, so the
     # toolbar's icons cannot pass for text.
     shot = tmp_path / "page.png"

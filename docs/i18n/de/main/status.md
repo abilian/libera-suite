@@ -12,7 +12,7 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 | **Öffnen und speichern** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Save, Save As, New. |
 | **Exportieren** | Save As bietet für jede Anwendung eine Formatliste an, PDF eingeschlossen. Jedes angebotene Format wird durch eine echte Konvertierung geprüft, deren Text danach wieder gelesen wird. |
 | **PDFs** | Kommentare, Markierungen und Zeichnungen, ausgefüllte Formulare, eingefügte, gelöschte, gedrehte und verschobene Seiten, kleine Textkorrekturen. Beim Speichern kommen Ihre Änderungen hinter das Original, das bleibt, wie es war. [Mit Dokumenten arbeiten](../guide/documents.md#pdfs) hat die Einzelheiten. |
-| **Kennwortgeschützte Dokumente** | Kennwortgeschützte Dokumente, Tabellen, Präsentationen und PDFs fragen nach ihrem Kennwort, und beim Speichern bleibt es erhalten. [Mit Dokumenten arbeiten](../guide/documents.md#passwords) beschreibt die Einzelheiten. |
+| **Kennwortgeschützte Dokumente** | Kennwortgeschützte Dokumente, Tabellen, Präsentationen und PDFs fragen nach ihrem Kennwort, und beim Speichern bleibt es erhalten. Datei ▸ Schützen gibt eines, ändert oder entfernt es, außer bei einem PDF. [Mit Dokumenten arbeiten](../guide/documents.md#passwords) beschreibt die Einzelheiten. |
 | **Bilder** | Bleiben beim Öffnen und Speichern erhalten; Einfügen ▸ Bild funktioniert. |
 | **Drucken** | Erzeugt ein PDF, fragt, wo es aufbewahrt werden soll, und öffnet es in Ihrem PDF-Betrachter. |
 | **Rechtschreibprüfung** | Sechs Sprachen, mit Vorschlägen. Siehe unten. |
@@ -57,7 +57,7 @@ Wenn Sie auf etwas stoßen, das *nicht* auf dieser Liste steht, [melden Sie es u
 
 ### Im Dokumentfenster
 
-- **Einem Dokument ein Kennwort geben**, es ändern oder entfernen. Ein Dokument, das eines hat, öffnet sich und wird mit ihm gespeichert.
+- **Einem PDF ein Kennwort geben**, sein eigenes ändern oder entfernen. Ein PDF, das eines hat, öffnet sich und wird mit ihm gespeichert; Dokumente, Tabellen und Präsentationen haben Datei ▸ Schützen.
 - **Digitale Signaturen.**
 - **Serienbriefe.**
 - **Plugins.** In diesem Fork vom Upstream-Projekt abgeschaltet, daher erscheint das Panel nie.

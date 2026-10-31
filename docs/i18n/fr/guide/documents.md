@@ -133,7 +133,7 @@ Un document protégé par un mot de passe, par Word, LibreOffice ou Libera Suite
 
 **La protection propre à LibreOffice 26 ne se lit pas encore.** Par défaut, LibreOffice 26 chiffre un fichier OpenDocument d'une façon que Libera Suite ne lit pas, et Libera Suite le dit au lieu de demander le mot de passe. LibreOffice écrit l'ancien chiffrement, que Libera Suite lit, quand sa version du format ODF est réglée sur 1.3.
 
-Donner un mot de passe à un document, le changer ou le retirer n'est pas encore possible.
+**Fichier ▸ Protéger** donne un mot de passe à un document avec *Ajouter un mot de passe*, et propose *Modifier le mot de passe* et *Supprimer le mot de passe* une fois qu'il en a un. Chacun enregistre le document aussitôt. Il est proposé pour les fichiers Word, Excel, PowerPoint et OpenDocument, les formats qui peuvent porter un mot de passe. Un PDF ne peut pas encore recevoir de mot de passe, ni changer le sien.
 
 ## Correction orthographique {#spell-checking}
 
