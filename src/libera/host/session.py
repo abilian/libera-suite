@@ -35,6 +35,16 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class PasswordAsked:
+    """The editor is to ask for the document's password. `code` is x2t's exit,
+    which the editor's dialog takes: 91 says the last one was wrong. `answer`
+    tries a password, and leaves the next question here if it fails."""
+
+    code: int
+    answer: Callable[[str], None]
+
+
 @dataclass(eq=False)
 class Session:
     """One window: where its files are, what is open in it, and what the host
@@ -78,11 +88,17 @@ class Session:
     # The conversion of the document, while its window loads the editor
     # (opening.convert_behind); asking for Editor.bin waits for it.
     converting: threading.Thread | None = field(default=None, repr=False)
-    # The password of a PDF that asks for one. The editor reads the PDF itself
-    # and asks for it, and hands it over with each save; kept here so that a
-    # save on close, which the editor takes no part in, has it too. In memory
-    # only: never written, never logged.
+    # The password of a protected document. The editor asks for it: for a PDF,
+    # which it reads itself, and hands it over with each save; for the rest,
+    # when x2t could not open the document without it (`password_asked`).
+    # Kept here so that every save has it, a save on close too, which the
+    # editor takes no part in: a save without it is written unprotected. In
+    # memory only: never written but into x2t's job, never logged.
     password: str = field(default="", repr=False)
+    # Set while the editor is to ask for the document's password: x2t's exit,
+    # 90 for none given or 91 for a wrong one, and what tries the one typed
+    # (opening.ask_password).
+    password_asked: PasswordAsked | None = field(default=None, repr=False)
 
     @property
     def id(self) -> str:
@@ -219,6 +235,9 @@ class Session:
                 json.dumps({
                     "document": str(self.read_current_document() or ""),
                     "at": time.time(),
+                    # Recovered, its edits open without the password, which
+                    # its saves need (opening._recover).
+                    "protected": bool(self.password),
                 }),
             )
         else:

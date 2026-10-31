@@ -282,6 +282,19 @@
   const currentBody = getFromHostSync("/__host__/current");
   if (currentBody) docPath = JSON.parse(currentBody).path || "";
 
+  // The converted document, or the question of its password: x2t could not
+  // open it without one (90), or not with the one typed (91). The editor's
+  // dialog takes either code, and its answer is SetAdvancedOptions.
+  function handOver(payload) {
+    if (payload.needPassword) {
+      w.asc_initAdvancedOptions(payload.needPassword);
+      return;
+    }
+    setTimeout(() => {
+      w.DesktopOfflineAppDocumentEndLoad(DOC_DIR, payload.b64, payload.len);
+    }, 0);
+  }
+
   const impl = {
     // --- lifecycle
     // Once per page, however many times the editor asks.
@@ -313,9 +326,7 @@
       if (w.LIBERA_LOCKED_BY && api && api.asc_setLocalRestrictions) {
         api.asc_setLocalRestrictions(w.Asc.c_oAscLocalRestrictionType.Locked, true);
       }
-      setTimeout(() => {
-        w.DesktopOfflineAppDocumentEndLoad(DOC_DIR, payload.b64, payload.len);
-      }, 0);
+      handOver(payload);
     },
     CheckUserId: () => "poc-user",
     // The real path of the open document, from the host. The title bar, "open
@@ -611,7 +622,29 @@
       if (request.type === "clear") return;
       checker.command(request);
     },
-    SetAdvancedOptions: () => {},
+    // The password the editor's dialog was given, as the editor writes it for
+    // x2t's job: "<m_sPassword>...</m_sPassword>", escaped as XML. Never
+    // logged. Cancelling the dialog closes the window instead.
+    SetAdvancedOptions: (param) => {
+      const job = new DOMParser().parseFromString(
+        `<job>${param}</job>`,
+        "application/xml",
+      );
+      const password = job.querySelector("m_sPassword");
+      if (password === null) return;
+      postToHost(
+        "/__host__/password",
+        JSON.stringify({ password: password.textContent }),
+        (xhr) => {
+          if (xhr.status === 200) handOver(answer(xhr));
+          else
+            report(
+              "error",
+              `the host could not open the document (HTTP ${xhr.status})`,
+            );
+        },
+      );
+    },
     SaveQuestion: () => {},
     LoadFontBase64: () => {},
     PreloadCryptoImage: () => {},

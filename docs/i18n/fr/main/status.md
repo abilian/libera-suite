@@ -12,6 +12,7 @@ L'interface de Libera Suite est en anglais : les noms des menus et des boutons s
 | **Ouvrir et enregistrer** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Save, Save As, New. |
 | **Exporter** | Save As propose une liste de formats pour chaque application, PDF compris. Chaque format proposé est vérifié par une conversion réelle, dont le texte est relu. |
 | **PDF** | Commentaires, surlignages et dessins, formulaires remplis, pages ajoutées, supprimées, pivotées et déplacées, petites corrections de texte. L'enregistrement ajoute vos modifications après l'original, qui reste tel quel. [Travailler avec les documents](../guide/documents.md#pdfs) donne le détail. |
+| **Documents protégés par un mot de passe** | Les documents, classeurs, présentations et PDF protégés par un mot de passe le demandent, et l'enregistrement le garde. [Travailler avec les documents](../guide/documents.md#passwords) donne le détail. |
 | **Images** | Conservées à l'ouverture et à l'enregistrement ; Insertion ▸ Image fonctionne. |
 | **Imprimer** | Produit un PDF, demande où le conserver et l'ouvre dans votre lecteur de PDF. |
 | **Correction orthographique** | Six langues, avec suggestions. Voir plus bas. |
@@ -38,6 +39,7 @@ L'interface de Libera Suite est en anglais : les noms des menus et des boutons s
 | **Lancée depuis un terminal, le Dock affiche « Python »** | Seulement quand vous lancez `libera` dans un terminal sous macOS. Une icône du Dock prend le nom du paquet d'application depuis lequel le programme a été lancé : ici celui de l'interpréteur Python, que l'application ne peut pas changer. L'icône et la barre de menus sont les nôtres dans tous les cas ; `Libera.app` affiche bien Libera. Un document déposé sur cette icône Python est refusé au nom de Python ; celle de `Libera.app` l'accepte. |
 | **Diagrams ne peut pas enregistrer** | Il ouvre un `.vsdx` et l'affiche. Le convertisseur ne sait écrire aucun format Visio : il n'y a donc rien à enregistrer, ni de modèle vierge pour commencer. |
 | **Le texte modifié d'un PDF ne se recompose pas** | Une ligne modifiée avec *Modifier le texte* garde sa largeur : les nouveaux mots passent sur une ligne à part, dans une de nos polices quand celle du PDF ne peut pas servir. |
+| **Les fichiers protégés par LibreOffice 26 ne s'ouvrent pas** | Par défaut, LibreOffice 26 chiffre un fichier OpenDocument d'une façon que Libera Suite ne sait pas encore lire. Libera Suite le dit au lieu de demander le mot de passe. |
 | **Les PDF certifiés ne s'enregistrent pas** | Un PDF certifié contre toute modification. L'enregistrement échoue avec un message général, et le fichier reste tel quel. |
 | **Une barre de menus réduite, avec peu de raccourcis affichés sous Linux et aucun sous Windows** | Linux et Windows ont File, Edit, View et Help, dessinés dans la fenêtre. Sous Linux, Nouveau, Ouvrir et Fermer affichent Ctrl-N, Ctrl-O et Ctrl-W, et aucun autre élément n'affiche sa touche ; sous Windows, aucun. Les touches fonctionnent pourtant : Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Maj-S, Ctrl-P et Ctrl-Z. macOS a les mêmes menus plus Window, avec les raccourcis habituels. |
 | **Pas d'onglets sous Linux ni Windows** | Une fenêtre par document. macOS a les onglets. |
@@ -55,7 +57,7 @@ Si vous rencontrez un problème qui ne figure *pas* dans cette liste, [signalez-
 
 ### Dans la fenêtre du document
 
-- **Les documents protégés par mot de passe.** Un PDF qui demande un mot de passe s'ouvre et s'enregistre en le gardant ; aucun autre type ne s'ouvre, et aucun document ne peut recevoir de mot de passe.
+- **Donner un mot de passe à un document**, ou le changer ou le retirer. Un document qui en a un s'ouvre et s'enregistre en le gardant.
 - **Les signatures numériques.**
 - **Le publipostage.**
 - **Les modules complémentaires.** Ils sont désactivés en amont dans ce fork : le panneau n'apparaît jamais.

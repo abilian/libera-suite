@@ -38,6 +38,7 @@
   "Hide Others": "Többi elrejtése",
   "In PowerShell:\n\n{command}": "PowerShellben:\n\n{command}",
   "In a terminal:\n\n{command}": "Terminálban:\n\n{command}",
+  "It is protected by a password, with an encryption Libera Suite cannot read yet. LibreOffice 26 encrypts this way.": "Jelszóval védett, olyan titkosítással, amelyet a Libera Suite még nem tud olvasni. A LibreOffice 26 így titkosít.",
   "Keep them": "Megtartás",
   "Leave It": "Hagyja így",
   "Libera Help": "Libera súgó",

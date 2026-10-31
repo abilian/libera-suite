@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from libera import timeline
 from libera.host import convert, hooks, locking, recents
-from libera.host.session import SESSIONS, Session
+from libera.host.session import SESSIONS, PasswordAsked, Session
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -29,16 +29,59 @@ def open_document(session: Session, document: pathlib.Path) -> None:
     if stale and hooks.shell.ask_to_recover(document):
         _recover(session, document, stale)
         return
-    convert.convert_to_editor_bin(session, document)
+    try:
+        convert.convert_to_editor_bin(session, document)
+    except convert.PasswordNeededError as e:
+        # Nobody to show a failure to: the request that answered fails.
+        ask_password(session, document, e.code, lambda _e: None, lambda: None)
+    else:
+        _converted(session, document)
     if stale and stale != session.work:
         # "Open Saved Version" declines the edits wherever they were. In this
         # session's directory the conversion has just replaced them; left in
         # another, they were offered again on every open.
         (stale / "unsaved.json").unlink(missing_ok=True)
     session.write_current_document(document)
+    locking.hold(session, document)
+
+
+def _converted(session: Session, document: pathlib.Path) -> None:
+    """What follows a document's conversion: it is open, as it is on disk."""
     session.unsaved_marker.unlink(missing_ok=True)
     recents.remember_recent(session, document)
-    locking.hold(session, document)
+
+
+def ask_password(
+    session: Session,
+    document: pathlib.Path,
+    code: int,
+    failed: Callable[[convert.ConversionError], None],
+    done: Callable[[], None],
+) -> None:
+    """Leave the editor the question of the document's password, which it
+    asks with its own dialog when it asks for the document
+    (server/document.py). The password typed converts the document, then
+    `done`; a wrong one leaves the question again, saying so with x2t's
+    WRONG_PASSWORD; any other failure is `failed`'s to show, and raised."""
+
+    def answer(password: str) -> None:
+        session.password = password
+        try:
+            convert.convert_to_editor_bin(session, document)
+        except convert.PasswordNeededError as e:
+            session.password = ""
+            ask_password(session, document, e.code, failed, done)
+            return
+        except convert.ConversionError as e:
+            session.password = ""
+            session.password_asked = None
+            failed(e)
+            raise
+        session.password_asked = None
+        _converted(session, document)
+        done()
+
+    session.password_asked = PasswordAsked(code, answer)
 
 
 def begin_opening(session: Session, document: pathlib.Path) -> bool:
@@ -77,12 +120,14 @@ def convert_behind(
     def run() -> None:
         try:
             convert.convert_to_editor_bin(session, document)
+        except convert.PasswordNeededError as e:
+            ask_password(session, document, e.code, failed, done)
+            return
         except convert.ConversionError as e:
             failed(e)
             return
         timeline.mark("converted", again=True)
-        session.unsaved_marker.unlink(missing_ok=True)
-        recents.remember_recent(session, document)
+        _converted(session, document)
         done()
 
     session.converting = threading.Thread(
@@ -103,6 +148,39 @@ def _recover(session: Session, document: pathlib.Path, stale: pathlib.Path) -> N
     session.write_current_document(document)
     recents.remember_recent(session, document)
     locking.hold(session, document)
+    marker = json.loads(session.unsaved_marker.read_text(encoding="utf-8"))
+    if marker.get("protected") and session.editor.converted:
+        _ask_recovered_password(session, document)
+
+
+def _ask_recovered_password(session: Session, document: pathlib.Path) -> None:
+    """A protected document's recovered edits are decrypted already, and open
+    without its password; saved without it, they would be written
+    unprotected. So the editor asks for it, as on any open, and the password
+    typed is checked against the document on disk, in a session of its own
+    that is then deleted: a mistyped one would otherwise become the
+    document's. A PDF needs none of this, since the editor asks itself."""
+
+    def answer(password: str) -> None:
+        check = Session(
+            payload=session.payload,
+            work=session.work / "password-check",
+            fonts=session.fonts,
+            document=document,
+            app=session.app,
+            password=password,
+        )
+        try:
+            convert.convert_to_editor_bin(check, document)
+        except convert.PasswordNeededError as e:
+            session.password_asked = PasswordAsked(e.code, answer)
+            return
+        finally:
+            shutil.rmtree(check.work, ignore_errors=True)
+        session.password = password
+        session.password_asked = None
+
+    session.password_asked = PasswordAsked(convert.NO_PASSWORD, answer)
 
 
 def has_unsaved_edits(found: Session, document: pathlib.Path) -> bool:

@@ -12,6 +12,7 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 | **Openen en opslaan** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Opslaan, Opslaan als, Nieuw. |
 | **Exporteren** | Save As biedt per programma een lijst met formaten, pdf inbegrepen. Elk aangeboden formaat is gecontroleerd door er een document naar te converteren en de tekst ervan terug te lezen. |
 | **Pdf's** | Opmerkingen, markeringen en tekeningen, ingevulde formulieren, pagina's toegevoegd, verwijderd, gedraaid en verplaatst, kleine tekstcorrecties. Bij het opslaan komen je wijzigingen achter het origineel, dat blijft zoals het was. [Werken met documenten](../guide/documents.md#pdfs) heeft de details. |
+| **Documenten met een wachtwoord** | Documenten, spreadsheets, presentaties en pdf's met een wachtwoord vragen erom, en bij het opslaan blijft het behouden. [Werken met documenten](../guide/documents.md#passwords) geeft de details. |
 | **Afbeeldingen** | Blijven behouden bij openen en opslaan; Invoegen ▸ Afbeelding werkt. |
 | **Afdrukken** | Maakt een pdf, vraagt waar je die wilt bewaren en opent hem in je pdf-viewer. |
 | **Spellingcontrole** | Zes talen, met suggesties. Zie hieronder. |
@@ -38,6 +39,7 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 | **Gestart vanuit een terminal, toont het Dock „Python”** | Alleen wanneer je `libera` op macOS in een terminal start. Een symbool in het Dock krijgt de naam van de bundel waaruit het gestart is: hier die van de Python-interpreter, en daar kan niets in de toepassing iets aan veranderen. Het pictogram en de menubalk zijn hoe dan ook van ons; `Libera.app` toont gewoon Libera. Een document dat je op dat Python-symbool sleept, wordt in naam van Python geweigerd; het symbool van `Libera.app` neemt het wel aan. |
 | **Diagrams kan niet opslaan** | Het opent een `.vsdx` en toont die. De converter kan geen enkel Visio-formaat schrijven, dus er valt niets op te slaan en er is geen leeg sjabloon om mee te beginnen. |
 | **Gewijzigde pdf-tekst loopt niet opnieuw door** | Een regel gewijzigd met *Tekst bewerken* houdt zijn breedte, dus nieuwe woorden komen op een eigen regel, in een van onze lettertypen als dat van de pdf niet te gebruiken is. |
+| **Bestanden die LibreOffice 26 heeft beveiligd, openen niet** | Standaard versleutelt LibreOffice 26 een OpenDocument-bestand op een manier die Libera Suite nog niet kan lezen. Libera Suite zegt dat in plaats van om het wachtwoord te vragen. |
 | **Gecertificeerde pdf's kunnen niet worden opgeslagen** | Een pdf die tegen elke wijziging is gecertificeerd. Het opslaan mislukt met een algemene melding, en het bestand blijft zoals het was. |
 | **Een beperkte menubalk, met weinig zichtbare sneltoetsen op Linux en geen op Windows** | Linux en Windows krijgen Bestand, Bewerken, Weergave en Help, getekend in het venster. Op Linux tonen Nieuw, Openen en Sluiten Ctrl-N, Ctrl-O en Ctrl-W, en geen ander item toont zijn toets; op Windows geen enkel. De toetsen werken wel: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z. macOS krijgt die menu's plus Window, met de gebruikelijke sneltoetsen. |
 | **Geen tabbladen op Linux en Windows** | Daar één venster per document. macOS heeft tabbladen. |
@@ -55,7 +57,7 @@ Loop je tegen iets aan dat *niet* op deze lijst staat, [laat het ons weten](../f
 
 ### In het documentvenster
 
-- **Documenten met een wachtwoord.** Een pdf die om een wachtwoord vraagt, opent en wordt opgeslagen, met zijn wachtwoord; geen ander soort opent, en geen enkel document kan een wachtwoord krijgen.
+- **Een document een wachtwoord geven**, of het wijzigen of verwijderen. Een document dat er een heeft, opent en wordt opgeslagen met zijn wachtwoord.
 - **Digitale handtekeningen.**
 - **Afdruk samenvoegen.**
 - **Plug-ins.** In deze fork upstream uitgeschakeld, dus het paneel verschijnt nooit.

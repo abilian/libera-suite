@@ -38,6 +38,7 @@
   "Hide Others": "ほかを隠す",
   "In PowerShell:\n\n{command}": "PowerShell で:\n\n{command}",
   "In a terminal:\n\n{command}": "ターミナルで:\n\n{command}",
+  "It is protected by a password, with an encryption Libera Suite cannot read yet. LibreOffice 26 encrypts this way.": "パスワードで保護されており、Libera Suite がまだ読み取れない暗号化方式が使われています。LibreOffice 26 はこの方式で暗号化します。",
   "Keep them": "残す",
   "Leave It": "そのままにする",
   "Libera Help": "Libera ヘルプ",

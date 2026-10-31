@@ -45,6 +45,25 @@ class ConversionError(RuntimeError):
     """
 
 
+# x2t's exits for a document that needs its password: none was given, or the
+# wrong one (CONVERT_DRM and CONVERT_PASSWORD in core's errors.h).
+NO_PASSWORD, WRONG_PASSWORD = 90, 91
+
+
+class PasswordNeededError(ConversionError):
+    """The document is protected, and x2t was given no password or the wrong
+    one: `code` is its exit, NO_PASSWORD or WRONG_PASSWORD, which the editor's
+    own password dialog takes (`asc_initAdvancedOptions`)."""
+
+    def __init__(self, name: str, code: int) -> None:
+        super().__init__(f"{name} needs its password (exit status {code})")
+        self.code = code
+
+
+class UnsupportedEncryptionError(ConversionError):
+    """The document is protected with an encryption x2t cannot read."""
+
+
 # How many x2t may run at once. Each holds tens to hundreds of MB -- 71 MB
 # converting a 3 MB docx, 117 MB a 2.9 MB xlsx (measured 2026-10-04) -- and a
 # dozen documents opened together started a dozen. The rest wait their turn.
@@ -221,23 +240,44 @@ def write_csv_open_job(
 PACKAGE_LIMIT = 1 << 30
 
 
-def check_package(src: pathlib.Path) -> None:
-    """Refuse a package that says it unpacks to more than PACKAGE_LIMIT,
-    before x2t starts on it. Anything that is not a ZIP package is x2t's."""
-    if not zipfile.is_zipfile(src):
-        return
-    try:
-        with zipfile.ZipFile(src) as package:
-            total = sum(member.file_size for member in package.infolist())
-    except zipfile.BadZipFile:
-        # Damaged past what Python reads: x2t, which reads more, decides.
-        return
+# What LibreOffice 26 encrypts an OpenDocument file with by default, as its
+# manifest names them. x2t reads AES-CBC with PBKDF2 only: given either of
+# these, it exits 0 having written nothing, whatever the password
+# (notes/plans/release-0.8.md, measured 2026-10-30).
+UNREADABLE_ENCRYPTION = (b"aes256-gcm", b"argon2id")
+
+
+MANIFEST = "META-INF/manifest.xml"
+
+
+def _check_size(src: pathlib.Path, package: zipfile.ZipFile) -> None:
+    total = sum(member.file_size for member in package.infolist())
     if total > PACKAGE_LIMIT:
         msg = (
             f"{src.name} unpacks to {total >> 20} MB,"
             f" more than {PACKAGE_LIMIT >> 20} MB"
         )
         raise ConversionError(msg)
+
+
+def check_package(src: pathlib.Path) -> None:
+    """Refuse a package before x2t starts on it: one that says it unpacks to
+    more than PACKAGE_LIMIT, or an OpenDocument file encrypted in a way x2t
+    cannot read, which would ask for a password it then cannot use. Anything
+    that is not a ZIP package is x2t's."""
+    if not zipfile.is_zipfile(src):
+        return
+    try:
+        with zipfile.ZipFile(src) as package:
+            # Before reading any part of it, the manifest included.
+            _check_size(src, package)
+            manifest = package.read(MANIFEST) if MANIFEST in package.namelist() else b""
+    except zipfile.BadZipFile:
+        # Damaged past what Python reads: x2t, which reads more, decides.
+        return
+    if any(name in manifest for name in UNREADABLE_ENCRYPTION):
+        msg = f"{src.name} is encrypted with AES-GCM or Argon2, which x2t cannot read"
+        raise UnsupportedEncryptionError(msg)
 
 
 def convert_to_editor_bin(session: Session, src: pathlib.Path) -> None:
@@ -274,6 +314,9 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
         shutil.rmtree(session.doc, ignore_errors=True)
         staged.rename(session.doc)
         return
+    # A protected document's password goes in the job, never on the command
+    # line, where any process listing shows it; the job is deleted after.
+    secret = {"m_sPassword": session.password} if session.password else {}
     if suffix in CSV_SUFFIXES:
         run = run_x2t(session, str(write_csv_open_job(session, src, editor_bin)))
     elif suffix in {".md", ".mht", ".fb2", ".epub", ".doc"}:
@@ -285,26 +328,31 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
         job = write_job(
             session,
             "open.xml",
+            session.work,
             m_sFileFrom=src,
             m_sFileTo=editor_bin,
             m_nFormatTo=CANVAS_WORD,
             m_sFontDir=session.font_dir,
             m_nCsvTxtEncoding=UTF_8,
+            **secret,
         )
         run = run_x2t(session, str(job))
-    elif suffix in {".xlsb", ".fods", ".fodp"}:
+    elif suffix in {".xlsb", ".fods", ".fodp"} or secret:
         # The three-argument form picks the kind of document itself, and
         # picked wrong for these, exit 0 each time: an .xlsb as an empty
         # presentation (PPTY), so no .xlsb ever opened, Excel's included; a
         # flat ODF spreadsheet or presentation as a text document (DOCY),
         # which then saved as nothing but PDF. The job names the editor's own.
+        # It has no place for a password either.
         job = write_job(
             session,
             "open.xml",
+            session.work,
             m_sFileFrom=src,
             m_sFileTo=editor_bin,
             m_nFormatTo=CANVASES[session.editor.doctype],
             m_sFontDir=session.font_dir,
+            **secret,
         )
         run = run_x2t(session, str(job))
     else:
@@ -314,6 +362,12 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
             str(editor_bin),
             str(session.font_dir / "font_selection.bin"),
         )
+    if secret:
+        (session.work / "open.xml").unlink()
+    if run.returncode in {NO_PASSWORD, WRONG_PASSWORD}:
+        logger.info("%s asks for its password (rc=%s)", src.name, run.returncode)
+        shutil.rmtree(staged, ignore_errors=True)
+        raise PasswordNeededError(src.name, run.returncode)
     if run.returncode != 0 or not editor_bin.is_file():
         logger.error("open failed rc=%s\n%s", run.returncode, choose_x2t_output(run))
         shutil.rmtree(staged, ignore_errors=True)
@@ -382,16 +436,23 @@ def _link_or_copy(src: str, dst: str) -> None:
 
 
 def _passwords(session: Session) -> dict[str, str]:
-    """A PDF's password for x2t, to open the PDF with and to save it under.
+    """A protected document's password for x2t, to save it under.
 
-    Both, and the same: given an opening password alone, x2t takes the empty
-    saving one for a change of password, and rewrites the whole PDF to remove
-    it (measured 2026-10-30). The job file holding it is in the export's own
-    directory, which mkdtemp makes readable by its owner alone, and which goes
-    when the export does.
+    Given none, x2t writes the document unprotected, exit 0, and nothing says
+    so. Given one, it encrypts every OOXML and OpenDocument format and PDF,
+    and writes the formats that have no encryption, text and CSV among them,
+    as they are (measured 2026-10-30): so it goes to every save, and x2t
+    decides. A PDF, which x2t opens itself, needs it to open with too, and the
+    same: given an opening password alone, x2t takes the empty saving one for
+    a change of password, and rewrites the whole PDF to remove it.
+
+    The job file holding it is in the export's own directory, which mkdtemp
+    makes readable by its owner alone, and which goes when the export does.
     """
-    if not session.password or session.editor.converted:
+    if not session.password:
         return {}
+    if session.editor.converted:
+        return {"m_sSavePassword": session.password}
     return {"m_sPassword": session.password, "m_sSavePassword": session.password}
 
 

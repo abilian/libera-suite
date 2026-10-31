@@ -38,6 +38,7 @@
   "Hide Others": "Digərlərini gizlət",
   "In PowerShell:\n\n{command}": "PowerShell-də:\n\n{command}",
   "In a terminal:\n\n{command}": "Terminalda:\n\n{command}",
+  "It is protected by a password, with an encryption Libera Suite cannot read yet. LibreOffice 26 encrypts this way.": "O, parolla qorunur və Libera Suite-in hələ oxuya bilmədiyi şifrələmə ilə şifrələnib. LibreOffice 26 belə şifrələyir.",
   "Keep them": "Saxlayın",
   "Leave It": "Olduğu kimi saxla",
   "Libera Help": "Libera yardımı",

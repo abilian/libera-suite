@@ -38,6 +38,7 @@
   "Hide Others": "Թաքցնել մյուսները",
   "In PowerShell:\n\n{command}": "PowerShell-ում՝\n\n{command}",
   "In a terminal:\n\n{command}": "Տերմինալում՝\n\n{command}",
+  "It is protected by a password, with an encryption Libera Suite cannot read yet. LibreOffice 26 encrypts this way.": "Այն պաշտպանված է գաղտնաբառով, գաղտնագրմամբ, որը Libera Suite-ը դեռ չի կարող կարդալ։ LibreOffice 26-ն այսպես է գաղտնագրում։",
   "Keep them": "Պահել դրանք",
   "Leave It": "Թողնել այդպես",
   "Libera Help": "Libera օգնություն",

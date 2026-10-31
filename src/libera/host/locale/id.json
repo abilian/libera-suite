@@ -38,6 +38,7 @@
   "Hide Others": "Sembunyikan Lainnya",
   "In PowerShell:\n\n{command}": "Di PowerShell:\n\n{command}",
   "In a terminal:\n\n{command}": "Di terminal:\n\n{command}",
+  "It is protected by a password, with an encryption Libera Suite cannot read yet. LibreOffice 26 encrypts this way.": "Dokumen ini dilindungi kata sandi, dengan enkripsi yang belum dapat dibaca Libera Suite. LibreOffice 26 mengenkripsi dengan cara ini.",
   "Keep them": "Simpan",
   "Leave It": "Biarkan",
   "Libera Help": "Bantuan Libera",

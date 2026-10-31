@@ -38,6 +38,7 @@
   "Hide Others": "Ẩn mục khác",
   "In PowerShell:\n\n{command}": "Trong PowerShell:\n\n{command}",
   "In a terminal:\n\n{command}": "Trong cửa sổ dòng lệnh:\n\n{command}",
+  "It is protected by a password, with an encryption Libera Suite cannot read yet. LibreOffice 26 encrypts this way.": "Tài liệu được bảo vệ bằng mật khẩu, với kiểu mã hóa mà Libera Suite chưa đọc được. LibreOffice 26 mã hóa theo cách này.",
   "Keep them": "Giữ lại",
   "Leave It": "Để nguyên",
   "Libera Help": "Trợ giúp Libera",

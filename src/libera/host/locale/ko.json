@@ -38,6 +38,7 @@
   "Hide Others": "기타 가리기",
   "In PowerShell:\n\n{command}": "PowerShell에서:\n\n{command}",
   "In a terminal:\n\n{command}": "터미널에서:\n\n{command}",
+  "It is protected by a password, with an encryption Libera Suite cannot read yet. LibreOffice 26 encrypts this way.": "암호로 보호되어 있으며, Libera Suite가 아직 읽을 수 없는 암호화 방식을 사용합니다. LibreOffice 26이 이 방식으로 암호화합니다.",
   "Keep them": "유지",
   "Leave It": "그대로 두기",
   "Libera Help": "Libera 도움말",

@@ -38,6 +38,7 @@
   "Hide Others": "Paslēpt citus",
   "In PowerShell:\n\n{command}": "PowerShell:\n\n{command}",
   "In a terminal:\n\n{command}": "Terminālī:\n\n{command}",
+  "It is protected by a password, with an encryption Libera Suite cannot read yet. LibreOffice 26 encrypts this way.": "Tas ir aizsargāts ar paroli, ar šifrējumu, ko Libera Suite vēl nespēj nolasīt. Tā šifrē LibreOffice 26.",
   "Keep them": "Paturēt tos",
   "Leave It": "Atstāt",
   "Libera Help": "Libera palīdzība",

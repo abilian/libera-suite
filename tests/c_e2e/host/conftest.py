@@ -166,12 +166,18 @@ class Editor:
             for frame in self.page.frames
         )
 
-    def give_password(self, password: str) -> None:
-        """Answer the dialog a PDF that asks for a password opens with: the
-        editor reads the PDF itself, and asks before the document is ready."""
-        dialog = self.page.frame_locator("iframe").locator("input[type=password]")
-        dialog.fill(password, timeout=READY)
-        self.page.frame_locator("iframe").get_by_role("button", name="OK").click()
+    def give_password(self, *passwords: str) -> None:
+        """Answer the dialog a protected document opens with, once per
+        password: it asks before the document is ready, again after a wrong
+        one. A PDF the editor reads itself; for the rest the host has it ask
+        (opening.ask_password)."""
+        frame = self.page.frame_locator("iframe")
+        for password in passwords:
+            dialog = frame.locator("input[type=password]")
+            dialog.fill(password, timeout=READY)
+            frame.get_by_role("button", name="OK").click()
+            # The next dialog is another: the one answered goes first.
+            dialog.wait_for(state="detached", timeout=READY)
 
     @property
     def frame(self):
@@ -236,7 +242,7 @@ def editor_with(tmp_path, sample_document, monkeypatch):
         locked_by: str | None = None,
         fonts: Path | None = None,
         init_script: str | None = None,
-        password: str | None = None,
+        password: str | tuple[str, ...] | None = None,
     ) -> Editor:
         document = document or sample_document
         httpd, port, opened = _open(owned, document, locked_by, fonts)
@@ -265,7 +271,9 @@ def editor_with(tmp_path, sample_document, monkeypatch):
         editor = Editor(page, port)  # before the page loads: it watches requests
         page.goto(server.make_editor_url(port, opened, document.name))
         if password is not None:
-            editor.give_password(password)
+            editor.give_password(
+                *((password,) if isinstance(password, str) else password)
+            )
         editor.wait_until_ready()
         return editor
 
