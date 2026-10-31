@@ -1,0 +1,41 @@
+From f653e29b44b1564cb959c14f61fcaa2d2b4f09f6 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Sat, 31 Oct 2026 10:28:43 +0100
+Subject: [PATCH] x2t: refuse an encrypted OOXML file whose integrity check
+ fails
+
+From ElixirOffice's 0010-office-integrity-rejection, without its
+EO_WASM condition. A file with one byte of its encrypted package
+changed failed the HMAC check and opened all the same. Standard
+encryption carries no HMAC and passes as before.
+---
+ X2tConverter/src/lib/crypt.h | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/X2tConverter/src/lib/crypt.h b/X2tConverter/src/lib/crypt.h
+index 67954b9093..384f75ebcc 100644
+--- a/X2tConverter/src/lib/crypt.h
++++ b/X2tConverter/src/lib/crypt.h
+@@ -63,7 +63,8 @@ namespace NExtractTools
+ 
+ 		if (bDataIntegrity == false)
+ 		{
+-		  // there was unauthorized tampering with the file
++			// there was unauthorized tampering with the file
++			return AVS_FILEUTILS_ERROR_CONVERT;
+ 		}
+ 
+ 		COfficeFileFormatChecker OfficeFileFormatChecker;
+@@ -149,7 +150,8 @@ namespace NExtractTools
+ 
+ 		if (bDataIntegrity == false)
+ 		{
+-		  // there was unauthorized tampering with the file
++			// there was unauthorized tampering with the file
++			return AVS_FILEUTILS_ERROR_CONVERT;
+ 		}
+ 
+ 		return 0;
+-- 
+2.55.0
+

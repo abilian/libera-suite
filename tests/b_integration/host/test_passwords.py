@@ -13,7 +13,14 @@ import logging
 
 import pytest
 from support import ScriptedShell
-from support.protected import SECRET, SENTENCE, is_encrypted, make_protected, open_in
+from support.protected import (
+    SECRET,
+    SENTENCE,
+    is_encrypted,
+    make_protected,
+    open_in,
+    tamper,
+)
 
 from libera.host import apps, convert, hooks, session as sessions
 
@@ -110,3 +117,24 @@ def test_recovered_edits_ask_for_the_password_their_saves_need(tmp_path, monkeyp
     assert recovered.password_asked is None
     assert recovered.password == SECRET
     assert not (recovered.work / "password-check").exists()
+
+
+@pytest.mark.parametrize(
+    "app", [apps.WORDS, apps.TABLES, apps.SLIDES], ids=["docx", "xlsx", "pptx"]
+)
+def test_a_tampered_protected_document_is_refused(tmp_path, app: apps.App):
+    """Its HMAC fails, and x2t opened it all the same (core 0183, from
+    ElixirOffice). The right password, and still no document. A changed
+    byte of the package was measured too, on files Word's way encrypts
+    (notes/plans/release-0.8.md)."""
+    protected = make_protected(app, app.ext, tmp_path)
+    tamper(protected)
+    session = open_in(app, protected, tmp_path / "work")
+    asked = session.password_asked
+    assert asked is not None
+
+    with pytest.raises(convert.ConversionError) as refused:
+        asked.answer(SECRET)
+
+    assert not isinstance(refused.value, convert.PasswordNeededError)
+    assert not session.editor_bin.exists()

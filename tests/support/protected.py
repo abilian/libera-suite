@@ -50,3 +50,15 @@ def is_encrypted(path: pathlib.Path) -> bool:
         return True  # OOXML: an OLE file holding EncryptionInfo and the package
     with zipfile.ZipFile(path) as package:
         return b"encryption-data" in package.read("META-INF/manifest.xml")
+
+
+def tamper(path: pathlib.Path) -> None:
+    """Make an encrypted OOXML file fail its integrity check and nothing
+    else: one character of the HMAC its EncryptionInfo stores, in clear
+    XML, changed. The package still decrypts and reads as it did, so only
+    the check can refuse it. Changing the package itself garbles a block of
+    the ZIP, which x2t then refuses whatever the check says."""
+    data = path.read_bytes()
+    value = data.index(b'encryptedHmacValue="') + len(b'encryptedHmacValue="')
+    flipped = b"B" if data[value : value + 1] == b"A" else b"A"
+    path.write_bytes(data[:value] + flipped + data[value + 1 :])
