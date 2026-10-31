@@ -13,8 +13,9 @@ import re
 import zipfile
 
 import pytest
+from support import ScriptedShell
 
-from libera.host import convert, opening, saving
+from libera.host import convert, hooks, opening, saving
 from libera.host.session import Session
 
 SECRET = "s<cr&t"
@@ -218,3 +219,142 @@ def test_a_save_that_takes_gives_the_file_its_new_password(
 
     assert outcome["error"] == saving.SaveOutcome.SAVED
     assert not session.password
+
+
+def save_as(
+    session, monkeypatch, target: pathlib.Path, *, confirm: bool, password=SECRET
+) -> tuple:
+    """A Save As to `target`, carrying the editor's `password` and answering the
+    question of the password with `confirm`: the outcome, the questions asked
+    and the files exported."""
+    asked: list[pathlib.Path] = []
+    exported: list[pathlib.Path] = []
+    monkeypatch.setattr(
+        hooks,
+        "shell",
+        ScriptedShell(
+            choose_save_path=lambda *_: str(target),
+            confirm_unprotected=lambda document: asked.append(document) or confirm,
+        ),
+    )
+
+    def export(_session, plan, _open_file):
+        exported.append(plan.target)
+        session.write_current_document(plan.target)
+        return plan.target
+
+    monkeypatch.setattr(saving, "_export", export)
+    monkeypatch.setattr(session, "mark_modified", lambda _m: None)
+    outcome = saving.save_document(
+        session, saving.SaveRequest(save_as=True, password=password)
+    )
+    return outcome, asked, exported
+
+
+def test_a_save_as_that_drops_the_password_asks_first(session, monkeypatch, tmp_path):
+    """x2t writes a .txt in clear, exit 0, and says nothing."""
+    session.password = SECRET
+
+    outcome, asked, exported = save_as(
+        session, monkeypatch, tmp_path / "Report.txt", confirm=False
+    )
+
+    assert asked == [tmp_path / "Report.txt"]
+    assert outcome["error"] == saving.SaveOutcome.DECLINED
+    assert exported == []
+    assert session.password == SECRET
+
+
+def test_saved_without_its_password_the_document_has_none(
+    session, monkeypatch, tmp_path
+):
+    """The window now has the .txt open. Kept, the password went to the next
+    Save As, and a .docx got one the user had been told was dropped."""
+    session.password = SECRET
+
+    outcome, asked, exported = save_as(
+        session, monkeypatch, tmp_path / "Report.txt", confirm=True
+    )
+
+    assert outcome["error"] == saving.SaveOutcome.SAVED
+    assert asked
+    assert exported == [tmp_path / "Report.txt"]
+    assert not session.password
+
+
+@pytest.mark.parametrize("name", ["Copy.docx", "Copy.odt", "Copy.pdf"])
+def test_a_save_as_that_keeps_the_password_does_not_ask(
+    session, monkeypatch, tmp_path, name
+):
+    session.password = SECRET
+
+    outcome, asked, _ = save_as(session, monkeypatch, tmp_path / name, confirm=False)
+
+    assert outcome["error"] == saving.SaveOutcome.SAVED
+    assert asked == []
+    assert session.password == SECRET
+
+
+def test_a_document_without_a_password_is_saved_as_text_unasked(
+    session, monkeypatch, tmp_path
+):
+    outcome, asked, _ = save_as(
+        session, monkeypatch, tmp_path / "Report.txt", confirm=False, password=""
+    )
+
+    assert outcome["error"] == saving.SaveOutcome.SAVED
+    assert asked == []
+
+
+def test_a_name_without_a_suffix_is_judged_by_the_format_written(
+    session, monkeypatch, tmp_path
+):
+    """Where the toolkit takes no format list (GTK, Windows), the name typed
+    decides, and one it does not know is written in the format asked for:
+    an encrypted .docx, with no question."""
+    session.password = SECRET
+
+    outcome, asked, _ = save_as(
+        session, monkeypatch, tmp_path / "Report 2026.10.31", confirm=False
+    )
+
+    assert outcome["error"] == saving.SaveOutcome.SAVED
+    assert asked == []
+    assert session.password == SECRET
+
+
+def test_a_password_set_on_a_text_file_asks_before_it_is_lost(
+    session, monkeypatch, tmp_path
+):
+    """The editor reads whether to offer File > Protect once, as it loads: a
+    document saved as text still offers it, and its save is a plain one."""
+    notes = tmp_path / "notes.txt"
+    session.write_current_document(notes)
+    asked: list[pathlib.Path] = []
+    monkeypatch.setattr(
+        hooks,
+        "shell",
+        ScriptedShell(confirm_unprotected=lambda d: asked.append(d) or False),
+    )
+    monkeypatch.setattr(saving, "_export", lambda *_: pytest.fail("exported"))
+
+    outcome = saving.save_document(session, saving.SaveRequest(password=SECRET))
+
+    assert asked == [notes]
+    assert outcome["error"] == saving.SaveOutcome.DECLINED
+    assert not session.password
+
+
+def test_with_no_one_to_ask_a_protected_document_is_not_saved_as_text(
+    session, monkeypatch
+):
+    session.password = SECRET
+    monkeypatch.setattr(saving, "_export", lambda *_: pytest.fail("exported"))
+    txt = next(i for i, (ext, _) in saving.apps.WORDS.formats.items() if ext == "txt")
+
+    outcome = saving.save_document(
+        session, saving.SaveRequest(file_type=txt, save_as=True)
+    )
+
+    assert outcome["error"] == saving.SaveOutcome.DECLINED
+    assert session.password == SECRET

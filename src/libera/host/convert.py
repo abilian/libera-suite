@@ -447,6 +447,10 @@ ENCRYPTABLE = frozenset({
     *(".pptx", ".pptm", ".ppsx", ".ppsm", ".potx", ".potm"),
     *(".odt", ".ott", ".ods", ".ots", ".odp", ".otp"),
 })
+# What keeps a protected document's password when saved: those, and a PDF,
+# which x2t encrypts too. Text, CSV, TSV, RTF, HTML, Markdown, EPUB and FB2
+# have no encryption, and are written in clear.
+KEEPS_PASSWORD = ENCRYPTABLE | {".pdf"}
 
 
 def _passwords(session: Session) -> dict[str, str]:

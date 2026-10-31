@@ -9,7 +9,7 @@ import logging
 
 from support.protected import SECRET, SENTENCE, is_encrypted, make_protected, open_in
 
-from libera.host import apps, convert, saving, session as sessions
+from libera.host import apps, convert, hooks, saving, session as sessions
 
 MARK = "zqx-typed-4471"
 
@@ -175,3 +175,46 @@ def test_protect_is_offered_only_where_a_password_is_kept(editor_with, tmp_path)
     editor = editor_with([], document=text)
 
     assert not editor.frame.evaluate("() => Asc.editor.asc_isProtectionSupport()")
+
+
+def test_saved_as_text_the_document_and_the_editor_drop_the_password(
+    editor_with, tmp_path, monkeypatch
+):
+    """Asked first, since x2t writes a .txt in clear and says nothing. The
+    window then has the .txt open, and the editor's password would have gone
+    to the next Save As. The editor still offers Protect, which it reads as it
+    loads: a password set there asks too, and declined, is not kept."""
+    from support import ScriptedShell
+
+    protected = make_protected(apps.WORDS, "docx", tmp_path / "made")
+    editor = editor_with([], document=protected, password=SECRET)
+    text = tmp_path / "notes.txt"
+    asked = []
+    answers = iter([True, False])
+    monkeypatch.setattr(
+        hooks,
+        "shell",
+        ScriptedShell(
+            choose_save_path=lambda *_: str(text),
+            confirm_unprotected=lambda d: asked.append(d) or next(answers),
+        ),
+    )
+
+    with editor.answered("save") as saved:
+        editor.press("Control+Shift+s")
+    reply = saved.value.json()
+
+    assert reply["error"] == 0
+    assert not reply["protected"]
+    assert SENTENCE in text.read_text(encoding="utf-8")
+    editor.frame.wait_for_function("() => Asc.editor.currentPassword === ''")
+    session = next(iter(sessions.SESSIONS.values()))
+    assert not session.password
+
+    with editor.answered("save") as saved:
+        editor.frame.evaluate("(p) => Asc.editor.asc_setCurrentPassword(p)", NEW)
+    assert saved.value.json()["error"] == saving.SaveOutcome.DECLINED
+
+    assert asked == [text, text]
+    editor.frame.wait_for_function("() => Asc.editor.currentPassword === ''")
+    assert not session.password

@@ -354,6 +354,9 @@ class WindowedShell:
         # and the host therefore stayed quiet.
         dialogs.reload(session, self.port)
 
+    def confirm_unprotected(self, document: Path) -> bool:
+        return dialogs.confirm_unprotected(document)
+
     def ask_to_recover(self, document: Path) -> bool:
         return ask_to_recover(document)
 

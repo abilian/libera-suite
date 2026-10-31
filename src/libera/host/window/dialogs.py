@@ -84,6 +84,26 @@ def ask_to_recover(document: Path) -> bool:
     return answer is Answer.YES
 
 
+def confirm_unprotected(document: Path) -> bool:
+    """Ask before a protected document is saved in a format with no password.
+
+    Text, CSV, RTF and the rest are written in clear, and the window then has
+    that file open, with no password (saving.save_document).
+    """
+    answer = ask(
+        Question(
+            language.translate("Save “{name}” without a password?", name=document.name),
+            language.translate(
+                "This format cannot keep a password: anyone with the file can "
+                "read it. To keep the password, save in the document's own format."
+            ),
+            yes=language.translate("Save Without Password"),
+            no=language.translate("Cancel"),
+        )
+    )
+    return answer is Answer.YES
+
+
 def confirm_close(session_id: str) -> bool:
     """Ask before a window takes unsaved edits with it. False keeps it open.
 

@@ -53,6 +53,10 @@ class Shell(Protocol):
         Starting in `start_in`, or where the toolkit chooses when it is None.
         """
 
+    def confirm_unprotected(self, document: Path) -> bool:
+        """Whether to save a protected document as `document`, in a format
+        that carries no password."""
+
     def choose_open_path(self, kind: str) -> str | None:
         """What to open, or None if the user cancelled."""
 
@@ -121,6 +125,9 @@ class HeadlessShell:
 
     def reload(self, session: Session) -> None:
         logger.warning("reload: no window to reload")
+
+    def confirm_unprotected(self, document: Path) -> bool:
+        return False
 
     def ask_to_recover(self, document: Path) -> bool:
         return False
