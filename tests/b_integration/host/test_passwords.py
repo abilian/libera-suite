@@ -2,9 +2,11 @@
 
 Each is made the way a save makes one: a document opened, then exported with
 its password, which x2t encrypts with (OLE for OOXML, AES-CBC for
-OpenDocument). Files from Word and LibreOffice were measured on 2026-10-30
+OpenDocument). Files saved by LibreOffice, and OOXML files encrypted the way
+Word does by msoffcrypto-tool, were measured on 2026-10-30
 (notes/plans/release-0.8.md): they behave as these do, but for LibreOffice
-26's own ODF encryption, which is refused before x2t.
+26's own ODF encryption, which is refused before x2t. No file saved by Word
+itself has been tried.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ from support.protected import (
     tamper,
 )
 
-from libera.host import apps, convert, hooks, session as sessions
+from libera.host import apps, convert, hooks, opening, session as sessions
 
 KINDS = [
     (apps.WORDS, "docx"),
@@ -138,3 +140,24 @@ def test_a_tampered_protected_document_is_refused(tmp_path, app: apps.App):
 
     assert not isinstance(refused.value, convert.PasswordNeededError)
     assert not session.editor_bin.exists()
+
+
+def test_the_next_document_in_a_session_is_not_saved_with_the_last_password(
+    tmp_path,
+):
+    """`libera --serve` opens every document into its one session. Kept, the
+    password of the last encrypted every save of the next, unasked."""
+    protected = make_protected(apps.WORDS, "docx", tmp_path)
+    session = open_in(apps.WORDS, protected, tmp_path / "work")
+    asked = session.password_asked
+    assert asked is not None
+    asked.answer(SECRET)
+    plain = tmp_path / "plain.txt"
+    plain.write_text(SENTENCE + "\n", encoding="utf-8")
+
+    opening.open_document(session, plain)
+    saved = tmp_path / "Saved.docx"
+    convert.export(session, saved, apps.WORDS.ids_by_ext["docx"], None)
+
+    assert not session.password
+    assert not is_encrypted(saved)

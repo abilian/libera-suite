@@ -317,53 +317,56 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
     # A protected document's password goes in the job, never on the command
     # line, where any process listing shows it; the job is deleted after.
     secret = {"m_sPassword": session.password} if session.password else {}
-    if suffix in CSV_SUFFIXES:
-        run = run_x2t(session, str(write_csv_open_job(session, src, editor_bin)))
-    elif suffix in {".md", ".mht", ".fb2", ".epub", ".doc"}:
-        # Refused without an encoding, like a CSV: rc 88. None had ever
-        # opened, though Words has listed all five since the start, .doc
-        # (Word 97-2003) included. An EPUB was probed first, as an archive:
-        # nothing it names outside itself is read or written
-        # (notes/plans/converter-hardening.md).
-        job = write_job(
-            session,
-            "open.xml",
-            session.work,
-            m_sFileFrom=src,
-            m_sFileTo=editor_bin,
-            m_nFormatTo=CANVAS_WORD,
-            m_sFontDir=session.font_dir,
-            m_nCsvTxtEncoding=UTF_8,
-            **secret,
-        )
-        run = run_x2t(session, str(job))
-    elif suffix in {".xlsb", ".fods", ".fodp"} or secret:
-        # The three-argument form picks the kind of document itself, and
-        # picked wrong for these, exit 0 each time: an .xlsb as an empty
-        # presentation (PPTY), so no .xlsb ever opened, Excel's included; a
-        # flat ODF spreadsheet or presentation as a text document (DOCY),
-        # which then saved as nothing but PDF. The job names the editor's own.
-        # It has no place for a password either.
-        job = write_job(
-            session,
-            "open.xml",
-            session.work,
-            m_sFileFrom=src,
-            m_sFileTo=editor_bin,
-            m_nFormatTo=CANVASES[session.editor.doctype],
-            m_sFontDir=session.font_dir,
-            **secret,
-        )
-        run = run_x2t(session, str(job))
-    else:
-        run = run_x2t(
-            session,
-            str(src),
-            str(editor_bin),
-            str(session.font_dir / "font_selection.bin"),
-        )
-    if secret:
-        (session.work / "open.xml").unlink()
+    try:
+        if suffix in CSV_SUFFIXES:
+            run = run_x2t(session, str(write_csv_open_job(session, src, editor_bin)))
+        elif suffix in {".md", ".mht", ".fb2", ".epub", ".doc"}:
+            # Refused without an encoding, like a CSV: rc 88. None had ever
+            # opened, though Words has listed all five since the start, .doc
+            # (Word 97-2003) included. An EPUB was probed first, as an archive:
+            # nothing it names outside itself is read or written
+            # (notes/plans/converter-hardening.md).
+            job = write_job(
+                session,
+                "open.xml",
+                session.work,
+                m_sFileFrom=src,
+                m_sFileTo=editor_bin,
+                m_nFormatTo=CANVAS_WORD,
+                m_sFontDir=session.font_dir,
+                m_nCsvTxtEncoding=UTF_8,
+                **secret,
+            )
+            run = run_x2t(session, str(job))
+        elif suffix in {".xlsb", ".fods", ".fodp"} or secret:
+            # The three-argument form picks the kind of document itself, and
+            # picked wrong for these, exit 0 each time: an .xlsb as an empty
+            # presentation (PPTY), so no .xlsb ever opened, Excel's included; a
+            # flat ODF spreadsheet or presentation as a text document (DOCY),
+            # which then saved as nothing but PDF. The job names the editor's own.
+            # It has no place for a password either.
+            job = write_job(
+                session,
+                "open.xml",
+                session.work,
+                m_sFileFrom=src,
+                m_sFileTo=editor_bin,
+                m_nFormatTo=CANVASES[session.editor.doctype],
+                m_sFontDir=session.font_dir,
+                **secret,
+            )
+            run = run_x2t(session, str(job))
+        else:
+            run = run_x2t(
+                session,
+                str(src),
+                str(editor_bin),
+                str(session.font_dir / "font_selection.bin"),
+            )
+    finally:
+        # On every way out, x2t stopped for its memory or its time included.
+        if secret:
+            (session.work / "open.xml").unlink(missing_ok=True)
     if run.returncode in {NO_PASSWORD, WRONG_PASSWORD}:
         logger.info("%s asks for its password (rc=%s)", src.name, run.returncode)
         shutil.rmtree(staged, ignore_errors=True)

@@ -129,7 +129,7 @@ Non è ancora possibile creare un modulo, né convertire un PDF in un documento.
 
 ## Documenti protetti da password {#passwords}
 
-Un documento protetto da una password, da Word, LibreOffice o Libera Suite, la chiede all'apertura, e di nuovo dopo una password sbagliata. Il salvataggio conserva la password: il file viene scritto protetto, com'era. Una stampa è un PDF protetto dalla stessa password. Salvato come testo o CSV, il documento non è protetto, perché quei formati non hanno protezione.
+Un documento protetto da una password, da Word, LibreOffice o Libera Suite, la chiede all'apertura, e di nuovo dopo una password sbagliata. Il salvataggio conserva la password: il file viene scritto protetto, com'era. Una stampa è un PDF protetto dalla stessa password. Salvato come testo, CSV, RTF, HTML, Markdown, EPUB o FB2, il documento non è protetto, perché quei formati non hanno protezione.
 
 **La protezione propria di LibreOffice 26 non si legge ancora.** Per impostazione predefinita, LibreOffice 26 cifra un file OpenDocument in un modo che Libera Suite non legge, e Libera Suite lo dice invece di chiedere la password. LibreOffice scrive la cifratura precedente, che Libera Suite legge, quando la sua versione del formato ODF è impostata su 1.3.
 

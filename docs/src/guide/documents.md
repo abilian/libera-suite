@@ -127,7 +127,7 @@ Creating a form is not possible yet, nor converting a PDF into a document.
 
 ## Documents with a password {#passwords}
 
-A document protected by a password, by Word, LibreOffice or Libera Suite, asks for it as it opens, and again after a wrong one. Saving keeps the password: the file is written protected, as it was. A print is a PDF protected by the same password. Saved as text or CSV, the document is not protected, since those formats have no protection.
+A document protected by a password, by Word, LibreOffice or Libera Suite, asks for it as it opens, and again after a wrong one. Saving keeps the password: the file is written protected, as it was. A print is a PDF protected by the same password. Saved as text, CSV, RTF, HTML, Markdown, EPUB or FB2, the document is not protected, since those formats have no protection.
 
 **LibreOffice 26's own protection cannot be read yet.** By default, LibreOffice 26 encrypts an OpenDocument file in a way Libera Suite does not read, and Libera Suite says so instead of asking for the password. LibreOffice writes the older encryption, which Libera Suite reads, when its ODF format version is set to 1.3.
 

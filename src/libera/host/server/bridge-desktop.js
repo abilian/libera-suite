@@ -373,8 +373,6 @@
     // Async on purpose: x2t takes about a second, and the editor expects the
     // call to return immediately and be told later.
     LocalFileSave: (params, password, docinfo, fileType) => {
-      // Not the password: the log reaches the console and the host's report.
-      log("LocalFileSave", [params, password ? "(a password)" : "", docinfo, fileType]);
       // The password is a PDF's, which the editor asked for itself; the host
       // needs it to save.
       const body = JSON.stringify({
@@ -830,6 +828,17 @@
     true,
   );
 
+  // The arguments that carry a password, by method: logged as "(a password)",
+  // since the log reaches the console and the host's report.
+  const SECRET_ARGS = { LocalFileSave: 1, SetAdvancedOptions: 0 };
+  function redacted(name, args) {
+    const at = SECRET_ARGS[name];
+    if (at === undefined || !args[at]) return args;
+    const shown = Array.from(args);
+    shown[at] = "(a password)";
+    return shown;
+  }
+
   w.AscDesktopEditor = new Proxy(impl, {
     get: (t, k) => {
       if (k in t) {
@@ -838,7 +847,7 @@
           ? v
           : function () {
               const r = v.apply(t, arguments);
-              log(k, arguments, r);
+              log(k, redacted(k, arguments), r);
               return r;
             };
       }

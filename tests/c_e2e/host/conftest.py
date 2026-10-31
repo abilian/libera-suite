@@ -65,6 +65,9 @@ class Editor:
         # these, and saying so is the difference between a stall and a stopwatch.
         self.failed: list[str] = []
         page.on("requestfailed", lambda r: self.failed.append(f"{r.url} ({r.failure})"))
+        # Every console line of every frame: the bridge logs each call there.
+        self.console: list[str] = []
+        page.on("console", lambda m: self.console.append(m.text))
         # And every one it made, for a test of where one went.
         self.requested: list[str] = []
         page.on("request", lambda r: self.requested.append(r.url))

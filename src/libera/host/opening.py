@@ -25,6 +25,7 @@ def open_document(session: Session, document: pathlib.Path) -> None:
     Converting throws away the previous session, so this is the only moment at
     which edits that never reached the file can still be rescued.
     """
+    session.forget_password()
     stale = find_recoverable(session, document)
     if stale and hooks.shell.ask_to_recover(document):
         _recover(session, document, stale)
@@ -96,6 +97,7 @@ def begin_opening(session: Session, document: pathlib.Path) -> bool:
     True when the document still has to be converted; False when it is the
     recovered edits that open, which are converted already.
     """
+    session.forget_password()
     stale = find_recoverable(session, document)
     if stale and hooks.shell.ask_to_recover(document):
         _recover(session, document, stale)
