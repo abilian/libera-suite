@@ -32,9 +32,9 @@ def test_opening_a_document_produces_an_editor_bin(opened: Session):
     assert opened.editor_bin.stat().st_size > 0
 
 
-OFFERED = [
-    (app, ext) for app in apps.ALL if app.editable for _, ext in app.save_formats
-]
+# From each editor's blank, so an editor without one, the PDF editor's, is not
+# here: tests/c_e2e/host/test_pdf.py saves a PDF.
+OFFERED = [(app, ext) for app in apps.ALL if app.blank for _, ext in app.save_formats]
 
 
 SENTENCE = "Libera keeps this sentence"

@@ -9,6 +9,7 @@ them back into a file where `saving` says it goes.
 from __future__ import annotations
 
 import csv
+import filecmp
 import logging
 import os
 import pathlib
@@ -268,6 +269,12 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
     staged.mkdir(parents=True)
     editor_bin = staged / session.editor_bin.name
     suffix = src.suffix.lower()
+    if not session.editor.converted:
+        # The editor reads the file itself: the bridge hands it over as it is.
+        shutil.copyfile(src, editor_bin)
+        shutil.rmtree(session.doc, ignore_errors=True)
+        staged.rename(session.doc)
+        return
     if suffix in CSV_SUFFIXES:
         run = run_x2t(session, str(write_csv_open_job(session, src, editor_bin)))
     elif suffix in {".md", ".mht", ".fb2", ".epub", ".doc"}:
@@ -423,6 +430,19 @@ def _export(
             choose_x2t_output(run),
         )
         msg = f"x2t could not write {staged.name} (exit status {run.returncode})"
+        raise ConversionError(msg)
+    # A PDF is saved by replaying the change log onto the original. When the
+    # replay fails, x2t writes the original and exits 0: with its script
+    # missing, before the changes reached the log, on a PDF certified against
+    # changes (notes/plans/release-0.7.md, item B). A save with changes that
+    # comes back as the original saved none of them.
+    if (
+        from_changes
+        and not session.editor.converted
+        and filecmp.cmp(staged, doc / "Editor.bin", shallow=False)
+    ):
+        logger.error("export failed: x2t wrote %s without the changes", staged.name)
+        msg = f"x2t saved none of the changes to {staged.name}"
         raise ConversionError(msg)
     # x2t converts text to UTF-8 through a buffer sized one unit per character,
     # while a character outside the BMP, an emoji say, needs two. The conversion
