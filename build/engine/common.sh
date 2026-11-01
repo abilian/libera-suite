@@ -35,10 +35,6 @@ esac
 BUILD_ROOT="${BUILD_ROOT:-$DEFAULT_BUILD_ROOT}"
 SRC="$BUILD_ROOT/src"
 OUT="$BUILD_ROOT/out"
-# The core's binaries: this tree's build, or, for libera-web's wheel, the
-# libera-core installed in its build environment, whose x2t makes the slide
-# themes (components/web/hatch_build.py).
-CORE_BIN="${CORE_BIN:-$OUT/core/bin}"
 
 # The payload version, out of the checkout at $1. The one shell reader of the
 # file the host reads with tomllib, so it takes what is between the quotes and
@@ -134,11 +130,11 @@ built() {
     exe="$1"
     shift
     bin_path="$PATH"
-    [ -n "$EXE" ] && bin_path="$(cygpath -u "$CORE_BIN"):$PATH"
+    [ -n "$EXE" ] && bin_path="$(cygpath -u "$OUT/core/bin"):$PATH"
     APPLICATION_NAME="${APPLICATION_NAME:-Libera Suite}" \
-    DYLD_LIBRARY_PATH="$CORE_BIN" LD_LIBRARY_PATH="$CORE_BIN" \
+    DYLD_LIBRARY_PATH="$OUT/core/bin" LD_LIBRARY_PATH="$OUT/core/bin" \
     PATH="$bin_path" \
-        "$CORE_BIN/$exe$EXE" "$@"
+        "$OUT/core/bin/$exe$EXE" "$@"
 }
 
 # A path a native Windows program will accept.
@@ -219,13 +215,6 @@ generate_fonts() {
            "$payload/sdkjs/common/AllFonts.js" "$payload/sdkjs/common/font_selection.bin" \
            "$payload/sdkjs/common/Images"/fonts_thumbnail*
     mkdir -p "$payload/fonts" "$payload/sdkjs/common/Images"
-    # Where the host finds the fonts to index, as in an installed payload,
-    # whose fonts-src is a copy of some of them (dist.sh). Removed first: Git
-    # Bash's ln -s copies, and ln -f will not replace the directory it copied
-    # last time, so the second build of the editors on Windows stopped here
-    # ("cannot overwrite directory"). rm on a link removes the link alone.
-    rm -rf "$payload/fonts-src"
-    ln -sfn "$CORE_FONTS" "$payload/fonts-src"
 
     echo "==> allfontsgen ($CORE_FONTS)"
     built tools/allfontsgen \

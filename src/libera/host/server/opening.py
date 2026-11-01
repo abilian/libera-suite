@@ -162,7 +162,6 @@ def create_new(r: Request) -> Response:
         # cannot take the place of the one in it: the page would stay, say, a
         # word processor showing a spreadsheet's blank.
         raise Refused(409, f"A new {app.noun.lower()} needs a window of its own")
-    r.session.forget_password()
     try:
         convert_to_editor_bin(r.session, blank)
     except ConversionError as e:

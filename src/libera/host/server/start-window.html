@@ -94,7 +94,7 @@
         border-radius: var(--radius);
         padding: 9px 12px;
         cursor: pointer;
-        text-align: start;
+        text-align: left;
       }
       button:hover { background: var(--highlight-button-hover); }
       button:focus-visible { outline: 2px solid var(--libera-suite); outline-offset: 1px; }
@@ -127,23 +127,18 @@
       /* The containing folder, not the whole path: a path reversed with
          direction:rtl to truncate on the left puts its leading slash at the
          far end, which reads as a trailing one. Right-truncating the folder
-         has no such trick in it, and the file name is already beside it.
-         A path reads left to right in an Arabic or Hebrew window too, so its
-         own text keeps that order (plaintext), while the column sits at the
-         end of the row the window's direction gives it. */
-      .recent .where { flex: 1 1 auto; min-width: 0; text-align: end;
-        unicode-bidi: plaintext;
+         has no such trick in it, and the file name is already beside it. */
+      .recent .where { flex: 1 1 auto; min-width: 0; text-align: right;
         color: var(--text-tertiary); overflow: hidden;
         text-overflow: ellipsis; white-space: nowrap; }
       .empty { color: var(--text-tertiary); }
-      .problem, .notice {
+      .problem {
         margin: 16px 0 0;
         padding: 9px 12px;
         border: 1px solid var(--border-regular-control);
         border-radius: var(--radius);
         background: var(--background-normal);
       }
-      .notice .choices { display: flex; gap: 8px; margin-top: 8px; }
       footer {
         margin: 20px 20px 0;
         padding: 12px 0 20px;
@@ -216,16 +211,6 @@
       </ul>
 
       <p class="problem" id="problem" hidden></p>
-
-      <!-- Asked once: what 0.6 and earlier downloaded, which this version
-           never reads (payload/leftovers.py). -->
-      <div class="notice" id="old-payloads" hidden>
-        <span></span>
-        <div class="choices">
-          <button id="remove-old">{{Remove them}}</button>
-          <button id="keep-old">{{Keep them}}</button>
-        </div>
-      </div>
 
     </main>
     <footer>
@@ -401,7 +386,7 @@
       async function loadPayload() {
         const info = await json("payload");
         const rows = [
-          [tr("Components"), info.version || tr("unknown")],
+          [tr("Payload"), info.version || tr("unknown")],
           [tr("Found via"), info.origin || "—"],
           [tr("Platform"), info.platform || "—"],
           [tr("Location"), info.root || "—"],
@@ -417,40 +402,17 @@
         );
       }
 
-      async function loadOldPayloads() {
-        const { size_mb: size } = await json("old-payloads");
-        if (!size) return;
-        const box = document.getElementById("old-payloads");
-        box.querySelector("span").textContent = tr(
-          "Earlier versions of Libera Suite left {size} MB of components on this computer, which this version does not use.",
-          { size },
-        );
-        // Either answer stands: the host asks no more.
-        const answer = (remove) => async () => {
-          box.hidden = true;
-          try {
-            await host("old-payloads", JSON.stringify({ remove }));
-          } catch (e) {
-            problem(tr("That did not work: {reason}", { reason: e.message || e }));
-          }
-        };
-        document.getElementById("remove-old").onclick = answer(true);
-        document.getElementById("keep-old").onclick = answer(false);
-        box.hidden = false;
-      }
-
       document.getElementById("open").onclick = once(() =>
         host("open-document", ""),
       );
-      // Whole sentences, each its own: a language may not put "the
-      // applications" where English does.
-      section((reason) => tr("Could not load the applications: {reason}", { reason }), loadNew);
+      // Whole sentences, each its own: a language may not put "the editors"
+      // where English does.
+      section((reason) => tr("Could not load the editors: {reason}", { reason }), loadNew);
       section(
         (reason) => tr("Could not load your recent documents: {reason}", { reason }),
         loadRecent,
       );
-      section((reason) => tr("Could not load the details of the components: {reason}", { reason }), loadPayload);
-      section((reason) => tr("Could not load the details of the components: {reason}", { reason }), loadOldPayloads);
+      section((reason) => tr("Could not load the payload: {reason}", { reason }), loadPayload);
     </script>
   </body>
 </html>

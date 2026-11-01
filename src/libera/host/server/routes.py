@@ -20,7 +20,6 @@ from libera.host.server import (
     editor,
     opening,
     payload_files,
-    signatures,
     spelling,
     start_window,
 )
@@ -28,7 +27,6 @@ from libera.host.server.api import Endpoint
 
 MODULES = (
     document,
-    signatures,
     opening,
     editor,
     spelling,

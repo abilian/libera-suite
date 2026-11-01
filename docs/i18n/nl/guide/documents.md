@@ -1,6 +1,6 @@
 # Werken met documenten
 
-De menu's en vensters van Libera Suite zelf zijn in het Nederlands, net als die van de componenten; de vertaling van Libera Suite zelf is nog niet nagelezen. Menu's en knoppen staan hier zoals ze op het scherm verschijnen.
+De menu's en vensters van Libera Suite zelf zijn in het Engels; die van de componenten zijn in het Nederlands. Menu's en knoppen staan hier zoals ze op het scherm verschijnen.
 
 ## Openen {#open}
 
@@ -11,7 +11,7 @@ libera ~/Documents/budget.xlsx
 libera ~/Documents/netwerk.vsdx
 ```
 
-**Het document bepaalt welk programma je krijgt.** Er is geen opdracht om er een te kiezen, net zoals je geen teksteditor kiest voor een `.txt`: je opent het document en het juiste programma verschijnt. Een `.xlsx` opent in Tables, een `.pptx` in Slides, een `.vsdx` in Diagrams, een `.pdf` in Libera PDF.
+**Het document bepaalt welk programma je krijgt.** Er is geen opdracht om er een te kiezen, net zoals je geen teksteditor kiest voor een `.txt`: je opent het document en het juiste programma verschijnt. Een `.xlsx` opent in Tables, een `.pptx` in Slides, een `.vsdx` in Diagrams.
 
 ![Het startvenster, met een tegel New voor elk van Document, Spreadsheet en Presentation, een knop Open, en een lijst Recent met drie documenten.](../assets/start.png)
 
@@ -25,11 +25,9 @@ libera ~/Documents/*.docx     # elk in een eigen venster
 
 Je kunt een document ook vanuit een open document openen, via **Bestand ▸ Openen** of **Bestand ▸ Recente openen**. Allebei openen ze een nieuw venster; het document dat je al open hebt, blijft ongemoeid.
 
-**Op macOS kunnen documenten als tabbladen** van één venster openen. Libera Suite volgt de systeeminstelling *Open documenten in tabbladen* in Systeeminstellingen ▸ Bureaublad en Dock, zoals elk documentprogramma op de Mac. Staat die op *Altijd*, dan opent elk document als tabblad. Anders opent het in een eigen venster, en **Window ▸ Merge All Windows** voegt ze samen. De **+** aan het eind van de tabbladbalk opent het startvenster als nieuw tabblad, en het document dat je daar kiest neemt de plaats ervan in. Een tabblad sleep je naar buiten tot een eigen venster.
-
 **Een document dat je** op een venster van Libera Suite sleept, het startvenster inbegrepen, opent in een eigen venster. Een afbeelding die je op een document sleept, wordt erin ingevoegd.
 
-**Bestand ▸ Nieuw** biedt vanuit elk venster een Document, een Rekenblad of een Presentatie aan, elk in een eigen venster. Op macOS maakt `⌘N` er een van dezelfde soort als het voorste venster. Binnen het document zelf krijg je dezelfde keuze via **Bestand ▸ Nieuw maken**.
+**File ▸ New** biedt vanuit elk venster een Document, een Spreadsheet of een Presentation aan, elk in een eigen venster. Op macOS maakt `⌘N` er een van dezelfde soort als het voorste venster. Binnen het document zelf krijg je dezelfde keuze via **Bestand ▸ Nieuw maken**.
 
 ## Opslaan
 
@@ -39,7 +37,7 @@ Bij het opslaan wordt het werkformaat weer omgezet in een echt document; dat duu
 
 ## Exporteren
 
-Met Opslaan als exporteer je ook: het dialoogvenster heeft een keuzelijst **Bestandsformaat**.
+Met Opslaan als exporteer je ook: het dialoogvenster heeft een keuzelijst **File Format**.
 
 | | |
 | :--- | :--- |
@@ -76,31 +74,31 @@ Een bestand dat al onder de nieuwe naam bestaat, wordt vervangen. Het bestand da
 
 ## De menubalk
 
-Op Linux en Windows zit de balk in het venster: **Bestand**, **Bewerken**, **Weergave** en **Help**, met in die laatste *Libera Help* en *Over Libera Suite*. Wat het menu daar biedt, levert drie verschillen op. Op Linux tonen Nieuw, Openen en Sluiten Ctrl-N, Ctrl-O en Ctrl-W, en geen ander item toont zijn toets; op Windows geen enkel. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z doen wat de ⌘-toetsen hieronder op een Mac doen. **Open Recent** wordt opgebouwd wanneer de applicatie start, dus een document dat je vandaag opent, verschijnt er morgen in. Niets wordt grijs, dus Save zonder iets om op te slaan doet niets.
+Op Linux en Windows zit de balk in het venster: **File**, **Edit**, **View** en **Help**, met in die laatste *Libera Help* en *About Libera Suite*. Wat het menu daar biedt, levert drie verschillen op. Geen enkel item toont een sneltoets, maar Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z doen wat de ⌘-toetsen hieronder op een Mac doen. **Open Recent** wordt opgebouwd wanneer de applicatie start, dus een document dat je vandaag opent, verschijnt er morgen in. Niets wordt grijs, dus Save zonder iets om op te slaan doet niets.
 
-Op macOS is het een echte Mac-menubalk, met dezelfde items plus **Venster**. De gebruikelijke sneltoetsen werken daar, of het document nu de focus heeft of niet:
+Op macOS is het een echte Mac-menubalk, met dezelfde items plus **Window**. De gebruikelijke sneltoetsen werken daar, of het document nu de focus heeft of niet:
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | New (van de soort van het voorste venster), Open: elk in een eigen venster of tabblad |
+| `⌘N` `⌘O` | New (van de soort van het voorste venster), Open: elk in een eigen venster |
 | `⌘S` `⇧⌘S` | Save, Save As |
 | `⌘P` | Print |
 | `⌘W` | Close, met eerst een vraag over niet-opgeslagen wijzigingen |
 | `⌘Z` `⇧⌘Z` | Undo, Redo |
 | `⌘F` | Find |
 | `⌘?` | Deze documentatie |
-| `⌘+` `⌘-` `⌘0` | Inzoomen, Uitzoomen, Aan pagina aanpassen |
-| `⌘8` | Opmaaktekens |
+| `⌘+` `⌘-` `⌘0` | Zoom In, Zoom Out, Fit Page |
+| `⌘8` | Formatting Marks |
 
-**Bestand ▸ Recent openen** wordt opnieuw opgebouwd telkens als je het opent. Het menu **Venster** toont alle geopende documenten.
+**File ▸ Open Recent** wordt opnieuw opgebouwd telkens als je het opent. Het menu **Window** toont alle geopende documenten.
 
 Save, Undo en Redo zijn grijs als er niets op te slaan of ongedaan te maken is. De componenten weigeren die opdrachten zonder iets te zeggen: een menu-item dat beschikbaar bleef, zou kapot lijken.
 
 ## Sluiten
 
-Wie een venster met niet-opgeslagen wijzigingen sluit, krijgt eerst een vraag: **Opslaan**, **Niet opslaan** of **Annuleren**.
+Wie een venster met niet-opgeslagen wijzigingen sluit, krijgt eerst een vraag: **Save**, **Don't Save** of **Cancel**.
 
-Kiezen voor Niet opslaan is niet definitief. Libera Suite bewaart wat je geschreven hebt, en biedt het opnieuw aan wanneer je dat document de volgende keer opent.
+Kiezen voor Don't Save is niet definitief. Libera Suite bewaart wat je geschreven hebt, en biedt het opnieuw aan wanneer je dat document de volgende keer opent.
 
 ## Afdrukken
 
@@ -112,44 +110,11 @@ Dat is voorlopig de keuze: de viewer die je al hebt, geeft je paginabereiken, pa
 
 Afbeeldingen die in een document zijn ingesloten, blijven bewaard bij openen en opslaan. **Invoegen ▸ Afbeelding** voegt een afbeelding van schijf toe.
 
-## Pdf's {#pdfs}
-
-Een `.pdf` opent in **Libera PDF**. Libera Suite wordt voor een pdf aangeboden onder *Openen met*, nooit als standaard: een dubbelklik opent hem nog steeds in je gewone viewer.
-
-- **Opmerkingen maken.** Het tabblad **Opmerking** heeft *Tekstopmerking*, *Markeren*, een pen, vormen en een tekstvak.
-- **Een formulier invullen.** Klik in een veld en typ, vink een vakje aan, kies uit een lijst. Veel officiële formulieren zijn gemaakt met Adobe LiveCycle Designer en dragen een tweede kopie van het formulier die alleen Acrobat leest. Bij het opslaan blijft die kopie weg, zodat Acrobat de ingevulde waarden toont, zoals andere lezers dat doen.
-- **De pagina's wijzigen.** Een rechtsklik op een pagina geeft *Lege pagina erna invoegen*, *Verwijder pagina* en *Pagina draaien*. Sleep de miniatuur van een pagina om hem te verplaatsen.
-- **Een regel tekst wijzigen**, met *PDF bewerken* en dan *Tekst bewerken*. Dat is bedoeld voor kleine correcties. De nieuwe woorden worden gezet in een van onze lettertypen als dat van de pdf niet te gebruiken is, en een regel die langer wordt loopt niet opnieuw door: wat niet meer past, komt op een eigen regel.
-
-**Opslaan voegt toe aan het bestand.** Je wijzigingen worden achter de oorspronkelijke inhoud van de pdf geschreven, die precies blijft zoals hij was. Een handtekening die opmerkingen toestaat, blijft dus geldig voor wat ze ondertekende. Een pdf wordt alleen als pdf opgeslagen.
-
-**Een pdf die om een wachtwoord vraagt** opent zodra je het wachtwoord geeft, en wordt met je wijzigingen opgeslagen, nog steeds met hetzelfde wachtwoord. **Een pdf die tegen elke wijziging is gecertificeerd, kan niet worden opgeslagen**: het opslaan mislukt en dat wordt gezegd, het bestand blijft zoals het was, en je wijzigingen blijven in het venster.
-
-Een formulier maken kan nog niet, en een pdf omzetten naar een document ook niet.
-
-## Documenten met een wachtwoord {#passwords}
-
-Een document dat met een wachtwoord is beveiligd, door Word, LibreOffice of Libera Suite, vraagt erom bij het openen, en opnieuw na een verkeerd wachtwoord. Bij het opslaan blijft het wachtwoord behouden: het bestand wordt beveiligd geschreven, zoals het was. Een afdruk is een pdf die met hetzelfde wachtwoord is beveiligd. Sommige indelingen kunnen geen wachtwoord bewaren: tekst, CSV, TSV, RTF, HTML, Markdown, EPUB en FB2. Opslaan in een daarvan vraagt eerst, en *Opslaan zonder wachtwoord* schrijft het bestand onbeveiligd; het venster heeft daarna dat bestand open, zonder wachtwoord.
-
-**De eigen beveiliging van LibreOffice 26 kan nog niet worden gelezen.** Standaard versleutelt LibreOffice 26 een OpenDocument-bestand op een manier die Libera Suite niet leest, en Libera Suite zegt dat in plaats van om het wachtwoord te vragen. LibreOffice schrijft de oudere versleuteling, die Libera Suite wel leest, als de ODF-formaatversie op 1.3 staat.
-
-**Bestand ▸ Beveiligen** geeft een document een wachtwoord met *Wachtwoord toevoegen*, en biedt *Verander wachtwoord* en *Wachtwoord verwijderen* zodra het er een heeft. Elk slaat het document meteen op. Het wordt aangeboden voor Word-, Excel-, PowerPoint-, OpenDocument- en pdf-bestanden, de formaten die een wachtwoord kunnen dragen. Een nieuw wachtwoord herschrijft een pdf helemaal: Beveiligen wordt daarom niet aangeboden voor een ondertekende pdf, waarvan de handtekeningen dat niet zouden overleven, noch voor een pdf waarvan de auteur afdrukken, kopiëren of bewerken heeft beperkt, omdat het nieuwe wachtwoord die beperkingen zou opheffen, noch voor een pdf die een deel van zichzelf onversleuteld laat, dat het herschrijven zou beschadigen.
-
-## Ondertekende documenten {#signatures}
-
-Een Word-, Excel- of PowerPoint-document kan digitale handtekeningen dragen, gezet door Word, door Libera Suite of door Euro-Office. Libera Suite controleert ze bij het openen van het document en toont ze in het paneel *Handtekening*, elk geldig of niet, met wie ondertekende en wanneer. Een ondertekend document opent alleen-lezen, zodat niets verandert aan wat ondertekend is. *Geldig* betekent dat het document niet veranderd is sinds het ondertekend werd. Wie het certificaat uitgaf, wordt nog niet gecontroleerd: de naam van de ondertekenaar is wat het certificaat zelf zegt, dus bekijk de *Handtekening details* voordat je erop vertrouwt.
-
-**Ondertekenen.** *Beveiliging* ▸ *Handtekening* ▸ *Digitale handtekening toevoegen*, of *Voeg een handtekeningregel toe* voor een handtekening die in het document wordt getekend, en dan *Selecteren* in het venster *Onderteken document*. Libera Suite vraagt om een sleutelbestand, PKCS#12 (`.p12`, `.pfx`) of PEM, het certificaatbestand als het sleutelbestand er geen bevat, en het wachtwoord van de sleutel; de ondertekenaar en de data van het certificaat verschijnen dan in het venster voordat je ondertekent. Het wachtwoord blijft bewaard zolang het venster open is, en wordt nooit weggeschreven. Een document met wijzigingen wordt eerst opgeslagen, omdat een document wordt ondertekend zoals het op schijf staat.
-
-**Een ondertekend document bewerken verwijdert zijn handtekeningen.** *Bestand* ▸ *Beveiligen* ▸ *Document bewerken* zegt dat en vraagt eerst; *Handtekening verwijderen*, in het paneel *Handtekening*, verwijdert er een. *Handtekening details* toont het certificaat van de ondertekenaar.
-
-**Nog niet**: een document met een wachtwoord, een OpenDocument-bestand of een pdf ondertekenen, en de certificaten in de eigen opslag van Windows; een sleutelbestand werkt op elk systeem. **Een verlopen certificaat ondertekent**, en zijn handtekening wordt als geldig getoond: controleer de data van het certificaat in het venster voordat je ondertekent.
-
 ## Spellingcontrole {#spell-checking}
 
 Spelfouten worden onderstreept, en met de rechtermuisknop krijg je suggesties. Welk woordenboek gebruikt wordt, volgt **de taal van het document**, die je per document instelt in de **statusbalk** onder in het venster.
 
-Er worden woordenboeken voor zes talen meegeleverd: Engels (VS en VK), Frans, Duits, Spaans, Italiaans en Nederlands. Een taal zonder woordenboek is geen fout; de woorden ervan gelden gewoon als juist. Woorden die je toevoegt met *Toevoegen aan woordenboek* blijven bewaard: vanaf dan zijn ze juist in elk document en elke taal.
+Er worden woordenboeken voor vijf talen meegeleverd: Engels (VS en VK), Frans, Duits, Spaans en Italiaans. Een taal zonder woordenboek is geen fout; de woorden ervan gelden gewoon als juist. Woorden die je toevoegt met *Toevoegen aan woordenboek* blijven bewaard: vanaf dan zijn ze juist in elk document en elke taal.
 
 ## Je naam in documenten {#your-name-in-documents}
 
@@ -193,8 +158,6 @@ Wil je voor één keer een ander bestand gebruiken, zonder dit bestand aan te ra
 ## Waar je werkbestanden staan
 
 Zolang een document open is, houdt Libera Suite een sessiemap bij naast zijn applicatiegegevens. Daarin staan de werkkopie en een doorlopend logboek van je wijzigingen, waardoor opslaan snel gaat en ongedaan maken betrouwbaar is. Het is geen back-up: het document staat waar je het hebt opgeslagen.
-
-Bij een document met een wachtwoord is die werkkopie niet versleuteld zolang het document open is: elk programma dat de bestanden van je account kan lezen, kan haar lezen. Ze wordt toch bewaard, zoals bij elk document, zodat je wijzigingen een crash overleven, en bij het terughalen wordt opnieuw om het wachtwoord gevraagd.
 
 ---
 

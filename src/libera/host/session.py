@@ -35,38 +35,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-class PasswordAsked:
-    """The editor is to ask for the document's password. `code` is x2t's exit,
-    which the editor's dialog takes: 91 says the last one was wrong. `answer`
-    tries a password, and leaves the next question here if it fails."""
-
-    code: int
-    answer: Callable[[str], None]
-
-
-@dataclass(frozen=True)
-class ChosenCertificate:
-    """A key and its certificate, chosen in one window to sign with, and
-    what they say (signing.choose_certificate). In memory only, the
-    passphrase out of every repr.
-
-    `id` is what the editor holds and hands back to `Sign`: a token of this
-    window's, never a path or the passphrase.
-    """
-
-    key: pathlib.Path
-    cert: pathlib.Path | None
-    passphrase: str = field(repr=False)
-    name: str
-    date: str
-    id: str = field(default_factory=lambda: secrets.token_hex(8))
-
-    def for_editor(self) -> dict:
-        """What the sign dialog shows: OnNativeReturnCallback's object."""
-        return {"id": self.id, "name": self.name, "date": self.date}
-
-
 @dataclass(eq=False)
 class Session:
     """One window: where its files are, what is open in it, and what the host
@@ -79,8 +47,8 @@ class Session:
 
     payload: pathlib.Path
     work: pathlib.Path
-    # The fonts' index this window was opened with (payload/fonts.py), or
-    # None for the payload's own fonts alone.
+    # The index of the fonts installed on the machine this window was opened
+    # with (payload/fonts.py), or None for the payload's own fonts alone.
     fonts: pathlib.Path | None = None
     document: pathlib.Path | None = None
     shot: pathlib.Path | None = None
@@ -110,25 +78,6 @@ class Session:
     # The conversion of the document, while its window loads the editor
     # (opening.convert_behind); asking for Editor.bin waits for it.
     converting: threading.Thread | None = field(default=None, repr=False)
-    # The password of a protected document. The editor asks for it: for a PDF,
-    # which it reads itself, and hands it over with each save; for the rest,
-    # when x2t could not open the document without it (`password_asked`).
-    # Kept here so that every save has it, a save on close too, which the
-    # editor takes no part in: a save without it is written unprotected. In
-    # memory only: never written but into x2t's job, never logged.
-    password: str = field(default="", repr=False)
-    # The password Editor.bin opens with, for a PDF, whose Editor.bin is the
-    # file as it was opened, encrypted as it was: the editor reports it once
-    # the PDF is open (server/document.take_opening_password). A save opens
-    # the PDF with it and gives the file `password`, so the two differ after
-    # File > Protect changes it.
-    opened_with: str = field(default="", repr=False)
-    # Set while the editor is to ask for the document's password: x2t's exit,
-    # 90 for none given or 91 for a wrong one, and what tries the one typed
-    # (opening.ask_password).
-    password_asked: PasswordAsked | None = field(default=None, repr=False)
-    # The certificate this window signs with, once chosen in its dialog.
-    certificate: ChosenCertificate | None = field(default=None, repr=False)
 
     @property
     def id(self) -> str:
@@ -151,18 +100,17 @@ class Session:
     @property
     def layout(self) -> locate.Layout:
         """Where each part of the payload is: see locate.Layout."""
-        return locate.Layout.of(self.payload)
+        return locate.Layout(self.payload)
 
     @property
     def all_fonts(self) -> pathlib.Path:
         """The AllFonts.js of filesystem paths, which x2t reads."""
-        return self.font_dir / "AllFonts.js"
+        return self.fonts / "AllFonts.js" if self.fonts else self.layout.all_fonts
 
     @property
     def font_dir(self) -> pathlib.Path:
-        """The fonts' index, which is where x2t finds font_selection.bin, and
-        so what it calls its font folder."""
-        return self.fonts or fonts.get_shipped(self.layout)
+        """Where x2t finds font_selection.bin, which it calls its font folder."""
+        return self.fonts or self.layout.sdkjs_common
 
     @property
     def unsaved_marker(self) -> pathlib.Path:
@@ -251,13 +199,6 @@ class Session:
     def write_current_document(self, document: pathlib.Path) -> None:
         write_atomically(self.current_file, str(document))
 
-    def forget_password(self) -> None:
-        """Another document is coming into this session: the password was the
-        last one's. Kept, every save of the next would be encrypted with it."""
-        self.password = ""
-        self.opened_with = ""
-        self.password_asked = None
-
     def mark_modified(self, modified: bool) -> None:
         """Record whether the editor has edits the file does not.
 
@@ -272,9 +213,6 @@ class Session:
                 json.dumps({
                     "document": str(self.read_current_document() or ""),
                     "at": time.time(),
-                    # Recovered, its edits open without the password, which
-                    # its saves need (opening._recover).
-                    "protected": bool(self.password),
                 }),
             )
         else:
@@ -339,7 +277,7 @@ def create_session(document: pathlib.Path | None = None) -> Session:
     was made.
     """
     template = next(iter(list(SESSIONS.values())))
-    layout = locate.Layout.of(template.payload)
+    layout = locate.Layout(template.payload)
     # The fonts as they are now, if their index is built; and if it is not, it
     # is built for the windows after this one.
     fonts.build_behind(layout, {s.fonts for s in list(SESSIONS.values())})

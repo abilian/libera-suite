@@ -13,18 +13,7 @@ from libera.host.server import routes
 API = {
     # The open document.
     ("GET", "opened"),
-    ("POST", "password"),
     ("GET", "current"),
-    ("POST", "opening-password"),
-    # Its signatures.
-    ("GET", "signatures"),
-    ("GET", "certificate"),
-    ("POST", "certificate"),
-    ("POST", "sign"),
-    ("POST", "remove-signature"),
-    ("GET", "signer"),
-    ("POST", "save-question"),
-    ("GET", "image"),
     ("POST", "changes"),
     ("POST", "modified"),
     ("POST", "save"),
@@ -54,8 +43,6 @@ API = {
     ("GET", "start"),
     ("GET", "apps"),
     ("GET", "payload"),
-    ("GET", "old-payloads"),
-    ("POST", "old-payloads"),
     # The regression harness.
     ("GET", "report"),
     ("POST", "shot"),

@@ -11,10 +11,8 @@ import logging
 import mimetypes
 import pathlib
 import shutil
-import threading
 
-from libera.host import convert, desktop, hooks, saving, signing
-from libera.host.convert import ConversionError
+from libera.host import desktop, hooks, saving
 from libera.host.server import diagnostics
 from libera.host.server.api import (
     NO_CONTENT,
@@ -35,73 +33,15 @@ def serve_opened(r: Request) -> Response:
     conversion its window was opened beside has finished."""
     if r.session.converting is not None:
         r.session.converting.join()
-    return _hand_over(r)
-
-
-def _hand_over(r: Request) -> Response:
-    """Editor.bin, or the question of the document's password, which the
-    bridge has the editor ask with its own dialog."""
-    asked = r.session.password_asked
-    if asked is not None:
-        return answer_json({"needPassword": asked.code})
     data = r.session.editor_bin.read_bytes()
-    opened = {"b64": base64.b64encode(data).decode(), "len": len(data)}
-    if r.session.password and r.session.editor.converted:
-        # The editor's own is gone after a reload, and its next save, which
-        # carries the editor's, would remove the document's protection.
-        opened["password"] = r.session.password
-    return answer_json(opened)
-
-
-@endpoint("POST", "password")
-def take_password(r: Request) -> Response:
-    """The password typed into the editor's dialog: the document converted
-    with it, or the question again, when it was wrong (opening.ask_password)."""
-    asked = r.session.password_asked
-    if asked is None:
-        raise Refused(409, "no password was asked for")
-    try:
-        asked.answer(r.read_field("password", str))
-    except ConversionError as e:
-        raise Refused(500, str(e)) from e
-    return _hand_over(r)
+    return answer_json({"b64": base64.b64encode(data).decode(), "len": len(data)})
 
 
 @endpoint("GET", "current")
 def serve_current(r: Request) -> Response:
     """The path of the document this window has open."""
     p = r.session.read_current_document()
-    reads_itself = not r.session.editor.converted
-    # Whether File > Protect is offered: in a format x2t encrypts, so that a
-    # password set is one the file gets, and for a PDF, one whose password x2t
-    # may change. The editor reads it once, as it loads.
-    if reads_itself:
-        # Asked as the page loads, while the PDF may still be on its way in.
-        if r.session.converting is not None:
-            r.session.converting.join()
-        protectable = r.session.editor_bin.is_file() and convert.may_change_password(
-            r.session.editor_bin
-        )
-    else:
-        protectable = p is None or p.suffix.lower() in convert.ENCRYPTABLE
-    return answer_json({
-        "path": str(p) if p else "",
-        "protectable": protectable,
-        "readsItself": reads_itself,
-        "signable": signing.is_signable(r.session),
-    })
-
-
-@endpoint("POST", "opening-password")
-def take_opening_password(r: Request) -> Response:
-    """The password the PDF editor opened its PDF with, "" for none, once it
-    is open: the PDF it reads is Editor.bin, which x2t opens with that to
-    save it, a save on close included."""
-    if r.session.editor.converted:
-        raise Refused(409, "this editor opens no file itself")
-    password = r.read_field("password", str)
-    r.session.opened_with = r.session.password = password
-    return NO_CONTENT
+    return answer_json({"path": str(p) if p else ""})
 
 
 @endpoint("GET", "media", prefix=True)
@@ -154,24 +94,7 @@ def save(r: Request) -> Response:
         request = saving.SaveRequest.from_body(r.read_json())
     except TypeError as e:
         raise Refused(400, str(e)) from e
-    outcome = saving.save_document(r.session, request)
-    # Saved as text, the document has no password any more, and the editor
-    # would give its own to the next Save As: the bridge takes it away.
-    outcome["protected"] = bool(r.session.password)
-    if (
-        outcome["error"] == saving.SaveOutcome.SAVED
-        and convert.rewrites(r.session)
-        and hooks.shell.windowed
-    ):
-        # A PDF whose password File > Protect changed: its Editor.bin is still
-        # the file as opened, under the old password, and recovered edits
-        # would reopen on it and be saved under that, or under none. Folded
-        # and reloaded as File > Reload does, once the editor has its answer;
-        # the editor asks for the new password.
-        threading.Thread(
-            target=hooks.shell.reload, args=(r.session,), daemon=True
-        ).start()
-    return answer_json(outcome)
+    return answer_json(saving.save_document(r.session, request))
 
 
 @endpoint("POST", "close")

@@ -8,19 +8,16 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 
 | | |
 | :--- | :--- |
-| **Fünf Anwendungen** | Windows 10 und 11 auf x64, Linux auf x86_64 (arm64 mit 0.4.1), macOS auf Apple Silicon. Words, Tables und Slides bearbeiten; Diagrams liest Visio-Dateien; Libera PDF kommentiert, füllt aus und ordnet PDFs neu. |
+| **Vier Anwendungen** | Windows 10 und 11 auf x64, Linux auf x86_64 (arm64 mit 0.4.1), macOS auf Apple Silicon. Words, Tables und Slides bearbeiten; Diagrams liest Visio-Dateien. |
 | **Öffnen und speichern** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Save, Save As, New. |
 | **Exportieren** | Save As bietet für jede Anwendung eine Formatliste an, PDF eingeschlossen. Jedes angebotene Format wird durch eine echte Konvertierung geprüft, deren Text danach wieder gelesen wird. |
-| **PDFs** | Kommentare, Markierungen und Zeichnungen, ausgefüllte Formulare, eingefügte, gelöschte, gedrehte und verschobene Seiten, kleine Textkorrekturen. Beim Speichern kommen Ihre Änderungen hinter das Original, das bleibt, wie es war. [Mit Dokumenten arbeiten](../guide/documents.md#pdfs) hat die Einzelheiten. |
-| **Kennwortgeschützte Dokumente** | Kennwortgeschützte Dokumente, Tabellen, Präsentationen und PDFs fragen nach ihrem Kennwort, und beim Speichern bleibt es erhalten. Datei ▸ Schützen gibt eines, ändert oder entfernt es, außer bei einem signierten oder von seinem Autor eingeschränkten PDF. [Mit Dokumenten arbeiten](../guide/documents.md#passwords) beschreibt die Einzelheiten. |
-| **Digitale Signaturen** | Word-, Excel- und PowerPoint-Dokumente zeigen ihre Signaturen, gültig oder nicht, und bleiben schreibgeschützt, solange sie signiert sind. Zum Signieren braucht es eine Schlüsseldatei, PKCS#12 oder PEM, und ihr Kennwort. [Mit Dokumenten arbeiten](../guide/documents.md#signatures) beschreibt die Einzelheiten. |
 | **Bilder** | Bleiben beim Öffnen und Speichern erhalten; Einfügen ▸ Bild funktioniert. |
 | **Drucken** | Erzeugt ein PDF, fragt, wo es aufbewahrt werden soll, und öffnet es in Ihrem PDF-Betrachter. |
-| **Rechtschreibprüfung** | Sechs Sprachen, mit Vorschlägen. Siehe unten. |
-| **In Ihrer Sprache** | Die Anwendungen folgen der Sprache Ihres Systems, und ein neues Dokument beginnt mit der leeren Vorlage Ihrer Region: A4-Papier überall außer in den USA, und Rechtschreibprüfung in Ihrer Sprache. Menüleiste, Startfenster und Dialoge folgen ebenfalls, in jeder Sprache der Anwendungen, und auf Arabisch, Hebräisch und Urdu ist das Startfenster von rechts nach links angeordnet. Nur die deutsche, französische, italienische und spanische Übersetzung hat ein Muttersprachler durchgesehen; die anderen sind Entwürfe, und [Korrekturen sind willkommen](../feedback.md). |
+| **Rechtschreibprüfung** | Fünf Sprachen, mit Vorschlägen. Siehe unten. |
+| **In Ihrer Sprache** | Die Anwendungen folgen der Sprache Ihres Systems, und ein neues Dokument beginnt mit der leeren Vorlage Ihrer Region: A4-Papier überall außer in den USA, und Rechtschreibprüfung in Ihrer Sprache. Auf Deutsch, Französisch, Italienisch und Spanisch folgen auch Menüleiste, Startfenster und Dialoge; in jeder anderen Sprache sind sie auf Englisch. |
 | **Zuletzt verwendete Dokumente** | Datei ▸ Zuletzt verwendet merkt sich die letzten 20. |
-| **Mehrere Dokumente gleichzeitig** | Auch verschiedener Art, jedes in seinem Fenster, unter macOS jedes in seinem Tab, wenn das System Tabs bevorzugt: über Datei ▸ Neu oder Datei ▸ Öffnen, per Doppelklick im Dateimanager oder mit `libera *.docx`. Der Dateityp bestimmt die Anwendung. |
-| **Bei Ihren Anwendungen** | Unter Windows legt das Installationsprogramm Libera Suite im Startmenü und auf dem Desktop ab und trägt sie im Explorer unter *Öffnen mit* ein. Unter Linux trägt das Flatpak sie mit Symbol und Dateizuordnungen in das Anwendungsmenü ein; `libera --launcher-install` tut dasselbe für jede andere Installation. Unter macOS legt das Installationsskript `Libera.app` in Ihren Programme-Ordner, und `libera --launcher-install` tut dasselbe nach Homebrew: Der Finder bietet sie unter *Öffnen mit* an, und das Dock zeigt ihr Symbol und ihren Namen. |
+| **Mehrere Dokumente gleichzeitig** | Auch verschiedener Art, jedes in seinem Fenster: über Datei ▸ Neu oder Datei ▸ Öffnen, per Doppelklick im Dateimanager oder mit `libera *.docx`. Der Dateityp bestimmt die Anwendung. |
+| **Im Startmenü und im Anwendungsmenü** | Unter Windows legt das Installationsprogramm Libera Suite im Startmenü und auf dem Desktop ab und trägt sie im Explorer unter *Öffnen mit* ein. Unter Linux trägt das Flatpak sie mit Symbol und Dateizuordnungen in das Anwendungsmenü ein; `libera --launcher-install` tut dasselbe für jede andere Installation. |
 | **Ein Startfenster** | `libera` ohne Argument: neues Dokument, öffnen, zuletzt verwendete Dokumente und die Herkunft der Komponenten. |
 | **Wiederherstellung nach Abstürzen** | Nicht gespeicherte Änderungen werden beim nächsten Öffnen des Dokuments wieder angeboten. |
 | **Ein anderswo geöffnetes Dokument** | Ist es bereits in LibreOffice oder einer anderen Instanz von Libera Suite geöffnet, wird es als *zur Bearbeitung gesperrt* markiert: Sie können es lesen und ändern, und beim Speichern wird nach dem Ort gefragt, sodass die Datei der anderen Instanz nie überschrieben wird. Ein Dokument, das bereits in einem Fenster angezeigt wird, holt beim erneuten Öffnen dieses Fenster nach vorn. Microsoft Office und Libera Suite sehen die Sperren des jeweils anderen nicht: Ein in Word geöffnetes Dokument ist nicht geschützt. |
@@ -36,43 +33,43 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 
 | | |
 | :--- | :--- |
-| **macOS spricht von einem nicht verifizierten Entwickler** | Nur bei einer `Libera.app`, die aus einer Kopie des Quellcodes gebaut wurde: Sie ist nicht mit einer Developer ID signiert, daher erhebt Gatekeeper beim ersten Mal Einspruch. [Weitere Installationswege](alt-install.md#a-double-clickable-application-on-macos) zeigt, wie Sie darüber hinwegkommen. Eine Installation über `pip`, `pipx` oder Homebrew ist nie betroffen. |
-| **Aus einem Terminal gestartet, zeigt das Dock „Python“** | Nur wenn Sie `libera` unter macOS in einem Terminal starten. Ein Dock-Symbol trägt den Namen des Programmpakets, aus dem es gestartet wurde, hier den des Python-Interpreters, und daran kann die Anwendung nichts ändern. Symbol und Menüleiste sind in jedem Fall unsere; `Libera.app` zeigt Libera an. Ein Dokument, das Sie auf dieses Python-Symbol ziehen, wird im Namen von Python abgelehnt; das Symbol von `Libera.app` nimmt es an. |
+| **macOS spricht von einem nicht verifizierten Entwickler** | Nur bei einer `Libera.app`, die Sie selbst gebaut haben: Sie ist nicht mit einer Developer ID signiert, daher erhebt Gatekeeper beim ersten Mal Einspruch. [Weitere Installationswege](alt-install.md#a-double-clickable-application-on-macos) zeigt, wie Sie darüber hinwegkommen. Eine Installation über `pip`, `pipx` oder Homebrew ist nie betroffen. |
+| **Aus einem Terminal gestartet, zeigt das Dock „Python“** | Nur wenn Sie `libera` aus einer `pipx`-Installation oder einer virtuellen Umgebung starten. Ein Dock-Symbol trägt den Namen des Programmpakets, aus dem es gestartet wurde, hier den des Python-Interpreters, und daran kann die Anwendung nichts ändern. Symbol und Menüleiste sind in jedem Fall unsere; `Libera.app` zeigt Libera an. Ein Dokument, das Sie auf dieses Python-Symbol ziehen, wird im Namen von Python abgelehnt; das Symbol von `Libera.app` nimmt es an. |
 | **Diagrams kann nicht speichern** | Es öffnet eine `.vsdx`-Datei und zeigt sie an. Der Konverter kann kein Visio-Format schreiben, also gibt es nichts zu speichern und keine leere Vorlage für den Anfang. |
-| **Geänderter PDF-Text bricht nicht neu um** | Eine mit *Text bearbeiten* geänderte Zeile behält ihre Breite, sodass neue Wörter in eine eigene Zeile kommen, in einer unserer Schriften, wenn die des PDFs nicht verwendet werden kann. |
-| **Von LibreOffice 26 geschützte Dateien öffnen sich nicht** | Standardmäßig verschlüsselt LibreOffice 26 eine OpenDocument-Datei auf eine Weise, die Libera Suite noch nicht lesen kann. Libera Suite sagt das, statt nach dem Kennwort zu fragen. |
-| **Zertifizierte PDFs lassen sich nicht speichern** | Ein PDF, das gegen jede Änderung zertifiziert ist. Das Speichern schlägt mit einer allgemeinen Meldung fehl, und die Datei bleibt, wie sie war. |
-| **Eine schmale Menüleiste, mit wenigen angezeigten Tastenkürzeln unter Linux und keinen unter Windows** | Linux und Windows haben File, Edit, View und Help, im Fenster gezeichnet. Unter Linux zeigen Neu, Öffnen und Schließen Ctrl-N, Ctrl-O und Ctrl-W, kein anderer Eintrag zeigt seine Taste; unter Windows keiner. Die Tasten funktionieren trotzdem: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Umschalt-S, Ctrl-P und Ctrl-Z. macOS hat dieselben Menüs plus Window, mit den üblichen Tastenkürzeln. |
-| **Keine Tabs unter Linux und Windows** | Dort ein Fenster pro Dokument. macOS hat Tabs. |
+| **Keine PDF-Bearbeitung** | PDFs werden nur erzeugt. Ein PDF zum Bearbeiten zu öffnen, ist nicht angebunden. |
+| **Eine schmale Menüleiste, ohne angezeigte Tastenkürzel unter Linux und Windows** | Linux und Windows haben File, Edit, View und Help, im Fenster gezeichnet, ohne angezeigte Tastenkürzel. Die Tasten funktionieren trotzdem: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Umschalt-S, Ctrl-P und Ctrl-Z. macOS hat dieselben Menüs plus Window, mit den üblichen Tastenkürzeln. |
+| **Keine Tabs** | Ein Fenster pro Dokument. |
 | **Windows warnt vor dem Installationsprogramm** | Das heruntergeladene Installationsprogramm ist noch nicht signiert, daher zeigt SmartScreen beim ersten Mal *„Der Computer wurde durch Windows geschützt“*. [Installieren](install.md#windows) zeigt, wie Sie darüber hinwegkommen. Die Installation per PowerShell-Zeile ist nie betroffen. |
 
 Wenn Sie auf etwas stoßen, das *nicht* auf dieser Liste steht, [melden Sie es uns](../feedback.md).
 
 ## Halb fertig
 
-**Die Menüleiste unter Linux und Windows.** Sie ist im Fenster gezeichnet, mit Datei, Bearbeiten, Ansicht und Hilfe; jeder Eintrag funktioniert. Unter Linux zeigen Neu, Öffnen und Schließen ihr Tastenkürzel, sonst kein Eintrag; unter Windows keiner. Die üblichen Tasten funktionieren trotzdem: Ctrl-N legt ein neues Dokument derselben Art an, Ctrl-O öffnet eines, Ctrl-W schließt das Fenster (und fragt vorher nach ungespeicherten Änderungen), und die eigenen Kürzel der Komponenten, Ctrl-S, Ctrl-Umschalt-S (Speichern unter), Ctrl-P und Ctrl-Z, funktionieren ebenfalls. Unter Windows wurden Ctrl-N, Ctrl-O und Ctrl-W noch nicht auf einem echten Rechner geprüft. Datei ▸ Neu ▸ Dokument, Tabelle oder Präsentation funktioniert, ebenso die Kacheln Neu im Startfenster und der Reiter Datei des Dokuments.
+**Die Menüleiste unter Linux und Windows.** Sie ist im Fenster gezeichnet, mit Datei, Bearbeiten, Ansicht und Hilfe; jeder Eintrag funktioniert. Keiner zeigt ein Tastenkürzel an, aber die üblichen Tasten funktionieren: Ctrl-N legt ein neues Dokument derselben Art an, Ctrl-O öffnet eines, Ctrl-W schließt das Fenster (und fragt vorher nach ungespeicherten Änderungen), und die eigenen Kürzel der Komponenten, Ctrl-S, Ctrl-Umschalt-S (Speichern unter), Ctrl-P und Ctrl-Z, funktionieren ebenfalls. Unter Windows wurden Ctrl-N, Ctrl-O und Ctrl-W noch nicht auf einem echten Rechner geprüft. Datei ▸ Neu ▸ Dokument, Tabelle oder Präsentation funktioniert, ebenso die Kacheln Neu im Startfenster und der Reiter Datei des Dokuments.
 
-**`Libera.app` unter macOS.** Das Installationsskript legt sie in Ihren Programme-Ordner, und `libera --launcher-install` tut dasselbe nach jeder anderen Installation. Sie öffnet ein Dokument per Doppelklick oder wenn es auf ihr Dock-Symbol gezogen wird, erscheint unter *Öffnen mit* und zeigt das Libera-Zeichen im Dock. Sie ist aber ein Starter um das Python Ihrer Installation (nichts ist eingebettet, signiert oder notarisiert), und damit noch nichts, was man jemand anderem geben kann.
+**`Libera.app` unter macOS.** `build/macos/macos-app.sh` baut sie. Sie öffnet ein Dokument per Doppelklick oder wenn es auf ihr Dock-Symbol gezogen wird, erscheint unter *Öffnen mit* und zeigt das Libera-Zeichen im Dock. Sie ist aber ein Starter um den Interpreter, mit dem sie gebaut wurde (nichts ist eingebettet, signiert oder notarisiert), und damit noch nichts, was man jemand anderem geben kann.
 
 ## Noch nicht begonnen
 
 ### Im Dokumentfenster
 
+- **Kennwortgeschützte Dokumente.** Weder öffnen noch speichern.
+- **Digitale Signaturen.**
 - **Serienbriefe.**
 - **Plugins.** In diesem Fork vom Upstream-Projekt abgeschaltet, daher erscheint das Panel nie.
 - **Makros.** Abgeschaltet. Die Makros der Komponenten sind JavaScript und führen kein VBA aus Microsoft-Office-Dokumenten aus, daher werden die Makros eines Dokuments nicht ausgeführt. Sie bleiben erhalten: Beim Speichern einer `.docm`-, `.xlsm`- oder `.pptm`-Datei bleibt ihr VBA unverändert. [Die Roadmap](/en/develop/roadmap/), auf Englisch, beschreibt, was stattdessen kommt.
 
 ### In der Anwendung
 
-- **Tabs unter Linux und Windows.** Dort ein Fenster pro Dokument, die die Taskleiste gruppiert.
-- **Eine weitergebbare Anwendung unter macOS.** `Libera.app` verwendet das Python Ihrer eigenen Installation und bettet weder Interpreter noch Komponenten ein. Windows hat eine: Sein Installationsprogramm bringt alles mit.
-- **Automatische Aktualisierungen** und **Code-Signatur**. macOS behandelt eine aus einer Kopie des Quellcodes gebaute `Libera.app` als Software eines nicht verifizierten Entwicklers. Windows warnt vor dem heruntergeladenen Installationsprogramm.
+- **Tabs.** Die Fenster gibt es, und das Menü Window listet sie auf, aber sie lassen sich nicht in einem Fenster zusammenführen.
+- **Eine weitergebbare Anwendung unter macOS.** `Libera.app` läuft aus Ihrer eigenen Kopie des Quellcodes und bettet weder Interpreter noch Komponenten ein. Windows hat eine: Sein Installationsprogramm bringt alles mit.
+- **Automatische Aktualisierungen** und **Code-Signatur**. macOS behandelt eine selbst gebaute `Libera.app` als Software eines nicht verifizierten Entwicklers. Windows warnt vor dem heruntergeladenen Installationsprogramm.
 - **Eine Offline-Hilfe**, lesbar ohne Browser und ohne Netz. Das Menü Help öffnet diese Website; About funktioniert offline. Siehe unten.
 
 ### Anderswo
 
 - **Diagramme bearbeiten.** Diagrams öffnet eine `.vsdx`-Datei und zeigt sie an. Der Konverter kann kein Visio-Format schreiben, also gibt es nichts zu speichern und keine leere Vorlage für den Anfang.
-- **Eigene PDF-Formulare.** Libera PDF füllt ein Formular aus; eines zu erstellen ist nicht gebaut.
+- **PDF-Bearbeitung.** Das Upstream-Projekt hat einen PDF-Editor; die Komponenten, die Libera Suite installiert, enthalten ihn noch nicht, weil nichts ihn öffnen würde.
 - **Zusammenarbeit, Cloud-Speicher, Konten, Telemetrie.** Nichts davon ist gebaut, und an nichts davon wird gearbeitet. [Die Roadmap](/en/develop/roadmap/), auf Englisch, beschreibt, wie jedes davon aussähe, falls es käme. [Was Ihren Rechner verlässt](../index.md#what-leaves-your-machine) führt die gesamte Netzwerknutzung der Anwendung auf.
 
 ## Hinweise zu einzelnen Lücken
@@ -83,7 +80,7 @@ Es gibt ein Menü **Hilfe**, auf allen Plattformen, und es öffnet diese Website
 
 ### Rechtschreibprüfung
 
-Libera Suite liefert Wörterbücher für **Englisch (USA und Großbritannien), Französisch, Deutsch, Spanisch, Italienisch und Niederländisch** mit: 12 MB samt ihren Lizenzen, ausgewählt, weil der vollständige Satz 327 MB umfasst. Eine Sprache hinzuzufügen, erfordert eine Zeile in `build/payload/dictionaries.txt` und einen Neubau der Komponenten.
+Libera Suite liefert Wörterbücher für **Englisch (USA und Großbritannien), Französisch, Deutsch, Spanisch und Italienisch** mit: 9,5 MB, ausgewählt, weil der vollständige Satz 327 MB umfasst. Eine Sprache hinzuzufügen, erfordert eine Zeile in `build/payload/dictionaries.txt` und einen Neubau der Komponenten.
 
 Eine Sprache ohne Wörterbuch ist kein Fehler: Ihre Wörter gelten schlicht als richtig, wie in der Desktop-Anwendung des Upstream-Projekts. Über *Add to dictionary* hinzugefügte Wörter bleiben erhalten, für alle Dokumente und alle Sprachen.
 
@@ -95,7 +92,7 @@ Nachverfolgte Änderungen und Kommentare werden einer Person zugeordnet, deren N
 
 ### Schriften
 
-Libera Suite liefert einen Grundbestand an Schriften mit: Liberation, Carlito, Caladea, Open Sans und einige weitere, genug, um gewöhnliche Dokumente originalgetreu darzustellen, bei 7 MB. Der vollständige Satz umfasst 248 MB. Ein Dokument, das eine Schrift außerhalb dieses Bestands verlangt, verwendet die auf Ihrem Rechner installierte, auf dem Bildschirm wie im PDF, und erhält nur dann eine Ersatzschrift, wenn auch Ihr Rechner sie nicht hat. Ausgenommen sind Calibri, Cambria, Arial, Times New Roman und Courier New: Fehlen sie auf Ihrem Rechner, erhält ein Dokument Carlito, Caladea oder Liberation, die dieselben Breiten haben, sodass seine Seiten an denselben Stellen umbrechen wie in Word, gleich welche Schriften sonst installiert sind. Libera Suite erfasst Ihre Schriften beim ersten Start und erneut im Hintergrund, wann immer Sie eine installieren oder entfernen; die danach geöffneten Fenster verwenden die neue Liste. Ob der Bestand erweitert wird, besonders für Chinesisch, Japanisch und Koreanisch, ist noch offen.
+Libera Suite liefert einen Grundbestand an Schriften mit: Liberation, Carlito, Caladea, Open Sans und einige weitere, genug, um gewöhnliche Dokumente originalgetreu darzustellen, bei 7 MB. Der vollständige Satz umfasst 248 MB. Ein Dokument, das eine Schrift außerhalb dieses Bestands verlangt, verwendet die auf Ihrem Rechner installierte, auf dem Bildschirm wie im PDF, und erhält nur dann eine Ersatzschrift, wenn auch Ihr Rechner sie nicht hat. Libera Suite erfasst Ihre Schriften beim ersten Start und erneut im Hintergrund, wann immer Sie eine installieren oder entfernen; die danach geöffneten Fenster verwenden die neue Liste. Ob der Bestand erweitert wird, besonders für Chinesisch, Japanisch und Koreanisch, ist noch offen.
 
 ### Treue der Darstellung
 

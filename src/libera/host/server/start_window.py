@@ -11,7 +11,6 @@ import re
 
 from libera.host import apps, language
 from libera.host.server.api import Request, Response, answer_json, endpoint
-from libera.payload import leftovers, locate
 
 
 @endpoint("GET", "start")
@@ -37,9 +36,9 @@ def fill_in(page: str) -> str:
     """The start window in the interface language: its marked text translated,
     and the catalogue handed to its script, whose `tr` looks the rest up."""
     page = MARKED.sub(lambda m: html.escape(language.translate(m[1])), page)
-    lang = language.get_interface_language()
-    direction = "rtl" if lang in language.RIGHT_TO_LEFT else "ltr"
-    page = page.replace('<html lang="en">', f'<html lang="{lang}" dir="{direction}">')
+    page = page.replace(
+        '<html lang="en">', f'<html lang="{language.get_interface_language()}">'
+    )
     return page.replace(STRINGS, json.dumps(language.get_catalogue()))
 
 
@@ -67,38 +66,22 @@ def serve_payload(r: Request) -> Response:
     payload's own payload.json, so a development tree reports that it
     knows nothing.
     """
+    # Imported here, since this is the only thing that wants the installer and
+    # `libera --serve` runs the host without it.
+    from libera import payload as payload_mod
+
     # Unreadable is not the same as absent: a payload.json that will not parse
     # was shown as "local build", which is what a tree with none is told.
-    found = locate.resolve()
-    info = found.read_record()
+    marker = r.session.layout.record
+    info = json.loads(marker.read_text(encoding="utf-8")) if marker.is_file() else {}
     body = {
         "root": str(r.session.payload),
-        # How this process found it -- LIBERA_PAYLOAD, a config file, the
-        # components or the installed copy -- which is not in payload.json
-        # because it is not a property of the payload.
-        "origin": found.origin,
+        # How this process found it -- LIBERA_PAYLOAD, a config file, or the
+        # installed copy -- which is not in payload.json because it is not a
+        # property of the payload.
+        "origin": payload_mod.resolve().origin,
         "version": info.get("payload_version") or language.translate("local build"),
         "platform": info.get("platform"),
         "built": info.get("built"),
     }
     return answer_json(body)
-
-
-@endpoint("GET", "old-payloads")
-def serve_old_payloads(_r: Request) -> Response:
-    """What earlier versions downloaded, in MB, for the start window to offer
-    to remove; 0 when there is none, or it has asked once already."""
-    if not leftovers.should_offer():
-        return answer_json({"size_mb": 0})
-    size = sum(leftovers.measure(root) for root in leftovers.find())
-    return answer_json({"size_mb": round(size / 1e6)})
-
-
-@endpoint("POST", "old-payloads")
-def answer_old_payloads(r: Request) -> Response:
-    """The answer, which stands: removed or kept, the window asks no more."""
-    remove = bool(r.read_json().get("remove"))
-    if remove:
-        leftovers.remove()
-    leftovers.mark_asked()
-    return answer_json({"removed": remove})

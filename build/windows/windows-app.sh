@@ -3,10 +3,8 @@
 #
 #   sh build/windows/windows-app.sh          icon, freeze, installer
 #
-# Freezes the environment `uv run` syncs, which holds the components that
-# `uv sync` builds (an hour the first time, minutes after a `payload all`),
-# and needs build/windows/windows-setup.ps1's tools, Inno Setup among them.
-# Writes:
+# Needs a built payload's artifacts (build/engine/dist.sh, into $OUT/dist/<version>)
+# and build/windows/windows-setup.ps1's tools, Inno Setup among them. Writes:
 #
 #   $OUT/windows/Libera Suite/                the frozen application
 #   $OUT/windows/Libera-Suite-Setup-<v>.exe   what a user downloads
@@ -25,6 +23,7 @@ REPO="$(cd "$BUILD/.." && pwd)"
 [ -n "$EXE" ] || { echo "FATAL: this builds the Windows application; run it on Windows" >&2; exit 1; }
 
 PAYLOAD_VERSION="$(payload_version "$REPO")"
+DIST="$OUT/dist/$PAYLOAD_VERSION"
 WORK="$OUT/windows"
 APP_VERSION="$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$REPO/pyproject.toml" | head -1)"
 # The numbers alone, for what Windows reads as a version: 0.4.0 of 0.4.0rc1.
@@ -44,6 +43,12 @@ done
 
 EDGE="/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
 [ -x "$EDGE" ] || { echo "FATAL: no Edge at $EDGE, which draws the icon" >&2; exit 1; }
+
+[ -f "$DIST/manifest.json" ] && [ -f "$DIST/core-windows-x86_64.tar.gz" ] || {
+    echo "FATAL: no Windows payload artifacts in $DIST" >&2
+    echo "       sh build/engine/build.sh build && sh build/engine/payload.sh && sh build/engine/dist.sh" >&2
+    exit 1
+}
 
 mkdir -p "$WORK"
 
@@ -97,7 +102,12 @@ VSVersionInfo(
 VER
 
 # --- freeze -----------------------------------------------------------------------
+# The payload's manifest goes into the application, as it goes into a release
+# wheel: the artifacts the installer carries are then checked against the
+# application's own copy, not trusted because they arrived beside it.
 echo "==> freeze ($PYINSTALLER, libera $APP_VERSION, payload $PAYLOAD_VERSION)"
+cp "$DIST/manifest.json" "$REPO/src/libera/manifest.json"
+trap 'rm -f "$REPO/src/libera/manifest.json"' EXIT
 rm -rf "$WORK/freeze" "$WORK/Libera Suite"
 (
     cd "$REPO"
@@ -110,7 +120,7 @@ rm -rf "$WORK/freeze" "$WORK/Libera Suite"
             "$(cygpath -w "$HERE/libera.spec")"
 )
 APP="$WORK/Libera Suite"
-for f in Libera.exe libera-cli.exe; do
+for f in Libera.exe libera-cli.exe _internal/libera/manifest.json; do
     [ -f "$APP/$f" ] || { echo "FATAL: the frozen tree has no $f" >&2; exit 1; }
 done
 
@@ -118,13 +128,14 @@ done
 # fails here, at a prompt, rather than on a user's double-click.
 echo "==> the frozen application"
 "$APP/libera-cli.exe" -V
-# --payload-status reaches the payload code, which -V does not, and says where
-# the payload was found: the components frozen with it, or the bundle is
-# broken. A missed module is a traceback, and its exit status alone cannot
-# tell it from a payload not found.
+# --payload-status reaches the payload code, which -V does not. Whether this
+# machine has a payload installed is not the question, so either answer
+# passes: where it is, or `libera:` and why not. A missed module is neither,
+# it is a traceback, and its exit status alone cannot tell it from "none".
 said="$("$APP/libera-cli.exe" --payload-status 2>&1)" || :
-if ! printf '%s\n' "$said" | grep -q '^found via: *components$'; then
-    echo "FATAL: the frozen application did not find its components:" >&2
+if printf '%s\n' "$said" | grep -q Traceback \
+    || ! printf '%s\n' "$said" | grep -qE '^(payload|libera):'; then
+    echo "FATAL: the frozen application could not say where its payload is:" >&2
     printf '%s\n' "$said" | sed 's/^/    /' >&2
     exit 1
 fi
@@ -142,6 +153,7 @@ MSYS2_ARG_CONV_EXCL='*' "$ISCC" /Q \
     "/DAppVersion=$APP_VERSION" \
     "/DAppNumbers=$APP_NUMBERS" \
     "/DAppDir=$(cygpath -w "$APP")" \
+    "/DPayloadDir=$(cygpath -w "$DIST")" \
     "/DIconFile=$(cygpath -w "$ICON")" \
     "/DAssociations=$(cygpath -w "$ASSOC")" \
     "/DOutputDir=$(cygpath -w "$WORK")" \

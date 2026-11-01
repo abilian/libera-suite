@@ -9,7 +9,7 @@ libera ~/Documents/budget.xlsx
 libera ~/Documents/network.vsdx
 ```
 
-**The document decides which application you get.** There is no command to pick one, in the same way there is no command to pick a text editor for a `.txt`: you open the document and the right application comes up. An `.xlsx` opens in Tables, a `.pptx` in Slides, a `.vsdx` in Diagrams, a `.pdf` in Libera PDF.
+**The document decides which application you get.** There is no command to pick one, in the same way there is no command to pick a text editor for a `.txt`: you open the document and the right application comes up. An `.xlsx` opens in Tables, a `.pptx` in Slides, a `.vsdx` in Diagrams.
 
 ![The start window, with a New tile for each of Document, Spreadsheet and Presentation, an Open button, and a Recent list of three documents.](../assets/start.png)
 
@@ -22,8 +22,6 @@ libera ~/Documents/*.docx     # one window each
 ```
 
 You can also open a document from inside the document window, through **File ▸ Open** or **File ▸ Open Recent**. Either opens a new window; neither disturbs the document you already have open.
-
-**On macOS, documents can open as tabs** of one window. Libera Suite follows the system's setting, *Prefer tabs when opening documents* in System Settings ▸ Desktop & Dock, as every Mac document application does. Set to *Always*, each document opens as a tab. Otherwise it opens in a window of its own, and **Window ▸ Merge All Windows** gathers them. The **+** at the end of the tab bar opens the start window as a new tab, and the document you choose there takes its place. A tab can be dragged out into a window of its own.
 
 **Dropping a document** on any Libera Suite window, the start window included, opens it in a window of its own. An image dropped on a document is inserted into it.
 
@@ -74,13 +72,13 @@ A file already there under the new name is replaced. Nothing is written over the
 
 ## The menu bar
 
-On Linux and Windows the bar sits inside the window: **File**, **Edit**, **View** and **Help**, the last holding *Libera Help* and *About Libera Suite*. Three differences follow from what the menu there offers. On Linux, New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W beside them, and no other item shows its key; on Windows none does. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P and Ctrl-Z do what the ⌘ keys below do on a Mac. **Open Recent** is built when the application starts, so a document you open today appears in it tomorrow. Nothing greys out, so Save with nothing to save does nothing.
+On Linux and Windows the bar sits inside the window: **File**, **Edit**, **View** and **Help**, the last holding *Libera Help* and *About Libera Suite*. Three differences follow from what the menu there offers. None of the items shows a keyboard shortcut, but Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P and Ctrl-Z do what the ⌘ keys below do on a Mac. **Open Recent** is built when the application starts, so a document you open today appears in it tomorrow. Nothing greys out, so Save with nothing to save does nothing.
 
 On macOS it is a real Mac menu bar, with the same items plus **Window**. The usual shortcuts work there whether or not the document has focus:
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | New (of the front window's kind), Open: each in its own window, or tab |
+| `⌘N` `⌘O` | New (of the front window's kind), Open: each in its own window |
 | `⌘S` `⇧⌘S` | Save, Save As |
 | `⌘P` | Print |
 | `⌘W` | Close, asking about unsaved changes first |
@@ -110,44 +108,11 @@ That is the choice for now: the viewer you already have gives you page ranges, p
 
 Images embedded in a document are preserved on open and save. **Insert ▸ Image** adds an image from disk.
 
-## PDFs
-
-A `.pdf` opens in **Libera PDF**. Libera Suite is offered in *Open With* for a PDF, never as the default: a double-click still opens it in your usual viewer.
-
-- **Comment.** The **Comment** tab has *Text Comment*, *Highlight*, a pen, shapes and a text box.
-- **Fill in a form.** Click a field and type, tick a box, choose from a list. Many official forms are made with Adobe LiveCycle Designer and carry a second copy of the form that only Acrobat reads. Saving leaves that copy out, so that Acrobat shows the values you filled in, as other readers do.
-- **Change the pages.** Right-click a page for *Insert blank page after*, *Delete page* and *Rotate page*. Drag a page's thumbnail to move it.
-- **Change a line of text**, with *Edit PDF*, then *Edit Text*. Use it for small corrections. The new words are set in one of our fonts when the PDF's own cannot be used, and a line that grows does not reflow: what no longer fits goes to a line of its own.
-
-**Saving adds to the file.** Your changes are written after the PDF's original content, which stays exactly as it was. A signature that permits comments therefore stays valid for what it signed. A PDF saves only as a PDF.
-
-**A PDF that asks for a password** opens once you give it, and saves with your changes, still under the same password. **A PDF certified against any change cannot be saved**: the save fails and says so, the file is left as it was, and your changes stay in the window.
-
-Creating a form is not possible yet, nor converting a PDF into a document.
-
-## Documents with a password {#passwords}
-
-A document protected by a password, by Word, LibreOffice or Libera Suite, asks for it as it opens, and again after a wrong one. Saving keeps the password: the file is written protected, as it was. A print is a PDF protected by the same password. Those formats cannot keep a password: text, CSV, TSV, RTF, HTML, Markdown, EPUB and FB2. Saving as one asks first, and *Save Without Password* writes the file unprotected; the window then has that file open, with no password.
-
-**LibreOffice 26's own protection cannot be read yet.** By default, LibreOffice 26 encrypts an OpenDocument file in a way Libera Suite does not read, and Libera Suite says so instead of asking for the password. LibreOffice writes the older encryption, which Libera Suite reads, when its ODF format version is set to 1.3.
-
-**File ▸ Protect** gives a document a password with *Add password*, and has *Change password* and *Delete password* once it has one. Each saves the document at once. It is offered for Word, Excel, PowerPoint, OpenDocument and PDF files, the formats that can carry a password. A PDF's new password rewrites the whole file, so Protect is not offered for a signed PDF, whose signatures that would break, nor for one whose author restricted printing, copying or editing, since its new password would lift those restrictions, nor for one that leaves part of itself unencrypted, which the rewrite would garble.
-
-## Signed documents {#signatures}
-
-A Word, Excel or PowerPoint document can carry digital signatures, made by Word, by Libera Suite or by Euro-Office. Libera Suite checks them as the document opens and lists them in the *Signature* panel, each valid or not, with who signed and when. A signed document opens read-only, so that nothing changes what was signed. *Valid* means the document has not changed since it was signed. Who issued the certificate is not checked yet: the signer's name is what the certificate itself says, so look at *Signature details* before trusting it.
-
-**Signing.** *Protection* ▸ *Signature* ▸ *Add digital signature*, or *Add signature line* for a signature drawn in the document, then *Select* in the *Sign document* dialog. Libera Suite asks for a key file, PKCS#12 (`.p12`, `.pfx`) or PEM, its certificate file when the key file holds none, and the key's passphrase; the signer and the dates of the certificate then show in the dialog before you sign. The passphrase is kept while the window is open, and never written. A document with edits is saved first, since a document is signed as it is on disk.
-
-**Editing a signed document removes its signatures.** *File* ▸ *Protect* ▸ *Edit document* says so and asks first; *Remove Signature*, in the *Signature* panel, removes one. *Signature details* shows the signer's certificate.
-
-**Not yet**: signing a document protected by a password, an OpenDocument file or a PDF, and the certificates in Windows's own store; a key file works on every system. **An expired certificate signs**, and its signature is listed as valid: check the certificate's dates in the dialog before signing.
-
 ## Spell checking
 
 Misspellings are underlined, and right-click offers suggestions. Which dictionary is used follows **the document's language**, which you set from the **status bar** at the bottom of the window, per document.
 
-Dictionaries for six languages ship: English (US and UK), French, German, Spanish, Italian and Dutch. A language with no dictionary is not an error; its words are simply treated as correct. Words you add through *Add to dictionary* are kept: from then on they are correct in every document and every language.
+Dictionaries for five languages ship: English (US and UK), French, German, Spanish and Italian. A language with no dictionary is not an error; its words are simply treated as correct. Words you add through *Add to dictionary* are kept: from then on they are correct in every document and every language.
 
 ## Your name in documents
 
@@ -191,8 +156,6 @@ To use another file for one run, without touching this one, name it with `libera
 ## Where your working files go
 
 While a document is open, Libera Suite keeps a session directory alongside its application data. It holds the working copy and a running log of your changes, which makes saving fast and undo reliable. It is not a backup: the document is where you saved it.
-
-For a document with a password, that working copy is not encrypted while the document is open, so anything that can read your account's files can read it. It is kept all the same, as for any document, so that your changes survive a crash, and getting them back asks for the password again.
 
 ---
 

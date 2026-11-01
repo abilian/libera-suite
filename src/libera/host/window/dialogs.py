@@ -84,41 +84,6 @@ def ask_to_recover(document: Path) -> bool:
     return answer is Answer.YES
 
 
-def confirm_unprotected(document: Path) -> bool:
-    """Ask before a protected document is saved in a format with no password.
-
-    Text, CSV, RTF and the rest are written in clear, and the window then has
-    that file open, with no password (saving.save_document).
-    """
-    answer = ask(
-        Question(
-            language.translate("Save “{name}” without a password?", name=document.name),
-            language.translate(
-                "This format cannot keep a password: anyone with the file can "
-                "read it. To keep the password, save in the document's own format."
-            ),
-            yes=language.translate("Save Without Password"),
-            no=language.translate("Cancel"),
-        )
-    )
-    return answer is Answer.YES
-
-
-def confirm_save_before_signing(document: Path) -> bool:
-    """Ask before a document with edits is saved so that it can be signed."""
-    answer = ask(
-        Question(
-            language.translate("Save “{name}” before signing it?", name=document.name),
-            language.translate(
-                "A document is signed as it is saved. Its edits are saved first."
-            ),
-            yes=language.translate("Save"),
-            no=language.translate("Cancel"),
-        )
-    )
-    return answer is Answer.YES
-
-
 def confirm_close(session_id: str) -> bool:
     """Ask before a window takes unsaved edits with it. False keeps it open.
 
@@ -133,11 +98,6 @@ def confirm_close(session_id: str) -> bool:
         return True
     document = closing.read_current_document()
     if document is None or not closing.unsaved_marker.is_file():
-        return True
-    if closing.password_asked is not None:
-        # Recovered edits of a protected document, its password not given:
-        # they cannot be saved (saving.save_document), and the marker left
-        # where it is offers them again the next time it is opened.
         return True
     return _confirm_close(closing, document)
 

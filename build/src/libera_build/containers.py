@@ -113,16 +113,6 @@ class Engine:
     def here(cls) -> Engine:
         return cls(choose_engine(os.environ, platform.system()))
 
-    def refuse_absent(self) -> None:
-        """Refuse an engine that is not installed, which would otherwise end
-        in a FileNotFoundError at its first command."""
-        if not shutil.which(self.name):
-            msg = (
-                f"no {self.name} here, and the Linux core builds in a container:"
-                " install podman or docker (or set ENGINE to the one you have)"
-            )
-            raise RefusedError(msg)
-
     def refuse_remote(self) -> None:
         """Refuse an engine that runs on another machine.
 

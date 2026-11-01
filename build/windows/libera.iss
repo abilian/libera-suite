@@ -2,7 +2,7 @@
 ;
 ; Built by build/windows/windows-app.sh, which passes:
 ;   /DAppVersion=0.4.0rc1   /DAppNumbers=0.4.0 (VersionInfoVersion takes numbers only)
-;   /DAppDir=<frozen app, its payload in share\libera\payload>
+;   /DAppDir=<frozen app>   /DPayloadDir=<dist artifacts>
 ;   /DIconFile=<.ico>    /DAssociations=<generated .iss>  /DOutputDir=<dir>
 ;
 ; Per-user and without administrator rights: the application goes to
@@ -10,10 +10,10 @@
 ; asks for elevation unless the machine lacks the WebView2 runtime, which is
 ; Microsoft's installer and asks for itself.
 ;
-; The editors themselves (the payload) are in the frozen tree, as the two
-; component packages, which the application finds by import. Their
-; configuration names them relatively, so nothing is written at install time.
-; See notes/14-windows.md.
+; The editors themselves (the payload) are installed at the end by the
+; application's own `--payload-install`, from artifacts carried in the setup:
+; the same verified path every other channel uses, checked against the
+; manifest built into the application. See notes/14-windows.md.
 
 #define AppName "Libera Suite"
 #define AppExe "Libera.exe"
@@ -47,9 +47,8 @@ UninstallDisplayName={#AppName}
 WizardStyle=modern
 OutputDir={#OutputDir}
 OutputBaseFilename=Libera-Suite-Setup-{#AppVersion}
-; Fast, which was chosen while the setup carried the payload's tarballs, gzip
-; already. It carries the payload unpacked now: a stronger setting may be
-; worth its minutes, measured.
+; The payload artifacts are gzip already; lzma2 over them gains little and
+; costs minutes, so compress the application and store the rest nearly as is.
 Compression=lzma2/fast
 SolidCompression=no
 
@@ -61,6 +60,7 @@ Name: "desktopicon"; Description: "Put a Libera Suite icon on the desktop"; Grou
 
 [Files]
 Source: "{#AppDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PayloadDir}\*"; DestDir: "{app}\payload-dist"; Flags: ignoreversion
 
 [InstallDelete]
 ; An older version's frozen tree, so modules it had and this one dropped do
@@ -78,14 +78,9 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; AppUserModelID: "
 Filename: "{app}\{#AppExe}"; Description: "Open {#AppName}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; The editors 0.6 and earlier installed there, and what this version builds
-; from its own: the fonts' indexes and the converter's code cache. Documents,
-; the Recent list and unsaved sessions stay: they are the user's, and a
-; reinstall finds them.
+; The editors installed by the payload step. Documents, the Recent list and
+; unsaved sessions stay: they are the user's, and a reinstall finds them.
 Type: filesandordirs; Name: "{localappdata}\Libera Suite\payload"
-Type: filesandordirs; Name: "{localappdata}\Libera Suite\fonts"
-Type: filesandordirs; Name: "{localappdata}\Libera Suite\shipped-fonts"
-Type: filesandordirs; Name: "{localappdata}\Libera Suite\code-cache"
 Type: files; Name: "{localappdata}\Libera Suite\instance.json"
 
 [Code]
@@ -122,11 +117,45 @@ begin
            mbError, MB_OK);
 end;
 
+{ The editors, from the artifacts carried in this setup, through the
+  application's own installer: it checks every artifact against the manifest
+  built into the application, unpacks them, and generates the font index for
+  this machine's paths. Run through cmd so its report can be kept. }
+procedure InstallPayload();
+var
+  ResultCode: Integer;
+  LogFile, Report: String;
+  Lines: TArrayOfString;
+  I: Integer;
+begin
+  WizardForm.StatusLabel.Caption := 'Installing the editors and fonts...';
+  LogFile := ExpandConstant('{localappdata}\Libera Suite\install.log');
+  ForceDirectories(ExtractFileDir(LogFile));
+  if Exec(ExpandConstant('{cmd}'),
+          '/c ""' + ExpandConstant('{app}\libera-cli.exe') + '" --payload-install --from "' +
+          ExpandConstant('{app}\payload-dist') + '" > "' + LogFile + '" 2>&1"',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+  begin
+    { Installed into %LOCALAPPDATA%\Libera Suite\payload; the artifacts are
+      spent, and they are most of the setup's size. }
+    DelTree(ExpandConstant('{app}\payload-dist'), True, True, True);
+    Exit;
+  end;
+  Report := '';
+  if LoadStringsFromFile(LogFile, Lines) then
+    for I := 0 to GetArrayLength(Lines) - 1 do
+      if I >= GetArrayLength(Lines) - 12 then
+        Report := Report + Lines[I] + #13#10;
+  MsgBox('The editors could not be installed (exit ' + IntToStr(ResultCode) + ').' + #13#10#13#10 +
+         Report + #13#10 + 'The full report is in ' + LogFile, mbError, MB_OK);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
   begin
     if not HasWebView2() then
       InstallWebView2();
+    InstallPayload();
   end;
 end;

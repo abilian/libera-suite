@@ -235,7 +235,6 @@ class Box:
         return done.stdout.strip()
 
     def ensure_image(self) -> None:
-        self.engine.refuse_absent()
         self.engine.refuse_remote()
         if not self.engine.has_image(self.image):
             clang = CLANG[self.options.arch]

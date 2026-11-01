@@ -73,7 +73,11 @@ lb payload dist                 # the distributable tarballs and their manifest
 
 Each is a thin wrapper over the script of the same name in `build/`; run those directly when you want to pass something the target does not.
 
-`uv sync` does the same itself. The two component packages, `components/core` and `components/web`, are workspace members whose build hooks build their wheels from the pinned sources, as pip does where PyPI has no wheel for the platform: libera-core's in `$BUILD_ROOT`, in the build container on Linux, libera-web's with that core's x2t, which makes the slide themes. `lb components wheels` makes the same two wheels on purpose, for PyPI: run it on each platform. It makes libera-core's sdist too, which carries the pins, the patch queues and the build scripts, and builds the core's wheel from that sdist, so each run tests what pip builds where there is no wheel. uv keeps the wheels and builds them again only when what they are built from changes: the pins, the patch queue, the scripts in `build/engine/`. A first `uv sync` builds the core, about an hour, with no output but uv's spinner; `lb payload all` first shows the build as it goes. With a built core it takes a few minutes, and the next one nothing.
+Then install what you built:
+
+```sh
+libera --payload-install --from "$BUILD_ROOT/out/dist/0.2"
+```
 
 Or skip packaging entirely while developing and point at the build tree:
 
@@ -117,10 +121,10 @@ That is two commands, and either is useful alone:
 
 ```sh
 lb payload container               # fetch, configure, core, payload, dist, smoke, in the image
-lb payload export                  # the artifacts out of the volume, and where they are
+lb payload install                 # the artifacts out of the volume and installed on this machine
 ```
 
-`payload export` copies the tarballs out of the container's volume and prints where it put them. `lb linux test` installs the component wheels of its architecture, which `lb components wheels` makes on a Linux machine of it; the Mac's own are macOS binaries.
+`payload install` copies the tarballs out of the container's volume and installs them the way a user does, with every hash checked against `manifest.json`, so `make test` resolves the payload with nothing set in the environment. After a *native* `lb payload dist`, point it at that build instead: `lb payload install --from $BUILD_ROOT/out/dist/0.2`.
 
 Underneath, the same container takes one step at a time:
 
@@ -157,8 +161,8 @@ The last layer checks the toolchain itself: every tool on `PATH`, `perl` with `F
 
 Two mounts:
 
-- **The build tree goes on a real disk**, at `$BUILD_ROOT/linux-<arch>`, beside the native one. It used to be a named Docker volume, which lives on the VM's disk (the Mac's internal one). A full build was around 30 GB, before the fetch took only the pinned commits and the third-party work trees went once installed: the first attempt died with `No space left on device` while `$BUILD_ROOT` had 295 GB free. `--volume NAME` puts the old behaviour back. V8 needs a case-sensitive filesystem, which is why `$BUILD_ROOT` is an external volume on macOS in the first place. On macOS the core alone now peaks at 4.4 GB and leaves 2.4 GB (sources 0.9, the build 1.5), measured from an empty build root.
-- **`MIRROR=DIR` is optional and read-only.** It is a local clone to fetch the pinned commits from instead of GitHub; an existing `$BUILD_ROOT/src` serves. Each tree gets its pinned commit alone, with no history: 180 MB of git for core rather than 870.
+- **The build tree goes on a real disk**, at `$BUILD_ROOT/linux-<arch>`, beside the native one. It used to be a named Docker volume, which lives on the VM's disk (the Mac's internal one). A full build is around 30 GB: the first attempt died with `No space left on device` while `$BUILD_ROOT` had 295 GB free. `--volume NAME` puts the old behaviour back. V8 needs a case-sensitive filesystem, which is why `$BUILD_ROOT` is an external volume on macOS in the first place.
+- **`MIRROR=DIR` is optional and read-only.** It is a local clone to copy git objects from, which saves pulling 1.5 GB from GitHub; an existing `$BUILD_ROOT/src` serves. Without it the fetch clones from upstream and says so.
 
 ## Windows
 

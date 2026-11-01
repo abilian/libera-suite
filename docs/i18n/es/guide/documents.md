@@ -11,7 +11,7 @@ libera ~/Documents/presupuesto.xlsx
 libera ~/Documents/red.vsdx
 ```
 
-**Es el documento el que decide qué aplicación obtienes.** No hay ningún comando para elegir uno, igual que no se elige un editor de texto para abrir un `.txt`: abres el documento y aparece la aplicación adecuada. Un `.xlsx` se abre en Tables, un `.pptx` en Slides, un `.vsdx` en Diagrams, un `.pdf` en Libera PDF.
+**Es el documento el que decide qué aplicación obtienes.** No hay ningún comando para elegir uno, igual que no se elige un editor de texto para abrir un `.txt`: abres el documento y aparece la aplicación adecuada. Un `.xlsx` se abre en Tables, un `.pptx` en Slides, un `.vsdx` en Diagrams.
 
 ![La ventana de inicio, con una tarjeta New para cada uno de Document, Spreadsheet y Presentation, un botón Open y una lista Recent de tres documentos.](../assets/start.png)
 
@@ -24,8 +24,6 @@ libera ~/Documents/*.docx     # una ventana para cada uno
 ```
 
 También puedes abrir un documento desde la ventana del documento, con **Archivo ▸ Abrir** o **Archivo ▸ Abrir reciente**. Los dos abren una ventana nueva y no tocan el documento que ya tienes abierto.
-
-**En macOS, los documentos pueden abrirse como pestañas** de una misma ventana. Libera Suite sigue el ajuste del sistema, *Preferir pestañas al abrir documentos* en Ajustes del Sistema ▸ Escritorio y Dock, como cualquier aplicación de documentos en Mac. Con *Siempre*, cada documento se abre en una pestaña. Si no, se abre en su propia ventana, y **Ventana ▸ Merge All Windows** las reúne. El **+** al final de la barra de pestañas abre la ventana de inicio en una pestaña nueva, y el documento que eliges ahí ocupa su lugar. Una pestaña se arrastra fuera para tener su propia ventana.
 
 **Un documento que sueltas** sobre una ventana de Libera Suite, incluida la ventana de inicio, se abre en una ventana propia. Una imagen que sueltas sobre un documento se inserta en él.
 
@@ -76,13 +74,13 @@ Un archivo que ya tiene el nuevo nombre se reemplaza. El documento que se convie
 
 ## La barra de menús
 
-En Linux y Windows la barra está dentro de la ventana: **Archivo**, **Edición**, **Ver** y **Ayuda**, este último con *Ayuda de Libera* y *Acerca de Libera Suite*. De lo que ofrece allí el menú se derivan tres diferencias. En Linux, Nuevo, Abrir y Cerrar muestran Ctrl-N, Ctrl-O y Ctrl-W, y ningún otro elemento muestra su tecla; en Windows, ninguno. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Mayús-S, Ctrl-P y Ctrl-Z hacen allí lo que las teclas ⌘ de abajo hacen en un Mac. **Abrir reciente** se construye al iniciar la aplicación: un documento que abres hoy aparece en él mañana. Nada se atenúa: Guardar sin nada que guardar no hace nada.
+En Linux y Windows la barra está dentro de la ventana: **Archivo**, **Edición**, **Ver** y **Ayuda**, este último con *Ayuda de Libera* y *Acerca de Libera Suite*. De lo que ofrece allí el menú se derivan tres diferencias. Ningún elemento muestra un atajo de teclado, pero Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Mayús-S, Ctrl-P y Ctrl-Z hacen allí lo que las teclas ⌘ de abajo hacen en un Mac. **Abrir reciente** se construye al iniciar la aplicación: un documento que abres hoy aparece en él mañana. Nada se atenúa: Guardar sin nada que guardar no hace nada.
 
 En macOS es una barra de menús de Mac de verdad, con los mismos elementos más **Ventana**. Los atajos habituales funcionan allí, tenga o no el foco el documento:
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | Nuevo (del tipo de la ventana en primer plano), Abrir: cada uno en su propia ventana, o pestaña |
+| `⌘N` `⌘O` | Nuevo (del tipo de la ventana en primer plano), Abrir: cada uno en su propia ventana |
 | `⌘S` `⇧⌘S` | Guardar, Guardar como |
 | `⌘P` | Imprimir |
 | `⌘W` | Cerrar, preguntando antes qué hacer con los cambios sin guardar |
@@ -112,44 +110,11 @@ Por ahora esa es la opción elegida: el visor que ya tienes te da intervalos de 
 
 Las imágenes incrustadas en un documento se conservan al abrir y al guardar. **Insertar ▸ Imagen** añade una imagen desde el disco.
 
-## PDF {#pdfs}
-
-Un `.pdf` se abre en **Libera PDF**. Libera Suite se ofrece en *Abrir con* para un PDF, nunca como predeterminado: un doble clic lo sigue abriendo en tu visor de siempre.
-
-- **Comentar.** La pestaña **Comentario** ofrece *Comentario de texto*, *Resaltar*, un lápiz, formas y un cuadro de texto.
-- **Rellenar un formulario.** Haz clic en un campo y escribe, marca una casilla, elige de una lista. Muchos formularios oficiales se hacen con Adobe LiveCycle Designer y llevan una segunda copia del formulario que solo lee Acrobat. Al guardar se deja fuera esa copia, para que Acrobat muestre los valores que rellenaste, como hacen los demás lectores.
-- **Cambiar las páginas.** Un clic derecho en una página ofrece *Insertar página en blanco después*, *Eliminar página* y *Girar página*. Arrastra la miniatura de una página para moverla.
-- **Cambiar una línea de texto**, con *Editar PDF* y luego *Editar texto*. Sirve para correcciones pequeñas. Las palabras nuevas se componen en una de nuestras fuentes cuando no se puede usar la del PDF, y una línea que crece no se recompone: lo que ya no cabe pasa a una línea propia.
-
-**Guardar añade al archivo.** Tus cambios se escriben después del contenido original del PDF, que queda exactamente como estaba. Por eso una firma que permite comentarios sigue siendo válida para lo que firmó. Un PDF solo se guarda como PDF.
-
-**Un PDF que pide una contraseña** se abre cuando das la contraseña, y se guarda con tus cambios, con la misma contraseña. **Un PDF certificado contra cualquier cambio no se puede guardar**: el guardado falla y lo dice, el archivo queda como estaba y tus cambios siguen en la ventana.
-
-Todavía no se puede crear un formulario, ni convertir un PDF en un documento.
-
-## Documentos con contraseña {#passwords}
-
-Un documento protegido con una contraseña, por Word, LibreOffice o Libera Suite, la pide al abrirse, y otra vez tras una contraseña incorrecta. Al guardar se conserva la contraseña: el archivo se escribe protegido, como estaba. Una impresión es un PDF protegido con la misma contraseña. Algunos formatos no pueden conservar una contraseña: texto, CSV, TSV, RTF, HTML, Markdown, EPUB y FB2. Guardar en uno de ellos pregunta primero, y *Guardar sin contraseña* escribe el archivo sin protección; la ventana tiene entonces ese archivo abierto, sin contraseña.
-
-**La protección propia de LibreOffice 26 aún no se puede leer.** De forma predeterminada, LibreOffice 26 cifra un archivo OpenDocument de un modo que Libera Suite no lee, y Libera Suite lo dice en lugar de pedir la contraseña. LibreOffice escribe el cifrado anterior, que Libera Suite lee, cuando su versión del formato ODF está en 1.3.
-
-**Archivo ▸ Proteger** pone una contraseña a un documento con *Añadir contraseña*, y ofrece *Cambiar contraseña* y *Eliminar contraseña* cuando ya tiene una. Cada uno guarda el documento al momento. Se ofrece para archivos de Word, Excel, PowerPoint, OpenDocument y PDF, los formatos que pueden llevar una contraseña. La nueva contraseña de un PDF reescribe el archivo entero: por eso Proteger no se ofrece para un PDF firmado, cuyas firmas no lo resistirían, ni para uno cuyo autor restringió la impresión, la copia o la edición, porque la nueva contraseña quitaría esas restricciones, ni para uno que deja una parte de sí sin cifrar, que la reescritura estropearía.
-
-## Documentos firmados {#signatures}
-
-Un documento de Word, Excel o PowerPoint puede llevar firmas digitales, hechas por Word, por Libera Suite o por Euro-Office. Libera Suite las comprueba al abrir el documento y las muestra en el panel *Firma*, cada una válida o no, con quién firmó y cuándo. Un documento firmado se abre en solo lectura, para que nada cambie lo firmado. *Válida* significa que el documento no ha cambiado desde que se firmó. Todavía no se comprueba quién emitió el certificado: el nombre del firmante es el que declara el propio certificado, así que consulta los *Detalles de la firma* antes de fiarte.
-
-**Firmar.** *Protección* ▸ *Firma* ▸ *Añadir firma digital*, o *Añadir línea de firma* para una firma dibujada en el documento, y después *Seleccionar* en el diálogo *Firmar documento*. Libera Suite pide un archivo de clave, PKCS#12 (`.p12`, `.pfx`) o PEM, el archivo del certificado cuando el de la clave no lo contiene, y la contraseña de la clave; el firmante y las fechas del certificado aparecen entonces en el diálogo antes de firmar. La contraseña se conserva mientras la ventana está abierta, y nunca se escribe. Un documento con cambios se guarda primero, porque un documento se firma tal como está en el disco.
-
-**Editar un documento firmado elimina sus firmas.** *Archivo* ▸ *Proteger* ▸ *Editar documento* lo dice y pregunta antes; *Eliminar la firma*, en el panel *Firma*, elimina una. *Detalles de la firma* muestra el certificado del firmante.
-
-**Todavía no**: firmar un documento protegido con contraseña, un archivo OpenDocument o un PDF, ni usar los certificados del almacén propio de Windows; un archivo de clave funciona en todos los sistemas. **Un certificado caducado firma**, y su firma aparece como válida: comprueba las fechas del certificado en el diálogo antes de firmar.
-
 ## Corrección ortográfica {#spell-checking}
 
 Las faltas se subrayan; el clic derecho ofrece sugerencias. El diccionario que se usa depende del **idioma del documento**, que fijas en la **barra de estado** de la parte inferior de la ventana, documento a documento.
 
-Se incluyen diccionarios para seis idiomas: inglés (de Estados Unidos y del Reino Unido), francés, alemán, español, italiano y neerlandés. Un idioma sin diccionario no es un error; sus palabras simplemente se consideran correctas. Las palabras que añades con *Add to dictionary* se conservan: desde ese momento son correctas en todos los documentos y en todos los idiomas.
+Se incluyen diccionarios para cinco idiomas: inglés (de Estados Unidos y del Reino Unido), francés, alemán, español e italiano. Un idioma sin diccionario no es un error; sus palabras simplemente se consideran correctas. Las palabras que añades con *Add to dictionary* se conservan: desde ese momento son correctas en todos los documentos y en todos los idiomas.
 
 ## Tu nombre en los documentos {#your-name-in-documents}
 
@@ -193,8 +158,6 @@ Para usar otro archivo durante un arranque, sin tocar este, indíquelo con `libe
 ## Dónde van tus archivos de trabajo
 
 Mientras un documento está abierto, Libera Suite mantiene una carpeta de sesión junto a sus datos de aplicación. Contiene la copia de trabajo y un registro continuo de tus cambios, lo que hace que guardar sea rápido y deshacer sea fiable. No es una copia de seguridad: el documento está donde lo guardaste.
-
-En un documento con contraseña, esa copia de trabajo no está cifrada mientras el documento está abierto: cualquier programa que pueda leer los archivos de tu cuenta puede leerla. Se conserva de todos modos, como con cualquier documento, para que tus cambios sobrevivan a un cierre inesperado, y recuperarlos vuelve a pedir la contraseña.
 
 ---
 

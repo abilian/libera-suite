@@ -23,7 +23,7 @@ from importlib import metadata
 from typing import TYPE_CHECKING
 
 from libera.host import hooks, language, session
-from libera.payload import locate
+from libera.payload import installer, locate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -53,7 +53,7 @@ def find_channel() -> Channel:
             "latest",
             language.translate(
                 "Run the install command again:\n\n{command}",
-                command=f"curl -fsSL {locate.ORIGIN}/install.sh | sh",
+                command=f"curl -fsSL {installer.DEFAULT_ORIGIN}/install.sh | sh",
             ),
         )
     # The installer's PyInstaller build. Its pointer moves only when the
@@ -63,7 +63,7 @@ def find_channel() -> Channel:
             "latest-windows",
             language.translate(
                 "In PowerShell:\n\n{command}",
-                command=f"irm {locate.ORIGIN}/install.ps1 | iex",
+                command=f"irm {installer.DEFAULT_ORIGIN}/install.ps1 | iex",
             ),
         )
     if "/Cellar/" in sys.prefix:
@@ -152,7 +152,7 @@ def check_in_background() -> None:
         try:
             check(
                 metadata.version("libera"),
-                locate.ORIGIN,
+                installer.DEFAULT_ORIGIN,
                 locate.get_state_dir() / "updates.json",
                 time.time(),
             )

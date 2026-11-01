@@ -11,7 +11,7 @@ libera ~/Documents/budget.xlsx
 libera ~/Documents/reseau.vsdx
 ```
 
-**C'est le document qui décide de l'application.** Aucune commande ne sert à en choisir une, de même qu'on ne choisit pas d'éditeur de texte pour ouvrir un `.txt` : vous ouvrez le document et la bonne application apparaît. Un `.xlsx` s'ouvre dans Tables, un `.pptx` dans Slides, un `.vsdx` dans Diagrams, un `.pdf` dans Libera PDF.
+**C'est le document qui décide de l'application.** Aucune commande ne sert à en choisir une, de même qu'on ne choisit pas d'éditeur de texte pour ouvrir un `.txt` : vous ouvrez le document et la bonne application apparaît. Un `.xlsx` s'ouvre dans Tables, un `.pptx` dans Slides, un `.vsdx` dans Diagrams.
 
 ![La fenêtre de démarrage, avec une tuile New pour chacun des types Document, Spreadsheet et Presentation, un bouton Open, et une liste Recent de trois documents.](../assets/start.png)
 
@@ -24,8 +24,6 @@ libera ~/Documents/*.docx     # une fenêtre chacun
 ```
 
 Vous pouvez aussi ouvrir un document depuis la fenêtre du document, par **Fichier ▸ Ouvrir** ou **Fichier ▸ Ouvrir récent**. L'un et l'autre ouvrent une nouvelle fenêtre et laissent en place le document déjà ouvert.
-
-**Sous macOS, les documents peuvent s'ouvrir en onglets** d'une même fenêtre. Libera Suite suit le réglage du système, *Préférer les onglets pour l’ouverture des documents* dans Réglages Système ▸ Bureau et Dock, comme toute application de documents sur Mac. Réglé sur *Toujours*, chaque document s'ouvre dans un onglet. Sinon, il s'ouvre dans sa propre fenêtre, et **Fenêtre ▸ Merge All Windows** les rassemble. Le **+** au bout de la barre d'onglets ouvre la fenêtre de démarrage dans un nouvel onglet, et le document choisi prend sa place. Un onglet se détache en une fenêtre par glisser-déposer.
 
 **Un document déposé** sur une fenêtre de Libera Suite, fenêtre de démarrage comprise, s'ouvre dans sa propre fenêtre. Une image déposée sur un document y est insérée.
 
@@ -76,13 +74,13 @@ Un fichier qui porte déjà le nouveau nom est remplacé. Le document converti n
 
 ## La barre de menus
 
-Sous Linux et Windows, la barre se trouve dans la fenêtre : **Fichier**, **Édition**, **Affichage** et **Aide**, ce dernier contenant *Aide de Libera* et *À propos de Libera Suite*. Le menu y impose trois différences. Sous Linux, Nouveau, Ouvrir et Fermer affichent Ctrl-N, Ctrl-O et Ctrl-W, et aucun autre élément n'affiche sa touche ; sous Windows, aucun. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Maj-S, Ctrl-P et Ctrl-Z font sur ces systèmes l'équivalent des touches ⌘ ci-dessous sur un Mac. **Ouvrir un fichier récent** est construit au lancement de l'application : un document ouvert aujourd'hui y apparaît demain. Rien n'est grisé : Enregistrer sans rien à enregistrer ne fait rien.
+Sous Linux et Windows, la barre se trouve dans la fenêtre : **Fichier**, **Édition**, **Affichage** et **Aide**, ce dernier contenant *Aide de Libera* et *À propos de Libera Suite*. Le menu y impose trois différences. Aucun élément n'affiche de raccourci clavier, mais Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Maj-S, Ctrl-P et Ctrl-Z font sur ces systèmes l'équivalent des touches ⌘ ci-dessous sur un Mac. **Ouvrir un fichier récent** est construit au lancement de l'application : un document ouvert aujourd'hui y apparaît demain. Rien n'est grisé : Enregistrer sans rien à enregistrer ne fait rien.
 
 Sous macOS, c'est une vraie barre de menus Mac, avec les mêmes éléments plus **Fenêtre**. Les raccourcis habituels y fonctionnent, que le document ait le focus ou non :
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | Nouveau (du type de la fenêtre au premier plan), Ouvrir : chacun dans sa propre fenêtre, ou son onglet |
+| `⌘N` `⌘O` | Nouveau (du type de la fenêtre au premier plan), Ouvrir : chacun dans sa propre fenêtre |
 | `⌘S` `⇧⌘S` | Enregistrer, Enregistrer sous |
 | `⌘P` | Imprimer |
 | `⌘W` | Fermer, en demandant d'abord quoi faire des modifications non enregistrées |
@@ -112,44 +110,11 @@ C'est le choix fait pour l'instant : le lecteur que vous avez déjà vous donne 
 
 Les images intégrées à un document sont conservées à l'ouverture et à l'enregistrement. **Insertion ▸ Image** ajoute une image depuis le disque.
 
-## PDF {#pdfs}
-
-Un `.pdf` s'ouvre dans **Libera PDF**. Libera Suite est proposé dans *Ouvrir avec* pour un PDF, jamais par défaut : un double-clic l'ouvre toujours dans votre lecteur habituel.
-
-- **Commenter.** L'onglet **Commentaire** offre *Commentaire texte*, *Mettre en évidence*, un stylo, des formes et une zone de texte.
-- **Remplir un formulaire.** Cliquez dans un champ et tapez, cochez une case, choisissez dans une liste. Beaucoup de formulaires officiels sont faits avec Adobe LiveCycle Designer et portent une seconde copie du formulaire, lue par Acrobat seul. L'enregistrement laisse cette copie de côté, pour qu'Acrobat montre les valeurs saisies, comme les autres lecteurs.
-- **Modifier les pages.** Un clic droit sur une page donne *Insérer une page vide après*, *Supprimer la page* et *Faire pivoter la page*. Faites glisser la miniature d'une page pour la déplacer.
-- **Corriger une ligne de texte**, avec *Modifier PDF*, puis *Modifier le texte*. C'est fait pour de petites corrections. Les nouveaux mots sont composés dans une de nos polices quand celle du PDF ne peut pas servir, et une ligne qui s'allonge ne se recompose pas : la partie qui ne tient plus passe sur une ligne à part.
-
-**L'enregistrement s'ajoute au fichier.** Vos modifications sont écrites après le contenu d'origine du PDF, qui reste exactement tel qu'il était. Une signature qui autorise les commentaires reste donc valable pour la partie signée. Un PDF ne s'enregistre qu'en PDF.
-
-**Un PDF qui demande un mot de passe** s'ouvre une fois le mot de passe donné, et s'enregistre avec vos modifications, toujours sous le même mot de passe. **Un PDF certifié contre toute modification ne s'enregistre pas** : l'enregistrement échoue en le disant, le fichier reste tel quel, et vos modifications restent dans la fenêtre.
-
-Créer un formulaire n'est pas encore possible, ni convertir un PDF en document.
-
-## Documents protégés par un mot de passe {#passwords}
-
-Un document protégé par un mot de passe, par Word, LibreOffice ou Libera Suite, le demande à l'ouverture, et le redemande après un mot de passe erroné. L'enregistrement garde le mot de passe : le fichier est écrit protégé, comme il l'était. Une impression est un PDF protégé par le même mot de passe. Certains formats ne peuvent pas garder de mot de passe : texte, CSV, TSV, RTF, HTML, Markdown, EPUB et FB2. Un enregistrement dans l'un d'eux demande d'abord, et *Enregistrer sans mot de passe* écrit le fichier sans protection ; la fenêtre a ensuite ce fichier ouvert, sans mot de passe.
-
-**La protection propre à LibreOffice 26 ne se lit pas encore.** Par défaut, LibreOffice 26 chiffre un fichier OpenDocument d'une façon que Libera Suite ne lit pas, et Libera Suite le dit au lieu de demander le mot de passe. LibreOffice écrit l'ancien chiffrement, que Libera Suite lit, quand sa version du format ODF est réglée sur 1.3.
-
-**Fichier ▸ Protéger** donne un mot de passe à un document avec *Ajouter un mot de passe*, et propose *Modifier le mot de passe* et *Supprimer le mot de passe* une fois qu'il en a un. Chacun enregistre le document aussitôt. Il est proposé pour les fichiers Word, Excel, PowerPoint, OpenDocument et PDF, les formats qui peuvent porter un mot de passe. Le nouveau mot de passe d'un PDF réécrit le fichier entier : Protéger n'est donc pas proposé pour un PDF signé, dont les signatures n'y survivraient pas, ni pour un PDF dont l'auteur a restreint l'impression, la copie ou la modification, car son nouveau mot de passe lèverait ces restrictions, ni pour un PDF qui laisse une partie de lui-même en clair, que la réécriture abîmerait.
-
-## Documents signés {#signatures}
-
-Un document Word, Excel ou PowerPoint peut porter des signatures numériques, faites par Word, par Libera Suite ou par Euro-Office. Libera Suite les vérifie à l'ouverture du document et les liste dans le panneau *Signature*, chacune valide ou non, avec son signataire et sa date. Un document signé s'ouvre en lecture seule : rien ne modifie ainsi le contenu signé. *Valide* signifie que le document n'a pas changé depuis sa signature. L'émetteur du certificat n'est pas encore vérifié : le nom du signataire est celui que le certificat annonce lui-même, consultez donc *Détails de la signature* avant de vous y fier.
-
-**Signer.** *Protection* ▸ *Signature* ▸ *Ajouter une signature numérique*, ou *Ajouter la zone de signature* pour une signature dessinée dans le document, puis *Sélectionner* dans la boîte de dialogue *Signer le document*. Libera Suite demande un fichier de clé, PKCS#12 (`.p12`, `.pfx`) ou PEM, le fichier du certificat lorsque le fichier de clé n'en contient pas, et la phrase secrète de la clé ; le signataire et les dates du certificat s'affichent alors dans la boîte de dialogue avant la signature. La phrase secrète est gardée tant que la fenêtre est ouverte, et jamais écrite. Un document modifié est d'abord enregistré, puisqu'un document est signé tel qu'il est sur le disque.
-
-**Modifier un document signé supprime ses signatures.** *Fichier* ▸ *Protéger* ▸ *Modifier le document* le dit et demande d'abord ; *Supprimer la signature*, dans le panneau *Signature*, en supprime une. *Détails de la signature* montre le certificat du signataire.
-
-**Pas encore** : signer un document protégé par un mot de passe, un fichier OpenDocument ou un PDF, et les certificats du magasin propre à Windows ; un fichier de clé fonctionne sur tous les systèmes. **Un certificat expiré signe**, et sa signature est listée comme valide : vérifiez les dates du certificat dans la boîte de dialogue avant de signer.
-
 ## Correction orthographique {#spell-checking}
 
 Les fautes sont soulignées ; le clic droit propose des suggestions. Le dictionnaire utilisé dépend de **la langue du document**, que vous réglez dans la **barre d'état** en bas de la fenêtre, pour chaque document.
 
-Des dictionnaires sont fournis pour six langues : l'anglais (américain et britannique), le français, l'allemand, l'espagnol, l'italien et le néerlandais. Une langue sans dictionnaire n'est pas une erreur ; ses mots sont simplement considérés comme corrects. Les mots ajoutés par *Add to dictionary* sont conservés : ils sont désormais corrects dans tous les documents et toutes les langues.
+Des dictionnaires sont fournis pour cinq langues : l'anglais (américain et britannique), le français, l'allemand, l'espagnol et l'italien. Une langue sans dictionnaire n'est pas une erreur ; ses mots sont simplement considérés comme corrects. Les mots ajoutés par *Add to dictionary* sont conservés : ils sont désormais corrects dans tous les documents et toutes les langues.
 
 ## Votre nom dans les documents {#your-name-in-documents}
 
@@ -193,8 +158,6 @@ Pour utiliser un autre fichier le temps d'un lancement, sans toucher à celui-ci
 ## Où vont vos fichiers de travail
 
 Tant qu'un document est ouvert, Libera Suite conserve un dossier de session à côté de ses données d'application. Il contient la copie de travail et le journal de vos modifications : l'enregistrement est ainsi rapide et l'annulation fiable. Ce n'est pas une sauvegarde : le document est là où vous l'avez enregistré.
-
-Pour un document protégé par un mot de passe, cette copie de travail n'est pas chiffrée tant que le document est ouvert : tout programme capable de lire les fichiers de votre compte peut la lire. Elle est conservée malgré tout, comme pour tout document, afin que vos modifications survivent à un plantage, et les récupérer redemande le mot de passe.
 
 ---
 

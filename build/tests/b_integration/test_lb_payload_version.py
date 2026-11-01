@@ -64,7 +64,15 @@ def checkout_with_dist(tmp_path, *, built_for: str):
     return root, dist
 
 
-def test_artifacts_for_another_payload_are_refused(tmp_path):
+def test_the_bundled_manifest_is_the_one_beside_the_artifacts(tmp_path):
+    """Not the last release's, which the installer would read first and refuse."""
+    root, dist = checkout_with_dist(tmp_path, built_for="0.5")
+    versions.stamp_bundled_manifest(root, dist)
+    assert (root / MANIFEST).read_bytes() == (dist / "manifest.json").read_bytes()
+
+
+def test_artifacts_for_another_payload_are_not_stamped(tmp_path):
     root, dist = checkout_with_dist(tmp_path, built_for="0.4.1")
     with pytest.raises(RefusedError, match=r"this tree wants 0\.5"):
-        versions.check_dist(root, dist)
+        versions.stamp_bundled_manifest(root, dist)
+    assert "0.4.1" in (root / MANIFEST).read_text()

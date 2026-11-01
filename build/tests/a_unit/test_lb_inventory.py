@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 from libera_build import inventory
-from libera_build.hosts import remote_path
 from libera_build.inventory import Builder
+from libera_build.release.phases import builders
 from libera_build.report import RefusedError
 
 GOOD = """
@@ -106,6 +106,6 @@ def test_a_builder_with_no_dist_is_read_where_its_build_writes(monkeypatch):
 
 def test_a_builders_dist_reaches_its_shell_with_the_tilde_expandable():
     _, _, arm = inventory.parse(GOOD, "builders.toml")
-    assert remote_path(f"{inventory.dist_of(arm)}/0.4") == (
+    assert builders.version_dist(arm, "0.4") == (
         '"$HOME/euro-office-build/linux-arm64/out/dist/0.4"'
     )

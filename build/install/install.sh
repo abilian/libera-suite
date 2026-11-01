@@ -119,11 +119,11 @@ OLD_VENV="$PREFIX/share/libera"
 # Does this command actually run? `--help` and not `--version`, because
 # `--version` arrived after 0.1.1 and this script has to work against whatever
 # the origin is serving, including the release before the one that added it.
-# --payload-status is in the help of every version there has ever been.
+# --payload-install is in the help of every version there has ever been.
 runs() {
     text="$("$@" --help 2>&1 || :)"
     case "$text" in
-    *--payload-status*) return 0 ;;
+    *--payload-install*) return 0 ;;
     esac
     printf '%s' "$text"
     return 1
@@ -392,27 +392,10 @@ install_pip() {
             say "    the launcher entry is stale: run  libera --launcher-install"
         fi
     fi
-    # On macOS this is the whole install, so it brings Libera.app too: without
-    # it Finder has nothing to offer in Open With, and the Dock says Python.
-    # Written every time, because the virtualenv was just made again and may
-    # be on another Python, whose library the bundle names.
-    if [ "$os" = macos ]; then
-        if "$BIN/libera" --launcher-install >/dev/null; then
-            say "    Libera.app is in ~/Applications"
-        else
-            say "    no Libera.app: run  libera --launcher-install"
-        fi
-    fi
     say "    $(describe "$BIN/libera")"
 }
 
 install_payload() {
-    # From 0.7 the components are packages, which came with libera, and the
-    # command that fetched them is gone. A release before it fetches its own.
-    case "$("$BIN/libera" --help 2>&1 || :)" in
-    *--payload-install*) ;;
-    *) return 0 ;;
-    esac
     if [ "$PAYLOAD" = no ]; then
         step "skipping the payload (--no-payload)"
         say "    fetch it later with:  libera --payload-install"

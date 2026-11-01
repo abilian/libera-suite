@@ -4,57 +4,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 Two versions move here and they move independently. The **application** is this package, `libera`. The **editor payload** is the Euro-Office build it fetches on first use, versioned separately so that a fix to the host does not force a 120 MB re-download. `libera --version` prints both.
 
-## [Unreleased]
-
-## [0.7.0b1] - 2026-11-01
-
-A beta: pip installs it only when asked (`pipx install --pip-args=--pre libera==0.7.0b1`), and the install scripts and the Homebrew tap stay on 0.6.0. The first with payload **0.7**, and the first whose editors are installed with the application rather than downloaded on first use. Its installers are not signed yet; 0.7.0 will be.
-
-### Added
-
-- **PDFs, edited and filled in.** A PDF opens in the PDF editor: comments, highlights, drawings, text boxes, small corrections to its text, pages added, deleted, rotated and moved. Forms fill in, a French Cerfa and the US IRS forms among those tried, and a form that also carries an XFA version is saved without it, so that Acrobat shows the fields as filled. Saving adds the changes after the original's bytes, which stay as they were. A PDF certified against any change is not saved, and says why. Libera Suite is offered in Open With for a PDF, never as the default.
-- **Documents with a password.** A Word, Excel, PowerPoint or OpenDocument file protected by a password asks for it as it opens, and again after a wrong one, and saving keeps it protected; so does a PDF. File ▸ Protect adds, changes and removes a document's password, a PDF's included, unless it is signed, restricted by its author or partly unencrypted. A save to a format that cannot keep a password (text, CSV, RTF, HTML, Markdown, EPUB) asks first. Edits recovered after a crash ask for the password again. LibreOffice 26's own encryption cannot be read yet, and Libera Suite says so.
-- **Digital signatures.** A signed Word, Excel or PowerPoint document shows its signatures as it opens, each valid or not, and opens read-only. Protection ▸ Signature signs it, invisibly or on a signature line, with a key file (PKCS#12 or PEM) and its passphrase, kept only while the window is open; Signature details shows the signer's certificate, and Edit document removes the signatures. *Valid* means the document has not changed since it was signed: who issued the certificate is not checked yet. Not yet: signing a protected document, an OpenDocument file or a PDF, and Windows's certificate store.
-
-### Changed
-
-- **The editors come with the application.** `pip install libera` installs them and the converter as two more packages, `libera-core` and `libera-web`, built from source where PyPI has no wheel for the machine, and nothing is downloaded on first start. `libera --payload-remove` deletes what 0.6 and earlier downloaded, and the start window offers it once.
-- **The converter starts in about half the time**, 72 ms to 38 on a Mac with nothing to convert, so every open and save is quicker by that much.
-
-### Fixed
-
-- **Word 97-2003 documents open.** No `.doc` file had ever opened: the converter refused each one, waiting for a text encoding it was never given. The 166 `.doc` files of LibreOffice's Word export tests all open now. So do web archives (`.mht`), FictionBook (`.fb2`) and EPUB books, listed since the start and refused the same way.
-- **Flat OpenDocument spreadsheets and presentations open as what they are.** A `.fods` opened in Tables, or a `.fodp` in Slides, came in as a text document and could then be saved as nothing but PDF. An open now also fails, saying why, if the converter returns another kind of document than the editor's, where it showed an empty editor.
-
-### Security
-
-- **A password-protected document that has been tampered with is refused.** The converter noticed that its integrity check failed, and opened it all the same; it now says the document cannot be opened. The fix is ElixirOffice's.
-- **A document no longer brings your files into what you send back.** A picture linked to a path on your disk was copied into every document saved or converted from it, and drawn into its PDF, so opening such a document, saving it and returning it returned the picture. A linked picture is now read from a web address only. A picture inside an SVG is drawn only if the SVG carries it.
-- **A document's text no longer runs as code in the editor.** A tracked change's font or style name, and the values the Formula Wizard shows, were written into the page as HTML, so a document carrying markup there ran it when the change was selected or the wizard opened. A link to a `javascript:` address ran once you clicked through the warning. All are shown or refused as text now.
-- **The editor's page loads pictures from Libera Suite only.** A picture a document links to is fetched by the converter when the document opens, so the page never needed pictures from elsewhere, and a script in it can no longer send anything out in a picture's address.
-- **A small document can no longer take the converter to gigabytes.** A 6 KB file with nested XML entities took it to 3.9 GB of memory; the converter's XML parser is now libxml2 2.9.14, where it was a copy from 2016, and the same file converts in under a second. A package that says it unpacks to more than 1 GB is refused before conversion, and a conversion that holds more than 2.5 GB is stopped, saying so, before the machine swaps.
-
-## [0.6.0] - 2026-10-26
-
-The first with payload **0.6**, so the editors are downloaded again once.
-
-### Added
-
-- **Our menus, start window and dialogs in every language the editors speak**, 44 in all, where they were in five and English everywhere else. Only the French, German, Italian and Spanish translations have been reviewed by a native speaker; the others are drafts, the status page says so, and corrections are welcome. Portuguese, Chinese and Serbian follow the editor's choice between their variants. In Arabic, Hebrew and Urdu the start window reads right to left. Help opens the documentation in English, French, German, Italian, Spanish or Dutch.
-- **On macOS, Libera Suite among your applications.** `libera --launcher-install` writes `Libera.app` into `~/Applications` around the Python of the install that runs it, where it did nothing on macOS, and the install script runs it there itself. Finder offers Libera Suite in Open With, a double-click on a document can open it, and the Dock says Libera, not Python. The bundle's executable links no Python: it loads the library its Info.plist names, so it ships prebuilt in the package, universal, and an install needs no compiler. `build/macos/macos-app.sh` writes its bundles the same way.
-- **Dutch spell-checking.** The editors ship the OpenTaal dictionary for Dutch, beside the English, French, German, Spanish and Italian ones, and each dictionary now comes with its licence.
-
-### Changed
-
-- **On Linux, the File menu shows its keys.** New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W beside them, and Ctrl-N makes a document of the front window's kind, as before. The editors' own keys, Ctrl-S, Ctrl-Z and the rest, stay theirs and are not shown, so that Ctrl-Z in a text field still undoes the field.
-
-- **A missing font is replaced the way Word replaces it.** Calibri, Cambria, Arial, Times New Roman and Courier New go to Carlito, Caladea and Liberation, which have their widths, so a document's pages break where they do in Word, whatever else your machine has installed: on a Mac, Calibri used to go to an installed Lato. A font Word would not know either is set in Calibri's stand-in, as Word sets it in Calibri, where it used to get Liberation Sans. Wingdings, Webdings and Symbol characters are drawn as the symbols they stand for, where a missing Wingdings showed letters.
-
-### Fixed
-
-- **Markdown keeps its headings.** A Markdown file opened, edited and saved turned every heading into a bold paragraph: `# Title` came back as `**Title**`.
-- **An OpenDocument file without master styles keeps its styles.** Every paragraph of such a file opened in the default style, with no heading larger or bolder than the text, where LibreOffice shows them as written. The file is valid, and programs that write OpenDocument often leave master styles out.
-
 ## [0.5.0] - 2026-10-20
 
 The first with payload **0.5**, so the editors are downloaded again once.

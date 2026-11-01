@@ -52,13 +52,9 @@ def test_an_editor_opens_everything_it_saves_except_pdf(app: apps.App):
 
 
 @pytest.mark.parametrize("app", apps.ALL, ids=lambda a: a.name)
-def test_only_an_editor_has_a_blank(app: apps.App):
-    """A new document is one the editor can save. The converse does not hold:
-    the PDF editor saves a PDF and makes no new one, and nothing offers it
-    File > New, which goes by the blank."""
-    if app.blank is not None:
-        assert app.editable
-    assert (app.blank is None) == (app.name in {apps.DIAGRAMS.name, apps.PDFS.name})
+def test_a_viewer_has_no_blank_and_an_editor_does(app: apps.App):
+    """The two halves of "can this editor make a new document" must agree."""
+    assert (app.blank is not None) == app.editable
 
 
 @pytest.mark.parametrize(

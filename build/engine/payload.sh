@@ -81,7 +81,7 @@ else
     echo "==> JS build jobs: $BUILD_JOBS (from $(usable_gb) GB usable)"
 fi
 
-[ -x "$CORE_BIN/x2t$EXE" ] || { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
+[ -x "$OUT/core/bin/x2t$EXE" ] || { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
 for repo in sdkjs web-apps; do
     [ -d "$SRC/$repo" ] || { echo "FATAL: no $SRC/$repo -- run build.sh fetch $repo" >&2; exit 1; }
 done
@@ -273,9 +273,9 @@ CHECK
 if [ -n "$EXE" ]; then
     rm -rf "$PAYLOAD/bin"
     MSYS2_ARG_CONV_EXCL='*' cmd /c mklink /J \
-        "$(cygpath -w "$PAYLOAD/bin")" "$(cygpath -w "$CORE_BIN")" >/dev/null
+        "$(cygpath -w "$PAYLOAD/bin")" "$(cygpath -w "$OUT/core/bin")" >/dev/null
 else
-    ln -sfn "$CORE_BIN" "$PAYLOAD/bin"
+    ln -sfn "$OUT/core/bin" "$PAYLOAD/bin"
 fi
 [ -f "$PAYLOAD/bin/x2t$EXE" ] || { echo "FATAL: $PAYLOAD/bin does not reach x2t" >&2; exit 1; }
 
@@ -298,15 +298,6 @@ grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$BUILD/payload/dictionaries.txt" | whi
         echo "FATAL: no $lang.aff/.dic in $src" >&2; exit 1; }
     mkdir -p "$PAYLOAD/dictionaries/$lang"
     cp "$src/$lang.aff" "$src/$lang.dic" "$PAYLOAD/dictionaries/$lang/"
-    # And the readme and licence texts, which their licences ask to travel
-    # with every copy: about 400 KB for all seven. Not the thesaurus's or the
-    # hyphenation's, whose data is left out.
-    for f in "$src"/*; do
-        case "$(basename "$f")" in
-            *.aff|*.dic|*.json|*hyph*|*thes*|th_*) ;;
-            *) cp "$f" "$PAYLOAD/dictionaries/$lang/" ;;
-        esac
-    done
 done || exit 1
 count="$(find "$PAYLOAD/dictionaries" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
 [ "$count" -gt 0 ] || { echo "FATAL: no dictionaries copied" >&2; exit 1; }
@@ -359,7 +350,7 @@ echo "==> DoctRenderer.config"
 # winpath, because x2t.exe reads this file and MSYS only rewrites arguments,
 # never file contents: /c/b/... in here is a path no Windows program can open.
 P="$(winpath "$PAYLOAD")"
-cat > "$CORE_BIN/DoctRenderer.config" <<CONF
+cat > "$OUT/core/bin/DoctRenderer.config" <<CONF
 <Settings>
 <file>$P/sdkjs/common/Native/native.js</file>
 <file>$P/sdkjs/common/Native/jquery_native.js</file>

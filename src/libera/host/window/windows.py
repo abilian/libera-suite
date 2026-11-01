@@ -49,9 +49,7 @@ logger = logging.getLogger(__name__)
 WINDOW_SIZE = (1400, 900)
 
 
-def create_window(
-    title: str, url: str, size: tuple[int, int] = WINDOW_SIZE, *, tabs: bool = True
-) -> Window:
+def create_window(title: str, url: str, size: tuple[int, int] = WINDOW_SIZE) -> Window:
     """A window, or a NotReadyError where pywebview would return None.
 
     pywebview types create_window as `Window | None`; the callers all went
@@ -60,7 +58,7 @@ def create_window(
     dereferences.
     """
     width, height = size
-    window = native.make_window(title, url, width, height, tabs=tabs)
+    window = native.make_window(title, url, width, height)
     if window is None:
         msg = f"pywebview could not make a window for {title}"
         raise NotReadyError(msg)
@@ -121,15 +119,16 @@ def find_front_session() -> Session | None:
 def find_front_window() -> Window | None:
     """The window a menu item or dialog should act on.
 
-    The window the toolkit says is in front, then the first there is, because
-    "no window" is never the right answer while one is open.
+    The window the toolkit says is in front, then pywebview's active window,
+    then the only window there is, because "no window" is never the right answer
+    while one is open.
     """
     if not webview.windows:
         return None
     # The key window is AppKit's to say, and AppKit is main-thread-only; the
     # menu, a new document and full screen ask from other threads.
     key = native.run_on_gui_thread(lambda: native.find_key_window(webview.windows))
-    return key or webview.windows[0]
+    return key or webview.active_window() or webview.windows[0]
 
 
 def copy_untitled(blank: Path, base: Path) -> Path:
@@ -186,10 +185,7 @@ def fold_changes_in(session: Session) -> None:
     Raises ConversionError when it does not work; the edits are then still in
     the log, which is what a save merges.
     """
-    # A PDF whose password File > Protect changed is folded with no edits
-    # too: its Editor.bin is still the file as it was opened, under the old
-    # password, for which the reloaded editor would then ask.
-    if not session.change_log and not convert.rewrites(session):
+    if not session.change_log:
         return
 
     ext, fmt = session.editor.formats[0]
@@ -200,8 +196,6 @@ def fold_changes_in(session: Session) -> None:
     with session.lock:
         convert.export(session, staged, fmt, None)
         convert.convert_to_editor_bin(session, staged)
-        # Written under the document's password, which a PDF now opens with.
-        session.opened_with = session.password
     logger.info("reload: folded the edits into %s", staged.name)
 
 
@@ -239,18 +233,6 @@ def close_session_window(session: Session) -> None:
     window = find_window(session)
     if window is not None:
         native.close_window(window)
-
-
-def document_title(session: Session, document: Path) -> str:
-    """What a document window is called, and its tab on macOS."""
-    return f"{document.name} — {session.editor.title}"
-
-
-def show_session_document(session: Session, document: Path) -> None:
-    """Retitle the window showing that session after a Save As."""
-    window = find_window(session)
-    if window is not None:
-        window.set_title(document_title(session, document))
 
 
 def show_session_edited(session: Session, edited: bool) -> None:

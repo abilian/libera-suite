@@ -1,14 +1,12 @@
-"""The fonts' indexes, without allfontsgen: what the editor is handed, what
-the server will serve from it, which one a window gets, and when it is stale.
+"""The index of the machine's fonts, without allfontsgen: what the editor is
+handed, what the server will serve from it, and when it is stale.
 
 What allfontsgen makes of a real machine is b_integration's.
 """
 
 from __future__ import annotations
 
-import base64
 import os
-import struct
 import threading
 import time
 from typing import TYPE_CHECKING
@@ -18,7 +16,7 @@ import pytest
 from libera.host.server.api import Refused, Request
 from libera.host.server.payload_files import serve_file, serve_font
 from libera.host.session import Session, configure, create_session
-from libera.payload import fonts, locate
+from libera.payload import PayloadError, fonts, installer, locate
 
 if TYPE_CHECKING:
     import pathlib
@@ -108,14 +106,23 @@ def test_the_font_list_and_pictures_come_from_the_index(index, tmp_path):
     assert b'"0",\n"1"' in served("sdkjs/common/AllFonts.js")
     assert served("sdkjs/common/Images/fonts_thumbnail@2x.png") == b"pictures"
     assert served("sdkjs/common/Images/other.png") == b"other"
+    without = serve_file(payload, "sdkjs/common/AllFonts.js", "")
+    assert without.file is not None
+    assert without.file.read_bytes() == b"the payload's"
 
 
 @pytest.fixture
 def machine(tmp_path, monkeypatch):
     """A payload of one font, a system font folder, and a state folder."""
+    shipped = tmp_path / "fonts-src"
+    shipped.mkdir()
+    (shipped / "ours.ttf").write_bytes(b"ours")
     payload = tmp_path / "payload"
-    (payload / "fonts-src").mkdir(parents=True)
-    (payload / "fonts-src" / "ours.ttf").write_bytes(b"ours")
+    payload.mkdir()
+    (payload / "AllFonts.js").write_text(
+        ALL_FONTS.format(a=shipped / "ours.ttf", b=shipped / "ours.ttf"),
+        encoding="utf-8",
+    )
     system = tmp_path / "system"
     (system / "family").mkdir(parents=True)
     # An hour back: Windows dates a folder by a clock that ticks every few
@@ -127,7 +134,7 @@ def machine(tmp_path, monkeypatch):
     monkeypatch.setattr(fonts, "_get_user_dirs", list)
     monkeypatch.setattr(locate, "get_state_dir", lambda: tmp_path / "state")
     monkeypatch.setenv(fonts.SWITCH, "1")
-    return locate.Layout.of(payload), system
+    return locate.Layout(payload), system
 
 
 def test_a_font_installed_in_a_family_folder_makes_the_index_stale(machine):
@@ -138,41 +145,24 @@ def test_a_font_installed_in_a_family_folder_makes_the_index_stale(machine):
 
 
 def test_an_index_is_used_once_it_exists_and_never_when_switched_off(
-    machine, builds, monkeypatch
+    machine, monkeypatch
 ):
-    """Until the machine's is built, and when it is not wanted, the payload's
-    own: built at once, since nothing renders without one."""
     layout, _ = machine
-    shipped = fonts.get_shipped_dir(layout)
-    assert fonts.choose(layout) == shipped
-    assert builds == [shipped]
+    assert fonts.choose(layout) is None
     fonts.get_index_dir(layout).mkdir(parents=True)
     assert fonts.choose(layout) == fonts.get_index_dir(layout)
     monkeypatch.setenv(fonts.SWITCH, "0")
-    assert fonts.choose(layout) == shipped
-    assert builds == [shipped], "the payload's index was built twice"
-
-
-def test_the_shipped_index_is_kept_apart_from_the_machines(machine, builds):
-    """Building the machine's sweeps every other in its folder."""
-    layout, _ = machine
-    assert fonts.get_shipped_dir(layout).parent != fonts.get_index_dir(layout).parent
+    assert fonts.choose(layout) is None
 
 
 @pytest.fixture
 def builds(monkeypatch) -> list[pathlib.Path]:
-    """The indexes built, by a stand-in for allfontsgen that lists no font.
-    Whole when it appears, as the real one's is: a window opening meanwhile
-    took a bare folder for an earlier index and read its missing list."""
+    """The indexes built, by a stand-in for allfontsgen that only makes the
+    folder."""
     made: list[pathlib.Path] = []
 
-    def build(_layout, index, *, machine=True):
-        building = index.with_name(".building-stand-in")
-        building.mkdir(parents=True)
-        (building / "AllFonts.js").write_text(
-            'window["__fonts_files"] = [];', encoding="utf-8"
-        )
-        building.rename(index)
+    def build(_layout, index):
+        index.mkdir(parents=True)
         made.append(index)
         return 1
 
@@ -233,7 +223,7 @@ def test_one_build_at_a_time_and_nothing_swept_meanwhile(machine, monkeypatch):
     release = threading.Event()
     asked: list[pathlib.Path] = []
 
-    def slow_build(_layout, index, *, machine=True):
+    def slow_build(_layout, index):
         asked.append(index)
         index.parent.mkdir(parents=True, exist_ok=True)
         (index.parent / ".building-now").mkdir()
@@ -256,20 +246,17 @@ def test_one_build_at_a_time_and_nothing_swept_meanwhile(machine, monkeypatch):
     assert not fonts.BUILDING.locked(), "a finished build kept the lock"
 
 
-def test_an_earlier_index_listing_a_removed_font_is_not_used(machine, builds, tmp_path):
+def test_an_earlier_index_listing_a_removed_font_is_not_used(machine, tmp_path):
     layout, _ = machine
     make_earlier_index(layout, "0123456789abcdef", tmp_path / "removed.ttf")
-    assert fonts.choose(layout) == fonts.get_shipped_dir(layout)
+    assert fonts.choose(layout) is None
 
 
 def test_a_new_window_gets_the_newest_index_not_the_first_windows(machine, builds):
     layout, _ = machine
-    shipped = fonts.choose(layout)
-    first = Session(
-        payload=layout.root, work=layout.root.parent / "w" / "1", fonts=shipped
-    )
+    first = Session(payload=layout.root, work=layout.root.parent / "w" / "1")
     configure(first)
-    builds.clear()
+    assert first.fonts is None
     # The first window's list was still to be built: the second asks for it,
     # and the third, opened once it is there, has it.
     create_session()
@@ -277,53 +264,25 @@ def test_a_new_window_gets_the_newest_index_not_the_first_windows(machine, build
     fonts.BUILDING.release()
     assert builds == [fonts.get_index_dir(layout)]
     assert create_session().fonts == fonts.get_index_dir(layout)
-    assert first.fonts == shipped
+    assert first.fonts is None
 
 
-def selection(*records: tuple[str, list[str]], after: bytes = b"ranges") -> bytes:
-    """A font selection as allfontsgen writes it: a count, then per font its
-    record's length (itself included), its name, its other names, and fields
-    that stand here for the path, style and metrics; then the range table."""
-
-    def string(text: str) -> bytes:
-        return struct.pack("<i", len(text.encode())) + text.encode()
-
-    out = struct.pack("<i", len(records))
-    for name, others in records:
-        body = string(name) + struct.pack("<i", len(others))
-        body += b"".join(string(o) for o in others) + f"fields of {name}".encode()
-        out += struct.pack("<i", 4 + len(body)) + body
-    return out + after
+def test_installing_the_payload_indexes_the_machines_fonts(machine, builds):
+    layout, _ = machine
+    said: list[str] = []
+    installer._index_installed_fonts(layout, said.append)
+    assert builds == [fonts.get_index_dir(layout)]
+    assert said[-1] == "    1 fonts"
 
 
-def test_a_missing_windows_font_is_answered_by_the_floor():
-    """Calibri went to the Lato installed on a Mac, not to Carlito, and a
-    document took a page more than in Word."""
-    got = fonts.add_floor_names(
-        selection(("Lato", []), ("Carlito", ["Carlito Regular"]))
-    )
-    assert got == selection(("Lato", []), ("Carlito", ["Carlito Regular", "Calibri"]))
+def test_an_index_that_fails_does_not_fail_the_install(machine, monkeypatch):
+    layout, _ = machine
 
+    def fails(_layout, _index):
+        msg = "allfontsgen drew 2 of 10 font thumbnails"
+        raise PayloadError(msg)
 
-def test_a_windows_font_the_machine_has_keeps_its_name():
-    machine = selection(("Calibri", []), ("Carlito", []), ("Liberation Sans", []))
-    assert fonts.add_floor_names(machine) == selection(
-        ("Calibri", []), ("Carlito", []), ("Liberation Sans", ["Arial"])
-    )
-
-
-def test_the_editor_and_x2t_get_the_same_floor(tmp_path):
-    """x2t reads font_selection.bin; the editor, the same bytes in AllFonts.js."""
-    bare = selection(("Carlito", []), after=b"")
-    (tmp_path / "font_selection.bin").write_bytes(bare + b"ranges for x2t")
-    encoded = base64.b64encode(bare).decode()
-    (tmp_path / "AllFonts.js").write_text(
-        f'window["__all_fonts_js_version__"] = 2;\n'
-        f'window["g_fonts_selection_bin"] = "{encoded}";\n',
-        encoding="utf-8",
-    )
-    fonts.put_floor_first(tmp_path)
-    named = selection(("Carlito", ["Calibri"]), after=b"")
-    assert (tmp_path / "font_selection.bin").read_bytes() == named + b"ranges for x2t"
-    js = (tmp_path / "AllFonts.js").read_text(encoding="utf-8")
-    assert f'"{base64.b64encode(named).decode()}"' in js
+    monkeypatch.setattr(fonts, "build", fails)
+    said: list[str] = []
+    installer._index_installed_fonts(layout, said.append)
+    assert said[-1] == "    not indexed: allfontsgen drew 2 of 10 font thumbnails"

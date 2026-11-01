@@ -53,14 +53,6 @@ class Shell(Protocol):
         Starting in `start_in`, or where the toolkit chooses when it is None.
         """
 
-    def confirm_unprotected(self, document: Path) -> bool:
-        """Whether to save a protected document as `document`, in a format
-        that carries no password."""
-
-    def confirm_save_before_signing(self, document: Path) -> bool:
-        """Whether to save `document`'s edits so that it can be signed: a
-        document is signed as it is on disk."""
-
     def choose_open_path(self, kind: str) -> str | None:
         """What to open, or None if the user cancelled."""
 
@@ -85,9 +77,6 @@ class Shell(Protocol):
 
     def show_edited(self, session: Session, edited: bool) -> None:
         """Mark that session's window as holding unsaved edits, or not."""
-
-    def show_document(self, session: Session, document: Path) -> None:
-        """Name `document` in that session's window: a Save As moved it there."""
 
     def take_dropped(self, names: list[str]) -> list[Path]:
         """The full paths of files just dropped on a window, which the page
@@ -130,12 +119,6 @@ class HeadlessShell:
     def reload(self, session: Session) -> None:
         logger.warning("reload: no window to reload")
 
-    def confirm_unprotected(self, document: Path) -> bool:
-        return False
-
-    def confirm_save_before_signing(self, document: Path) -> bool:
-        return False
-
     def ask_to_recover(self, document: Path) -> bool:
         return False
 
@@ -143,9 +126,6 @@ class HeadlessShell:
         logger.warning("%s: %s", heading, detail)
 
     def show_edited(self, session: Session, edited: bool) -> None:
-        pass
-
-    def show_document(self, session: Session, document: Path) -> None:
         pass
 
     def take_dropped(self, names: list[str]) -> list[Path]:

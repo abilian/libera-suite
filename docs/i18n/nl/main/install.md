@@ -43,11 +43,7 @@ Met [Homebrew](https://brew.sh) open je Terminal en voer je uit:
 brew install abilian/tap/libera
 ```
 
-Homebrew bouwt Libera Suite op je Mac. De eerste keer dat je `libera` uitvoert, biedt het aan de componenten te downloaden, ongeveer 90 MB. Voer daarna één keer dit uit, om Libera Suite in je map Programma's te hebben:
-
-```sh
-libera --launcher-install
-```
+Homebrew bouwt Libera Suite op je Mac. De eerste keer dat je `libera` uitvoert, biedt het aan de componenten te downloaden, ongeveer 90 MB.
 
 Zonder Homebrew heb je Python 3.12 of nieuwer nodig, en dat zit niet in macOS: installeer het via [python.org](https://www.python.org/downloads/macos/). Voer daarna uit:
 
@@ -55,15 +51,13 @@ Zonder Homebrew heb je Python 3.12 of nieuwer nodig, en dat zit niet in macOS: i
 curl -fsSL https://cdn.abilian.com/libera/install.sh | sh
 ```
 
-Dit script zet Libera Suite ook in je map Programma's.
-
-In beide gevallen krijg je de opdracht `libera`, en `Libera.app` in de map Programma's van je thuismap. De Finder biedt Libera Suite dan aan onder *Open met*, en Spotlight vindt het. Het neemt je documenten niet over: wil je dat een dubbelklik een `.docx` in Libera Suite opent, kies dan *Toon info* bij zo'n bestand, kies Libera Suite onder *Open met* en klik op *Wijzig alles*.
+In beide gevallen krijg je de opdracht `libera`. Op macOS start je Libera Suite voorlopig vanuit een terminal: een programma om op te dubbelklikken staat [op de roadmap](/en/develop/roadmap/).
 
 ## Starten
 
 - **Windows:** via het Startmenu of het bureaublad, of door op een document te dubbelklikken.
 - **Linux:** via je toepassingenmenu, of met `libera` in een terminal.
-- **macOS:** vanuit je map Programma's of Spotlight, of met `libera` in Terminal. Geef er een document aan mee om precies dat document te openen:
+- **macOS:** met `libera` in Terminal. Geef er een document aan mee om precies dat document te openen:
 
 ```sh
 libera ~/Documents/verslag.docx
@@ -80,8 +74,6 @@ De volgende pagina is [Werken met documenten](../guide/documents.md): openen, op
 Voer hetzelfde installatieprogramma of dezelfde opdracht opnieuw uit. De geïnstalleerde versie wordt vervangen door de nieuwste.
 
 Met Homebrew voer je `brew upgrade libera` uit. Heeft een nieuwe versie nieuwe componenten nodig, dan biedt Libera Suite bij de volgende start aan ze te downloaden.
-
-Opent `Libera.app` op macOS niet meer na een update, voer dan `libera --launcher-install` opnieuw uit.
 
 ## Verwijderen {#uninstall}
 
@@ -103,15 +95,13 @@ Opent `Libera.app` op macOS niet meer na een update, voer dan `libera --launcher
 - **macOS:**
 
     ```sh
-    libera --launcher-remove
     libera --payload-remove
     rm -rf ~/.local/bin/libera ~/.local/share/libera
     ```
 
-- **Homebrew**, op beide systemen (`libera --launcher-remove` is voor macOS):
+- **Homebrew**, op beide systemen:
 
     ```sh
-    libera --launcher-remove
     libera --payload-remove
     brew uninstall libera
     ```

@@ -1,6 +1,8 @@
 """The desktop entry: what puts Libera Suite in a Linux launcher.
 
-A `pipx install` on Linux got a command and nothing else: nothing in the
+macOS gets `Libera.app` out of `build/macos/macos-app.sh` -- a Dock icon, a name in
+Open With, and a double-clicked document opening in the right editor. A
+`pipx install` on Linux got a command and nothing else: nothing in the
 activities overview, nothing offering to open a `.docx`, no mark anywhere. The
 Flatpak has always shipped a desktop entry, so the gap was exactly the install
 that `notes/09-release.md` calls Phase 1 and recommends first.
@@ -22,9 +24,8 @@ does not include `~/.local/bin`, so shipping the template as-is would have
 produced an icon that silently does nothing -- the same class of failure as a
 launch with no terminal to print to.
 
-Linux only, and the answer for Windows, whose installer does this itself.
-Callers ask `explain_unsupported()`, which says so; none tests the platform
-itself.
+Linux only. Callers ask `explain_unsupported()`, which says so; none tests
+the platform itself.
 """
 
 from __future__ import annotations
@@ -47,7 +48,7 @@ APP_ID = "eu.liberasuite.Libera"
 def explain_unsupported() -> str | None:
     """None when a launcher entry makes sense here; otherwise what to say."""
     if not sys.platform.startswith("linux"):
-        return "the Windows installer puts Libera Suite in the Start menu itself"
+        return "a desktop entry is a Linux thing; macOS has Libera.app"
     if os.environ.get("FLATPAK_ID"):
         return "the Flatpak installs its own desktop entry"
     return None

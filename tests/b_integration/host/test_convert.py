@@ -32,9 +32,9 @@ def test_opening_a_document_produces_an_editor_bin(opened: Session):
     assert opened.editor_bin.stat().st_size > 0
 
 
-# From each editor's blank, so an editor without one, the PDF editor's, is not
-# here: tests/c_e2e/host/test_pdf.py saves a PDF.
-OFFERED = [(app, ext) for app in apps.ALL if app.blank for _, ext in app.save_formats]
+OFFERED = [
+    (app, ext) for app in apps.ALL if app.editable for _, ext in app.save_formats
+]
 
 
 SENTENCE = "Libera keeps this sentence"
@@ -196,24 +196,18 @@ def test_save_as_follows_the_extension_the_user_typed(
     so it decides, and the format follows it.
     """
     chosen = tmp_path / "elsewhere.odt"
-    named: list[pathlib.Path] = []
     monkeypatch.setattr(
         hooks,
         "shell",
-        ScriptedShell(
-            choose_save_path=lambda _name, _formats, _start_in: str(chosen),
-            show_document=lambda _session, document: named.append(document),
-        ),
+        ScriptedShell(choose_save_path=lambda _name, _formats, _start_in: str(chosen)),
     )
 
     result = save_document(opened, SaveRequest(file_type=65, save_as=True))
 
     assert result == {"error": 0, "path": str(chosen)}
     assert chosen.read_bytes()[:2] == b"PK"  # an ODF package, not a docx
-    # Save As moves the session onto the new file; a plain Save now goes there,
-    # and the window (and its tab) is called after it.
+    # Save As moves the session onto the new file; a plain Save now goes there.
     assert opened.current_file.read_text() == str(chosen)
-    assert named == [chosen]
 
 
 def test_a_failed_save_as_leaves_the_session_on_the_open_document(
@@ -546,45 +540,6 @@ def test_a_text_file_saves_as_rtf_with_its_text(tmp_path):
     assert "après" in read_rtf_text(rtf)
 
 
-ODF_NS = (
-    'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
-    'xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" '
-    'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" '
-    'xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" '
-    'office:version="1.2"'
-)
-
-
-def test_an_odt_without_master_styles_keeps_its_styles(tmp_path):
-    """x2t's ODF reader skipped every style when styles.xml had no
-    office:master-styles, which is optional, and a generated FAQ came out
-    all in the default style. Patch 0169."""
-    document = tmp_path / "faq.odt"
-    with zipfile.ZipFile(document, "w") as odt:
-        odt.writestr("mimetype", "application/vnd.oasis.opendocument.text")
-        odt.writestr(
-            "styles.xml",
-            f"<office:document-styles {ODF_NS}><office:styles>"
-            '<style:style style:name="Titre" style:family="paragraph">'
-            '<style:text-properties fo:font-size="19pt" fo:font-weight="bold"/>'
-            "</style:style></office:styles></office:document-styles>",
-        )
-        odt.writestr(
-            "content.xml",
-            f"<office:document-content {ODF_NS}><office:body><office:text>"
-            '<text:p text:style-name="Titre">FAQ</text:p>'
-            "</office:text></office:body></office:document-content>",
-        )
-    faq = open_in(apps.WORDS, document, tmp_path / "session")
-    docx = tmp_path / "out.docx"
-
-    export(faq, docx, apps.WORDS.ids_by_ext["docx"], None)
-    styles = zipfile.ZipFile(docx).read("word/styles.xml").decode()
-    titre = re.search(r'<w:name w:val="Titre"/>.*?</w:style>', styles)
-    assert titre is not None
-    assert '<w:sz w:val="38"' in titre.group()
-
-
 def test_markdown_opens_and_saves(tmp_path):
     """x2t refused every .md without an encoding (rc 88)."""
     document = tmp_path / "notes.md"
@@ -593,121 +548,6 @@ def test_markdown_opens_and_saves(tmp_path):
 
     assert save_document(notes, SaveRequest()) == {"error": 0, "path": str(document)}
     assert "cœur 🎯" in document.read_text(encoding="utf-8")
-
-
-MHT = (
-    b"MIME-Version: 1.0\r\n"
-    b'Content-Type: multipart/related; type="text/html"; boundary="b"\r\n\r\n'
-    b"--b\r\nContent-Type: text/html\r\n"
-    b"Content-Transfer-Encoding: quoted-printable\r\n"
-    b"Content-Location: https://example.invalid/\r\n\r\n"
-    b'<html><head><meta charset=3D"utf-8"></head>'
-    b"<body><p>Un mot et c=C5=93ur</p></body></html>\r\n--b--\r\n"
-)
-FB2 = (
-    '<?xml version="1.0" encoding="utf-8"?>'
-    '<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">'
-    "<description><title-info><book-title>T</book-title></title-info>"
-    "</description><body><section><p>Un mot et cœur</p></section></body>"
-    "</FictionBook>"
-).encode()
-
-
-@pytest.mark.parametrize(("ext", "content"), [("mht", MHT), ("fb2", FB2)])
-def test_a_format_that_needs_an_encoding_opens(tmp_path, ext, content):
-    """Words listed .mht and .fb2 and never opened either: x2t refused them
-    without an encoding (rc 88), as it did .md. A web page as a browser saves
-    it, quoted-printable UTF-8, and a FictionBook; Words writes neither, so
-    each goes out as text."""
-    document = tmp_path / f"page.{ext}"
-    document.write_bytes(content)
-    page = open_in(apps.WORDS, document, tmp_path / "session")
-    text = tmp_path / "page.txt"
-
-    export(page, text, apps.WORDS.ids_by_ext["txt"], None)
-
-    assert "Un mot et cœur" in text.read_text(encoding="utf-8-sig")
-
-
-def test_an_epub_opens(tmp_path):
-    """Words listed .epub and never opened one either (rc 88). The EPUB is
-    one Words wrote, from a text file."""
-    source = tmp_path / "book.txt"
-    source.write_text("Un mot et cœur\n", encoding="utf-8")
-    book = tmp_path / "book.epub"
-    export(
-        open_in(apps.WORDS, source, tmp_path / "first"),
-        book,
-        apps.WORDS.ids_by_ext["epub"],
-        None,
-    )
-    text = tmp_path / "book-again.txt"
-
-    export(
-        open_in(apps.WORDS, book, tmp_path / "second"),
-        text,
-        apps.WORDS.ids_by_ext["txt"],
-        None,
-    )
-
-    assert "Un mot et cœur" in text.read_text(encoding="utf-8-sig")
-
-
-ODF_FLAT = (
-    '<?xml version="1.0" encoding="UTF-8"?><office:document'
-    ' xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"'
-    ' xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"'
-    ' xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"'
-    ' xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0"'
-    ' xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"'
-    ' office:version="1.2" office:mimetype="application/vnd.oasis.opendocument.{kind}">'
-    "<office:body>{body}</office:body></office:document>"
-)
-FODS = ODF_FLAT.format(
-    kind="spreadsheet",
-    body='<office:spreadsheet><table:table table:name="S"><table:table-row>'
-    '<table:table-cell office:value-type="string"><text:p>Un mot et cœur</text:p>'
-    "</table:table-cell></table:table-row></table:table></office:spreadsheet>",
-)
-FODP = ODF_FLAT.format(
-    kind="presentation",
-    body='<office:presentation><draw:page draw:name="P">'
-    '<draw:frame svg:x="2cm" svg:y="2cm" svg:width="10cm" svg:height="3cm">'
-    "<draw:text-box><text:p>Un mot et cœur</text:p></draw:text-box></draw:frame>"
-    "</draw:page></office:presentation>",
-)
-
-
-# What each editor saves to, for the test to read back.
-SAVED_AS = {"word": "docx", "cell": "xlsx", "slide": "pptx"}
-
-
-@pytest.mark.parametrize(
-    ("app", "name", "content", "expected"),
-    [
-        (apps.WORDS, "fdo59530.doc", None, "ccc"),
-        (apps.TABLES, "sheet.fods", FODS, "Un mot et cœur"),
-        (apps.SLIDES, "deck.fodp", FODP, "Un mot et cœur"),
-    ],
-    ids=["doc", "fods", "fodp"],
-)
-def test_a_listed_format_opens_as_its_editors_kind(
-    tmp_path, app, name, content, expected
-):
-    """Words listed .doc and refused every one (rc 88); Tables and Slides
-    opened a flat ODF file as a text document, which saved as nothing but
-    PDF. Each now opens as its editor's own kind and saves its text."""
-    document = tmp_path / name
-    if content is None:
-        shutil.copy(repo_root() / "tests/b_integration/host/data" / name, document)
-    else:
-        document.write_text(content, encoding="utf-8")
-    opened = open_in(app, document, tmp_path / "session")
-    saved = tmp_path / f"saved.{SAVED_AS[app.doctype]}"
-
-    export(opened, saved, app.ids_by_ext[saved.suffix[1:]], None)
-
-    assert expected.encode() in _read_text(saved)
 
 
 # --- x2t's CSV reader skipped a character every 500,000 --------------------

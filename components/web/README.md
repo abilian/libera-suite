@@ -1,1 +1,0 @@
-Part of [Libera Suite](https://pypi.org/project/libera/), installed with it: `pip install libera`. Built from [Euro-Office](https://github.com/Euro-Office) sources, which are AGPL v3, with Libera Suite's patches; the pinned sources and the patch queue are in [the repository](https://github.com/abilian/libera-suite/tree/main/build/upstream).

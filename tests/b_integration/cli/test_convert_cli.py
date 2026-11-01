@@ -65,8 +65,6 @@ def test_a_document_that_fails_does_not_stop_the_others(docs, capsys, monkeypatc
 
     monkeypatch.setattr(convert, "convert_to_editor_bin", fail_on_a)
     assert cli.main(["--convert", "a.docx", "b.docx", "-t", "pdf"]) == 1
-    err = capsys.readouterr().err
-    assert "a.docx: x2t could not convert" in err
-    assert "1 of 2 documents could not be converted" in err
+    assert "a.docx: x2t could not convert" in capsys.readouterr().err
     assert not (docs / "a.pdf").exists()
     assert (docs / "b.pdf").read_bytes().startswith(b"%PDF-")

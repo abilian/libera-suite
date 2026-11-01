@@ -72,12 +72,9 @@ class Toolkit(Protocol):
         """Run work where the toolkit wants it, and return its answer."""
 
     def make_window(
-        self, title: str, url: str, width: int, height: int, *, tabs: bool
+        self, title: str, url: str, width: int, height: int
     ) -> Window | None:
-        """pywebview's create_window, made where the toolkit can make it.
-
-        `tabs` says whether the window may join a tab group, where the
-        toolkit has them."""
+        """pywebview's create_window, made where the toolkit can make it."""
 
     def find_key_window(self, windows: Sequence[Window]) -> Window | None:
         """The window the toolkit says is in front, if it says."""
@@ -130,18 +127,14 @@ def run_on_gui_thread(work: Callable[[], T]) -> T:
     return work()
 
 
-def make_window(
-    title: str, url: str, width: int, height: int, *, tabs: bool
-) -> Window | None:
-    """pywebview's own, which has no tabs, so `tabs` changes nothing."""
-    del tabs
+def make_window(title: str, url: str, width: int, height: int) -> Window | None:
+    """pywebview's own."""
     return webview.create_window(title, url, width=width, height=height)
 
 
 def find_key_window(windows: Sequence[Window]) -> Window | None:
-    """pywebview's own active_window()."""
-    del windows
-    return webview.active_window()
+    """Nothing beyond pywebview's own active_window(), which is asked next."""
+    return None
 
 
 def set_fullscreen(window: Window, on: bool) -> None:

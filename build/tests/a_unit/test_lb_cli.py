@@ -11,7 +11,7 @@ import shlex
 from pathlib import Path
 
 import pytest
-from libera_build import bench, buildbox, cli, flatpak, linux, matrix, tidy
+from libera_build import bench, buildbox, cli, containers, flatpak, linux, matrix, tidy
 from libera_build.buildbox import BoxOptions
 from libera_build.cli import Step
 from libera_build.containers import host_arch
@@ -66,10 +66,13 @@ TOOLCHAIN = sh("engine/toolchain.sh", "check")
                 sh("engine/smoke.sh"),
             ],
         ),
+        (
+            ["payload", "install", "--from", "/d"],
+            [Step(("uv", "run", "libera", "--payload-install", "--from", "/d"))],
+        ),
         (["payload", "patches"], [sh("engine/check-patches.sh")]),
         (["toolchain", "list"], [sh("engine/toolchain.sh", "list")]),
         (["app", "macos", "--standalone"], [sh("macos/macos-app.sh", STANDALONE="1")]),
-        (["app", "macos-launcher"], [sh("macos/launcher.sh")]),
     ],
 )
 def test_a_command_line_runs_its_scripts(argv, steps):
@@ -103,9 +106,7 @@ def test_an_unknown_phase_is_refused():
 
 
 # Commands that need arguments, and a line for each to plan with.
-NEEDS_ARGUMENTS = {
-    "on": ["linux-arm64", "app", "flatpak-smoke"],
-}
+NEEDS_ARGUMENTS = {"on": ["linux-arm64", "app", "flatpak-smoke"]}
 
 
 def every_command_line() -> list[list[str]]:
@@ -117,7 +118,6 @@ def every_command_line() -> list[list[str]]:
         cli.add_app,
         cli.add_linux,
         cli.add_release,
-        cli.add_components,
         cli.add_others,
     ):
         add(groups)
@@ -158,7 +158,6 @@ def test_linux_is_called_here_with_its_options(monkeypatch):
     monkeypatch.delenv("ARCH", raising=False)
     monkeypatch.delenv("DIST", raising=False)
     monkeypatch.delenv("PAYLOAD", raising=False)
-    monkeypatch.delenv("LINUX_LANG", raising=False)
     (call,) = cli.plan(["linux", "test", "-k", "bridge", "--arch", "arm64"])
     assert call == cli.Call(
         linux.run,
@@ -241,6 +240,7 @@ def no_knobs(monkeypatch):
     "argv",
     [
         ["payload", "export"],
+        ["payload", "install"],
         ["payload", "container", "--versions"],
         ["release", "status"],
         ["release", "push"],
@@ -274,11 +274,18 @@ def test_the_payload_container_is_the_whole_build_or_one_script(no_knobs):
     assert call.args == ("exec /bin/bash",)
 
 
+def test_install_without_a_source_takes_the_container_build(no_knobs):
+    (call,) = cli.plan(["payload", "install", "--arch", "arm64"])
+    assert call == cli.Call(
+        cli.install_exported, (BoxOptions(arch="arm64"),), env={"ARCH": "arm64"}
+    )
+
+
 def test_the_flatpak_defaults_to_this_machines_architecture(no_knobs):
     (call,) = cli.plan(["app", "flatpak-smoke"])
     assert call == cli.Call(flatpak.run, (FlatpakOptions("smoke", arch=host_arch()),))
-    (call,) = cli.plan(["app", "flatpak", "--arch", "amd64"])
-    assert call.args[0] == FlatpakOptions("build", arch="amd64")
+    (call,) = cli.plan(["app", "flatpak", "--arch", "amd64", "--dist", "/d"])
+    assert call.args[0] == FlatpakOptions("build", arch="amd64", dist=Path("/d"))
 
 
 def test_released_gui_is_every_builder_unless_one_is_named():
@@ -356,7 +363,14 @@ def test_a_dry_toolchain_install_installs_nothing():
     assert step.argv[-1] in {"-DryRun", "list"}
 
 
-def test_linux_gui_takes_a_language(monkeypatch):
-    monkeypatch.delenv("LINUX_LANG", raising=False)
-    (call,) = cli.plan(["linux", "gui", "--lang", "fr_FR.UTF-8"])
-    assert call.args[0].lang == "fr_FR.UTF-8"
+def test_the_flatpak_takes_the_container_builds_payload_when_given_none(
+    monkeypatch, tmp_path
+):
+    """A Linux builder builds its payload in the container, so `out/dist` is
+    empty there: a hand-run `app flatpak` failed on a manifest it never had."""
+    monkeypatch.setattr(buildbox, "exported_dist", lambda arch: tmp_path / arch)
+    engine = containers.Engine("docker", selinux=False)
+
+    builder = flatpak.Builder(FlatpakOptions("build", arch="amd64"), engine)
+
+    assert builder.dist == tmp_path / "amd64"

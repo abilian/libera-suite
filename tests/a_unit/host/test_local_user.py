@@ -30,37 +30,12 @@ def test_the_user_has_a_name_and_an_id():
 def test_the_editor_is_told_both():
     url = server.make_editor_url(43110, a_window(), "Note.docx")
     query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
-    name = desktop.lookup_local_user()[1]
+    user_id, name = desktop.lookup_local_user()
 
     # index.html.desktop falls back to Chuk.Gek for name and uid-901 for id
     # whenever these are absent, so both have to be there.
     assert query["username"] == [name]
-    assert query["userid"][0]
-
-
-def test_the_editor_is_not_told_the_login(tmp_path, monkeypatch):
-    """The PDF editor writes the id into every annotation, as /OUserID, so the
-    login went out in each PDF saved (measured, 2026-10-29). Nothing else
-    reads it -- a lock file has the login from desktop.lookup_local_user --
-    but it has to stay the same from one session to the next, since it is
-    how an annotation is known as yours."""
-    monkeypatch.setattr(locate, "get_state_dir", lambda: tmp_path)
-    login = desktop.lookup_local_user()[0]
-
-    def told() -> str:
-        # A new process each time, as far as the id knows.
-        desktop.editor_user_id.cache_clear()
-        url = server.make_editor_url(43110, a_window(), "Note.pdf")
-        return urllib.parse.parse_qs(urllib.parse.urlparse(url).query)["userid"][0]
-
-    try:
-        first, second = told(), told()
-    finally:
-        desktop.editor_user_id.cache_clear()
-
-    assert first == second
-    assert login not in first
-    assert (tmp_path / "editor-user-id").read_text(encoding="utf-8") == first
+    assert query["userid"] == [user_id]
 
 
 def test_a_name_with_a_space_survives_the_url(monkeypatch):
@@ -82,7 +57,7 @@ def test_a_name_with_a_space_survives_the_url(monkeypatch):
 
 def test_a_configured_name_comes_first(tmp_path, monkeypatch):
     """For a document that has to go out under another name than the
-    account's. The name does not change the id."""
+    account's. The id stays the login: a lock file is recognised by it."""
     config = tmp_path / "config.toml"
     config.write_text('user_name = "Jeanne Dupont"\n', encoding="utf-8")
     monkeypatch.setattr(locate, "get_config_file", lambda: config)
@@ -95,8 +70,8 @@ def test_a_configured_name_comes_first(tmp_path, monkeypatch):
 
     query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
     assert query["username"] == ["Jeanne Dupont"]
+    assert query["userid"] == [login]
     assert login != "Jeanne Dupont"
-    assert "Jeanne" not in query["userid"][0]
 
 
 def test_without_a_config_file_it_is_the_account_name(tmp_path, monkeypatch):

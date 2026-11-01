@@ -22,24 +22,19 @@ import subprocess
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from libera_build import components, versions
-from libera_build.containers import (
-    Engine,
-    Mount,
-    Run,
-    host_arch,
-    interactive,
-    linux_platform,
-)
-from libera_build.repo import REPO, build_root
+from libera.payload import locate
+from libera_build import repo, versions
+from libera_build.buildbox import exported_dist
+from libera_build.containers import Engine, Mount, Run, host_arch, interactive
+from libera_build.repo import REPO
 from libera_build.report import RefusedError, say, step
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-# uv sync into /venv, and the components installed the way a user installs
-# them: from their wheels. The workspace's own would be built in here, which
-# has none of the build's tools. The venv is volume-cached.
+# uv sync into /venv, and the payload installed the way a user installs it --
+# through the manifest, with every hash checked. Both are volume-cached, so
+# this is a no-op on the second run.
 #
 # UV_PYTHON=/usr/bin/python3 (in the Dockerfile) and the pyvenv.cfg line
 # together, because neither works alone. PyGObject is not a wheel -- it is the
@@ -52,6 +47,9 @@ if TYPE_CHECKING:
 # package installed, and `pipx install --system-site-packages libera` reports
 # one. gui.py says so.
 #
+# With a mounted payload the status check passes and nothing is installed;
+# with artifacts it installs, which is what a user does.
+#
 # Playwright's own Chromium, which is not the system's: the keyboard, slideshow
 # and start-window tests drive Playwright, which refuses to run against anything
 # it did not install -- fifteen tests skipped on Linux for want of it, which
@@ -62,20 +60,22 @@ if TYPE_CHECKING:
 # reads no payload. It used to install one all the same, and so stopped the
 # day the payload version moved ahead of every Linux payload here.
 SYNC = """set -e
-uv sync --group dev --quiet \\
-    --no-install-package libera-core --no-install-package libera-web
+uv sync --group dev --quiet
 sed -i 's/^include-system-site-packages = false/include-system-site-packages = true/' \\
     /venv/pyvenv.cfg
 uv run --no-sync python -c 'import gi' \\
     || { echo 'FATAL: the venv still cannot import gi' >&2; exit 1; }"""
-# The wheels each time: a rebuild keeps the version, and uv would keep the
-# first install. Into /venv by name: uv pip reads no UV_PROJECT_ENVIRONMENT,
-# and would find the mounted checkout's .venv. With a payload mounted
-# instead, LIBERA_PAYLOAD names it, which resolve() takes first.
+# Installs whenever /dist holds other artifacts than the last install's, and
+# not only when no payload works: a payload rebuilt under the same version
+# passes --payload-status, and the state volume kept the one before it.
 PREPARE = f"""{SYNC}
-if [ -d /wheels ]; then
-    uv pip install --python /venv/bin/python --quiet --no-deps --reinstall \\
-        /wheels/libera_core-*.whl /wheels/libera_web-*.whl
+if [ -e /dist/manifest.json ] && ! cmp -s /dist/manifest.json /state/installed-from.json
+then
+    uv run --no-sync libera --payload-install --from /dist \\
+        && cp /dist/manifest.json /state/installed-from.json
+else
+    uv run --no-sync libera --payload-status >/dev/null 2>&1 \\
+        || uv run --no-sync libera --payload-install --from /dist
 fi
 uv run --no-sync playwright install chromium >/dev/null 2>&1 \\
     || {{ echo 'FATAL: playwright could not install a browser' >&2; exit 1; }}"""
@@ -136,38 +136,58 @@ xvfb-run -a --server-args='-screen 0 1600x1000x24' \\
 class LinuxOptions:
     action: str
     arch: str | None = None  # default: this machine's
-    wheels: Path | None = None  # the component wheels to install
-    payload: Path | None = None  # a payload folder, used as is
-    lang: str | None = None  # the container's LANG, which picks the host's language
+    dist: Path | None = None  # payload artifacts to install from
+    payload: Path | None = None  # an unpacked payload, used as is
     pytest_args: tuple[str, ...] = ()
 
 
-def choose_payload(options: LinuxOptions, arch: str) -> tuple[Path | None, Path | None]:
-    """The component wheels to install, or a payload folder to mount.
+def newest_complete_payload(data_dir: Path) -> Path | None:
+    """The newest installed payload that is complete, of any version.
 
-    The wheels by default, because installing them is what a user does: the
-    folder asked for, else the one `lb components wheels` writes, which on a
-    Linux machine of this architecture holds its core.
+    `resolve()` wants PAYLOAD_VERSION exactly; a window check does not care
+    which payload drew the window, only that one did. Newest by number: a plain
+    sort puts 0.10 before 0.9.
+    """
+    if not data_dir.is_dir():
+        return None
+    found = [d for d in data_dir.iterdir() if d.is_dir() and locate.is_complete(d)]
+
+    def key(d: Path) -> tuple[int, ...]:
+        return tuple(int(p) if p.isdigit() else -1 for p in d.name.split("."))
+
+    return max(found, key=key, default=None)
+
+
+def choose_payload(options: LinuxOptions, arch: str) -> tuple[Path | None, Path | None]:
+    """The artifacts to install from, or failing those a payload to mount.
+
+    Artifacts first, because installing them is what a user does: the ones
+    asked for, else the container build's, else a native build's. Then an
+    unpacked payload: the one asked for, else the newest installed here.
     """
     if options.payload:
         return None, options.payload
-    version = versions.payload_version(REPO)
-    wheels = options.wheels or build_root() / "out" / "wheels" / version
-    tag = components.TAGS[linux_platform(arch)]
-    if list(wheels.glob(f"libera_core-*-{tag}.whl")):
-        return wheels, None
+    dist = (
+        options.dist or exported_dist(arch) or repo.dist(versions.payload_version(REPO))
+    )
+    if dist.is_dir():
+        return dist, None
+    if found := newest_complete_payload(locate.get_data_dir()):
+        say(f"==> no artifacts in {dist}; using the installed payload {found.name}")
+        say(f"    {found}  (--payload DIR overrides)")
+        return None, found
     msg = (
-        f"no libera-core wheel for {linux_platform(arch)} in {wheels}\n"
-        f"  build them on Linux:  lb on {linux_platform(arch)} components wheels\n"
-        "  or point at them: --wheels DIR, or at a payload: --payload DIR"
+        f"no payload artifacts in {dist}, and no installed payload\n"
+        f"  build them:  lb payload container --arch {arch}\n"
+        "  or point at a directory: --dist DIR, or a payload: --payload DIR"
     )
     raise RefusedError(msg)
 
 
-def mounts_for(arch: str, wheels: Path | None, payload: Path | None) -> list[Mount]:
-    """The repository, two volumes, and the components. Two volumes because
-    both are expensive and neither belongs in the repository: the virtualenv
-    with Linux wheels, and the state a run leaves."""
+def mounts_for(arch: str, dist: Path | None, payload: Path | None) -> list[Mount]:
+    """The repository, two volumes, and the payload. Two volumes because both
+    are expensive and neither belongs in the repository: the virtualenv with
+    Linux wheels, and the installed payload."""
     mounts = [
         Mount(REPO, "/repo"),
         Mount(f"libera-test-venv-{arch}", "/venv"),
@@ -175,12 +195,14 @@ def mounts_for(arch: str, wheels: Path | None, payload: Path | None) -> list[Mou
     ]
     if payload:
         mounts.append(Mount(payload, "/payload", read_only=True))
-    if wheels:
-        mounts.append(Mount(wheels, "/wheels", read_only=True))
+    # Only when they are there: mounting a directory that does not exist made
+    # the engine refuse to start, before anything could say what it wanted.
+    if dist and dist.is_dir():
+        mounts.append(Mount(dist, "/dist", read_only=True))
     return mounts
 
 
-def env_for(payload: Path | None, lang: str | None = None) -> dict[str, str]:
+def env_for(payload: Path | None) -> dict[str, str]:
     env = {
         "XDG_DATA_HOME": "/state",
         "HOME": "/state",
@@ -193,10 +215,6 @@ def env_for(payload: Path | None, lang: str | None = None) -> dict[str, str]:
     # this checkout's PAYLOAD_VERSION has moved ahead of every payload here.
     if payload:
         env["LIBERA_PAYLOAD"] = "/payload"
-    # The host reads LC_ALL, LC_MESSAGES, then LANG (host/language.py); the
-    # image sets none, so LANG alone decides.
-    if lang:
-        env["LANG"] = lang
     return env
 
 
@@ -234,15 +252,17 @@ def run(options: LinuxOptions, engine: Engine | None = None) -> int:
             return status
 
     needs_payload = options.action not in {"versions", "shell", "lint"}
-    wheels, payload = choose_payload(options, arch) if needs_payload else (None, None)
+    dist, payload = choose_payload(options, arch) if needs_payload else (None, None)
+    if dist is not None:
+        versions.stamp_bundled_manifest(REPO, dist)
     step(f"{options.action}, on Linux ({arch})")
     argv = engine.run_argv(
         Run(
             image,
             ("-c", script_for(options)),
             arch,
-            mounts=tuple(mounts_for(arch, wheels, payload)),
-            env=env_for(payload, options.lang),
+            mounts=tuple(mounts_for(arch, dist, payload)),
+            env=env_for(payload),
             workdir="/repo",
             interactive=interactive(),
             extra=("--pull=never",),

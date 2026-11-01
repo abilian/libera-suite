@@ -1,20 +1,22 @@
-"""Building the parts of a payload that are not shipped in it.
+"""Building the parts of a payload that can only be built here.
 
-DoctRenderer.config, and running allfontsgen, whose AllFonts.js records
-absolute font paths -- which is why the artifacts ship font *sources*. The
-index it builds lives in the state folder (payload/fonts.py).
+Installing is not unpacking. `AllFonts.js` records absolute font paths and
+`DoctRenderer.config` absolute payload paths, so both have to be produced on
+this machine by running `allfontsgen` out of the payload just unpacked --
+which is also why the artifacts ship font *sources* rather than the web set.
 """
 
 from __future__ import annotations
 
-import hashlib
-import os
 import shutil
 import subprocess
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from libera.payload import locate
 from libera.payload.locate import PayloadError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # What allfontsgen reads, and the thumbnail scales it draws: five sizes, each
 # for Latin and for East Asian names.
@@ -25,65 +27,79 @@ THUMBNAILS = 10
 _running: set[subprocess.Popen[str]] = set()
 
 
-def generate(root: Path) -> None:
-    """Write DoctRenderer.config beside x2t, which is where x2t looks for it."""
-    layout = locate.Layout.of(root)
-    if not layout.x2t.is_file():
-        msg = f"no x2t at {layout.x2t}: the core artifact is incomplete"
-        raise PayloadError(msg)
-    write_config(layout)
+def generate(root: Path) -> int:
+    """Produce the files that cannot be shipped, because they hold local paths.
 
-
-def write_config(layout: locate.Layout) -> None:
-    """DoctRenderer.config, for the editors where `layout` says they are.
-
-    Its paths are relative, which x2t resolves against the file's own folder
-    (doctrenderer/config.h, private_GetFile), and `<sdkjs>` is taken that way
-    when it starts with "./". So the core wheel ships it, written for
-    libera_web beside libera_core in one site-packages. It names no
-    AllFonts.js: every conversion passes the index's own as m_sAllFontsPath,
-    which x2t takes over the config's.
+    Runs allfontsgen over the font sources, then writes DoctRenderer.config
+    beside x2t -- which is where x2t looks for it. Returns the font count,
+    because allfontsgen exits 0 having found none and the caller reports it.
     """
+    layout = locate.Layout(root)
+    allfontsgen = layout.allfontsgen
+    if not allfontsgen.is_file():
+        msg = f"no allfontsgen at {allfontsgen}: the core artifact is incomplete"
+        raise PayloadError(msg)
 
-    def relative(path: Path) -> str:
-        return Path(os.path.relpath(path, layout.bin)).as_posix()
+    fonts_src = layout.fonts_src
+    if not fonts_src.is_dir():
+        msg = f"no font sources at {fonts_src}"
+        raise PayloadError(msg)
+
+    web = layout.fonts
+    images = layout.font_thumbnails
+    # allfontsgen treats an existing AllFonts.js as an up-to-date cache and
+    # exits 0 without writing anything, leaving an empty font directory behind.
+    for stale in (layout.all_fonts, layout.web_all_fonts):
+        stale.unlink(missing_ok=True)
+    # And it skips every thumbnail scale whose PNG exists, so a changed font set
+    # would keep the pictures of the old one in the font menu.
+    for stale in images.glob("fonts_thumbnail*"):
+        stale.unlink()
+    shutil.rmtree(web, ignore_errors=True)
+    web.mkdir(parents=True, exist_ok=True)
+    images.mkdir(parents=True, exist_ok=True)
+
+    run_allfontsgen(
+        layout,
+        f"--input={fonts_src}",
+        f"--allfonts-web={layout.web_all_fonts}",
+        f"--allfonts={layout.all_fonts}",
+        f"--images={images}",
+        f"--selection={layout.sdkjs_common / 'font_selection.bin'}",
+        f"--output-web={web}",
+    )
+    # The counts, not the exit code: allfontsgen exits 0 having found nothing
+    # when its directory walk has no live branch, and writes a well-formed
+    # AllFonts.js with an empty font list. An editor built on that renders every
+    # glyph as a box. The build checks the same two things (build/engine).
+    found = len(list(web.iterdir()))
+    sources = sum(1 for f in fonts_src.rglob("*") if f.suffix.lower() in FONT_SUFFIXES)
+    # ponytail: nine in ten, because allfontsgen passes over a source it cannot
+    # use (188 web fonts from 189 files, measured); a run that stopped partway
+    # is far below that. An exact rule needs allfontsgen's own list.
+    if found == 0 or found < sources * 9 // 10:
+        msg = f"allfontsgen made {found} web fonts from {sources} in {fonts_src}"
+        raise PayloadError(msg)
+    # And the thumbnails, which it draws last: on Windows it once stopped at
+    # the second, leaving blank names in the font menu.
+    drawn = len(list(images.glob("fonts_thumbnail*.png")))
+    if drawn < THUMBNAILS:
+        msg = f"allfontsgen drew {drawn} of {THUMBNAILS} font thumbnails"
+        raise PayloadError(msg)
 
     xregexp = layout.web_apps / "vendor" / "xregexp" / "xregexp-all-min.js"
     native = layout.sdkjs_common / "Native"
     layout.doctrenderer_config.write_text(
         "<Settings>\n"
-        f"<file>{relative(native / 'native.js')}</file>\n"
-        f"<file>{relative(native / 'jquery_native.js')}</file>\n"
-        f"<file>{relative(xregexp)}</file>\n"
-        f"<sdkjs>./{relative(layout.sdkjs)}</sdkjs>\n"
+        f"<file>{native / 'native.js'}</file>\n"
+        f"<file>{native / 'jquery_native.js'}</file>\n"
+        f"<allfonts>{layout.all_fonts}</allfonts>\n"
+        f"<file>{xregexp}</file>\n"
+        f"<sdkjs>{layout.sdkjs}</sdkjs>\n"
         "</Settings>\n",
         encoding="utf-8",
     )
-
-
-def make_code_cache_dir(layout: locate.Layout) -> Path:
-    """The folder doctrenderer keeps V8's code cache in, made if need be: the
-    compiled editor scripts, 8 MB each, which halve a PDF export.
-
-    It wrote them beside the scripts, into the payload, until core patch 0034
-    let DOCTRENDERER_CACHE_DIR name a folder. One folder per converter -- its
-    version, where it is, and when its x2t was written -- because a cache is
-    V8's, for one build of it. Made, it clears the others, which no
-    converter in use reads.
-    """
-    x2t = layout.x2t
-    key = f"{locate.PAYLOAD_VERSION}|{x2t}|{x2t.stat().st_mtime_ns}"
-    folder = (
-        locate.get_state_dir()
-        / "code-cache"
-        / hashlib.sha256(key.encode()).hexdigest()[:16]
-    )
-    if not folder.is_dir():
-        folder.mkdir(parents=True)
-        for other in folder.parent.iterdir():
-            if other != folder:
-                shutil.rmtree(other, ignore_errors=True)
-    return folder
+    return found
 
 
 def run_allfontsgen(layout: locate.Layout, *args: str) -> None:

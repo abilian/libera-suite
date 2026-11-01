@@ -14,8 +14,7 @@ import pathlib
 import secrets
 import shutil
 import tempfile
-import zipfile
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from enum import IntEnum
 from typing import TYPE_CHECKING
 
@@ -49,11 +48,6 @@ class SaveRequest:
     file_type: int = 0
     save_as: bool = False
     printing: bool = False
-    # The document's password as the editor has it, which LocalFileSave is
-    # handed with every save: "" for none, a new one after File > Protect.
-    # None for a save the editor takes no part in, one on close, which keeps
-    # the session's. Out of the repr, so that no log of a request shows it.
-    password: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_body(cls, body: dict) -> SaveRequest:
@@ -66,7 +60,6 @@ class SaveRequest:
             file_type=file_type,
             save_as="saveas=true" in str(body.get("params") or ""),
             printing=bool(body.get("isPrint")),
-            password=None if body.get("password") is None else str(body["password"]),
         )
 
 
@@ -90,13 +83,13 @@ class Destination:
 
     def to(self, chosen: pathlib.Path, app: apps.App) -> Destination:
         """Where the user chose, in the format its extension names. A print
-        stays a PDF, whatever was typed, and a name whose extension names no
-        format ("Report 2026.10.31") stays in the one asked for: its ext was
-        the typed one, x2t's format the asked one."""
-        ext = chosen.suffix.lstrip(".").lower()
-        if self.printing or ext not in app.ids_by_ext:
+        stays a PDF, whatever was typed."""
+        if self.printing:
             return replace(self, target=chosen)
-        return replace(self, target=chosen, ext=ext, fmt=app.ids_by_ext[ext])
+        ext = chosen.suffix.lstrip(".").lower() or self.ext
+        return replace(
+            self, target=chosen, ext=ext, fmt=app.ids_by_ext.get(ext, self.fmt)
+        )
 
 
 def plan_save(
@@ -248,20 +241,6 @@ def _put_in_place(
         locking.let_go(session)
         session.write_current_document(target)
         locking.hold(session, target)
-        hooks.shell.show_document(session, target)
-
-
-def _refuses_to_save(session: Session) -> str:
-    """Why this session cannot be saved at all, or "" when it can."""
-    if not session.editor.editable:
-        # A viewer has nothing to write and x2t has no id to write it with.
-        return f"{session.editor.title} is a viewer"
-    if session.password_asked is not None:
-        # Recovered edits of a protected document are decrypted already, and
-        # x2t given no password writes them unprotected: not before the
-        # password is given (opening._ask_recovered_password).
-        return "the document's password is not given yet"
-    return ""
 
 
 def save_document(
@@ -279,76 +258,12 @@ def save_document(
     `may_ask` is False on the GUI thread, where the save panel would wait for
     itself: a save that needs to ask where fails there instead.
     """
-    refused = _refuses_to_save(session)
-    if refused:
-        logger.warning("save refused: %s", refused)
-        return {"error": SaveOutcome.DECLINED}
-    # The password the save carries is the document's from now on, File >
-    # Protect's new one or "" after Delete password; but only once it is on
-    # disk. Kept after a cancelled or failed save, the next save, a print or
-    # the one on close, wrote it under a password that never took.
-    previous = session.password
-    if request.password is not None:
-        session.password = request.password
-    outcome = _save(session, request, may_ask=may_ask)
-    if outcome["error"] != SaveOutcome.SAVED:
-        session.password = previous
-    return outcome
-
-
-def _drops_password(session: Session, plan: Destination) -> bool:
-    """Whether this save writes a protected document in a format with no
-    encryption: x2t writes it in clear, exit 0, and says nothing.
-
-    By the format written, not the name typed: a name the toolkit leaves
-    without a known suffix is written in the format asked for.
-    """
-    return bool(session.password) and f".{plan.ext}" not in convert.KEEPS_PASSWORD
-
-
-def is_signed(path: pathlib.Path) -> bool:
-    """Whether a package carries digital signatures, read without running
-    anything: their parts, under `_xmlsignatures/` (host.signing)."""
-    try:
-        with zipfile.ZipFile(path) as package:
-            return any(n.startswith("_xmlsignatures/sig") for n in package.namelist())
-    except (OSError, zipfile.BadZipFile):
-        return False
-
-
-def _declines(
-    plan: Destination, open_file: pathlib.Path | None, *, drops_password: bool
-) -> bool:
-    """Whether a save stops before x2t runs, which it says in the log."""
-    # Asked first, a plain save included: the editor reads whether to offer
-    # File > Protect once, as it loads, so a document saved as text still
-    # offers it, and a password set there reaches a .txt. With no one to ask,
-    # the answer is no.
-    if drops_password and (
-        plan.target is None or not hooks.shell.confirm_unprotected(plan.target)
-    ):
-        logger.info("save cancelled: it would drop the password")
-        return True
-    if open_file is not None and plan.target == open_file and is_signed(open_file):
-        # x2t rebuilds the package from Editor.bin and writes no signature.
-        # The editor keeps a signed document read-only, and its Edit anyway
-        # removes the signatures first; a save that still meets them went
-        # around both, and would unsign the document without a word.
-        logger.error("save refused: %s is signed", open_file.name)
-        hooks.shell.tell(
-            language.translate("“{name}” is signed", name=open_file.name),
-            language.translate(
-                "Saving it would remove its signatures. To edit it, choose "
-                "File ▸ Protect ▸ Edit document, which removes them first."
-            ),
-        )
-        return True
-    return False
-
-
-def _save(session: Session, request: SaveRequest, *, may_ask: bool) -> dict:
-    """save_document, once the session may be saved and has its password."""
     app = session.editor
+    if not app.editable:
+        # A viewer has nothing to write and x2t has no id to write it with.
+        logger.warning("save refused: %s is a viewer", app.title)
+        return {"error": SaveOutcome.DECLINED}
+
     open_file = session.read_current_document()
     untitled = open_file is not None and is_inside(session.scratch, open_file)
     plan = plan_save(
@@ -367,9 +282,7 @@ def _save(session: Session, request: SaveRequest, *, may_ask: bool) -> dict:
         if chosen is None:
             return {"error": SaveOutcome.DECLINED}
         plan = plan.to(chosen, app)
-    drops_password = _drops_password(session, plan)
-    if _declines(plan, open_file, drops_password=drops_password):
-        return {"error": SaveOutcome.DECLINED}
+
     final = _export(session, plan, open_file)
     if final is None:
         # convert has logged what x2t said; the editor is told the save failed.
@@ -384,11 +297,6 @@ def _save(session: Session, request: SaveRequest, *, may_ask: bool) -> dict:
             "error": SaveOutcome.SAVED if opened else SaveOutcome.FAILED,
             "path": str(final),
         }
-    if drops_password:
-        # The file the window now has open has none. Kept, it went to the
-        # next Save As, which gave a .docx a password the user had been told
-        # was dropped.
-        session.password = ""
     # The file now matches the editor, so there is nothing to recover.
     session.mark_modified(False)
     return {"error": SaveOutcome.SAVED, "path": str(final)}

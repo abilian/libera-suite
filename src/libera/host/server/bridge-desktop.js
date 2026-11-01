@@ -66,11 +66,11 @@
     postToHost("/__host__/close");
   }
 
-  // -- Ctrl-N, Ctrl-O and Ctrl-W on Windows -----------------------------------
+  // -- Ctrl-N, Ctrl-O and Ctrl-W off macOS -------------------------------------
   //
   // No menu bar fires them there and the editor handles none of them, so the
   // page runs what the editor's File tab would. The host says which keys
-  // (shortcuts.PAGE_RUNS) and sends none on macOS or Linux, whose menu bars have them. Every frame installs its
+  // (shortcuts.PAGE_RUNS) and sends none on macOS. Every frame installs its
   // own, on the window and capturing, because a keydown in the editor's iframe
   // never reaches the top document.
   const PAGE_KEYS = w.LIBERA_PAGE_KEYS || {};
@@ -253,202 +253,6 @@
     preferred().focus();
   }
 
-  // -- signatures ------------------------------------------------------------
-  //
-  // The host signs and checks the file on disk (host/signing.py); the editor
-  // shows what it is told. DesktopOfflineAppDocumentSignatures takes the list
-  // as a JSON string, on open and after every change, and a signed document
-  // stays read-only until a shorter list arrives: removing a signature changes
-  // nothing in the editor by itself (sdkjs common/Local/common.js).
-  function showSignatures(xhr) {
-    if (xhr.status !== 200) {
-      report("host", `the host could not list the signatures (HTTP ${xhr.status})`);
-      return;
-    }
-    if (w.DesktopOfflineAppDocumentSignatures)
-      w.DesktopOfflineAppDocumentSignatures(xhr.responseText);
-  }
-
-  // The answers to GetDefaultCertificate and SelectCertificate, an object with
-  // a non-empty string id; "sertificate" is the editor's spelling.
-  function answerCertificate(name, certificate) {
-    if (w.OnNativeReturnCallback) w.OnNativeReturnCallback(name, certificate);
-  }
-
-  // A panel over the editor, as Create New's: the editor draws its own
-  // dialogs in the page, and so does this one (decided 2026-11-01).
-  function panel(titleText) {
-    const doc = w.top.document;
-    const dark =
-      w.document.documentElement.classList.contains("theme-type-dark") ||
-      (w.document.body?.classList.contains("theme-type-dark") ?? false);
-    const [card, text, line] = dark
-      ? ["#2a2a2a", "#e8e5e0", "#4a4a4a"]
-      : ["#fff", "#1e1a17", "#d8d2c8"];
-    const backdrop = doc.createElement("div");
-    backdrop.className = "libera-panel";
-    backdrop.style.cssText =
-      "position:fixed;inset:0;z-index:100000;display:flex;align-items:center;" +
-      "justify-content:center;background:rgba(0,0,0,.35);" +
-      "font:13px system-ui,-apple-system,'Segoe UI',sans-serif;";
-    const dialog = doc.createElement("div");
-    dialog.setAttribute("role", "dialog");
-    dialog.setAttribute("aria-modal", "true");
-    dialog.setAttribute("aria-label", titleText);
-    dialog.style.cssText =
-      `background:${card};color:${text};border-radius:10px;width:440px;` +
-      "padding:18px 22px;box-shadow:0 12px 40px rgba(0,0,0,.3);";
-    const title = doc.createElement("div");
-    title.textContent = titleText;
-    title.style.cssText = "font-weight:600;font-size:15px;margin-bottom:14px;";
-    dialog.append(title);
-    backdrop.append(dialog);
-    // Esc closes, before the editor sees it, in its frame as here.
-    const docs = [doc, w.document];
-    const onKey = (event) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      close();
-    };
-    const close = () => {
-      backdrop.remove();
-      for (const d of docs) d.removeEventListener("keydown", onKey, true);
-    };
-    for (const d of docs) d.addEventListener("keydown", onKey, true);
-    const button = (label, primary) => {
-      const b = doc.createElement("button");
-      b.type = "button";
-      b.textContent = label;
-      b.style.cssText =
-        `padding:6px 14px;border-radius:6px;border:1px solid ${line};font:inherit;` +
-        (primary
-          ? "background:#446995;color:#fff;border-color:#446995;"
-          : `background:transparent;color:${text};`);
-      return b;
-    };
-    const buttons = doc.createElement("div");
-    buttons.style.cssText =
-      "display:flex;justify-content:flex-end;gap:8px;margin-top:16px;";
-    doc.body.append(backdrop);
-    return { doc, dialog, buttons, button, close, line };
-  }
-
-  // A key file, its certificate when the key holds none, and the passphrase.
-  // The files are chosen in the host's open dialog, which lets the host read
-  // them; the passphrase goes to the host, which keeps it for this window.
-  function chooseCertificate() {
-    const p = panel(tr("Choose a Certificate"));
-    const chosen = { key: "", cert: "" };
-    const field = (labelText, which) => {
-      const row = p.doc.createElement("div");
-      row.style.cssText = "margin-bottom:10px;";
-      const label = p.doc.createElement("div");
-      label.textContent = labelText;
-      label.style.cssText = "margin-bottom:4px;";
-      const line = p.doc.createElement("div");
-      line.style.cssText = "display:flex;gap:8px;align-items:center;";
-      const name = p.doc.createElement("span");
-      name.style.cssText =
-        "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.8;";
-      name.dataset.file = which;
-      const pick = p.button(tr("Choose…"));
-      pick.dataset.choose = which;
-      pick.addEventListener("click", () => {
-        postToHost(
-          "/__host__/choose-file",
-          JSON.stringify({ filter: "certificates" }),
-          (xhr) => {
-            const path = answer(xhr).path || "";
-            if (!path) return;
-            chosen[which] = path;
-            name.textContent = path.split(/[\\/]/).pop();
-            name.title = path;
-          },
-        );
-      });
-      line.append(name, pick);
-      row.append(label, line);
-      p.dialog.append(row);
-    };
-    field(tr("Key file"), "key");
-    field(tr("Certificate file, if the key file holds none"), "cert");
-    const passLabel = p.doc.createElement("div");
-    passLabel.textContent = tr("Passphrase");
-    passLabel.style.cssText = "margin-bottom:4px;";
-    const pass = p.doc.createElement("input");
-    pass.type = "password";
-    pass.autocomplete = "off";
-    pass.style.cssText = `width:100%;box-sizing:border-box;padding:5px;border:1px solid ${p.line};border-radius:6px;font:inherit;`;
-    const problem = p.doc.createElement("div");
-    problem.setAttribute("role", "alert");
-    problem.style.cssText = "color:#c0392b;min-height:1.3em;margin-top:8px;";
-    const cancel = p.button(tr("Cancel"));
-    const ok = p.button(tr("OK"), true);
-    cancel.addEventListener("click", p.close);
-    ok.addEventListener("click", () => {
-      if (!chosen.key) {
-        problem.textContent = tr("Choose a key file.");
-        return;
-      }
-      const body = JSON.stringify({
-        key: chosen.key,
-        cert: chosen.cert,
-        passphrase: pass.value,
-      });
-      postToHost("/__host__/certificate", body, (xhr) => {
-        if (xhr.status === 200) {
-          p.close();
-          answerCertificate("on_signature_selectsertificate_ret", answer(xhr));
-        } else if (xhr.status === 403) {
-          problem.textContent = tr(
-            "The key did not load: a wrong passphrase, or a file that is not a key.",
-          );
-        } else {
-          problem.textContent = tr("The certificate could not be read.");
-          report("host", `the host refused the certificate (HTTP ${xhr.status})`);
-        }
-      });
-    });
-    pass.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") ok.click();
-    });
-    p.buttons.append(cancel, ok);
-    p.dialog.append(passLabel, pass, problem, p.buttons);
-  }
-
-  // ViewCertificate: who signed, who vouched for them, until when, and the
-  // certificate itself as OpenSSL prints it.
-  function showSigner(index) {
-    getFromHost(`/__host__/signer?index=${encodeURIComponent(index)}`, (xhr) => {
-      if (xhr.status !== 200) {
-        report("host", `the host could not show the certificate (HTTP ${xhr.status})`);
-        return;
-      }
-      const found = answer(xhr);
-      const cert = found.certificate || {};
-      const p = panel(tr("Certificate"));
-      for (const text of [
-        tr("Signed by {name}").replace("{name}", cert.name || ""),
-        tr("Issued by {issuer}").replace("{issuer}", cert.issuer || ""),
-        tr("Valid {dates}").replace("{dates}", cert.date || ""),
-      ]) {
-        const line = p.doc.createElement("div");
-        line.textContent = text;
-        line.style.cssText = "margin-bottom:4px;";
-        p.dialog.append(line);
-      }
-      const pre = p.doc.createElement("pre");
-      pre.textContent = found.text || "";
-      pre.style.cssText = `max-height:240px;overflow:auto;font:11px ui-monospace,Menlo,monospace;border:1px solid ${p.line};border-radius:6px;padding:8px;`;
-      const close = p.button(tr("Close"), true);
-      close.addEventListener("click", p.close);
-      p.buttons.append(close);
-      p.dialog.append(pre, p.buttons);
-      close.focus();
-    });
-  }
-
   // -- the editor -------------------------------------------------------------
   //
   // Its API, where the editor's own code puts it.
@@ -474,64 +278,9 @@
   // request turns any hiccup -- teardown included -- into a JS exception inside
   // the editor. Fetch once; the host tells us when it changes.
   let docPath = "";
-  // Whether File > Protect is offered: the host says, from the document's
-  // format. And the password the file on disk was last written with, which
-  // the editor is given back when a save that carried another did not take.
-  let protectable = false;
-  let confirmed = "";
-  // Whether the editor offers signatures: an OOXML file with no password, and
-  // a payload with libera-sign (host/signing.is_signable).
-  let signable = false;
-  // The PDF editor, which reads the file itself and asks for its password.
-  let readsItself = false;
 
   const currentBody = getFromHostSync("/__host__/current");
-  if (currentBody) {
-    const current = JSON.parse(currentBody);
-    docPath = current.path || "";
-    protectable = !!current.protectable;
-    readsItself = !!current.readsItself;
-    signable = !!current.signable;
-  }
-
-  // The password the PDF editor opened the PDF with: the host opens it with
-  // that to save it, a save on close included, and gives the file the
-  // editor's, which differs once File > Protect has changed it.
-  function reportOpeningPassword() {
-    const api = editorApi();
-    confirmed = (api && api.currentPassword) || "";
-    const body = JSON.stringify({ password: confirmed });
-    postToHost("/__host__/opening-password", body, (xhr) => {
-      if (xhr.status !== 204) {
-        report(
-          "error",
-          `the host did not take the PDF's password (HTTP ${xhr.status})`,
-        );
-      }
-    });
-  }
-
-  // The converted document, or the question of its password: x2t could not
-  // open it without one (90), or not with the one typed (91). The editor's
-  // dialog takes either code, and its answer is SetAdvancedOptions.
-  function handOver(payload) {
-    if (payload.needPassword) {
-      w.asc_initAdvancedOptions(payload.needPassword);
-      return;
-    }
-    // The password the host has for the document, a reload's above all: the
-    // editor's is gone with its page, and each save carries the editor's,
-    // so one it does not know would be saved as none. `true`: on open, which
-    // saves nothing.
-    const api = editorApi();
-    confirmed = payload.password || "";
-    if (payload.password && api && api.asc_setCurrentPassword) {
-      api.asc_setCurrentPassword(payload.password, true);
-    }
-    setTimeout(() => {
-      w.DesktopOfflineAppDocumentEndLoad(DOC_DIR, payload.b64, payload.len);
-    }, 0);
-  }
+  if (currentBody) docPath = JSON.parse(currentBody).path || "";
 
   const impl = {
     // --- lifecycle
@@ -564,7 +313,9 @@
       if (w.LIBERA_LOCKED_BY && api && api.asc_setLocalRestrictions) {
         api.asc_setLocalRestrictions(w.Asc.c_oAscLocalRestrictionType.Locked, true);
       }
-      handOver(payload);
+      setTimeout(() => {
+        w.DesktopOfflineAppDocumentEndLoad(DOC_DIR, payload.b64, payload.len);
+      }, 0);
     },
     CheckUserId: () => "poc-user",
     // The real path of the open document, from the host. The title bar, "open
@@ -575,8 +326,6 @@
     },
     onDocumentContentReady: function () {
       log("onDocumentContentReady", arguments);
-      if (readsItself) reportOpeningPassword();
-      if (signable) getFromHost("/__host__/signatures", showSignatures);
       // At once, not on the next one-second tick: it is the moment the
       // document is on screen, and build/src/libera_build/bench.py times it.
       sendReport();
@@ -612,14 +361,9 @@
     // must answer with DesktopOfflineAppDocumentEndSave(error, hash, password).
     // Async on purpose: x2t takes about a second, and the editor expects the
     // call to return immediately and be told later.
-    LocalFileSave: (params, password, _docinfo, fileType) => {
-      // The document's password as the editor has it, "" for none: the host
-      // saves under it (saving.SaveRequest).
-      const body = JSON.stringify({
-        fileType: fileType || 0,
-        params: params || "",
-        password: password || "",
-      });
+    LocalFileSave: function (params, password, _docinfo, fileType) {
+      log("LocalFileSave", arguments);
+      const body = JSON.stringify({ fileType: fileType || 0, params: params || "" });
       postToHost("/__host__/save", body, (xhr) => {
         const reply = answer(xhr);
         // No reply, or one without an error code, is a failed save.
@@ -629,23 +373,6 @@
           // Save As moves the document; keep the cached path in step without a
           // reload.
           docPath = reply.path || docPath;
-          // Saved as text, the file has none, and the editor's would go to the
-          // next Save As (saving._drops_password).
-          confirmed = reply.protected ? password || "" : "";
-          // A Save As leaves the signed file for one x2t wrote without its
-          // signatures, or for a format that has none: the editor still shows
-          // the old list, read-only, until it is sent the new one.
-          if (signable) getFromHost("/__host__/signatures", showSignatures);
-          const api = editorApi();
-          if (password && !reply.protected && api && api.asc_setCurrentPassword)
-            api.asc_setCurrentPassword("", true);
-        } else if (protectable && (password || "") !== confirmed) {
-          // File > Protect saves at once, and a save cancelled or failed left
-          // the editor with a password the file never got: its next save would
-          // write it unasked. The host has kept the file's (saving.py).
-          const api = editorApi();
-          if (api && api.asc_setCurrentPassword)
-            api.asc_setCurrentPassword(confirmed, true);
         }
         w.DesktopOfflineAppDocumentEndSave(error, "", password || "");
       });
@@ -714,9 +441,8 @@
     isSupportPlugins: () => false,
     isSupportMacroses: () => false,
     isBlockchainSupport: () => false,
-    IsSignaturesSupport: () => signable,
-    // File > Protect: set, change or remove a document's password.
-    IsProtectionSupport: () => protectable,
+    IsSignaturesSupport: () => false,
+    IsProtectionSupport: () => false,
     IsSupportMedia: () => false,
     IsSupportNativePrint: () => false,
     IsCloudCryptoSupport: () => false,
@@ -822,12 +548,7 @@
 
     CheckNeedWheel: () => true, // C++: always true (compat stub)
     LoadJS: () => 0,
-    // The sign dialog's own picture, a file the user chose: synchronous, a
-    // data: URL the dialog draws as it is.
-    GetImageBase64: (path) =>
-      getFromHostSync(
-        `/__host__/image?path=${encodeURIComponent(String(path || ""))}`,
-      ) || "",
+    GetImageBase64: () => "",
     GetImageFormat: (p) =>
       String(p || "")
         .split(".")
@@ -883,37 +604,8 @@
       if (request.type === "clear") return;
       checker.command(request);
     },
-    // The password the editor's dialog was given, as the editor writes it for
-    // x2t's job: "<m_sPassword>...</m_sPassword>", escaped as XML. Never
-    // logged. Cancelling the dialog closes the window instead.
-    SetAdvancedOptions: (param) => {
-      const job = new DOMParser().parseFromString(
-        `<job>${param}</job>`,
-        "application/xml",
-      );
-      const password = job.querySelector("m_sPassword");
-      if (password === null) return;
-      postToHost(
-        "/__host__/password",
-        JSON.stringify({ password: password.textContent }),
-        (xhr) => {
-          if (xhr.status === 200) handOver(answer(xhr));
-          else
-            report(
-              "error",
-              `the host could not open the document (HTTP ${xhr.status})`,
-            );
-        },
-      );
-    },
-    // Signing a document with edits: it is signed as it is on disk, so the
-    // host asks to save it first, and the editor saves, then signs.
-    SaveQuestion: () => {
-      postToHost("/__host__/save-question", "{}", (xhr) => {
-        if (w.DesktopSaveQuestionReturn)
-          w.DesktopSaveQuestionReturn(!!answer(xhr).save);
-      });
-    },
+    SetAdvancedOptions: () => {},
+    SaveQuestion: () => {},
     LoadFontBase64: () => {},
     PreloadCryptoImage: () => {},
     NativeViewerOpen: () => {},
@@ -951,33 +643,12 @@
     RemoveFile: () => {},
     ResaveFile: () => {},
     CallInAllWindows: () => {},
-    GetDefaultCertificate: () => {
-      getFromHost("/__host__/certificate", (xhr) => {
-        answerCertificate("on_signature_defaultcertificate_ret", answer(xhr));
-      });
-    },
-    SelectCertificate: () => chooseCertificate(),
-    ViewCertificate: (index) => showSigner(index),
-    Sign: (id, guid, imageValid, imageInvalid) => {
-      const body = JSON.stringify({
-        id: String(id || ""),
-        guid: String(guid || ""),
-        imageValid: String(imageValid || ""),
-        imageInvalid: String(imageInvalid || ""),
-      });
-      postToHost("/__host__/sign", body, showSignatures);
-    },
-    RemoveSignature: (guid) => {
-      const body = JSON.stringify({ guid: String(guid || "") });
-      postToHost("/__host__/remove-signature", body, showSignatures);
-    },
-    RemoveAllSignatures: () => {
-      postToHost(
-        "/__host__/remove-signature",
-        JSON.stringify({ guid: "" }),
-        showSignatures,
-      );
-    },
+    GetDefaultCertificate: () => {},
+    SelectCertificate: () => {},
+    ViewCertificate: () => {},
+    Sign: () => {},
+    RemoveSignature: () => {},
+    RemoveAllSignatures: () => {},
     PluginInstall: () => {},
     CompareDocumentFile: () => {},
     CompareDocumentUrl: () => {},
@@ -1119,19 +790,6 @@
     true,
   );
 
-  // The arguments that carry a password, by method: logged as "(a password)",
-  // since the log reaches the console and the host's report. LocalFileSave's
-  // sixth, from Words and the PDF editor, is the password before the last
-  // File > Protect (word/Local/api.js).
-  const SECRET_ARGS = { LocalFileSave: [1, 5], SetAdvancedOptions: [0] };
-  function redacted(name, args) {
-    const shown = Array.from(args);
-    for (const at of SECRET_ARGS[name] || []) {
-      if (shown[at]) shown[at] = "(a password)";
-    }
-    return shown;
-  }
-
   w.AscDesktopEditor = new Proxy(impl, {
     get: (t, k) => {
       if (k in t) {
@@ -1140,7 +798,7 @@
           ? v
           : function () {
               const r = v.apply(t, arguments);
-              log(k, redacted(k, arguments), r);
+              log(k, arguments, r);
               return r;
             };
       }

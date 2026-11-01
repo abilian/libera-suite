@@ -15,7 +15,6 @@ The layers, innermost first, and nothing imports anything above it:
     locking    lock files: a document open here, or open somewhere else
     convert    x2t: documents in, documents out
     saving     what a save request means, and doing the save
-    signing    digital signatures: libera-sign, on the file on disk
     recents    the Recent list
     opening    opening a document into a session, and recovering a crash
     server     HTTP: routing, endpoints, the injected bridge

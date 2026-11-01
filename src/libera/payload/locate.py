@@ -10,9 +10,6 @@ that way: a test that replaces `get_data_dir` replaces it for every caller.
 
 from __future__ import annotations
 
-import functools
-import importlib.metadata
-import importlib.util
 import json
 import os
 import platform
@@ -34,10 +31,6 @@ PAYLOAD_VERSION: str = tomllib.loads(
     .joinpath("payload.version")
     .read_text(encoding="utf-8")
 )["version"]
-
-# Where Libera Suite is published: the bundles, the install scripts, the
-# release pointer the update check reads, and the payloads of 0.6 and earlier.
-ORIGIN = "https://cdn.abilian.com/libera"
 
 # The payload's executables are x2t.exe and tools\allfontsgen.exe on Windows.
 EXE = ".exe" if os.name == "nt" else ""
@@ -75,48 +68,30 @@ class PayloadError(RuntimeError):
     """Something is wrong with the payload, said in terms a user can act on."""
 
 
-@dataclass(frozen=True)
-class Layout:
-    """Where each part of a payload is: the one place that says. It was
-    spelled out in four modules.
+class NoPayloadError(PayloadError):
+    """There is no payload anywhere `resolve` looks: the one case to offer an install.
 
-    Two roots. `root` holds the editors, their fonts and blanks, which the
-    server serves; `core` holds `bin/`, the converter. They are one folder in
-    a build tree and in a payload downloaded by 0.6 and earlier, and two
-    packages when the components are installed as such: libera_web and
-    libera_core.
+    A class of its own so the caller can tell it from the others by type.
+    It used to search the message for "no editor payload found", which any
+    rewording of the message would have broken without a sound.
     """
 
-    root: Path
-    core: Path
 
-    @classmethod
-    def of(cls, root: Path) -> Layout:
-        """The layout of the payload whose editors are at `root`: its own
-        `bin/`, unless it is the installed libera_web, whose core is the
-        installed libera_core."""
-        if root != find_component("libera_web"):
-            return cls(root, root)
-        core = find_component("libera_core")
-        if core is None:
-            msg = f"libera-web is installed, in {root}, but not libera-core"
-            raise PayloadError(msg)
-        return cls(root, core)
+@dataclass(frozen=True)
+class Layout:
+    """Where each part of a payload is, under its root: the one place that
+    says. It was spelled out in four modules, the two AllFonts.js among them,
+    which are not interchangeable."""
+
+    root: Path
 
     @property
     def bin(self) -> Path:
-        return self.core / "bin"
+        return self.root / "bin"
 
     @property
     def x2t(self) -> Path:
         return self.bin / f"x2t{EXE}"
-
-    @property
-    def sign(self) -> Path:
-        """libera-sign, which signs and checks OOXML packages (core 0190).
-        Not part of `is_complete`: a build tree from before it still opens
-        documents, and offers no signatures."""
-        return self.bin / f"libera-sign{EXE}"
 
     @property
     def allfontsgen(self) -> Path:
@@ -128,6 +103,11 @@ class Layout:
         return self.bin / "DoctRenderer.config"
 
     @property
+    def all_fonts(self) -> Path:
+        """The AllFonts.js of filesystem paths, which x2t reads."""
+        return self.root / "AllFonts.js"
+
+    @property
     def sdkjs(self) -> Path:
         return self.root / "sdkjs"
 
@@ -136,9 +116,23 @@ class Layout:
         return self.sdkjs / "common"
 
     @property
+    def web_all_fonts(self) -> Path:
+        """The AllFonts.js of web ids, which the editor loads."""
+        return self.sdkjs_common / "AllFonts.js"
+
+    @property
+    def font_thumbnails(self) -> Path:
+        return self.sdkjs_common / "Images"
+
+    @property
+    def fonts(self) -> Path:
+        """The web fonts, which allfontsgen writes and the editor fetches:
+        obfuscated copies, under numbers."""
+        return self.root / "fonts"
+
+    @property
     def fonts_src(self) -> Path:
-        """The fonts as shipped, which allfontsgen reads. Their index is not
-        here but in the state folder: see payload/fonts.py."""
+        """The fonts as shipped, which allfontsgen reads."""
         return self.root / "fonts-src"
 
     @property
@@ -157,25 +151,13 @@ class Layout:
 
 @dataclass(frozen=True)
 class Payload(Layout):
-    """A usable payload, and how we came to be using it."""
+    """A usable payload directory, and how we came to be using it."""
 
-    # "LIBERA_PAYLOAD", "config" or "components"
-    origin: str
-
-    @classmethod
-    def found(cls, root: Path, origin: str) -> Payload:
-        layout = Layout.of(root)
-        return cls(layout.root, layout.core, origin)
+    origin: str  # "LIBERA_PAYLOAD", "config", "bundled", or "installed"
 
     def read_record(self) -> dict:
-        """payload.json, or nothing for a build tree. The components' names
-        no platform, since libera-web is every platform's: theirs is this
-        machine's, which pip chose libera-core for."""
         f = self.record
-        record = json.loads(f.read_text(encoding="utf-8")) if f.is_file() else {}
-        if self.origin == "components":
-            record.setdefault("platform", get_current_platform())
-        return record
+        return json.loads(f.read_text(encoding="utf-8")) if f.is_file() else {}
 
 
 def get_xdg_data_home() -> Path:
@@ -218,10 +200,14 @@ def make_state_dir_private() -> None:
 
 
 def get_data_dir() -> Path:
-    """Where 0.6 and earlier downloaded their payloads, a folder per version,
-    about 400 MB each. Nothing reads them from 0.7 on, which installs the
-    components as packages; `libera --payload-remove` deletes them."""
+    """Where an installed payload lives."""
     return get_state_dir() / "payload"
+
+
+def get_installed_dir() -> Path:
+    """Where `--payload-install` puts this application's payload, and where
+    `resolve` looks for it. Three callers used to spell it for themselves."""
+    return get_data_dir() / PAYLOAD_VERSION
 
 
 def get_sessions_dir() -> Path:
@@ -313,62 +299,49 @@ def get_current_platform() -> str:
     return f"{system}-{machine}"
 
 
-@functools.cache
-def find_component(package: str) -> Path | None:
-    """The folder of an installed component package, without importing it:
-    there is nothing in it to run."""
-    spec = importlib.util.find_spec(package)
-    if spec is None or spec.origin is None:
-        return None
-    return Path(spec.origin).parent
+def find_bundled_dir() -> Path | None:
+    """A payload shipped inside the application, under the same prefix.
 
+    Every channel that can ship 120 MB should ship it: a Flatpak, and later a
+    `.dmg` and the cask. Only PyPI cannot, which makes it the one channel where
+    fetching on first run earns its complexity. A bundle that downloads its own
+    editors on first launch has to ask a question in a window, reach the
+    network from a sandbox, and fail in front of somebody who has just
+    double-clicked. The Flatpak did all three, one of them silently.
 
-def find_components() -> Payload | None:
-    """The components installed as packages, as `pip install libera` brings
-    them from 0.7 on: libera-web and libera-core, in exactly this host's
-    version, which its own requirements pin."""
-    web = find_component("libera_web")
-    if web is None:
-        return None
-    for name in ("libera-web", "libera-core"):
-        try:
-            version = importlib.metadata.version(name)
-        except importlib.metadata.PackageNotFoundError:
-            version = None
-        if version != PAYLOAD_VERSION:
-            there = f"{name} {version} is installed" if version else f"no {name}"
-            msg = (
-                f"{there}, and this version of Libera Suite needs"
-                f" {PAYLOAD_VERSION}\n"
-                f"  install it:   pip install {name}=={PAYLOAD_VERSION}"
-            )
-            raise PayloadError(msg)
-    found = Payload.found(web, "components")
-    if not is_complete(web):
-        msg = f"the components installed in {web.parent} are incomplete"
-        raise PayloadError(msg)
-    return found
+    **Searched, not counted.** The Flatpak installs the wheel with
+    `--prefix=/app` and runs it under the *runtime's* interpreter, so
+    `sys.prefix` is `/usr` and says nothing about where the application went.
+    Walking up from this file looking for the directory answers the question
+    that actually matters -- is there a payload shipped alongside this
+    installation -- and it is right for any prefix layout, which is what the
+    `.dmg` will want. Counting parents would break the first time the package
+    moved; see notes/lessons-learned/data-and-paths.md.
+    """
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "share" / "libera" / "payload"
+        if is_complete(candidate):
+            return candidate
+    return None
 
 
 def is_complete(root: Path) -> bool:
-    """Everything the host needs, including what install generates.
-
-    The fonts' index is not in it: the host builds that in the state folder
-    when it is missing (payload/fonts.py)."""
-    layout = Layout.of(root)
+    """Everything the host needs, including what install generates."""
+    layout = Layout(root)
     needed = [
         layout.x2t,
         layout.doctrenderer_config,
         layout.sdkjs,
         layout.web_apps,
         layout.blanks / "new.docx",
-        layout.fonts_src,
+        layout.all_fonts,
+        layout.fonts,
     ]
     return all(p.exists() for p in needed)
 
 
 def resolve() -> Payload:
-    """Find the payload, or say what to install."""
+    """Find the payload. Never downloads: see notes/05-packaging.md."""
     env = os.environ.get("LIBERA_PAYLOAD")
     if env:
         # Taken exactly as given -- this is the development path, pointing at a
@@ -381,7 +354,7 @@ def resolve() -> Payload:
                 " (run build/engine/payload.sh?)"
             )
             raise PayloadError(msg)
-        return Payload.found(root, "LIBERA_PAYLOAD")
+        return Payload(root, "LIBERA_PAYLOAD")
 
     configured = _read_configured_dir()
     if configured:
@@ -391,20 +364,25 @@ def resolve() -> Payload:
                 "is not a complete payload"
             )
             raise PayloadError(msg)
-        return Payload.found(configured, "config")
+        return Payload(configured, "config")
 
-    components = find_components()
-    if components is not None:
-        return components
+    # Before the installed one: a bundled payload shipped with this exact
+    # application and is guaranteed to match it, where an installed one is
+    # whatever some earlier run put there. Both are the same PAYLOAD_VERSION or
+    # neither is used at all, so this only decides which of two equals wins --
+    # and the one that cannot be half-upgraded should.
+    bundled = find_bundled_dir()
+    if bundled is not None:
+        return Payload(bundled, "bundled")
 
-    # libera requires both, so this is an install that skipped its
-    # dependencies, or a platform with no core wheel whose build from source
-    # did not happen.
+    installed = get_installed_dir()
+    if is_complete(installed):
+        return Payload(installed, "installed")
+
     msg = (
         f"Libera Suite's components are not installed"
         f" (this version needs {PAYLOAD_VERSION}).\n"
-        f"  install them:   pip install libera-core=={PAYLOAD_VERSION}"
-        f" libera-web=={PAYLOAD_VERSION}\n"
+        f"  install it:   libera --payload-install\n"
         f"  or point at a local build:   export LIBERA_PAYLOAD=/path/to/out/payload"
     )
-    raise PayloadError(msg)
+    raise NoPayloadError(msg)

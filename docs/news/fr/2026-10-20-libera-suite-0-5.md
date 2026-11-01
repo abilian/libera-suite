@@ -3,7 +3,7 @@ date: 2026-10-20
 description: Libera Suite 0.5 parle votre langue, affiche les documents dans les polices installées sur votre ordinateur, les ouvre plus vite et fait le ménage après ses propres mises à jour.
 ---
 
-# Libera Suite 0.5 : votre langue et vos polices
+# Libera Suite 0.5 : dans votre langue, avec vos polices
 
 Libera Suite 0.5 est disponible. Elle suit désormais la langue de votre système et affiche un document dans les polices installées sur votre ordinateur.
 

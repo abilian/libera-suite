@@ -3,7 +3,7 @@ date: 2026-10-12
 description: Libera Suite 0.4 markeert een document dat al elders open staat, in Libera Suite of in LibreOffice, geeft OpenDocument-bestanden getrouwer weer, en voegt slepen en neerzetten, een persoonlijk woordenboek en conversie vanaf de opdrachtregel toe.
 ---
 
-# Libera Suite 0.4: documentvergrendeling en getrouwer OpenDocument
+# Libera Suite 0.4: veiliger in een gedeelde map, getrouwer aan OpenDocument
 
 Libera Suite 0.4 is uit. Ze beschermt een document dat iemand anders open heeft, in Libera Suite of in LibreOffice. De componenten lezen en schrijven de OpenDocument-formaten nauwkeuriger.
 

@@ -37,14 +37,6 @@ remote_base() {
     sed -n 's/^base *= *"\(.*\)".*/\1/p' "$BUILD/upstream/pins.toml" | head -1
 }
 
-# Where a repository is fetched from: its own address under [urls], else
-# Euro-Office's.
-repo_url() {
-    url="$(sed -n '/^\[urls\]/,/^\[[a-z]/p' "$BUILD/upstream/pins.toml" |
-        sed -n "s/^$1 *= *\"\(.*\)\".*/\1/p" | head -1)"
-    echo "${url:-$(remote_base)/$1.git}"
-}
-
 # depot_tools shells out to gsutil, which picks up ~/.boto and then fails on
 # stale credentials even for public buckets -- and --no_auth no longer has any
 # effect. Point it at an empty config so it uses the anonymous path. This is a
@@ -180,13 +172,22 @@ fetch_repo() {
     dst="$SRC/$repo"
 
     if [ ! -d "$dst/.git" ]; then
-        src="$(repo_url "$repo")"
+        src="$(remote_base)/$repo.git"
         [ -d "$MIRROR/$repo/.git" ] && src="$MIRROR/$repo"
         echo "==> clone $repo from $src"
-        # Only the pinned commit is fetched, below: the history is 0.9 GB of
-        # core's 1.5, and nothing builds from it.
-        git init --quiet "$dst"
-        git -C "$dst" remote add origin "$src"
+        git clone --quiet --no-checkout "$src" "$dst" || {
+            echo "FATAL: could not clone $repo from $src" >&2
+            echo "       Every repository in pins.toml is public, so a request" >&2
+            echo "       for a username here is usually GitHub throttling" >&2
+            echo "       unauthenticated traffic -- six clones of ~2 GB in a row" >&2
+            echo "       is the pattern it throttles." >&2
+            echo "       Wait and run it again, or clone from local copies:" >&2
+            echo "           MIRROR=/path/to/clones lb payload fetch" >&2
+            echo "       Host key verification failed: git config rewrites the" >&2
+            echo "       URL to ssh, which has never met github.com here." >&2
+            echo "       Run ssh -T git@github.com once, by hand, and check the key." >&2
+            exit 1
+        }
     fi
 
     # In the clone's own config, before the checkout, and on every run so an
@@ -202,23 +203,8 @@ fetch_repo() {
     git -C "$dst" config core.longpaths true
 
     echo "==> $repo @ $sha"
-    # By SHA, which GitHub serves for any commit it has. A tree cloned whole
-    # before this keeps its history and fetches nothing it already has. A
-    # mirror older than the pin falls back to upstream: it only saves traffic.
-    git -C "$dst" cat-file -e "$sha^{commit}" 2>/dev/null ||
-        git -C "$dst" fetch --quiet --depth 1 origin "$sha" ||
-        git -C "$dst" fetch --quiet --depth 1 "$(repo_url "$repo")" "$sha" || {
-            echo "FATAL: could not fetch $repo @ $sha from $(git -C "$dst" remote get-url origin)" >&2
-            echo "       Every repository in pins.toml is public, so a request" >&2
-            echo "       for a username here is usually GitHub throttling" >&2
-            echo "       unauthenticated traffic." >&2
-            echo "       Wait and run it again, or fetch from local clones:" >&2
-            echo "           MIRROR=/path/to/clones lb payload fetch" >&2
-            echo "       Host key verification failed: git config rewrites the" >&2
-            echo "       URL to ssh, which has never met github.com here." >&2
-            echo "       Run ssh -T git@github.com once, by hand, and check the key." >&2
-            exit 1
-        }
+    git -C "$dst" fetch --quiet --all 2>/dev/null ||
+        echo "    (fetch skipped: upstream unreachable or throttled)"
     # Hard reset, so a re-run starts from pristine upstream rather than from
     # whatever the last patch attempt left behind.
     # A series that stopped halfway leaves git am's state behind, and the next
@@ -246,15 +232,14 @@ fetch_repo() {
 
 # git am makes a commit per patch. Without an identity it applies the series,
 # fails at the first commit, and leaves the tree mid-am -- which reads as a
-# rejected patch rather than an unconfigured machine. It used to stop here and
-# ask for one, which a machine building the core's sdist from PyPI need not
-# have, and which a scheduled task on the Windows builder did not see though
-# its ssh sessions do. A commit's author comes from its patch; the committer is
-# a local detail of a build tree, so one is supplied when git has none.
-ensure_git_committer() {
+# rejected patch rather than an unconfigured machine.
+require_git_identity() {
     git config --get user.email >/dev/null && git config --get user.name >/dev/null && return 0
-    export GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME:-Libera build}"
-    export GIT_COMMITTER_EMAIL="${GIT_COMMITTER_EMAIL:-build@libera.invalid}"
+    echo "FATAL: git has no user.email/user.name, and the patch queue is applied" >&2
+    echo "       with git am, which makes commits. Set them and re-run:" >&2
+    echo "         git config --global user.email you@example.com" >&2
+    echo "         git config --global user.name 'Your Name'" >&2
+    exit 1
 }
 
 # ICU's data, cut down to what core reads: the character-set converters and the
@@ -287,7 +272,7 @@ icu_data_filter_check() {
 
 cmd_fetch() {
     require_case_sensitive
-    ensure_git_committer
+    require_git_identity
     mkdir -p "$SRC" "$OUT"
     # No argument means every pinned repo. Only core is built here; the rest are
     # the payload (sdkjs, web-apps) and the fonts x2t needs.
@@ -339,17 +324,6 @@ cmd_configure() {
         set -- "-DEO_CORE_OPENSSL_DIR=$openssl_prefix"
         echo "==> $1"
     fi
-
-    # libxml2 from its own pin, not the copy core keeps (about 2.9.4, which a
-    # 6 KB document took to 3.9 GB): core patch 0172 reads this, and fetch
-    # applies the libxml2 queue, which writes its xmlversion.h. Absent, core
-    # would silently build its own copy, so its absence stops the build.
-    [ -f "$SRC/libxml2/include/libxml/xmlversion.h" ] || {
-        echo "FATAL: no libxml2 at $SRC/libxml2 -- run build.sh fetch libxml2" >&2
-        exit 1
-    }
-    set -- "$@" "-DEO_CORE_LIBXML2_DIR=$(winpath "$SRC/libxml2")"
-    echo "==> libxml2: $SRC/libxml2 @ $(git -C "$SRC/libxml2" rev-parse --short HEAD)"
 
     # Links get a ninja pool of their own on Windows, sized by memory, apart
     # from the compile job count. Measured on a 4-core, 8 GB machine: link.exe
@@ -405,11 +379,6 @@ cmd_configure() {
         exit 1
     }
     icu_data_filter_check
-    # Every third-party library is installed now, and its ok_marker under
-    # install/ is what tells the next configure not to build it again. What
-    # built it is 3 GB or more (V8, depot_tools, OpenSSL, Boost, ICU) that
-    # nothing reads after this. Kept until here so a failed build resumes.
-    rm -rf "$OUT/core/third_party/work"
 }
 
 # What the failing component's source tree actually contains.

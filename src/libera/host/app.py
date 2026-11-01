@@ -24,7 +24,6 @@ import webview
 from libera import payload as payload_mod, timeline
 from libera.host import (
     apps,
-    convert,
     hooks,
     instance,
     language,
@@ -54,7 +53,6 @@ from libera.host.window import (
     confirm_close,
     create_window,
     dialogs,
-    document_title,
     find_window,
     forget_start_window,
     listen_for_drops,
@@ -63,11 +61,10 @@ from libera.host.window import (
     offer_reload,
     remember_start_window,
     set_fullscreen,
-    show_session_document,
     show_session_edited,
     take_dropped,
 )
-from libera.payload import fonts, generate, locate
+from libera.payload import fonts, generate, locate, prune
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -102,7 +99,7 @@ def _show_session(
     "Don't Save" left behind were never offered back.
     """
     window = create_window(
-        title or document_title(session, document),
+        title or f"{document.name} — {session.editor.title}",
         server.make_editor_url(port, session, document.name),
     )
     session.window = window.uid
@@ -120,7 +117,6 @@ def _open_start_window(port: int, title: str | None = None):
         title or "Libera Suite",
         f"http://127.0.0.1:{port}/__host__/start?key={instance.TOKEN}",
         size=(720, 640),
-        tabs=False,
     )
     remember_start_window(window)
     window.events.closed += lambda: forget_start_window(window)
@@ -146,7 +142,8 @@ def run(
     # (the recent list, a new blank, the payload) is answered for a session,
     # even with no document shown, so there has to be one to answer for.
     timeline.mark("host")
-    layout = locate.Layout.of(payload_root)
+    prune.note_use(payload_root)
+    layout = locate.Layout(payload_root)
     first_session = Session(
         payload=payload_root,
         work=new_work(work),
@@ -157,7 +154,7 @@ def run(
         # engine drew is otherwise unmeasurable -- see tests/d_gui/.
         shot=shot,
     )
-    logger.info("fonts: %s", first_session.fonts)
+    logger.info("fonts: %s", first_session.fonts or "the payload's own")
     configure(first_session)
 
     port = server.find_free_port()
@@ -279,6 +276,8 @@ def _once_running() -> None:
     timeline.mark("gui-loop")
     menu.native.install()
     updates.check_in_background()
+    # Other versions of the payload that nobody has used for weeks.
+    prune.remove_unused_behind(locate.get_data_dir(), keep=locate.PAYLOAD_VERSION)
 
 
 class WindowedShell:
@@ -354,12 +353,6 @@ class WindowedShell:
         # and the host therefore stayed quiet.
         dialogs.reload(session, self.port)
 
-    def confirm_unprotected(self, document: Path) -> bool:
-        return dialogs.confirm_unprotected(document)
-
-    def confirm_save_before_signing(self, document: Path) -> bool:
-        return dialogs.confirm_save_before_signing(document)
-
     def ask_to_recover(self, document: Path) -> bool:
         return ask_to_recover(document)
 
@@ -368,9 +361,6 @@ class WindowedShell:
 
     def show_edited(self, session: Session, edited: bool) -> None:
         show_session_edited(session, edited)
-
-    def show_document(self, session: Session, document: Path) -> None:
-        show_session_document(session, document)
 
     def take_dropped(self, names: list[str]) -> list[Path]:
         return take_dropped(names)
@@ -382,23 +372,16 @@ def _convert_behind(
     """The document's conversion, while its window loads the editor. A
     document the converter refuses is said on screen, and its window closed."""
 
-    def failed(error: ConversionError) -> None:
+    def failed(_error: ConversionError) -> None:
         # convert has logged what x2t said; the user needs to hear it too.
-        if isinstance(error, convert.UnsupportedEncryptionError):
-            why = language.translate(
-                "It is protected by a password, with an encryption Libera "
-                "Suite cannot read yet. LibreOffice 26 encrypts this way."
-            )
-        else:
-            why = language.translate(
-                "The converter could not read it: it may be damaged, or in a "
-                "format Libera Suite cannot open."
-            )
         dialogs.say(
             language.translate(
                 "Libera Suite could not open “{name}”", name=document.name
             ),
-            why,
+            language.translate(
+                "The converter could not read it: it may be damaged, or in a "
+                "format Libera Suite cannot open."
+            ),
         )
         close_session_window(session)
 

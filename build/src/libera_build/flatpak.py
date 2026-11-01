@@ -20,14 +20,17 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from libera.payload import locate
-from libera_build import components, versions
-from libera_build.artifacts import bundle_name
+from libera_build import buildbox, repo, versions
+from libera_build.artifacts import bundle_name, core_name
 from libera_build.containers import Engine, Mount, Run, interactive, linux_platform
 from libera_build.process import run_quietly
 from libera_build.repo import REPO
 from libera_build.report import RefusedError, say, step
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 APP_ID = "eu.liberasuite.Libera"
 WORK = REPO / "build" / "flatpak"
@@ -47,6 +50,7 @@ MUST_HAVE = (
 class FlatpakOptions:
     action: str  # build, wheels, check, smoke, shell, versions, clean
     arch: str = "amd64"
+    dist: Path | None = None  # the payload artifacts to bundle
 
 
 def dockerfile_sum() -> str:
@@ -62,15 +66,8 @@ def impure_wheels(names: list[str]) -> list[str]:
     """The wheels that are not pure Python. The set is resolved on the builder
     image's Python, not the runtime's, which is safe only while every wheel is
     platform-independent: resolving on the wrong interpreter cannot then have
-    picked something different. libera-core is the exception: built here, for
-    this architecture, from the artifacts, and found by --find-links."""
-    return [
-        n
-        for n in names
-        if not re.search(r"-(py2\.)?py3-none-any\.whl$", n)
-        # Ours, built for this bundle's architecture rather than resolved.
-        and not n.startswith("libera_core-")
-    ]
+    picked something different."""
+    return [n for n in names if not re.search(r"-(py2\.)?py3-none-any\.whl$", n)]
 
 
 def diagnose_problems(report: str) -> list[str]:
@@ -83,14 +80,22 @@ def diagnose_problems(report: str) -> list[str]:
             "  runtime supplies GTK and WebKit here, so the runtime-version in\n"
             "  the manifest moved under us."
         )
-    if not re.search(r"^found via: *components$", report, re.MULTILINE):
+    if not re.search(r"^found via: *bundled$", report, re.MULTILINE):
         found.append(
-            "the bundle does not carry its components: --diagnose should say\n"
-            "  'found via: components'. Either the wheels the manifest installs\n"
-            "  did not include libera-core and libera-web, or resolve() no\n"
-            "  longer finds them installed (locate.find_components())."
+            "the bundle does not carry its payload: --diagnose should say\n"
+            "  'found via: bundled'. Either the manifest's install step did not\n"
+            "  run, or resolve() no longer looks beside the application\n"
+            "  (locate.find_bundled_dir())."
         )
     return found
+
+
+def staged_names(arch: str, fonts: list[str]) -> list[str]:
+    """Only what this architecture needs: the other cores are 70 MB each of
+    something this bundle can never run, and would live in the build cache.
+    The fonts by what is there, but at least one set of them."""
+    core = core_name(linux_platform(arch))
+    return ["manifest.json", core, "editors.tar.gz", *(fonts or ["fonts-core.tar.gz"])]
 
 
 class Builder:
@@ -107,6 +112,14 @@ class Builder:
         self.volume = f"libera-flatpak-{self.arch}"
         self.app = versions.app_version(REPO)
         self.bundle = bundle_name(self.app, self.arch)
+        # The container build's artifacts first, as `lb linux` takes them: a
+        # Linux builder builds its payload in the container, so its own
+        # out/dist is empty, and `ship` passes --dist where a hand run did not.
+        self.dist = (
+            options.dist
+            or buildbox.exported_dist(self.arch)
+            or repo.dist(versions.payload_version(REPO))
+        )
 
     # --- the container ---------------------------------------------------------
 
@@ -199,20 +212,10 @@ class Builder:
         """The offline wheel set, assembled aside and moved into place: a set
         that is present but half-filled is worse than one that is absent."""
         step("wheels, for a build with no network")
-        # The components are built for this machine, so it must be the
-        # bundle's platform: a Mac would hand the Flatpak a macOS core.
-        if (here := locate.get_current_platform()) != linux_platform(self.arch):
-            msg = (
-                f"the {self.arch} Flatpak carries a core built where it is made,\n"
-                f"  and this is {here}: lb on {linux_platform(self.arch)} app flatpak"
-            )
-            raise RefusedError(msg)
+        versions.stamp_bundled_manifest(REPO, self.dist)
         tmp = WORK / "wheels.tmp"
         shutil.rmtree(tmp, ignore_errors=True)
         tmp.mkdir(parents=True)
-        # The components first, this machine's core and the editors, built from
-        # the pinned sources: `pip wheel` finds them there rather than on PyPI.
-        components.wheels(REPO, tmp)
         # libera itself, built here: it is pure Python. Into the scratch
         # directory with --out-dir, and never `rm -rf dist && uv build`, which
         # once deleted the sdist a release had just made.
@@ -232,7 +235,6 @@ class Builder:
             self.run_argv(
                 "set -eu\npip3 wheel --no-cache-dir --ignore-requires-python \\\n"
                 "    --wheel-dir build/flatpak/wheels.tmp \\\n"
-                "    --find-links build/flatpak/wheels.tmp \\\n"
                 "    build/flatpak/wheels.tmp/libera-*.whl",
                 extra=("-e", "HOME=/tmp", *user),
             )
@@ -252,11 +254,38 @@ class Builder:
             say(f"    {wheel.name}")
         return 0
 
+    def stage_payload(self) -> None:
+        """The payload beside the manifest, before flatpak-builder runs: it gives
+        the build no network, which is what makes the result reproducible.
+        Staged rather than mounted, because flatpak-builder resolves a source
+        against the manifest's own directory."""
+        step(f"payload, for {linux_platform(self.arch)}")
+        fonts = sorted(p.name for p in self.dist.glob("fonts-*.tar.gz"))
+        names = staged_names(self.arch, fonts)
+        if missing := [n for n in names if not (self.dist / n).is_file()]:
+            msg = (
+                f"no {', '.join(missing)} in {self.dist}. The bundle carries the\n"
+                "  editors, so it needs them built:\n"
+                f"    lb payload container --arch {self.arch}\n"
+                "  or point at a directory of artifacts: --dist DIR"
+            )
+            raise RefusedError(msg)
+        tmp = WORK / "payload.tmp"
+        shutil.rmtree(tmp, ignore_errors=True)
+        tmp.mkdir()
+        for name in names:
+            shutil.copyfile(self.dist / name, tmp / name)
+        shutil.rmtree(WORK / "payload", ignore_errors=True)
+        tmp.rename(WORK / "payload")
+
     def build(self) -> int:
-        # Always, not "unless wheels/ is there": the components are among
-        # them, and a set built from other artifacts ships other editors.
+        # Always, not "unless wheels/ is there": the wheel carries the manifest
+        # the application verifies its payload against, so a wheel built before
+        # the manifest was last written ships a bundle that cannot install its
+        # payload. Twenty seconds, against shipping that.
         if status := self.wheels():
             return status
+        self.stage_payload()
         # The icon and the desktop entry, from the one place each lives:
         # flatpak-builder needs them beside the manifest, and each has a second
         # consumer, so they are copied rather than committed twice.

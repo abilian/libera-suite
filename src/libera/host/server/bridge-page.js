@@ -30,6 +30,24 @@
     console.log(`[libera:${TAG}] localStorage shimmed onto sessionStorage`);
   }
 
+  // -- mousewheel ---------------------------------------------------------------
+  // On a Mac, sdkjs listens for the legacy `mousewheel` event, while web-apps
+  // has listened for `wheel` since Euro-Office's d7edcbfd4e, and the
+  // spreadsheet puts both on #editor_sdk. A browser fires an element's
+  // `mousewheel` listeners only when it has no `wheel` listener, so the grid
+  // never scrolled. Elsewhere sdkjs asks for `wheel` itself, by this same test
+  // on the user agent, so turning `mousewheel` into `wheel` puts the Mac on the
+  // path Linux and Windows already take. The event is a WheelEvent either way,
+  // wheelDelta included.
+  if (/mac/i.test(w.navigator.userAgent)) {
+    for (const name of ["addEventListener", "removeEventListener"]) {
+      const original = w.EventTarget.prototype[name];
+      w.EventTarget.prototype[name] = function (type, ...rest) {
+        return original.call(this, type === "mousewheel" ? "wheel" : type, ...rest);
+      };
+    }
+  }
+
   // -- document media ---------------------------------------------------------
   // DesktopOfflineAppDocumentEndLoad forces the document URL to file://, and
   // images resolve against it, so an http-served page silently drops every
@@ -181,27 +199,10 @@
   // window.open() from script reports WKNavigationTypeOther. Every external
   // link the editor offers -- Suggest a feature, help, learn more -- is a
   // window.open(), so hand them to the host, which has a real browser.
-  //
-  // Any other scheme a document's link names comes here too, once the user
-  // says Yes to the editor's warning, and a javascript: one ran in this page,
-  // beside the bridge. So only mailto and our own pages (a URL with no scheme,
-  // resolved against this one) still reach the browser's window.open; the
-  // scheme is read after resolving, as the browser reads it, so leading
-  // spaces or a mixed case do not hide one.
   const nativeOpen = w.open;
   w.open = function (url) {
     if (typeof url === "string" && /^https?:\/\//i.test(url)) {
       postToHost("/__host__/open-url", JSON.stringify({ url }));
-      return null;
-    }
-    let scheme;
-    try {
-      scheme = new URL(String(url ?? ""), w.location.href).protocol;
-    } catch {
-      return null;
-    }
-    if (scheme !== "mailto:" && scheme !== w.location.protocol) {
-      console.log(`[libera:${TAG}] window.open refused: ${scheme}`);
       return null;
     }
     return nativeOpen.apply(w, arguments);

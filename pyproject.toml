@@ -1,6 +1,6 @@
 [project]
 name = "libera"
-version = "0.7.0b1"
+version = "0.5.0"
 description = "Libera Suite — Abilian's desktop office suite"
 readme = "README.md"
 authors = [
@@ -27,10 +27,6 @@ classifiers = [
     "Topic :: Office/Business :: Office Suites",
 ]
 dependencies = [
-    # The components, in exactly the payload version: payload.version, which a
-    # test holds these to.
-    "libera-core==0.7",
-    "libera-web==0.7",
     "pywebview>=6.2.1",
 ]
 
@@ -96,7 +92,6 @@ only-include = ["src", "README.md", "LICENSE"]
 [dependency-groups]
 dev = [
     "abilian-devtools>=0.9.4",
-    "cryptography>=50.0.2",
     "libera-build",
     "mypy>=2.3.1",
     "nox>=2026.8.17",
@@ -121,18 +116,11 @@ default-groups = ["dev", "e2e"]
 # tooling, with its own
 # pyproject.toml. In the dev group so that `make test` and `make lint` cover it;
 # never in the wheel, whose packages are src/libera only.
-#
-# components/ are the two component packages. `uv sync` builds their wheels
-# from the pinned sources, as pip does where PyPI has no wheel for the
-# platform, and installs them as any other: not editable, since their files
-# are made by the build and are not in the project.
 [tool.uv.workspace]
-members = ["build", "components/core", "components/web"]
+members = ["build"]
 
 [tool.uv.sources]
 libera-build = { workspace = true }
-libera-core = { workspace = true, editable = false }
-libera-web = { workspace = true, editable = false }
 
 [tool.mypy]
 # The same stubs ty and pyrefly use. See stubs/README.md.

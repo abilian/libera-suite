@@ -8,11 +8,9 @@ import getpass
 import logging
 import os
 import pathlib
-import re
 import shutil
 import subprocess
 import sys
-import uuid
 
 from libera.payload import locate
 
@@ -214,26 +212,6 @@ def _copy_xattrs(source: pathlib.Path, dest: pathlib.Path) -> None:
 
 
 @functools.cache
-def editor_user_id() -> str:
-    """The id the editor is given for you: random, made once, kept.
-
-    The PDF editor writes it into every annotation, as /OUserID, so the login
-    it used to be went out in each PDF saved. It has to stay the same from one
-    session to the next, since it is how an annotation is known as yours;
-    nothing else reads it, a lock file naming the login from
-    `lookup_local_user`.
-    """
-    path = locate.get_state_dir() / "editor-user-id"
-    with contextlib.suppress(FileNotFoundError):
-        if found := path.read_text(encoding="utf-8").strip():
-            return found
-    made = uuid.uuid4().hex
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(made, encoding="utf-8")
-    return made
-
-
-@functools.cache
 def lookup_local_user() -> tuple[str, str]:
     """Who the editor should say you are: (id, name).
 
@@ -321,77 +299,3 @@ def _lookup_windows_full_name(login: str) -> str:
                     netapi.NetApiBufferFree(info)
         return ""
     return ""
-
-
-def memory_bytes(pid: int) -> int:
-    """How much of the machine's memory a running process holds, wherever the
-    system put it: in RAM, compressed, or swapped out. Zero once it is gone.
-
-    What run_x2t watches. Resident size alone was measured to miss the case it
-    exists for: macOS compresses a runaway process's pages, which then are not
-    resident, and an x2t whose resident size never passed 855 MB thrashed a Mac
-    for five minutes (2026-10-29). The kernels' own limits were set aside: the
-    address-space one counts V8's reservations inside x2t, and macOS does not
-    enforce it.
-    """
-    if sys.platform == "linux":
-        try:
-            status = pathlib.Path(f"/proc/{pid}/status").read_text(encoding="ascii")
-        except FileNotFoundError:
-            return 0
-        # In kB: what is in RAM, and what was swapped out of it.
-        kb = dict(re.findall(r"^(VmRSS|VmSwap):\s+(\d+) kB", status, re.MULTILINE))
-        return sum(int(v) for v in kb.values()) * 1024
-    if sys.platform == "darwin":
-        return _footprint_macos(pid)
-    return _memory_bytes_windows(pid)
-
-
-def _footprint_macos(pid: int) -> int:
-    import ctypes
-
-    # proc_pid_rusage with RUSAGE_INFO_V0 (0) fills struct rusage_info_v0: a
-    # 16-byte uuid, then uint64 fields, the ninth of them ri_phys_footprint,
-    # Activity Monitor's "Memory", which counts compressed pages too.
-    info = (ctypes.c_uint64 * 16)()
-    libproc = ctypes.CDLL("/usr/lib/libproc.dylib")
-    if libproc.proc_pid_rusage(pid, 0, ctypes.byref(info)) != 0:
-        return 0
-    return info[2 + 7]
-
-
-def _memory_bytes_windows(pid: int) -> int:
-    # Inside the test, so every checker reads it as Windows' only.
-    if sys.platform == "win32":
-        import ctypes
-        from ctypes import wintypes
-
-        class Counters(ctypes.Structure):  # PROCESS_MEMORY_COUNTERS
-            _fields_ = (
-                ("cb", wintypes.DWORD),
-                ("PageFaultCount", wintypes.DWORD),
-                ("PeakWorkingSetSize", ctypes.c_size_t),
-                ("WorkingSetSize", ctypes.c_size_t),
-                ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
-                ("PagefileUsage", ctypes.c_size_t),
-                ("PeakPagefileUsage", ctypes.c_size_t),
-            )
-
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        query_limited_information = 0x1000
-        handle = kernel32.OpenProcess(query_limited_information, False, pid)
-        if not handle:
-            return 0
-        try:
-            counters = Counters(cb=ctypes.sizeof(Counters))
-            if kernel32.K32GetProcessMemoryInfo(
-                handle, ctypes.byref(counters), counters.cb
-            ):
-                # The commit charge: what it holds, paged out or not.
-                return counters.PagefileUsage
-        finally:
-            kernel32.CloseHandle(handle)
-    return 0

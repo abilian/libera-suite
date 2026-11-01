@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
         os.environ["LIBERA_CONFIG"] = str(named)
     logs.setup(args.verbose, quiet=args.quiet)
     locate.make_state_dir_private()
-    return commands.run(_choose_command(parser, args), args)
+    return _choose_command(parser, args)(args)
 
 
 def _make_parser() -> argparse.ArgumentParser:
@@ -193,46 +193,59 @@ def _add_convert_options(parser: argparse.ArgumentParser, *, shown: bool) -> Non
 
 
 def _add_payload_options(parser: argparse.ArgumentParser) -> None:
-    """The payload: the Euro-Office components, installed with the wheel as
-    two packages of their own. The help says components, which is what a user
-    installs; the options keep the name the code and the scripts use. The
-    start window shows the same information; these are for scripts and for a
-    machine with no window system."""
+    """The payload: the Euro-Office components, fetched, verified and installed
+    separately from the wheel, because they are ~90 MB of JavaScript and native
+    binaries. The help says components, which is what a user installs; the
+    options keep the name the code and the scripts use. The start window shows
+    the same information; these are for scripts and for a machine with no
+    window system."""
     group = parser.add_argument_group("components (the payload)")
     group.add_argument(
         "--payload-status",
         action="store_true",
-        help="where they are, and which version",
+        help="where they are installed, and which version",
     )
     group.add_argument(
-        "--payload-remove",
+        "--payload-install",
         action="store_true",
-        help="delete what earlier versions downloaded, which this one does not use",
+        help="download them, check them and install them",
+    )
+    group.add_argument("--payload-remove", action="store_true", help="delete them")
+    group.add_argument(
+        "--from",
+        dest="source",
+        metavar="DIR_OR_URL",
+        help="install from a directory of built files, or download from this URL",
+    )
+    group.add_argument(
+        "--trust-manifest",
+        action="store_true",
+        help=(
+            "in a copy installed from source, which has no checksums of its own:"
+            " download without asking, checked against the download site's"
+        ),
     )
 
 
 def _add_launcher_options(parser: argparse.ArgumentParser) -> None:
-    """A desktop entry on Linux, Libera.app on macOS: what an install that gave
-    only a command lacks. The Flatpak and the Windows installer do it
-    themselves. Where it makes no sense the options stay, so that they still
-    answer with why, but the help leaves them out."""
+    """Linux has no application bundle to hold this, so it is a command. The
+    Flatpak installs the same entry itself. Where it makes no sense the options
+    stay, so that they still answer with why, but the help leaves them out."""
     shown = launcher.explain_unsupported() is None
 
     def help_(text: str) -> str:
         return text if shown else argparse.SUPPRESS
 
-    group = parser.add_argument_group("among your applications")
+    group = parser.add_argument_group("the Linux launcher")
     group.add_argument(
         "--launcher-install",
         action="store_true",
-        help=help_(
-            "put Libera Suite among your applications, with its icon and Open With"
-        ),
+        help=help_("put Libera Suite in the launcher, with an icon and Open With"),
     )
     group.add_argument(
         "--launcher-remove",
         action="store_true",
-        help=help_("take it away again"),
+        help=help_("take the desktop entry and its icon away"),
     )
 
 
@@ -259,7 +272,7 @@ def _add_serve_options(parser: argparse.ArgumentParser) -> None:
 
 def _choose_command(
     parser: argparse.ArgumentParser, args: argparse.Namespace
-) -> Callable[[argparse.Namespace], None]:
+) -> Callable[[argparse.Namespace], int]:
     """The one command this run asked for: a flag, or opening documents.
 
     Checked here rather than made impossible by argparse, because
@@ -274,8 +287,10 @@ def _choose_command(
 
     # Options that belong to one command, which every other ignored without a
     # word: `libera --from ./dist` opened the start window, and offered to
-    # download from the default origin, when there was one.
+    # download from the default origin.
     owned = (
+        ("--from", "--payload-install", args.source is not None),
+        ("--trust-manifest", "--payload-install", args.trust_manifest),
         ("--port", "--serve", args.port is not None),
         ("--work", "--serve", args.work is not None),
         ("--to", "--convert", args.to is not None),
@@ -314,7 +329,7 @@ def _check_convert(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
 
 def _find_command_flags(
     args: argparse.Namespace,
-) -> list[tuple[str, Callable[[argparse.Namespace], None]]]:
+) -> list[tuple[str, Callable[[argparse.Namespace], int]]]:
     """Every command flag given, with the command it runs.
 
     One table saying which spellings are commands, read by both the
@@ -325,6 +340,7 @@ def _find_command_flags(
     table = (
         ("--diagnose", args.diagnose, commands.diagnose),
         ("--payload-status", args.payload_status, commands.show_payload_status),
+        ("--payload-install", args.payload_install, commands.install_payload),
         ("--payload-remove", args.payload_remove, commands.remove_payload),
         ("--launcher-install", args.launcher_install, commands.install_launcher),
         ("--launcher-remove", args.launcher_remove, commands.remove_launcher),

@@ -38,21 +38,13 @@ REPO_ROOT="$(cd "$BUILD/.." && pwd)"
 PAYLOAD="${PAYLOAD:-$OUT/payload}"
 FONT_SET="core"
 MANIFEST_ONLY=0
-# One half: the core, which libera-core's wheel takes, or the editors and the
-# fonts, which libera-web's does.
-ONLY=""
 while [ $# -gt 0 ]; do
     case "$1" in
     --fonts) FONT_SET="$2"; shift 2 ;;
     --manifest-only) MANIFEST_ONLY=1; shift ;;
-    --only) ONLY="$2"; shift 2 ;;
     *) echo "FATAL: unknown argument $1" >&2; exit 2 ;;
     esac
 done
-case "$ONLY" in
-"" | core | editors) ;;
-*) echo "FATAL: --only takes core or editors, not $ONLY" >&2; exit 2 ;;
-esac
 
 VERSION="$(payload_version "$BUILD/..")"
 [ -n "$VERSION" ] || { echo "FATAL: no version in src/libera/payload/payload.version" >&2; exit 1; }
@@ -90,15 +82,12 @@ mkdir -p "$DIST" "$STAGE"
 
 if [ "$MANIFEST_ONLY" = "0" ]; then
 
-[ "$ONLY" = "editors" ] || [ -x "$OUT/core/bin/x2t$EXE" ] ||
-    { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
-[ "$ONLY" = "core" ] || [ -d "$PAYLOAD/sdkjs" ] ||
-    { echo "FATAL: no payload -- run payload.sh" >&2; exit 1; }
+[ -x "$OUT/core/bin/x2t$EXE" ] || { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
+[ -d "$PAYLOAD/sdkjs" ] || { echo "FATAL: no payload -- run payload.sh" >&2; exit 1; }
 
 # --- native, per platform -----------------------------------------------------
 # DoctRenderer.config is deliberately excluded: it holds absolute paths and is
 # written on the target at install time.
-if [ "$ONLY" != "editors" ]; then
 echo "==> core ($PLATFORM)"
 mkdir -p "$STAGE/bin/tools"
 cp -R "$OUT/core/bin/." "$STAGE/bin/"
@@ -115,10 +104,8 @@ find "$STAGE/bin" \( -name 'libicui18n*' -o -name 'libicuio*' -o -name 'libicute
 # writing one does not open them. Back with the viewer. And on macOS the
 # second copy of the signature library, beside the framework that x2t and
 # libx2tlib link: nothing names the dylib. Measured with smoke, every
-# integration and e2e test passing without both. And docbuilder, a program
-# for scripting documents in JavaScript, which no binary links and the host
-# never runs.
-rm -f "$STAGE/bin/cmap.bin" "$STAGE/bin/docbuilder$EXE"
+# integration and e2e test passing without both.
+rm -f "$STAGE/bin/cmap.bin"
 [ -d "$STAGE/bin/ooxmlsignature.framework" ] && rm -f "$STAGE/bin"/libooxmlsignature*.dylib
 # Local symbols, which nothing reads at run time: 28 MB of the 187 on macOS
 # (libx2tlib alone 83 to 65 MB), measured with every integration and e2e test
@@ -139,32 +126,29 @@ if [ -n "$strip_local" ]; then
 fi
 tar -czf "$DIST/core-$PLATFORM.tar.gz" -C "$STAGE" bin
 rm -rf "$STAGE/bin"
-fi  # the core
-if [ "$ONLY" != "core" ]; then
 
 # --- editors, platform-neutral ------------------------------------------------
-# Words, Tables, Slides, Diagrams and the PDF editor, which runs on Words'
-# bundle with sdkjs/pdf, the engine x2t also needs to save a PDF
-# (drawingfile_native.js: without it a save writes the original).
+# Words, Tables, Slides and Diagrams. pdfeditor is left out: nothing routes to
+# it yet (see src/libera/host/apps.py).
 echo "==> editors"
 mkdir -p "$STAGE/web-apps/apps" "$STAGE/sdkjs"
 cp -R "$PAYLOAD/web-apps/vendor" "$STAGE/web-apps/"
-for d in api common documenteditor spreadsheeteditor presentationeditor visioeditor pdfeditor; do
+for d in api common documenteditor spreadsheeteditor presentationeditor visioeditor; do
     cp -R "$PAYLOAD/web-apps/apps/$d" "$STAGE/web-apps/apps/"
 done
-for d in documenteditor spreadsheeteditor presentationeditor visioeditor pdfeditor; do
+for d in documenteditor spreadsheeteditor presentationeditor visioeditor; do
     # The desktop suite needs main/ only; mobile, forms and embed are the web
     # product's other entry points and nothing here links to them.
     rm -rf "$STAGE/web-apps/apps/$d/mobile" \
            "$STAGE/web-apps/apps/$d/forms" \
            "$STAGE/web-apps/apps/$d/embed"
-    # 500 MB of help across the editors, in eight languages, which nothing can
+    # 500 MB of help across the four, in eight languages, which nothing can
     # reach: upstream hardcodes canHelp = false. It is also ONLYOFFICE's
     # manual, not ours. When Libera Suite has its own documentation this comes back
     # -- see notes/04-plan.md.
     rm -rf "$STAGE/web-apps/apps/$d/main/resources/help"
 done
-for d in common word cell slide visio pdf vendor; do
+for d in common word cell slide visio vendor; do
     cp -R "$PAYLOAD/sdkjs/$d" "$STAGE/sdkjs/"
 done
 # Internet Explorer's fallbacks, loaded only where there is no WebAssembly
@@ -273,7 +257,6 @@ for f in "$CORE_FONTS"/LICENSE* "$CORE_FONTS"/README*; do
 done
 tar -czf "$DIST/fonts-$FONT_SET.tar.gz" -C "$STAGE" fonts-src
 rm -rf "$STAGE/fonts-src"
-fi  # the editors
 
 fi  # MANIFEST_ONLY
 

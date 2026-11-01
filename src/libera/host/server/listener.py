@@ -13,7 +13,6 @@ from wsgiref.simple_server import WSGIRequestHandler, WSGIServer
 
 from libera.host.server import adapter
 from libera.host.session import NotReadyError
-from libera.payload import fonts
 
 if TYPE_CHECKING:
     from libera.host.session import Session
@@ -28,10 +27,13 @@ def check_ready(session: Session) -> None:
     document and therefore no Editor.bin -- opening one creates it and reports
     its own failure.
     """
-    for path in (session.payload, session.font_dir / fonts.WEB_ALL_FONTS):
+    for path in (session.payload, session.layout.web_all_fonts):
         if not path.exists():
             msg = f"missing: {path}"
             raise NotReadyError(msg)
+    if not any(session.layout.fonts.glob("*")):
+        msg = f"no fonts in {session.layout.fonts}"
+        raise NotReadyError(msg)
 
 
 class QuietHandler(WSGIRequestHandler):

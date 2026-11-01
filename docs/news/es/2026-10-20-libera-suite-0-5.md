@@ -3,7 +3,7 @@ date: 2026-10-20
 description: Libera Suite 0.5 habla tu idioma, muestra los documentos con las fuentes instaladas en tu ordenador, los abre antes y limpia tras sus propias actualizaciones.
 ---
 
-# Libera Suite 0.5: tu idioma y tus fuentes
+# Libera Suite 0.5: en tu idioma, con tus fuentes
 
 Libera Suite 0.5 ya está disponible. Ahora sigue el idioma de tu sistema y muestra un documento con las fuentes instaladas en tu ordenador.
 
@@ -35,7 +35,7 @@ La ventana de un documento se abre ahora enseguida, mientras el documento aún s
 - **Los componentes antiguos se eliminan.** Cada actualización dejaba la versión anterior en el disco, unos 400 MB cada una. Una versión que nada ha usado en cuatro semanas se elimina ahora.
 - **Correcciones.** El menú de fuentes muestra cada nombre completo. Un libro `.xlsb` se abre, en lugar de abrirse como una presentación vacía. En macOS, salir con Cmd-Q ya no deja documentos bloqueados. En Windows, la lista Recientes muestra el nombre de cada documento y ya no pierde sus entradas.
 
-## Funciones retiradas
+## Lo que desaparece
 
 - **Guardar como `.xlsb`.** Escribir uno fallaba en Linux. Guarda como `.xlsx`; Excel abre los dos.
 - **Linux en arm64, por ahora.** No hay compilación arm64 de la 0.5. El script de instalación instala la 0.4.1 en esas máquinas; una versión posterior volverá a admitir arm64.

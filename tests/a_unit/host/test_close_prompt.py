@@ -11,7 +11,7 @@ import pytest
 
 from libera.host import convert, saving, session as sessions, window
 from libera.host.saving import SaveRequest
-from libera.host.session import PasswordAsked, Session
+from libera.host.session import Session
 from libera.host.window import Answer
 
 
@@ -60,22 +60,3 @@ def test_a_saved_document_stops_being_dirty(bound_session, monkeypatch):
 
     assert result["error"] == 0
     assert not bound_session.unsaved_marker.is_file()
-
-
-def test_recovered_edits_waiting_for_their_password_close_unsaved(
-    bound_session, monkeypatch
-):
-    """Recovered edits of a protected document are decrypted already, and a
-    save before the password is given wrote them unprotected over the file.
-    So no save is offered or made; the marker stays, and the edits are
-    offered again at the next open."""
-    monkeypatch.setattr(window.dialogs, "ask", lambda _q: pytest.fail("asked"))
-    monkeypatch.setattr(convert, "export", lambda *_: pytest.fail("exported"))
-    bound_session.mark_modified(True)
-    bound_session.password_asked = PasswordAsked(convert.NO_PASSWORD, lambda _p: None)
-
-    assert window.confirm_close("s") is True
-    assert saving.save_document(bound_session, SaveRequest()) == {
-        "error": saving.SaveOutcome.DECLINED
-    }
-    assert bound_session.unsaved_marker.is_file()

@@ -12,8 +12,7 @@
 #   lib/python3.13/site-packages/gi
 #   Gtk-3.0.typelib  Gdk-3.0.typelib  WebKit2-4.1.typelib  Soup-3.0.typelib
 #
-# The payload IS in here: the libera-core and libera-web wheels, installed
-# beside libera under /app, as pip installs them anywhere.
+# The payload IS in here, at /app/share/libera/payload.
 #
 # It used not to be, on the grounds that a 120 MB editor moving on its own
 # schedule would mean a full application update every time. That reasoning is
@@ -28,6 +27,9 @@
 # and it failed silently, because everything it had to say went to a terminal
 # that a desktop launcher does not have. Bundling deletes that whole path, and
 # makes the bundle installable offline, which is what a Flatpak is for.
+#
+# PyPI is the one channel that genuinely cannot carry this, and it keeps the
+# fetch-and-verify installer. See locate.bundled_dir().
 app-id: eu.liberasuite.Libera
 runtime: org.gnome.Platform
 runtime-version: '51'
@@ -39,8 +41,10 @@ finish-args:
   - --socket=wayland
   - --socket=fallback-x11
   - --device=dri
-  # The editor talks to the host's own HTTP server on 127.0.0.1. Without
-  # this the sandbox has no loopback either and nothing loads at all.
+  # Two reasons, and the second is the one people forget: the payload is
+  # fetched from cdn.abilian.com on first run, and the editor talks to the
+  # host's own HTTP server on 127.0.0.1. Without this the sandbox has no
+  # loopback either and nothing loads at all.
   - --share=network
   # Documents, and the sessions directory alongside them. The portal would be
   # the better answer and is what this should become -- but the host's open
@@ -70,9 +74,18 @@ modules:
       # Offline: build/src/libera_build/flatpak.py fills wheels/ before flatpak-builder runs,
       # because flatpak-builder gives the build no network -- which is the
       # property that makes the result reproducible, so it is worth the step.
-      # The components with it, libera-core and libera-web, which libera
-      # pins: wheels/ holds this architecture's, built from the artifacts.
       - pip3 install --no-index --find-links=wheels --prefix=/app libera
+      # The payload, through the installer the CLI uses rather than a tar
+      # command beside it: that is what verifies every artifact against the
+      # manifest, extracts without trusting the member paths, and then
+      # regenerates AllFonts.js and DoctRenderer.config -- both of which record
+      # absolute paths. Those come out right here by construction, because
+      # flatpak-builder builds into /app and /app is where it is mounted at run
+      # time. On an ordinary install the same step has to happen on the user's
+      # machine for exactly this reason.
+      - python3 -c "from pathlib import Path; from libera.payload import
+          installer; installer.install(source=Path('payload'),
+          dest=Path('/app/share/libera/payload'))"
       - install -Dm644 eu.liberasuite.Libera.desktop
           /app/share/applications/eu.liberasuite.Libera.desktop
       - install -Dm644 eu.liberasuite.Libera.svg
@@ -87,6 +100,12 @@ modules:
       - type: dir
         path: wheels
         dest: wheels
+      # The release artifacts and their manifest, staged by build/src/libera_build/flatpak.py.
+      # flatpak-builder gives the build no network, which is the property that
+      # makes it reproducible, so the tarballs have to arrive as a source.
+      - type: dir
+        path: payload
+        dest: payload
       - type: file
         path: eu.liberasuite.Libera.desktop
       - type: file

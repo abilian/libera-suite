@@ -63,7 +63,7 @@ def test_a_machine_gets_its_own_core_and_the_shared_artifacts():
 
 
 def test_provenance_is_read_from_the_source():
-    assert FULL.libera_commit == "d" * 40
+    assert FULL.commit == "d" * 40
     assert not FULL.dirty
     assert FULL.core_platforms == ["linux-arm64", "macos-arm64"]
 
@@ -92,19 +92,6 @@ def test_pins_are_the_repos_table_only(tmp_path):
         '[meta]\nx = "no"\n[repos]\n# a comment\ncore = "abc"  # pinned 2026\nsdkjs = "def"\n'
     )
     assert manifest.read_pins(pins) == {"core": "abc", "sdkjs": "def"}
-
-
-def test_a_pin_from_elsewhere_has_its_address_under_urls(tmp_path):
-    """Every pin's source is under `upstream`, Euro-Office's, but one under
-    [urls]: the manifest says where the corresponding source of each is."""
-    pins = tmp_path / "pins.toml"
-    pins.write_text(
-        '[repos]\ncore = "abc"\nlibxml2 = "def"\n'
-        '[urls]\nlibxml2 = "https://github.com/GNOME/libxml2.git"\n'
-    )
-    assert manifest.read_pins(pins, "urls") == {
-        "libxml2": "https://github.com/GNOME/libxml2.git"
-    }
 
 
 def test_stamp_describes_every_tarball_in_the_directory(tmp_path):

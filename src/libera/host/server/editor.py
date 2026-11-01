@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from libera import timeline
 from libera.host import desktop, hooks, instance, language, shortcuts
-from libera.host.desktop import editor_user_id, lookup_local_user
+from libera.host.desktop import lookup_local_user
 from libera.host.server import diagnostics
 from libera.host.server.api import NO_CONTENT, Refused, Request, Response, endpoint
 
@@ -53,7 +53,7 @@ def serve_bridge(r: Request) -> Response:
     #                       them here from shortcuts.PAGE_YIELDS, the one
     #                       definition. Empty without a menu: `libera --serve` and
     #                       the harness have none and nothing to yield to.
-    #   LIBERA_PAGE_KEYS   the keys the page runs itself, on Windows, where no
+    #   LIBERA_PAGE_KEYS   the keys the page runs itself, off macOS, where no
     #                       menu bar has them -- shortcuts.PAGE_RUNS.
     #   LIBERA_LOCKED_BY   who else has the document open, from their lock
     #                       file, or null: the editor opens it in its locked
@@ -73,9 +73,9 @@ def serve_bridge(r: Request) -> Response:
 def list_owned_keys() -> list[dict]:
     """The key equivalents the native menu bar fires, for the page to yield.
 
-    macOS only. The GTK bar's accelerators reach the window before WebKit, so
-    the page never sees them to yield (`menu/gtk.py`), and the WinForms bar has
-    none.
+    macOS only, and not for want of a menu elsewhere: the GTK bar has no
+    accelerators at all (`menu/gtk.py` says why), so on Linux the page owns
+    every key and has nothing to yield.
 
     `shell.windowed` is the test for "this process has windows and therefore
     a menu".
@@ -209,7 +209,7 @@ def make_editor_url(port: int, session: Session, title: str) -> str:
     The key goes no further than this first request, whose answer sets the
     cookie that brings it from then on: see `admission`.
     """
-    user_name = lookup_local_user()[1]
+    user_id, user_name = lookup_local_user()
     app = session.editor
     mode = "edit" if app.editable else "view"
     ext = pathlib.Path(title).suffix.lstrip(".").lower() or app.ext
@@ -220,15 +220,14 @@ def make_editor_url(port: int, session: Session, title: str) -> str:
         f"&title={urllib.parse.quote(title)}"
         f"&filetype={ext}&session={urllib.parse.quote(session.id)}"
         f"&key={instance.TOKEN}"
-        f"&userid={editor_user_id()}"
+        f"&userid={urllib.parse.quote(user_id)}"
         f"&username={urllib.parse.quote(user_name)}"
     )
 
 
 def list_page_keys() -> dict[str, dict]:
-    """The keys the page runs itself, by action: on Windows only, whose bar has
-    no accelerators. The macOS and GTK bars have them, and on macOS Ctrl-N is a
-    text-editing key."""
-    if sys.platform != "win32":
+    """The keys the page runs itself, by action: none on macOS, whose menu bar
+    has them as Cmd keys, and where Ctrl-N is a text-editing key."""
+    if sys.platform == "darwin":
         return {}
     return {name: key.as_json() for name, key in shortcuts.PAGE_RUNS.items()}

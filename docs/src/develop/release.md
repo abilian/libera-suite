@@ -142,7 +142,7 @@ step you are on and does not ask you to remember.
 | `verify` | Read the *published* wheel back and check it against the origin. The check 0.1.0 needed. | anywhere |
 
 Two things are left that no command covers. The mirrors go up, and somebody
-installs the release on a machine that has never built it and opens a document.
+runs `libera --payload-install` on a machine that has never built it.
 
 Any one phase runs on its own, which is what makes a partial redo cheap. `--only` narrows the phases that run per builder, and refuses the rest: collect, push, check, wheel, publish and verify work on every builder at once. `publish` also wants `check` in the same run, and a manifest collected from this commit for this payload version:
 
@@ -236,7 +236,8 @@ No release depends on this. It is the only place the suite runs on real arm64 ha
 
 ```sh
 lb payload container --arch arm64            # payload in the pinned container
-lb linux test                                # the suite, on Linux, with that payload
+lb payload install                           # installed the way a user does
+lb linux test                                # the suite, on Linux
 lb linux gui                                 # a real GTK/WebKitGTK window under Xvfb, screenshotted
 lb app flatpak-check                         # install the bundle, run --diagnose in the sandbox
 ```
@@ -327,7 +328,7 @@ Publish in this order, because the parts refer to each other:
 
 6. **Push the tag.**
 
-The last word belongs to the application, on a machine that never built it: `pipx install libera`, then a document opened.
+The last word belongs to the application, on a machine with no payload: `libera --payload-install`.
 
 ## When a step fails
 

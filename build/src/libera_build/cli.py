@@ -30,8 +30,6 @@ from unittest import mock
 from libera_build import (
     bench as bench_,
     buildbox,
-    components,
-    fidelity as fidelity_,
     flatpak,
     linux,
     matrix,
@@ -51,7 +49,6 @@ from libera_build.release.ship import ShipOptions, ship
 from libera_build.released_gui import ReleasedGuiOptions
 from libera_build.repo import REPO, build_root
 from libera_build.report import RefusedError
-from libera_build.versions import payload_version
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -176,21 +173,8 @@ BUILD_DIR = Knob(
 PAYLOAD = Knob(
     "--payload",
     "PAYLOAD",
-    "a payload folder to mount as is, instead of the component wheels",
+    "an unpacked payload to mount as is, when no artifacts match this checkout",
     "DIR",
-)
-WHEELS = Knob(
-    "--wheels",
-    "WHEELS",
-    "the component wheels to install; default $BUILD_ROOT/out/wheels/<version>",
-    "DIR",
-)
-# Not LANG: every shell here has one, and it would reach every container.
-LINUX_LANG = Knob(
-    "--lang",
-    "LINUX_LANG",
-    "the container's LANG, the language the host speaks there, e.g. fr_FR.UTF-8",
-    "LOCALE",
 )
 VOLUME = Knob(
     "--volume", "VOLUME", "a named Docker volume instead of --build-dir", "NAME"
@@ -206,12 +190,6 @@ WHEEL = Knob(
 DISTROS = Knob("--distros", "DISTROS", "images to try", '"IMAGE ..."')
 ARCHES = Knob("--arches", "ARCHES", "architectures to try", '"x86_64 arm64"')
 YES = Knob("--yes", "YES", "delete; without it, a dry run", switch=True)
-OUT = Knob(
-    "--out",
-    "OUT",
-    "where the wheels go; default $BUILD_ROOT/out/wheels/<version>",
-    "DIR",
-)
 
 
 def add_knobs(parser: argparse.ArgumentParser, *knobs: Knob) -> None:
@@ -321,6 +299,22 @@ def print_exported(options: BoxOptions) -> int:
     return 0
 
 
+def payload_install(args: argparse.Namespace) -> Steps:
+    if args.source:
+        return [
+            Step(("uv", "run", "libera", "--payload-install", "--from", args.source))
+        ]
+    return [Call(install_exported, (box_options(args),))]
+
+
+def install_exported(options: BoxOptions) -> int:
+    """The container build's artifacts, installed the way a user installs."""
+    where = buildbox.Box(options).exported()
+    return run_step(
+        Step(("uv", "run", "libera", "--payload-install", "--from", str(where)))
+    )
+
+
 def payload_smoke(args: argparse.Namespace) -> Steps:
     return [sh("engine/smoke.sh", env=env_of(args))]
 
@@ -363,12 +357,10 @@ def app_macos(args: argparse.Namespace) -> Steps:
     ]
 
 
-def app_macos_launcher(_args: argparse.Namespace) -> Steps:
-    return [sh("macos/launcher.sh")]
-
-
 def app_flatpak(args: argparse.Namespace) -> Steps:
-    options = FlatpakOptions(args.action, arch=given(args, ARCH) or host_arch())
+    options = FlatpakOptions(
+        args.action, arch=given(args, ARCH) or host_arch(), dist=path_given(args, DIST)
+    )
     return [Call(flatpak.run, (options,))]
 
 
@@ -402,9 +394,8 @@ def linux_(args: argparse.Namespace) -> Steps:
     options = LinuxOptions(
         action=args.action,
         arch=given(args, ARCH),
-        wheels=path_given(args, WHEELS),
+        dist=path_given(args, DIST),
         payload=path_given(args, PAYLOAD),
-        lang=given(args, LINUX_LANG),
         pytest_args=tuple(args.rest),
     )
     return [Call(linux.run, (options,))]
@@ -457,12 +448,6 @@ def on_(args: argparse.Namespace) -> Steps:
     return [Call(on, (options,))]
 
 
-def components_wheels(args: argparse.Namespace) -> Steps:
-    version = payload_version(REPO)
-    out = path_given(args, OUT) or build_root() / "out" / "wheels" / version
-    return [Call(components.wheels, (REPO, out))]
-
-
 def tidy_(args: argparse.Namespace) -> Steps:
     root = path_given(args, BUILD_ROOT) or build_root()
     return [Call(tidy.tidy, (REPO, root), {"yes": switched(args, YES)})]
@@ -470,10 +455,6 @@ def tidy_(args: argparse.Namespace) -> Steps:
 
 def bench(args: argparse.Namespace) -> Steps:
     return [Call(bench_.main, (list(args.rest),))]
-
-
-def fidelity(args: argparse.Namespace) -> Steps:
-    return [Call(fidelity_.main, (list(args.rest),))]
 
 
 # --- the parser ----------------------------------------------------------------
@@ -566,12 +547,11 @@ def add_command(
 def add_payload(groups: Groups) -> None:
     g = groups.group(
         "payload",
-        "the editor payload: build it here or in a container, and check it",
+        "the editor payload: build it here or in a container, check it, install it",
         "Built here, the order is fetch, configure, core, assemble, then dist for\n"
         "the tarballs; `all` runs the five, then smoke, as `container` does in\n"
-        "the container. Each checks the toolchain first. `uv sync` builds the\n"
-        "components itself, through their projects' build hooks.\n\n"
-        + examples("payload all", "payload container --arch arm64", "payload export"),
+        "the container. Each checks the toolchain first.\n\n"
+        + examples("payload all", "payload container --arch arm64", "payload install"),
     )
     p = g.command(
         "fetch",
@@ -666,6 +646,22 @@ def add_payload(groups: Groups) -> None:
         BUILD_DIR,
         VOLUME,
     )
+    p = g.command(
+        "install",
+        "install built artifacts the way a user would, every hash checked",
+        payload_install,
+        ARCH,
+        BUILD_ROOT,
+        BUILD_DIR,
+        VOLUME,
+        epilog=examples(
+            "payload install                  the container build's",
+            "payload install --from $BUILD_ROOT/out/dist/0.4   a native build's",
+        ),
+    )
+    p.add_argument(
+        "--from", dest="source", metavar="DIR", help="default: the container build's"
+    )
     g.command(
         "smoke",
         "the converter: fonts, docx -> odt -> docx, docx -> pdf",
@@ -711,16 +707,11 @@ def add_app(groups: Groups) -> None:
             "app macos --standalone", "app flatpak --arch arm64", "app flatpak-check"
         ),
     )
-    p = g.command("macos", "Libera.app, unsigned", app_macos)
+    p = g.command("macos", "Libera.app, ad-hoc signed", app_macos)
     p.add_argument(
         "--standalone",
         action="store_true",
         help="with Python, libera and the payload inside; default: runs this checkout",
-    )
-    g.command(
-        "macos-launcher",
-        "rebuild src/libera/macos/: the bundle's executable and icon, committed",
-        app_macos_launcher,
     )
     for name, action, summary in (
         ("flatpak", "build", "wheels, then the bundle, then the check"),
@@ -731,7 +722,7 @@ def add_app(groups: Groups) -> None:
         ("flatpak-shell", "shell", "a shell in the builder container"),
         ("flatpak-versions", "versions", "what the builder image is pinned to"),
     ):
-        p = g.command(name, summary, app_flatpak, ARCH_HERE)
+        p = g.command(name, summary, app_flatpak, ARCH_HERE, DIST)
         p.set_defaults(action=action)
     g.command("windows", "the Windows installer, on Windows", app_windows)
     g.command(
@@ -745,14 +736,8 @@ def add_linux(groups: Groups) -> None:
     g = groups.group(
         "linux",
         "this repository's checks on Linux, in a container: the one place they run",
-        "The suite needs this architecture's component wheels, which\n"
-        "`components wheels` makes on a Linux machine, or a --payload DIR.\n\n"
-        + examples(
-            "linux lint",
-            "linux test -k bridge",
-            "linux gui --arch arm64",
-            "linux gui --lang fr_FR.UTF-8",
-        ),
+        "All need a Linux payload: `payload container`, or --dist DIR.\n\n"
+        + examples("linux lint", "linux test -k bridge", "linux gui --arch arm64"),
     )
     for action, summary in (
         ("test", "the suite; anything after it goes to pytest"),
@@ -764,7 +749,7 @@ def add_linux(groups: Groups) -> None:
         ("shell", "a shell in the test container"),
         ("image", "build, or rebuild, the test image"),
     ):
-        p = g.command(action, summary, linux_, ARCH_HERE, WHEELS, PAYLOAD, LINUX_LANG)
+        p = g.command(action, summary, linux_, ARCH_HERE, DIST, PAYLOAD)
         p.set_defaults(action=action, passes_on=action == "test")
 
 
@@ -850,23 +835,6 @@ def add_release(groups: Groups) -> None:
     p.add_argument("--doc", metavar="FILE", help="the document to open")
 
 
-def add_components(groups: Groups) -> None:
-    g = groups.group(
-        "components",
-        "the components as Python packages: libera-core and libera-web",
-        "`uv sync` builds this machine's from the pinned sources, and `wheels`\n"
-        "makes their wheels, for PyPI: run it on each platform.\n\n"
-        + examples("components wheels"),
-    )
-    g.command(
-        "wheels",
-        "this machine's core wheel, from the core's sdist, and the editors'",
-        components_wheels,
-        OUT,
-        epilog=examples("components wheels", "components wheels --out /tmp/wheels"),
-    )
-
-
 def add_others(groups: Groups) -> None:
     p = groups.leaf(
         "on",
@@ -904,16 +872,6 @@ def add_others(groups: Groups) -> None:
         ),
     )
     p.set_defaults(passes_on=True)
-    p = groups.leaf(
-        "fidelity",
-        "the same pages from the same build twice, and scored against references"
-        " (libera_build/fidelity.py)",
-        fidelity,
-        epilog=examples(
-            "fidelity", "fidelity DOC.docx --runs 3", "fidelity --ref refs/word-web"
-        ),
-    )
-    p.set_defaults(passes_on=True)
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -935,7 +893,6 @@ def make_parser() -> argparse.ArgumentParser:
     add_app(groups)
     add_linux(groups)
     add_release(groups)
-    add_components(groups)
     add_others(groups)
     commands = "\n".join(f"  {name:<24} {what}" for name, what in groups.listing)
     parser.epilog = (

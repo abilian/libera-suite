@@ -24,9 +24,6 @@ PAGES = ("server/start-window.html", "server/bridge-desktop.js")
 MARKED = re.compile(r"\{\{(.+?)\}\}")
 TR = re.compile(r'\btr\(\s*("(?:[^"\\]|\\.)*")')
 PLACEHOLDER = re.compile(r"\{(\w+)\}")
-# Every catalogue there is, drafts included: one not yet in TRANSLATED is held
-# to the same keys, or it would fall behind the English while it waits.
-CATALOGUES = sorted(f.stem for f in language.CATALOGUES.glob("*.json"))
 
 
 def find_literal_keys() -> set[str]:
@@ -74,7 +71,7 @@ def test_the_keys_are_found() -> None:
     assert "Spreadsheet" in find_data_keys()
 
 
-@pytest.mark.parametrize("lang", CATALOGUES)
+@pytest.mark.parametrize("lang", language.TRANSLATED)
 def test_each_catalogue_has_every_string_and_no_other(lang: str) -> None:
     catalogue = language.read_catalogue(lang)
     used = find_literal_keys() | find_page_keys() | find_data_keys()
@@ -82,7 +79,7 @@ def test_each_catalogue_has_every_string_and_no_other(lang: str) -> None:
     assert sorted(catalogue.keys() - used) == [], "no longer used"
 
 
-@pytest.mark.parametrize("lang", CATALOGUES)
+@pytest.mark.parametrize("lang", language.TRANSLATED)
 def test_a_translation_fills_in_what_its_english_does(lang: str) -> None:
     for english, text in language.read_catalogue(lang).items():
         assert text.strip(), english
@@ -91,37 +88,11 @@ def test_a_translation_fills_in_what_its_english_does(lang: str) -> None:
         )
 
 
-def test_every_translated_language_has_a_catalogue() -> None:
-    assert set(language.TRANSLATED) <= set(CATALOGUES)
-
-
 def test_english_needs_no_catalogue(monkeypatch) -> None:
     monkeypatch.setattr(language, "get_language", lambda: "en-FR")
     assert language.translate("Save changes to “{name}” before closing?", name="a") == (
         "Save changes to “a” before closing?"
     )
-
-
-@pytest.mark.parametrize(
-    ("tag", "catalogue"),
-    [
-        ("pt-PT", "pt-pt"),
-        ("pt-BR", "pt"),
-        ("zh-TW", "zh-tw"),
-        # As the editor has it: `zh-hant` is not one of its files, so `zh`.
-        ("zh-Hant-TW", "zh"),
-        ("sr-Cyrl-RS", "sr-cyrl"),
-        ("sr_RS", "sr"),
-        ("fr-CA", "fr"),
-        ("en-FR", "en"),
-        ("tlh", "en"),
-    ],
-)
-def test_a_catalogue_is_chosen_as_the_editor_chooses_its_locale(
-    monkeypatch, tag: str, catalogue: str
-) -> None:
-    monkeypatch.setattr(language, "get_language", lambda: tag)
-    assert language.get_interface_language() == catalogue
 
 
 def test_a_translated_language_is_looked_up(monkeypatch) -> None:
