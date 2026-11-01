@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import html
 import re
+import shutil
 import zipfile
 from typing import TYPE_CHECKING
 
@@ -224,3 +225,32 @@ def test_what_a_workbook_names_is_shown_as_text(editor_with, tmp_path, case):
     assert ran(editor) == []
     assert not editor.page.evaluate("() => window.Z")
     assert "onerror" in editor.frame.evaluate("() => document.body.innerText")
+
+
+# What a document's link would run, if the page let it: the same record.
+SCRIPT_LINK = (
+    f"javascript:void((window.opener?opener.top:top).{MARK}="
+    f"((window.opener?opener.top:top).{MARK}||[]).concat('link'))"
+)
+
+
+@pytest.mark.parametrize("ext", ["docx", "xlsx"])
+def test_a_script_link_does_not_run_when_followed(editor_with, tmp_path, ext):
+    """A link that is not http(s) or mailto gets the editor's warning, and
+    Yes calls window.open with it. The bridge's window.open handed anything
+    but http(s) to the browser's own, which ran a javascript: link in the
+    page, beside the bridge (notes/plans/converter-hardening.md). The click
+    is the editor's own event, as clicking the link sends it."""
+    document = tmp_path / f"blank.{ext}"
+    shutil.copyfile(payload.resolve().root / "empty" / f"new.{ext}", document)
+    editor = editor_with([], document=document)
+    editor.wait_for_nothing()
+
+    editor.frame.evaluate(
+        "(u) => Asc.editor.sendEvent('asc_onHyperlinkClick', u)", SCRIPT_LINK
+    )
+    yes = editor.frame.locator(".asc-window.alert button", has_text="Yes")
+    yes.first.click()
+    editor.page.wait_for_timeout(SHOWN)
+
+    assert ran(editor) == []

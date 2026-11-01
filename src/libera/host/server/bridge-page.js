@@ -181,10 +181,27 @@
   // window.open() from script reports WKNavigationTypeOther. Every external
   // link the editor offers -- Suggest a feature, help, learn more -- is a
   // window.open(), so hand them to the host, which has a real browser.
+  //
+  // Any other scheme a document's link names comes here too, once the user
+  // says Yes to the editor's warning, and a javascript: one ran in this page,
+  // beside the bridge. So only mailto and our own pages (a URL with no scheme,
+  // resolved against this one) still reach the browser's window.open; the
+  // scheme is read after resolving, as the browser reads it, so leading
+  // spaces or a mixed case do not hide one.
   const nativeOpen = w.open;
   w.open = function (url) {
     if (typeof url === "string" && /^https?:\/\//i.test(url)) {
       postToHost("/__host__/open-url", JSON.stringify({ url }));
+      return null;
+    }
+    let scheme;
+    try {
+      scheme = new URL(String(url ?? ""), w.location.href).protocol;
+    } catch {
+      return null;
+    }
+    if (scheme !== "mailto:" && scheme !== w.location.protocol) {
+      console.log(`[libera:${TAG}] window.open refused: ${scheme}`);
       return null;
     }
     return nativeOpen.apply(w, arguments);
