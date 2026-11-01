@@ -11,7 +11,7 @@ libera ~/Documents/budget.xlsx
 libera ~/Documents/rete.vsdx
 ```
 
-**È il documento a decidere quale applicazione ottieni.** Non c'è un comando per sceglierne uno, così come non si sceglie un editor di testo per aprire un `.txt`: apri il documento e compare l'applicazione giusta. Un `.xlsx` si apre in Tables, un `.pptx` in Slides, un `.vsdx` in Diagrams.
+**È il documento a decidere quale applicazione ottieni.** Non c'è un comando per sceglierne uno, così come non si sceglie un editor di testo per aprire un `.txt`: apri il documento e compare l'applicazione giusta. Un `.xlsx` si apre in Tables, un `.pptx` in Slides, un `.vsdx` in Diagrams, un `.pdf` in Libera PDF.
 
 ![La finestra iniziale, con un riquadro New per ciascuno fra Document, Spreadsheet e Presentation, un pulsante Open e un elenco Recent di tre documenti.](../assets/start.png)
 
@@ -111,6 +111,21 @@ Per ora la scelta è questa: il lettore che hai già ti offre intervalli di pagi
 ## Immagini
 
 Le immagini incorporate in un documento vengono conservate all'apertura e al salvataggio. **Inserisci ▸ Immagine** aggiunge un'immagine dal disco.
+
+## PDF {#pdfs}
+
+Un `.pdf` si apre in **Libera PDF**. Libera Suite è proposto in *Apri con* per un PDF, mai come predefinito: un doppio clic lo apre sempre nel tuo lettore abituale.
+
+- **Commentare.** La scheda **Commenta** offre *Commento del testo*, *Evidenzia*, una penna, delle forme e una casella di testo.
+- **Compilare un modulo.** Fai clic in un campo e scrivi, spunta una casella, scegli da un elenco. Molti moduli ufficiali sono fatti con Adobe LiveCycle Designer e portano una seconda copia del modulo, che legge solo Acrobat. Il salvataggio lascia fuori quella copia, perché Acrobat mostri i valori inseriti, come fanno gli altri lettori.
+- **Modificare le pagine.** Un clic destro su una pagina offre *Inserisci pagina vuota dopo*, *Elimina pagina* e *Ruota la pagina*. Trascina la miniatura di una pagina per spostarla.
+- **Correggere una riga di testo**, con *Modifica PDF*, poi *Modifica Testo*. Serve per piccole correzioni. Le parole nuove sono composte in uno dei nostri caratteri quando quello del PDF non si può usare, e una riga che si allunga non si ricompone: la parte che non ci sta più va su una riga a sé.
+
+**Il salvataggio si aggiunge al file.** Le tue modifiche sono scritte dopo il contenuto originale del PDF, che resta esattamente com'era. Una firma che consente i commenti resta quindi valida per la parte firmata. Un PDF si salva solo come PDF.
+
+**Due tipi di PDF non si possono ancora salvare.** Un PDF certificato contro ogni modifica, e un PDF che chiede una password per aprirsi: si apre quando dai la password, e puoi leggerlo e commentarlo, ma il salvataggio arriverà in una versione successiva. In entrambi i casi il salvataggio non riesce e lo dice, il file resta com'era, e le tue modifiche restano nella finestra.
+
+Non è ancora possibile creare un modulo, né convertire un PDF in un documento.
 
 ## Controllo ortografico {#spell-checking}
 

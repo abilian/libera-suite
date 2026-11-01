@@ -8,9 +8,10 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 
 | | |
 | :--- | :--- |
-| **Vier Anwendungen** | Windows 10 und 11 auf x64, Linux auf x86_64 (arm64 mit 0.4.1), macOS auf Apple Silicon. Words, Tables und Slides bearbeiten; Diagrams liest Visio-Dateien. |
+| **Fünf Anwendungen** | Windows 10 und 11 auf x64, Linux auf x86_64 (arm64 mit 0.4.1), macOS auf Apple Silicon. Words, Tables und Slides bearbeiten; Diagrams liest Visio-Dateien; Libera PDF kommentiert, füllt aus und ordnet PDFs neu. |
 | **Öffnen und speichern** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Save, Save As, New. |
 | **Exportieren** | Save As bietet für jede Anwendung eine Formatliste an, PDF eingeschlossen. Jedes angebotene Format wird durch eine echte Konvertierung geprüft, deren Text danach wieder gelesen wird. |
+| **PDFs** | Kommentare, Markierungen und Zeichnungen, ausgefüllte Formulare, eingefügte, gelöschte, gedrehte und verschobene Seiten, kleine Textkorrekturen. Beim Speichern kommen Ihre Änderungen hinter das Original, das bleibt, wie es war. [Mit Dokumenten arbeiten](../guide/documents.md#pdfs) hat die Einzelheiten. |
 | **Bilder** | Bleiben beim Öffnen und Speichern erhalten; Einfügen ▸ Bild funktioniert. |
 | **Drucken** | Erzeugt ein PDF, fragt, wo es aufbewahrt werden soll, und öffnet es in Ihrem PDF-Betrachter. |
 | **Rechtschreibprüfung** | Sechs Sprachen, mit Vorschlägen. Siehe unten. |
@@ -36,7 +37,8 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 | **macOS spricht von einem nicht verifizierten Entwickler** | Nur bei einer `Libera.app`, die aus einer Kopie des Quellcodes gebaut wurde: Sie ist nicht mit einer Developer ID signiert, daher erhebt Gatekeeper beim ersten Mal Einspruch. [Weitere Installationswege](alt-install.md#a-double-clickable-application-on-macos) zeigt, wie Sie darüber hinwegkommen. Eine Installation über `pip`, `pipx` oder Homebrew ist nie betroffen. |
 | **Aus einem Terminal gestartet, zeigt das Dock „Python“** | Nur wenn Sie `libera` unter macOS in einem Terminal starten. Ein Dock-Symbol trägt den Namen des Programmpakets, aus dem es gestartet wurde, hier den des Python-Interpreters, und daran kann die Anwendung nichts ändern. Symbol und Menüleiste sind in jedem Fall unsere; `Libera.app` zeigt Libera an. Ein Dokument, das Sie auf dieses Python-Symbol ziehen, wird im Namen von Python abgelehnt; das Symbol von `Libera.app` nimmt es an. |
 | **Diagrams kann nicht speichern** | Es öffnet eine `.vsdx`-Datei und zeigt sie an. Der Konverter kann kein Visio-Format schreiben, also gibt es nichts zu speichern und keine leere Vorlage für den Anfang. |
-| **Keine PDF-Bearbeitung** | PDFs werden nur erzeugt. Ein PDF zum Bearbeiten zu öffnen, ist nicht angebunden. |
+| **Geänderter PDF-Text bricht nicht neu um** | Eine mit *Text bearbeiten* geänderte Zeile behält ihre Breite, sodass neue Wörter in eine eigene Zeile kommen, in einer unserer Schriften, wenn die des PDFs nicht verwendet werden kann. |
+| **Manche PDFs lassen sich nicht speichern** | Eines, das gegen jede Änderung zertifiziert ist, und eines, das beim Öffnen ein Kennwort verlangt. Das Speichern schlägt mit einer allgemeinen Meldung fehl, und die Datei bleibt, wie sie war. |
 | **Eine schmale Menüleiste, mit wenigen angezeigten Tastenkürzeln unter Linux und keinen unter Windows** | Linux und Windows haben File, Edit, View und Help, im Fenster gezeichnet. Unter Linux zeigen Neu, Öffnen und Schließen Ctrl-N, Ctrl-O und Ctrl-W, kein anderer Eintrag zeigt seine Taste; unter Windows keiner. Die Tasten funktionieren trotzdem: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Umschalt-S, Ctrl-P und Ctrl-Z. macOS hat dieselben Menüs plus Window, mit den üblichen Tastenkürzeln. |
 | **Keine Tabs unter Linux und Windows** | Dort ein Fenster pro Dokument. macOS hat Tabs. |
 | **Windows warnt vor dem Installationsprogramm** | Das heruntergeladene Installationsprogramm ist noch nicht signiert, daher zeigt SmartScreen beim ersten Mal *„Der Computer wurde durch Windows geschützt“*. [Installieren](install.md#windows) zeigt, wie Sie darüber hinwegkommen. Die Installation per PowerShell-Zeile ist nie betroffen. |
@@ -53,7 +55,7 @@ Wenn Sie auf etwas stoßen, das *nicht* auf dieser Liste steht, [melden Sie es u
 
 ### Im Dokumentfenster
 
-- **Kennwortgeschützte Dokumente.** Weder öffnen noch speichern.
+- **Kennwortgeschützte Dokumente.** Ein PDF, das ein Kennwort verlangt, öffnet sich und lässt sich nicht speichern; keine andere Art öffnet sich.
 - **Digitale Signaturen.**
 - **Serienbriefe.**
 - **Plugins.** In diesem Fork vom Upstream-Projekt abgeschaltet, daher erscheint das Panel nie.
@@ -69,7 +71,7 @@ Wenn Sie auf etwas stoßen, das *nicht* auf dieser Liste steht, [melden Sie es u
 ### Anderswo
 
 - **Diagramme bearbeiten.** Diagrams öffnet eine `.vsdx`-Datei und zeigt sie an. Der Konverter kann kein Visio-Format schreiben, also gibt es nichts zu speichern und keine leere Vorlage für den Anfang.
-- **PDF-Bearbeitung.** Das Upstream-Projekt hat einen PDF-Editor; die Komponenten, die Libera Suite installiert, enthalten ihn noch nicht, weil nichts ihn öffnen würde.
+- **Eigene PDF-Formulare.** Libera PDF füllt ein Formular aus; eines zu erstellen ist nicht gebaut.
 - **Zusammenarbeit, Cloud-Speicher, Konten, Telemetrie.** Nichts davon ist gebaut, und an nichts davon wird gearbeitet. [Die Roadmap](/en/develop/roadmap/), auf Englisch, beschreibt, wie jedes davon aussähe, falls es käme. [Was Ihren Rechner verlässt](../index.md#what-leaves-your-machine) führt die gesamte Netzwerknutzung der Anwendung auf.
 
 ## Hinweise zu einzelnen Lücken

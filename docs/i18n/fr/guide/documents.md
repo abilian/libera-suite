@@ -11,7 +11,7 @@ libera ~/Documents/budget.xlsx
 libera ~/Documents/reseau.vsdx
 ```
 
-**C'est le document qui décide de l'application.** Aucune commande ne sert à en choisir une, de même qu'on ne choisit pas d'éditeur de texte pour ouvrir un `.txt` : vous ouvrez le document et la bonne application apparaît. Un `.xlsx` s'ouvre dans Tables, un `.pptx` dans Slides, un `.vsdx` dans Diagrams.
+**C'est le document qui décide de l'application.** Aucune commande ne sert à en choisir une, de même qu'on ne choisit pas d'éditeur de texte pour ouvrir un `.txt` : vous ouvrez le document et la bonne application apparaît. Un `.xlsx` s'ouvre dans Tables, un `.pptx` dans Slides, un `.vsdx` dans Diagrams, un `.pdf` dans Libera PDF.
 
 ![La fenêtre de démarrage, avec une tuile New pour chacun des types Document, Spreadsheet et Presentation, un bouton Open, et une liste Recent de trois documents.](../assets/start.png)
 
@@ -111,6 +111,21 @@ C'est le choix fait pour l'instant : le lecteur que vous avez déjà vous donne 
 ## Images
 
 Les images intégrées à un document sont conservées à l'ouverture et à l'enregistrement. **Insertion ▸ Image** ajoute une image depuis le disque.
+
+## PDF {#pdfs}
+
+Un `.pdf` s'ouvre dans **Libera PDF**. Libera Suite est proposé dans *Ouvrir avec* pour un PDF, jamais par défaut : un double-clic l'ouvre toujours dans votre lecteur habituel.
+
+- **Commenter.** L'onglet **Commentaire** offre *Commentaire texte*, *Mettre en évidence*, un stylo, des formes et une zone de texte.
+- **Remplir un formulaire.** Cliquez dans un champ et tapez, cochez une case, choisissez dans une liste. Beaucoup de formulaires officiels sont faits avec Adobe LiveCycle Designer et portent une seconde copie du formulaire, lue par Acrobat seul. L'enregistrement laisse cette copie de côté, pour qu'Acrobat montre les valeurs saisies, comme les autres lecteurs.
+- **Modifier les pages.** Un clic droit sur une page donne *Insérer une page vide après*, *Supprimer la page* et *Faire pivoter la page*. Faites glisser la miniature d'une page pour la déplacer.
+- **Corriger une ligne de texte**, avec *Modifier PDF*, puis *Modifier le texte*. C'est fait pour de petites corrections. Les nouveaux mots sont composés dans une de nos polices quand celle du PDF ne peut pas servir, et une ligne qui s'allonge ne se recompose pas : la partie qui ne tient plus passe sur une ligne à part.
+
+**L'enregistrement s'ajoute au fichier.** Vos modifications sont écrites après le contenu d'origine du PDF, qui reste exactement tel qu'il était. Une signature qui autorise les commentaires reste donc valable pour la partie signée. Un PDF ne s'enregistre qu'en PDF.
+
+**Deux sortes de PDF ne s'enregistrent pas encore.** Un PDF certifié contre toute modification, et un PDF qui demande un mot de passe à l'ouverture : il s'ouvre une fois le mot de passe donné, vous pouvez le lire et le commenter, mais son enregistrement viendra dans une version ultérieure. Dans les deux cas l'enregistrement échoue en le disant, le fichier reste tel quel, et vos modifications restent dans la fenêtre.
+
+Créer un formulaire n'est pas encore possible, ni convertir un PDF en document.
 
 ## Correction orthographique {#spell-checking}
 

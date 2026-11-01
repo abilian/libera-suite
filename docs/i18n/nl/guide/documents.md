@@ -11,7 +11,7 @@ libera ~/Documents/budget.xlsx
 libera ~/Documents/netwerk.vsdx
 ```
 
-**Het document bepaalt welk programma je krijgt.** Er is geen opdracht om er een te kiezen, net zoals je geen teksteditor kiest voor een `.txt`: je opent het document en het juiste programma verschijnt. Een `.xlsx` opent in Tables, een `.pptx` in Slides, een `.vsdx` in Diagrams.
+**Het document bepaalt welk programma je krijgt.** Er is geen opdracht om er een te kiezen, net zoals je geen teksteditor kiest voor een `.txt`: je opent het document en het juiste programma verschijnt. Een `.xlsx` opent in Tables, een `.pptx` in Slides, een `.vsdx` in Diagrams, een `.pdf` in Libera PDF.
 
 ![Het startvenster, met een tegel New voor elk van Document, Spreadsheet en Presentation, een knop Open, en een lijst Recent met drie documenten.](../assets/start.png)
 
@@ -111,6 +111,21 @@ Dat is voorlopig de keuze: de viewer die je al hebt, geeft je paginabereiken, pa
 ## Afbeeldingen
 
 Afbeeldingen die in een document zijn ingesloten, blijven bewaard bij openen en opslaan. **Invoegen ▸ Afbeelding** voegt een afbeelding van schijf toe.
+
+## Pdf's {#pdfs}
+
+Een `.pdf` opent in **Libera PDF**. Libera Suite wordt voor een pdf aangeboden onder *Openen met*, nooit als standaard: een dubbelklik opent hem nog steeds in je gewone viewer.
+
+- **Opmerkingen maken.** Het tabblad **Opmerking** heeft *Tekstopmerking*, *Markeren*, een pen, vormen en een tekstvak.
+- **Een formulier invullen.** Klik in een veld en typ, vink een vakje aan, kies uit een lijst. Veel officiële formulieren zijn gemaakt met Adobe LiveCycle Designer en dragen een tweede kopie van het formulier die alleen Acrobat leest. Bij het opslaan blijft die kopie weg, zodat Acrobat de ingevulde waarden toont, zoals andere lezers dat doen.
+- **De pagina's wijzigen.** Een rechtsklik op een pagina geeft *Lege pagina erna invoegen*, *Verwijder pagina* en *Pagina draaien*. Sleep de miniatuur van een pagina om hem te verplaatsen.
+- **Een regel tekst wijzigen**, met *PDF bewerken* en dan *Tekst bewerken*. Dat is bedoeld voor kleine correcties. De nieuwe woorden worden gezet in een van onze lettertypen als dat van de pdf niet te gebruiken is, en een regel die langer wordt loopt niet opnieuw door: wat niet meer past, komt op een eigen regel.
+
+**Opslaan voegt toe aan het bestand.** Je wijzigingen worden achter de oorspronkelijke inhoud van de pdf geschreven, die precies blijft zoals hij was. Een handtekening die opmerkingen toestaat, blijft dus geldig voor wat ze ondertekende. Een pdf wordt alleen als pdf opgeslagen.
+
+**Twee soorten pdf's kunnen nog niet worden opgeslagen.** Een pdf die tegen elke wijziging is gecertificeerd, en een pdf die bij het openen om een wachtwoord vraagt: hij opent zodra je het wachtwoord geeft, en je kunt hem lezen en van opmerkingen voorzien, maar opslaan komt in een latere versie. In beide gevallen mislukt het opslaan en wordt dat gezegd, blijft het bestand zoals het was, en blijven je wijzigingen in het venster.
+
+Een formulier maken kan nog niet, en een pdf omzetten naar een document ook niet.
 
 ## Spellingcontrole {#spell-checking}
 

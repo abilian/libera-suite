@@ -8,9 +8,10 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 
 | | |
 | :--- | :--- |
-| **Vier programma's** | Windows 10 en 11 op x64, Linux op x86_64 (arm64 met 0.4.1), macOS op Apple Silicon. Words, Tables en Slides bewerken; Diagrams leest Visio-bestanden. |
+| **Vijf programma's** | Windows 10 en 11 op x64, Linux op x86_64 (arm64 met 0.4.1), macOS op Apple Silicon. Words, Tables en Slides bewerken; Diagrams leest Visio-bestanden; Libera PDF voorziet pdf's van opmerkingen, vult ze in en ordent ze opnieuw. |
 | **Openen en opslaan** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Opslaan, Opslaan als, Nieuw. |
 | **Exporteren** | Save As biedt per programma een lijst met formaten, pdf inbegrepen. Elk aangeboden formaat is gecontroleerd door er een document naar te converteren en de tekst ervan terug te lezen. |
+| **Pdf's** | Opmerkingen, markeringen en tekeningen, ingevulde formulieren, pagina's toegevoegd, verwijderd, gedraaid en verplaatst, kleine tekstcorrecties. Bij het opslaan komen je wijzigingen achter het origineel, dat blijft zoals het was. [Werken met documenten](../guide/documents.md#pdfs) heeft de details. |
 | **Afbeeldingen** | Blijven behouden bij openen en opslaan; Invoegen ▸ Afbeelding werkt. |
 | **Afdrukken** | Maakt een pdf, vraagt waar je die wilt bewaren en opent hem in je pdf-viewer. |
 | **Spellingcontrole** | Zes talen, met suggesties. Zie hieronder. |
@@ -36,7 +37,8 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 | **macOS spreekt van een onbekende ontwikkelaar** | Alleen bij een `Libera.app` die vanuit een kopie van de broncode is gebouwd: die is niet ondertekend met een Developer ID, dus Gatekeeper maakt de eerste keer bezwaar. [Andere manieren om te installeren](alt-install.md#a-double-clickable-application-on-macos) legt uit hoe je daarlangs komt. Een installatie via `pip`, `pipx` of Homebrew heeft er nooit last van. |
 | **Gestart vanuit een terminal, toont het Dock „Python”** | Alleen wanneer je `libera` op macOS in een terminal start. Een symbool in het Dock krijgt de naam van de bundel waaruit het gestart is: hier die van de Python-interpreter, en daar kan niets in de toepassing iets aan veranderen. Het pictogram en de menubalk zijn hoe dan ook van ons; `Libera.app` toont gewoon Libera. Een document dat je op dat Python-symbool sleept, wordt in naam van Python geweigerd; het symbool van `Libera.app` neemt het wel aan. |
 | **Diagrams kan niet opslaan** | Het opent een `.vsdx` en toont die. De converter kan geen enkel Visio-formaat schrijven, dus er valt niets op te slaan en er is geen leeg sjabloon om mee te beginnen. |
-| **Geen pdf-bewerking** | Pdf's worden alleen geschreven. Een pdf openen om te bewerken is nog niet aangesloten. |
+| **Gewijzigde pdf-tekst loopt niet opnieuw door** | Een regel gewijzigd met *Tekst bewerken* houdt zijn breedte, dus nieuwe woorden komen op een eigen regel, in een van onze lettertypen als dat van de pdf niet te gebruiken is. |
+| **Sommige pdf's kunnen niet worden opgeslagen** | Een die tegen elke wijziging is gecertificeerd, en een die bij het openen om een wachtwoord vraagt. Het opslaan mislukt met een algemene melding, en het bestand blijft zoals het was. |
 | **Een beperkte menubalk, met weinig zichtbare sneltoetsen op Linux en geen op Windows** | Linux en Windows krijgen Bestand, Bewerken, Weergave en Help, getekend in het venster. Op Linux tonen Nieuw, Openen en Sluiten Ctrl-N, Ctrl-O en Ctrl-W, en geen ander item toont zijn toets; op Windows geen enkel. De toetsen werken wel: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z. macOS krijgt die menu's plus Window, met de gebruikelijke sneltoetsen. |
 | **Geen tabbladen op Linux en Windows** | Daar één venster per document. macOS heeft tabbladen. |
 | **Windows waarschuwt voor het installatieprogramma** | Het gedownloade installatieprogramma is nog niet digitaal ondertekend, dus SmartScreen zegt de eerste keer *„Windows heeft uw pc beschermd”*. [Installeren](install.md#windows) legt uit hoe je daarlangs komt. De installatie met één regel PowerShell heeft er nooit last van. |
@@ -53,7 +55,7 @@ Loop je tegen iets aan dat *niet* op deze lijst staat, [laat het ons weten](../f
 
 ### In het documentvenster
 
-- **Documenten met een wachtwoord.** Openen noch opslaan.
+- **Documenten met een wachtwoord.** Een pdf die om een wachtwoord vraagt, opent en kan niet worden opgeslagen; geen ander soort opent.
 - **Digitale handtekeningen.**
 - **Afdruk samenvoegen.**
 - **Plug-ins.** In deze fork upstream uitgeschakeld, dus het paneel verschijnt nooit.
@@ -69,7 +71,7 @@ Loop je tegen iets aan dat *niet* op deze lijst staat, [laat het ons weten](../f
 ### Elders
 
 - **Diagrammen bewerken.** Diagrams opent een `.vsdx` en toont die. De converter kan geen enkel Visio-formaat schrijven, dus er valt niets op te slaan en er is geen leeg sjabloon om mee te beginnen.
-- **Pdf-bewerking.** Upstream heeft een component om pdf's te bewerken. Libera Suite installeert die nog niet, omdat de hosttoepassing er nog geen pdf in kan openen.
+- **Eigen pdf-formulieren.** Libera PDF vult een formulier in; er een maken is niet gebouwd.
 - **Samenwerken, cloudopslag, accounts, telemetrie.** Niets daarvan is gebouwd, en aan niets daarvan wordt gewerkt. [De roadmap](/en/develop/roadmap/), in het Engels, beschrijft hoe elk ervan eruit zou zien als het er kwam. [Wat je computer verlaat](../index.md#what-leaves-your-machine) noemt al het netwerkgebruik van de toepassing.
 
 ## Toelichting bij enkele ontbrekende onderdelen
