@@ -19,6 +19,8 @@ from pathlib import Path
 
 from libera.manifest import Manifest
 from libera.payload import generate, locate
+from libera_build import buildbox
+from libera_build.containers import host_arch
 from libera_build.process import run_here
 from libera_build.release.phases.here import source_problems
 from libera_build.repo import build_root
@@ -100,23 +102,36 @@ def build_web(repo: Path, into: Path, core_bin: Path) -> None:
 
 
 def build_core(repo: Path, into: Path) -> str:
-    """libera-core's bin/, into `into`, for this machine's platform, which it
-    returns.
+    """libera-core's bin/, built into `into` from the pinned sources for this
+    machine's platform, which it returns.
 
-    ponytail: from the core already built in this machine's build tree, which
-    it refuses without; building one here, in the container on Linux, comes
-    next.
+    Here on macOS and Windows; on Linux in the build container, because V8 8.9
+    wants a clang no current distribution has. The tree is fetched only when
+    it is not at its pin with the patch queue applied, as `build_web` does,
+    and configure and ninja redo only what changed: an hour the first time,
+    minutes after.
     """
-    if not (build_root() / "out" / "core" / "bin").is_dir():
-        msg = f"no core built in {build_root()}: lb payload all"
-        raise RefusedError(msg)
-    dist = build_root() / "out" / "core-dist"
-    shutil.rmtree(dist, ignore_errors=True)
-    env = {**os.environ, "DIST": str(dist)}
-    argv = ["sh", str(repo / "build" / "engine" / "dist.sh"), "--only", "core"]
-    run_here(argv, "the core", cwd=repo, env=env)
     platform = locate.get_current_platform()
-    _unpack_core(into, dist, platform)
+    box = None
+    if platform.startswith("linux-"):
+        box = buildbox.Box(buildbox.BoxOptions(arch=host_arch()))
+    tree = box.options.tree if box else build_root()
+    dist = Path("out", "core-dist")
+    root = "/build" if box else tree.as_posix()
+    steps = [
+        "build/engine/build.sh configure",
+        "build/engine/build.sh build",
+        f"DIST={root}/{dist.as_posix()} build/engine/dist.sh --only core",
+    ]
+    if source_problems(repo, tree / "src", only=("core",)):
+        steps.insert(0, "build/engine/build.sh fetch core")
+    script = "\n".join(["set -e", *steps])
+    if not box:
+        run_here(["sh", "-c", script], "the core", cwd=repo)
+    elif status := box.run(script):
+        msg = f"the core: the build container failed ({status})"
+        raise RefusedError(msg)
+    _unpack_core(into, tree / dist, platform)
     generate.write_config(locate.Layout(into.parent / "libera_web", into))
     return platform
 
