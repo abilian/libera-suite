@@ -1,6 +1,6 @@
 [project]
 name = "libera"
-version = "0.7.0.dev1"
+version = "0.7.0b1"
 description = "Libera Suite — Abilian's desktop office suite"
 readme = "README.md"
 authors = [
@@ -29,8 +29,8 @@ classifiers = [
 dependencies = [
     # The components, in exactly the payload version: payload.version, which a
     # test holds these to.
-    "libera-core==0.7.dev1",
-    "libera-web==0.7.dev1",
+    "libera-core==0.7",
+    "libera-web==0.7",
     "pywebview>=6.2.1",
 ]
 
