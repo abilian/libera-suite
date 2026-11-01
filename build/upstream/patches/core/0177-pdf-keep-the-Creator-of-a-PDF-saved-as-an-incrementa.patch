@@ -1,0 +1,32 @@
+From f4d305efb85118301af7243d9d1f4080b9e2ebb5 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Fri, 30 Oct 2026 07:05:48 +0100
+Subject: [PATCH] pdf: keep the Creator of a PDF saved as an incremental update
+
+The writer filled Creator from Producer, so a saved PDF claimed to have
+been made by whatever produced the original; and a Creator written as a
+hex string, as LibreOffice writes it, reads as binary and was replaced
+too. The idea is ElixirOffice's 0011-pdf-preserve-creator
+(leag1234/elixiroffice@624edc4).
+---
+ PdfFile/SrcWriter/Document.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/PdfFile/SrcWriter/Document.cpp b/PdfFile/SrcWriter/Document.cpp
+index 05da8d0d50..09b3b333e9 100644
+--- a/PdfFile/SrcWriter/Document.cpp
++++ b/PdfFile/SrcWriter/Document.cpp
+@@ -1882,8 +1882,8 @@ namespace PdfWriter
+ 		sCreatorA += VALUE2STR(INTVER);
+ #endif
+ 
+-		const char* cCreator = m_pInfo->GetInfo(InfoProducer);
+-		m_pInfo->SetInfo(InfoCreator, cCreator ? cCreator : sCreatorA.c_str());
++		if (!m_pInfo->Get("Creator"))
++			m_pInfo->SetInfo(InfoCreator, sCreatorA.c_str());
+ 		m_pInfo->SetInfo(InfoProducer, sCreatorA.c_str());
+ 
+ 		if (pInfoXref)
+-- 
+2.55.0
+
