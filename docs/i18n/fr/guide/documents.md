@@ -129,7 +129,7 @@ Créer un formulaire n'est pas encore possible, ni convertir un PDF en document.
 
 ## Documents protégés par un mot de passe {#passwords}
 
-Un document protégé par un mot de passe, par Word, LibreOffice ou Libera Suite, le demande à l'ouverture, et le redemande après un mot de passe erroné. L'enregistrement garde le mot de passe : le fichier est écrit protégé, comme il l'était. Une impression est un PDF protégé par le même mot de passe. Enregistré en texte, CSV, RTF, HTML, Markdown, EPUB ou FB2, le document n'est pas protégé, car ces formats n'ont pas de protection.
+Un document protégé par un mot de passe, par Word, LibreOffice ou Libera Suite, le demande à l'ouverture, et le redemande après un mot de passe erroné. L'enregistrement garde le mot de passe : le fichier est écrit protégé, comme il l'était. Une impression est un PDF protégé par le même mot de passe. Certains formats ne peuvent pas garder de mot de passe : texte, CSV, TSV, RTF, HTML, Markdown, EPUB et FB2. Un enregistrement dans l'un d'eux demande d'abord, et *Enregistrer sans mot de passe* écrit le fichier sans protection ; la fenêtre a ensuite ce fichier ouvert, sans mot de passe.
 
 **La protection propre à LibreOffice 26 ne se lit pas encore.** Par défaut, LibreOffice 26 chiffre un fichier OpenDocument d'une façon que Libera Suite ne lit pas, et Libera Suite le dit au lieu de demander le mot de passe. LibreOffice écrit l'ancien chiffrement, que Libera Suite lit, quand sa version du format ODF est réglée sur 1.3.
 

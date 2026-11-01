@@ -89,13 +89,13 @@ class Destination:
 
     def to(self, chosen: pathlib.Path, app: apps.App) -> Destination:
         """Where the user chose, in the format its extension names. A print
-        stays a PDF, whatever was typed."""
-        if self.printing:
+        stays a PDF, whatever was typed, and a name whose extension names no
+        format ("Report 2026.10.31") stays in the one asked for: its ext was
+        the typed one, x2t's format the asked one."""
+        ext = chosen.suffix.lstrip(".").lower()
+        if self.printing or ext not in app.ids_by_ext:
             return replace(self, target=chosen)
-        ext = chosen.suffix.lstrip(".").lower() or self.ext
-        return replace(
-            self, target=chosen, ext=ext, fmt=app.ids_by_ext.get(ext, self.fmt)
-        )
+        return replace(self, target=chosen, ext=ext, fmt=app.ids_by_ext[ext])
 
 
 def plan_save(
@@ -295,6 +295,16 @@ def save_document(
     return outcome
 
 
+def _drops_password(session: Session, plan: Destination) -> bool:
+    """Whether this save writes a protected document in a format with no
+    encryption: x2t writes it in clear, exit 0, and says nothing.
+
+    By the format written, not the name typed: a name the toolkit leaves
+    without a known suffix is written in the format asked for.
+    """
+    return bool(session.password) and f".{plan.ext}" not in convert.KEEPS_PASSWORD
+
+
 def _save(session: Session, request: SaveRequest, *, may_ask: bool) -> dict:
     """save_document, once the session may be saved and has its password."""
     app = session.editor
@@ -316,6 +326,16 @@ def _save(session: Session, request: SaveRequest, *, may_ask: bool) -> dict:
         if chosen is None:
             return {"error": SaveOutcome.DECLINED}
         plan = plan.to(chosen, app)
+    # Asked first, a plain save included: the editor reads whether to offer
+    # File > Protect once, as it loads, so a document saved as text still
+    # offers it, and a password set there reaches a .txt. With no one to ask,
+    # the answer is no.
+    drops_password = _drops_password(session, plan)
+    if drops_password and (
+        plan.target is None or not hooks.shell.confirm_unprotected(plan.target)
+    ):
+        logger.info("save cancelled: it would drop the password")
+        return {"error": SaveOutcome.DECLINED}
 
     final = _export(session, plan, open_file)
     if final is None:
@@ -331,6 +351,11 @@ def _save(session: Session, request: SaveRequest, *, may_ask: bool) -> dict:
             "error": SaveOutcome.SAVED if opened else SaveOutcome.FAILED,
             "path": str(final),
         }
+    if drops_password:
+        # The file the window now has open has none. Kept, it went to the
+        # next Save As, which gave a .docx a password the user had been told
+        # was dropped.
+        session.password = ""
     # The file now matches the editor, so there is nothing to recover.
     session.mark_modified(False)
     return {"error": SaveOutcome.SAVED, "path": str(final)}

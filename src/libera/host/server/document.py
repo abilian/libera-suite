@@ -130,7 +130,11 @@ def save(r: Request) -> Response:
         request = saving.SaveRequest.from_body(r.read_json())
     except TypeError as e:
         raise Refused(400, str(e)) from e
-    return answer_json(saving.save_document(r.session, request))
+    outcome = saving.save_document(r.session, request)
+    # Saved as text, the document has no password any more, and the editor
+    # would give its own to the next Save As: the bridge takes it away.
+    outcome["protected"] = bool(r.session.password)
+    return answer_json(outcome)
 
 
 @endpoint("POST", "close")

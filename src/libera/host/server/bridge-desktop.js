@@ -404,10 +404,15 @@
         const error = reply.error === undefined ? 2 : reply.error;
         if (error === 0) {
           saved = true;
-          confirmed = password || "";
           // Save As moves the document; keep the cached path in step without a
           // reload.
           docPath = reply.path || docPath;
+          // Saved as text, the file has none, and the editor's would go to the
+          // next Save As (saving._drops_password).
+          confirmed = reply.protected ? password || "" : "";
+          const api = editorApi();
+          if (password && !reply.protected && api && api.asc_setCurrentPassword)
+            api.asc_setCurrentPassword("", true);
         } else if (protectable && (password || "") !== confirmed) {
           // File > Protect saves at once, and a save cancelled or failed left
           // the editor with a password the file never got: its next save would
