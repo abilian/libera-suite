@@ -443,6 +443,10 @@ def _export(
     ):
         logger.error("export failed: x2t wrote %s without the changes", staged.name)
         msg = f"x2t saved none of the changes to {staged.name}"
+        # The likely reason, when there is one to name: both certified PDFs
+        # tried were refused so, whatever their signature permitted.
+        if b"/DocMDP" in (doc / "Editor.bin").read_bytes():
+            msg += ", which carries a certification signature"
         raise ConversionError(msg)
     # x2t converts text to UTF-8 through a buffer sized one unit per character,
     # while a character outside the BMP, an emoji say, needs two. The conversion
