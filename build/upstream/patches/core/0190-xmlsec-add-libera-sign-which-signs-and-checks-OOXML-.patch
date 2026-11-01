@@ -1,7 +1,7 @@
-From 2b07a0cfbf464c31a8719dde9f24996b9d93da2f Mon Sep 17 00:00:00 2001
+From 4cd178f442fd93a92aa85f53de4aef73b52b0a13 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Sun, 1 Nov 2026 08:47:09 +0100
-Subject: [PATCH 190/190] xmlsec: add libera-sign, which signs and checks OOXML
+Subject: [PATCH] xmlsec: add libera-sign, which signs and checks OOXML
  packages
 
 ooxmlsignature has a C++ interface only, which Libera Suite's Python host
@@ -11,8 +11,8 @@ removes signatures, and prints a signer's certificate. Built beside x2t.
 ---
  CMakeLists.txt                                |   1 +
  .../xmlsec/libera-sign/CMakeLists.txt         |  44 +++
- DesktopEditor/xmlsec/libera-sign/main.cpp     | 255 ++++++++++++++++++
- 3 files changed, 300 insertions(+)
+ DesktopEditor/xmlsec/libera-sign/main.cpp     | 261 ++++++++++++++++++
+ 3 files changed, 306 insertions(+)
  create mode 100644 DesktopEditor/xmlsec/libera-sign/CMakeLists.txt
  create mode 100644 DesktopEditor/xmlsec/libera-sign/main.cpp
 
@@ -80,10 +80,10 @@ index 0000000000..d3ecb301ff
 +declare_victory( libera-sign )
 diff --git a/DesktopEditor/xmlsec/libera-sign/main.cpp b/DesktopEditor/xmlsec/libera-sign/main.cpp
 new file mode 100644
-index 0000000000..511abe250a
+index 0000000000..0b65eada31
 --- /dev/null
 +++ b/DesktopEditor/xmlsec/libera-sign/main.cpp
-@@ -0,0 +1,255 @@
+@@ -0,0 +1,261 @@
 +// libera-sign: list, make and remove the digital signatures of an OOXML
 +// package, for Libera Suite, which runs it beside x2t. A program because
 +// ooxmlsignature has a C++ interface only.
@@ -299,7 +299,13 @@ index 0000000000..511abe250a
 +		ICertificate* cert = signature ? signature->GetCertificate() : NULL;
 +		if (!cert)
 +			return FAILED;
-+		Say("{\"certificate\":" + Describe(cert) + ",\"text\":" + Json(cert->Print()) + "}");
++		// Printed by OpenSSL whatever read it: on Windows the verifier reads
++		// certificates with CryptoAPI, whose Print answers "".
++		ICertificate* printer = NSCertificate::CreateInstance(CERTIFICATE_ENGINE_TYPE_OPENSSL);
++		std::string text = printer && printer->LoadFromBase64Data(cert->GetCertificateBase64())
++			? printer->Print() : "";
++		delete printer;
++		Say("{\"certificate\":" + Describe(cert) + ",\"text\":" + Json(text) + "}");
 +		return DONE;
 +	}
 +

@@ -253,6 +253,9 @@ echo | built libera-sign sign "$(winpath "$XMLSEC/file.docx")" "$(winpath "$W/si
     "$(winpath "$XMLSEC/keys/key.key")" "$(winpath "$XMLSEC/keys/cert.crt")" "$GUID" \
     "$(winpath "$W/valid.png")" "$(winpath "$W/invalid.png")" || fail "libera-sign sign failed"
 built libera-sign verify "$(winpath "$W/signed.docx")" >"$W/signed.json" || fail "libera-sign verify failed"
+# Details shows the certificate as OpenSSL prints it: on Windows the verifier
+# reads it with CryptoAPI, whose Print answers nothing.
+built libera-sign certificate "$(winpath "$W/signed.docx")" 0 >"$W/certificate.json" || fail "libera-sign certificate failed"
 py - "$W/signed.docx" "$W/tampered.docx" <<'PY'
 import sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as src, zipfile.ZipFile(sys.argv[2], "w", zipfile.ZIP_DEFLATED) as out:
@@ -269,7 +272,8 @@ py - "$W" "$GUID" <<'PY' || fail "libera-sign did not sign, check or remove as i
 import base64, json, pathlib, sys
 w, guid = pathlib.Path(sys.argv[1]), sys.argv[2]
 read = lambda name: json.loads((w / f"{name}.json").read_text(encoding="utf-8"))
-legacy, signed, tampered, removed = (read(n) for n in ("legacy", "signed", "tampered", "removed"))
+legacy, signed, tampered, removed, cert = (
+    read(n) for n in ("legacy", "signed", "tampered", "removed", "certificate"))
 picture = lambda b64: base64.b64decode(b64 + "=" * (-len(b64) % 4))
 (one,) = signed["data"]
 print(f"    legacy: {[s['valid'] for s in legacy['data']]}, signed: {one['valid']} by {one['name']!r}, "
@@ -281,6 +285,7 @@ ok = (
     and picture(one["image_invalid"]) == (w / "invalid.png").read_bytes()
     and [s["valid"] for s in tampered["data"]] == [1]
     and removed["count"] == 0
+    and "Certificate:" in cert["text"]
 )
 raise SystemExit(0 if ok else 1)
 PY
