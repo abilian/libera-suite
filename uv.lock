@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -10,6 +10,8 @@ resolution-markers = [
 members = [
     "libera",
     "libera-build",
+    "libera-core",
+    "libera-web",
 ]
 
 [[package]]
@@ -670,7 +672,10 @@ wheels = [
 name = "libera"
 version = "0.6.0"
 source = { editable = "." }
+default-groups = ["dev", "e2e"]
 dependencies = [
+    { name = "libera-core" },
+    { name = "libera-web" },
     { name = "pywebview" },
 ]
 
@@ -693,7 +698,11 @@ e2e = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pywebview", specifier = ">=6.2.1" }]
+requires-dist = [
+    { name = "libera-core", editable = "components/core" },
+    { name = "libera-web", editable = "components/web" },
+    { name = "pywebview", specifier = ">=6.2.1" },
+]
 
 [package.metadata.requires-dev]
 dev = [
@@ -721,6 +730,16 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "libera", editable = "." }]
+
+[[package]]
+name = "libera-core"
+version = "0.7"
+source = { editable = "components/core" }
+
+[[package]]
+name = "libera-web"
+version = "0.7"
+source = { editable = "components/web" }
 
 [[package]]
 name = "librt"

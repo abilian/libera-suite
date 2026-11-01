@@ -86,6 +86,7 @@ def test_missing_payload_says_what_to_do(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("LIBERA_PAYLOAD", raising=False)
     monkeypatch.setattr(payload.locate, "get_data_dir", lambda: tmp_path / "nothing")
     monkeypatch.setattr(payload.locate, "_read_configured_dir", lambda: None)
+    monkeypatch.setattr(payload.locate, "find_components", lambda: None)
     with pytest.raises(payload.NoPayloadError, match="libera --payload-install"):
         payload.resolve()
 

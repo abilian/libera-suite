@@ -26,17 +26,24 @@ _running: set[subprocess.Popen[str]] = set()
 
 
 def generate(root: Path) -> None:
-    """Write DoctRenderer.config beside x2t, which is where x2t looks for it.
-
-    Its paths are relative, which x2t resolves against the file's own folder
-    (doctrenderer/config.h, private_GetFile), and `<sdkjs>` is taken that way
-    when it starts with "./". It names no AllFonts.js: every conversion passes
-    the index's own as m_sAllFontsPath, which x2t takes over the config's.
-    """
+    """Write DoctRenderer.config beside x2t, which is where x2t looks for it."""
     layout = locate.Layout.of(root)
     if not layout.x2t.is_file():
         msg = f"no x2t at {layout.x2t}: the core artifact is incomplete"
         raise PayloadError(msg)
+    write_config(layout)
+
+
+def write_config(layout: locate.Layout) -> None:
+    """DoctRenderer.config, for the editors where `layout` says they are.
+
+    Its paths are relative, which x2t resolves against the file's own folder
+    (doctrenderer/config.h, private_GetFile), and `<sdkjs>` is taken that way
+    when it starts with "./". So the core wheel ships it, written for
+    libera_web beside libera_core in one site-packages. It names no
+    AllFonts.js: every conversion passes the index's own as m_sAllFontsPath,
+    which x2t takes over the config's.
+    """
 
     def relative(path: Path) -> str:
         return Path(os.path.relpath(path, layout.bin)).as_posix()

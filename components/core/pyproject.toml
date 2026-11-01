@@ -1,0 +1,25 @@
+# The converter: x2t, allfontsgen and their libraries, one wheel per platform.
+# The files are not in git: `lb components fill` puts a build's into
+# src/libera_core/bin/, and `lb components wheels` builds every platform's.
+[project]
+name = "libera-core"
+# The payload version, which libera pins exactly; a test holds the three equal.
+version = "0.7"
+description = "Libera Suite's document converter, built from Euro-Office sources"
+readme = "README.md"
+license = "AGPL-3.0-only"
+requires-python = ">=3.12"
+
+[project.urls]
+Source = "https://github.com/abilian/libera-suite"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/libera_core"]
+# Gitignored, and hatchling leaves VCS-ignored files out by default.
+artifacts = ["src/libera_core/bin"]
+
+[tool.hatch.build.targets.wheel.hooks.custom]

@@ -156,7 +156,7 @@ def test_open_asks_the_host_to_put_a_panel_up(start_window):
 def test_it_says_where_the_payload_came_from(start_window):
     """The management half of the window, such as it is today."""
     shown = start_window.locator("footer").inner_text()
-    assert "installed" in shown or "LIBERA_PAYLOAD" in shown
+    assert any(o in shown for o in ("components", "installed", "LIBERA_PAYLOAD"))
     assert str(payload_mod.resolve().root) in shown
 
 

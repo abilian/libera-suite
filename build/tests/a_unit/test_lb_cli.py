@@ -119,6 +119,7 @@ def every_command_line() -> list[list[str]]:
         cli.add_app,
         cli.add_linux,
         cli.add_release,
+        cli.add_components,
         cli.add_others,
     ):
         add(groups)

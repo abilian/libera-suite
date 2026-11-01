@@ -27,6 +27,10 @@ classifiers = [
     "Topic :: Office/Business :: Office Suites",
 ]
 dependencies = [
+    # The components, in exactly the payload version: payload.version, which a
+    # test holds these to.
+    "libera-core==0.7",
+    "libera-web==0.7",
     "pywebview>=6.2.1",
 ]
 
@@ -116,11 +120,17 @@ default-groups = ["dev", "e2e"]
 # tooling, with its own
 # pyproject.toml. In the dev group so that `make test` and `make lint` cover it;
 # never in the wheel, whose packages are src/libera only.
+#
+# components/ are the two component packages, installed editable here so that
+# `uv sync` gives the host its components before any is on PyPI. Their files
+# are a build's: `lb components fill`.
 [tool.uv.workspace]
-members = ["build"]
+members = ["build", "components/core", "components/web"]
 
 [tool.uv.sources]
 libera-build = { workspace = true }
+libera-core = { workspace = true }
+libera-web = { workspace = true }
 
 [tool.mypy]
 # The same stubs ty and pyrefly use. See stubs/README.md.
