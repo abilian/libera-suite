@@ -13,6 +13,7 @@ from libera_build.process import run_here
 from libera_build.report import RefusedError, problems, say, step
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
     from pathlib import Path
 
     from libera_build.release.context import Context
@@ -43,9 +44,11 @@ def native(ctx: Context) -> None:
     run_here(["uv", "run", "lb", "payload", "dist"], "native", cwd=ctx.root)
 
 
-def source_problems(root: Path, src: Path) -> list[str]:
+def source_problems(
+    root: Path, src: Path, only: Collection[str] | None = None
+) -> list[str]:
     """Why the trees under `src` are not the pins plus the patch queue in
-    `root`, one sentence a tree.
+    `root`, one sentence a tree; of every pinned tree, or of `only`.
 
     The manifest stamps the pins from pins.toml, not from what was compiled,
     and nothing in re-tarring a core fetches: a patch added since the trees
@@ -58,6 +61,8 @@ def source_problems(root: Path, src: Path) -> list[str]:
     pins = tomllib.loads((root / repo.PINS).read_text(encoding="utf-8"))["repos"]
     found = []
     for name, pin in pins.items():
+        if only is not None and name not in only:
+            continue
         tree = src / name
         if not (tree / ".git").exists():
             found.append(f"{name}: no source tree at {tree}")

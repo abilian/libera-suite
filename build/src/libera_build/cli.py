@@ -454,12 +454,6 @@ def on_(args: argparse.Namespace) -> Steps:
     return [Call(on, (options,))]
 
 
-def components_fill(args: argparse.Namespace) -> Steps:
-    dist = path_given(args, DIST) or dist_of(payload_version(REPO))
-    platform = locate.get_current_platform()
-    return [Call(components.fill, (REPO, dist, platform))]
-
-
 def components_unpack(args: argparse.Namespace) -> Steps:
     dist = path_given(args, DIST) or dist_of(payload_version(REPO))
     platform = args.platform or locate.get_current_platform()
@@ -580,8 +574,8 @@ def add_payload(groups: Groups) -> None:
         "the editor payload: build it here or in a container, and check it",
         "Built here, the order is fetch, configure, core, assemble, then dist for\n"
         "the tarballs; `all` runs the five, then smoke, as `container` does in\n"
-        "the container. Each checks the toolchain first. `lb components fill`\n"
-        "puts the artifacts where `uv sync` installs them.\n\n"
+        "the container. Each checks the toolchain first. `uv sync` builds the\n"
+        "components itself, through their projects' build hooks.\n\n"
         + examples("payload all", "payload container --arch arm64", "payload export"),
     )
     p = g.command(
@@ -864,19 +858,10 @@ def add_components(groups: Groups) -> None:
     g = groups.group(
         "components",
         "the components as Python packages: libera-core and libera-web",
-        "Their files are a build's artifacts, never git's: `fill` puts this\n"
-        "machine's into components/, which `uv sync` installs editable, and\n"
-        "`wheels` builds every platform's for PyPI.\n\n"
-        + examples("components fill", "components wheels"),
-    )
-    g.command(
-        "fill",
-        "put a build's artifacts into the workspace's two packages",
-        components_fill,
-        DIST,
-        epilog=examples(
-            "components fill", "components fill --dist $BUILD_ROOT/out/dist/0.6"
-        ),
+        "`uv sync` builds this machine's from the pinned sources; `wheels`\n"
+        "builds every platform's for PyPI from a build's artifacts, and\n"
+        "`unpack` makes one folder of them.\n\n"
+        + examples("components wheels", "components unpack --into ~/payload"),
     )
     p = g.command(
         "unpack",

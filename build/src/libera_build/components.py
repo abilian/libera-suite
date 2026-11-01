@@ -1,11 +1,12 @@
-"""`lb components`: the components as Python packages, from a build's artifacts.
+"""The components as Python packages: libera-core, the converter, a wheel
+per platform, and libera-web, the editors with their fonts, dictionaries and
+blanks, one wheel for all (notes/plans/pypi-components.md).
 
-Two packages, workspace members of the repository (notes/plans/pypi-components.md):
-libera-core, the converter, a wheel per platform, and libera-web, the editors
-with their fonts, dictionaries and blanks, one wheel for all. Their files are
-a build's and never git's. `fill` puts this machine's into the workspace's two,
-which `uv sync` installs editable; `wheels` builds every platform's from a
-copy, so the workspace never holds another platform's binaries.
+Their projects are workspace members, whose build hooks call `build_core` and
+`build_web`: `uv sync` builds them from the pinned sources, as pip does where
+PyPI has no wheel. `lb components wheels` builds every platform's from a
+build's artifacts, in copies, so the workspace never holds a platform's
+binaries.
 """
 
 from __future__ import annotations
@@ -19,6 +20,8 @@ from pathlib import Path
 from libera.manifest import Manifest
 from libera.payload import generate, locate
 from libera_build.process import run_here
+from libera_build.release.phases.here import source_problems
+from libera_build.repo import build_root
 from libera_build.report import RefusedError, say, step
 from libera_build.versions import check_dist
 
@@ -42,17 +45,6 @@ def package_dir(repo: Path, project: Path) -> Path:
     return repo / project / "src" / f"libera_{project.name}"
 
 
-def fill(repo: Path, dist: Path, platform: str) -> int:
-    """Put the artifacts in `dist` into the workspace's two packages, the core
-    for `platform`. The configuration names the editors where they are in
-    the workspace, which is not where a wheel puts them."""
-    core, web = package_dir(repo, CORE), package_dir(repo, WEB)
-    fill_core(core, dist, platform, web)
-    fill_web(web, dist)
-    say(f"    filled {core.parent.parent} and {web.parent.parent} from {dist}")
-    return 0
-
-
 def fill_core(package: Path, dist: Path, platform: str, web: Path) -> None:
     """The core for `platform`, with DoctRenderer.config written for the
     editors at `web`."""
@@ -66,6 +58,67 @@ def fill_web(package: Path, dist: Path) -> None:
     platform in it: this wheel is every platform's."""
     _empty(package)
     _unpack_web(package, dist, {})
+
+
+# The sources the editors are built from, and the fonts and blanks they ship.
+WEB_SOURCES = ("sdkjs", "web-apps", "document-templates", "dictionaries", "core-fonts")
+
+
+def build_web(repo: Path, into: Path, core_bin: Path) -> None:
+    """libera-web's files, built into `into` from the pinned sources, with the
+    core at `core_bin` to make the slide themes: what its wheel is made of.
+
+    The sources are fetched only when they are not at their pins with the
+    patch queue applied: fetching resets and re-patches them, and the build
+    then redoes everything. The core is copied, because payload.sh writes its
+    DoctRenderer.config beside the x2t it runs.
+    """
+    engine = repo / "build" / "engine"
+    if source_problems(repo, build_root() / "src", only=WEB_SOURCES):
+        run_here(
+            ["sh", str(engine / "build.sh"), "fetch", *WEB_SOURCES], "fetch", cwd=repo
+        )
+    work = build_root() / "out" / "web"
+    core, payload, dist = work / "core", work / "payload", work / "dist"
+    for old in (core, dist):
+        shutil.rmtree(old, ignore_errors=True)
+    shutil.copytree(core_bin, core, symlinks=True)
+    env = {
+        **os.environ,
+        "CORE_BIN": str(core),
+        "PAYLOAD": str(payload),
+        "DIST": str(dist),
+    }
+    run_here(["sh", str(engine / "payload.sh")], "the editors", cwd=repo, env=env)
+    run_here(
+        ["sh", str(engine / "dist.sh"), "--only", "editors"],
+        "the editors",
+        cwd=repo,
+        env=env,
+    )
+    _unpack_web(into, dist, {})
+
+
+def build_core(repo: Path, into: Path) -> str:
+    """libera-core's bin/, into `into`, for this machine's platform, which it
+    returns.
+
+    ponytail: from the core already built in this machine's build tree, which
+    it refuses without; building one here, in the container on Linux, comes
+    next.
+    """
+    if not (build_root() / "out" / "core" / "bin").is_dir():
+        msg = f"no core built in {build_root()}: lb payload all"
+        raise RefusedError(msg)
+    dist = build_root() / "out" / "core-dist"
+    shutil.rmtree(dist, ignore_errors=True)
+    env = {**os.environ, "DIST": str(dist)}
+    argv = ["sh", str(repo / "build" / "engine" / "dist.sh"), "--only", "core"]
+    run_here(argv, "the core", cwd=repo, env=env)
+    platform = locate.get_current_platform()
+    _unpack_core(into, dist, platform)
+    generate.write_config(locate.Layout(into.parent / "libera_web", into))
+    return platform
 
 
 def unpack(dest: Path, dist: Path, platform: str) -> int:
@@ -131,17 +184,23 @@ def wheels(
         step(f"libera-core for {platform}")
         package = stage(repo, CORE, stage_root / "core")
         fill_core(package, dist, platform, package.parent / "libera_web")
-        env = {**os.environ, "LIBERA_CORE_TAG": TAGS[platform]}
+        env = {**PREBUILT, "LIBERA_CORE_TAG": TAGS[platform]}
         _uv_build(stage_root / "core", out, env)
     step("libera-web")
     fill_web(stage(repo, WEB, stage_root / "web"), dist)
-    _uv_build(stage_root / "web", out, None)
+    # Its build requires libera-core, which is in `out` now.
+    _uv_build(stage_root / "web", out, PREBUILT, "--find-links", str(out))
     say(f"\n    the wheels are in {out}")
     return 0
 
 
-def _uv_build(project: Path, out: Path, env: dict[str, str] | None) -> None:
-    argv = ["uv", "build", "--wheel", "--out-dir", str(out), str(project)]
+# The copies `wheels` builds from are filled already: the hooks take them as
+# they are.
+PREBUILT = {**os.environ, "LIBERA_PREBUILT": "1"}
+
+
+def _uv_build(project: Path, out: Path, env: dict[str, str], *extra: str) -> None:
+    argv = ["uv", "build", "--wheel", "--out-dir", str(out), *extra, str(project)]
     run_here(argv, "building a wheel", cwd=project, env=env)
 
 

@@ -144,7 +144,7 @@ def pytest_report_header() -> list[str]:
             "libera payload: NONE -- every tier above a_unit will skip",
             (
                 f"  wanted {payload.PAYLOAD_VERSION}: no components, not built here,"
-                " and no artifacts to unpack: `lb components fill`, `make payload`,"
+                " and no artifacts to unpack: `uv sync`, `make payload`,"
                 " or LIBERA_PAYLOAD=DIR"
             ),
         ]
@@ -158,7 +158,7 @@ def pytest_report_header() -> list[str]:
 NEEDS_PAYLOAD = pytest.mark.skip(
     reason=(
         "needs the payload this tree wants: no components, not built here, and "
-        "no artifacts to unpack (see the header); `lb components fill`, or LIBERA_PAYLOAD"
+        "no artifacts to unpack (see the header); `uv sync`, or LIBERA_PAYLOAD"
     )
 )
 

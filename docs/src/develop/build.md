@@ -73,11 +73,7 @@ lb payload dist                 # the distributable tarballs and their manifest
 
 Each is a thin wrapper over the script of the same name in `build/`; run those directly when you want to pass something the target does not.
 
-Then put what you built into the workspace's two component packages, which `uv sync` installs, so that `libera` and `make test` find it with nothing set in the environment:
-
-```sh
-lb components fill --dist "$BUILD_ROOT/out/dist/0.7"
-```
+`uv sync` does the same itself. The two component packages, `components/core` and `components/web`, are workspace members whose build hooks build their wheels from the pinned sources, as pip does where PyPI has no wheel for the platform: libera-core's from the core built in `$BUILD_ROOT` (building it there is not yet part of the hook), libera-web's with that core's x2t, which makes the slide themes. uv keeps the wheels and builds them again only when what they are built from changes: the pins, the patch queue, the scripts in `build/engine/`. A first `uv sync` on a machine with a built core takes about two minutes; the next one, nothing.
 
 Or skip packaging entirely while developing and point at the build tree:
 
@@ -124,7 +120,7 @@ lb payload container               # fetch, configure, core, payload, dist, smok
 lb payload export                  # the artifacts out of the volume, and where they are
 ```
 
-`payload export` copies the tarballs out of the container's volume and prints where it put them. On a Linux machine, `lb components fill --dist` that folder puts them where `make test` finds them; on the Mac, whose own components are macOS binaries, `lb linux test` unpacks them inside the container.
+`payload export` copies the tarballs out of the container's volume and prints where it put them. On the Mac, whose own components are macOS binaries, `lb linux test` unpacks them inside the container.
 
 Underneath, the same container takes one step at a time:
 

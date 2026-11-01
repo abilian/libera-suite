@@ -1,4 +1,4 @@
-"""`lb components`: the two component packages, filled from a build's artifacts."""
+"""`lb components`: the two component packages, made from a build's artifacts."""
 
 from __future__ import annotations
 
@@ -84,6 +84,14 @@ def a_repo(tmp_path):
     return tmp_path
 
 
+def fill(repo: Path, dist: Path) -> None:
+    web = components.package_dir(repo, components.WEB)
+    components.fill_core(
+        components.package_dir(repo, components.CORE), dist, "macos-arm64", web
+    )
+    components.fill_web(web, dist)
+
+
 def test_a_filled_core_has_no_links_and_its_versioned_names_hold_the_files(repo, dist):
     """A wheel holds no symlinks. The binaries load libicuuc.74.dylib and the
     framework's Versions/1, never the unversioned names."""
@@ -91,7 +99,7 @@ def test_a_filled_core_has_no_links_and_its_versioned_names_hold_the_files(repo,
     stale.parent.mkdir()
     stale.write_bytes(b"from an earlier fill")
 
-    components.fill(repo, dist, "macos-arm64")
+    fill(repo, dist)
 
     core = components.package_dir(repo, components.CORE)
     links = [p for p in core.rglob("*") if p.is_symlink()]
@@ -104,7 +112,7 @@ def test_a_filled_core_has_no_links_and_its_versioned_names_hold_the_files(repo,
 
 
 def test_a_filled_core_names_the_editors_where_they_were_put(repo, dist):
-    components.fill(repo, dist, "macos-arm64")
+    fill(repo, dist)
 
     core = components.package_dir(repo, components.CORE)
     web = components.package_dir(repo, components.WEB)
@@ -129,7 +137,7 @@ def test_a_core_with_no_converter_is_refused(repo, dist):
     make_tarball(dist / "core-macos-arm64.tar.gz", {"bin/README": b""}, {})
 
     with pytest.raises(RefusedError, match="no x2t"):
-        components.fill(repo, dist, "macos-arm64")
+        fill(repo, dist)
 
 
 def test_a_platform_with_no_wheel_tag_is_refused(dist):
@@ -143,7 +151,7 @@ def test_the_editors_say_what_they_are_built_from(repo, dist):
     """What --payload-status says, the source among it, which the AGPL wants
     said: an installed payload has it from the installer, the components
     from the build."""
-    components.fill(repo, dist, "macos-arm64")
+    fill(repo, dist)
 
     web = components.package_dir(repo, components.WEB)
     record = json.loads((web / "payload.json").read_text())

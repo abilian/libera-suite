@@ -38,13 +38,21 @@ REPO_ROOT="$(cd "$BUILD/.." && pwd)"
 PAYLOAD="${PAYLOAD:-$OUT/payload}"
 FONT_SET="core"
 MANIFEST_ONLY=0
+# One half: the core, which libera-core's wheel takes, or the editors and the
+# fonts, which libera-web's does.
+ONLY=""
 while [ $# -gt 0 ]; do
     case "$1" in
     --fonts) FONT_SET="$2"; shift 2 ;;
     --manifest-only) MANIFEST_ONLY=1; shift ;;
+    --only) ONLY="$2"; shift 2 ;;
     *) echo "FATAL: unknown argument $1" >&2; exit 2 ;;
     esac
 done
+case "$ONLY" in
+"" | core | editors) ;;
+*) echo "FATAL: --only takes core or editors, not $ONLY" >&2; exit 2 ;;
+esac
 
 VERSION="$(payload_version "$BUILD/..")"
 [ -n "$VERSION" ] || { echo "FATAL: no version in src/libera/payload/payload.version" >&2; exit 1; }
@@ -82,12 +90,15 @@ mkdir -p "$DIST" "$STAGE"
 
 if [ "$MANIFEST_ONLY" = "0" ]; then
 
-[ -x "$OUT/core/bin/x2t$EXE" ] || { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
-[ -d "$PAYLOAD/sdkjs" ] || { echo "FATAL: no payload -- run payload.sh" >&2; exit 1; }
+[ "$ONLY" = "editors" ] || [ -x "$OUT/core/bin/x2t$EXE" ] ||
+    { echo "FATAL: no x2t -- run build.sh build" >&2; exit 1; }
+[ "$ONLY" = "core" ] || [ -d "$PAYLOAD/sdkjs" ] ||
+    { echo "FATAL: no payload -- run payload.sh" >&2; exit 1; }
 
 # --- native, per platform -----------------------------------------------------
 # DoctRenderer.config is deliberately excluded: it holds absolute paths and is
 # written on the target at install time.
+if [ "$ONLY" != "editors" ]; then
 echo "==> core ($PLATFORM)"
 mkdir -p "$STAGE/bin/tools"
 cp -R "$OUT/core/bin/." "$STAGE/bin/"
@@ -126,6 +137,8 @@ if [ -n "$strip_local" ]; then
 fi
 tar -czf "$DIST/core-$PLATFORM.tar.gz" -C "$STAGE" bin
 rm -rf "$STAGE/bin"
+fi  # the core
+if [ "$ONLY" != "core" ]; then
 
 # --- editors, platform-neutral ------------------------------------------------
 # Words, Tables, Slides and Diagrams. pdfeditor is left out: nothing routes to
@@ -257,6 +270,7 @@ for f in "$CORE_FONTS"/LICENSE* "$CORE_FONTS"/README*; do
 done
 tar -czf "$DIST/fonts-$FONT_SET.tar.gz" -C "$STAGE" fonts-src
 rm -rf "$STAGE/fonts-src"
+fi  # the editors
 
 fi  # MANIFEST_ONLY
 

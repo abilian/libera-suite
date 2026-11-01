@@ -41,7 +41,11 @@ lint.extend-ignore = [
 # is no module of any package, and its `initialize` is the interface's.
 "components/core/hatch_build.py" = [
     "INP001", # no package: hatchling reads it by path
-    "PLR6301", # initialize is BuildHookInterface's method, called on the instance
+    "PLC0415", # libera_build is on sys.path only once initialize has put it there
+]
+"components/web/hatch_build.py" = [
+    "INP001", # no package: hatchling reads it by path
+    "PLC0415", # libera_build is on sys.path only once initialize has put it there
 ]
 # stubs/ names what pyobjc and Bottle name. NSMenuItem, callAfter and
 # setAssociatedObject are Objective-C spellings, HTTPResponse is Bottle's, and a

@@ -31,7 +31,7 @@ A Linux payload has to be built on Linux. A Flatpak bundle cannot be cross-built
 
 The suite needs the editor payload: `x2t` as a real binary, the fonts, the blank documents, several hundred megabytes of it, built from pinned upstream sources over several hours. The upper tiers need a browser as well. A hosted runner starts with none of that, so the two workflows in `.github/` do the one job that needs a Windows kernel and nothing else. The standard for "everything passed" is `make verify` on a machine that has a payload or can fetch one.
 
-The suite finds the payload this tree wants and no other: `LIBERA_PAYLOAD` if set, the workspace's component packages once `lb components fill` has filled them, this checkout's build tree, and otherwise this checkout's build artifacts (native or the container's), unpacked into `~/.cache/libera-tests/` and again whenever they are rebuilt. It used to take any payload installed on the machine, and a checkout wanting 0.4.1 reported the bugs of a leftover 0.2 as failures. With none of these the upper tiers skip, and the header says why. Nothing is downloaded.
+The suite finds the payload this tree wants and no other: `LIBERA_PAYLOAD` if set, the component packages `uv sync` built and installed, this checkout's build tree, and otherwise this checkout's build artifacts (native or the container's), unpacked into `~/.cache/libera-tests/` and again whenever they are rebuilt. It used to take any payload installed on the machine, and a checkout wanting 0.4.1 reported the bugs of a leftover 0.2 as failures. With none of these the upper tiers skip, and the header says why. Nothing is downloaded.
 
 ## What the tests assert
 
