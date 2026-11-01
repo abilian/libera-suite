@@ -10,8 +10,8 @@
 ; asks for elevation unless the machine lacks the WebView2 runtime, which is
 ; Microsoft's installer and asks for itself.
 ;
-; The editors themselves (the payload) are in the frozen tree, unpacked there
-; by windows-app.sh, where the application finds them beside itself. Its
+; The editors themselves (the payload) are in the frozen tree, as the two
+; component packages, which the application finds by import. Their
 ; configuration names them relatively, so nothing is written at install time.
 ; See notes/14-windows.md.
 

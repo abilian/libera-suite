@@ -114,23 +114,6 @@ def build_core(repo: Path, into: Path) -> str:
     return platform
 
 
-def unpack(dest: Path, dist: Path, platform: str) -> int:
-    """The whole payload in one folder, the core's bin/ beside the editors, as
-    a build tree has it: for LIBERA_PAYLOAD, and for the Windows installer,
-    which ships it beside the frozen application. Made aside and renamed into
-    place, so a folder that is there is whole."""
-    tmp = dest.with_name(f".{dest.name}.tmp")
-    shutil.rmtree(tmp, ignore_errors=True)
-    tmp.mkdir(parents=True)
-    unpack_core(tmp, dist, platform)
-    unpack_web(tmp, dist, {"platform": platform})
-    generate.write_config(locate.Layout(tmp, tmp))
-    shutil.rmtree(dest, ignore_errors=True)
-    tmp.rename(dest)
-    say(f"    unpacked the {platform} payload from {dist} into {dest}")
-    return 0
-
-
 def unpack_core(into: Path, dist: Path, platform: str) -> None:
     _unpack(dist / f"core-{platform}.tar.gz", into)
     if not any((into / "bin").glob("x2t*")):

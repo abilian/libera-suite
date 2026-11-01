@@ -110,20 +110,3 @@ def test_the_editors_say_what_they_are_built_from(dist, tmp_path):
     assert record["payload_version"] == "0.7"
     assert record["source"] == {"libera_commit": "abc"}
     assert "platform" not in record, "libera-web is every platform's"
-
-
-def test_an_unpacked_payload_is_one_folder_the_host_takes(dist, tmp_path):
-    """For LIBERA_PAYLOAD and the Windows installer: its own core, and a
-    configuration that names the editors beside it."""
-    dest = tmp_path / "payload"
-    (dest / "stale").mkdir(parents=True)
-
-    components.unpack(dest, dist, "macos-arm64")
-
-    config = (dest / "bin" / "DoctRenderer.config").read_text()
-    assert "<sdkjs>./../sdkjs</sdkjs>" in config
-    assert (dest / "sdkjs" / "word" / "sdk-all.js").is_file()
-    assert not (dest / "stale").exists()
-    assert not any(p.is_symlink() for p in dest.rglob("*"))
-    record = json.loads((dest / "payload.json").read_text())
-    assert record["platform"] == "macos-arm64"
