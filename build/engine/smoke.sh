@@ -138,14 +138,18 @@ SMOKE_PDF="$(dirname "$0")/smoke-pdf"
 if [ ! -d "$PAYLOAD/sdkjs/pdf" ]; then
     echo "    SKIPPED (this payload has no sdkjs/pdf)"
 else
-mkdir -p "$W/pdfdoc/changes"
-cp "$SMOKE_PDF/sample.pdf" "$W/pdfdoc/Editor.bin"
+# hybrid.pdf is a form with an /XFA beside its fields, as the IRS's are: the
+# save rewrites the form's dictionary and has to leave the XFA out (core
+# 0176), or Acrobat, which shows the XFA, shows the form as it was.
+for doc in sample hybrid; do
+rm -rf "$W/pdfdoc" && mkdir -p "$W/pdfdoc/changes"
+cp "$SMOKE_PDF/$doc.pdf" "$W/pdfdoc/Editor.bin"
 cp "$SMOKE_PDF/changes0.txt" "$W/pdfdoc/changes/changes0.json"
 cat > "$W/pdfjob.xml" <<XML
 <?xml version="1.0" encoding="utf-8"?>
 <TaskQueueDataConvert>
   <m_sFileFrom>$(winpath "$W/pdfdoc/Editor.bin")</m_sFileFrom>
-  <m_sFileTo>$(winpath "$W/annotated.pdf")</m_sFileTo>
+  <m_sFileTo>$(winpath "$W/$doc-saved.pdf")</m_sFileTo>
   <m_nFormatTo>513</m_nFormatTo>
   <m_bFromChanges>true</m_bFromChanges>
   <m_bDontSaveAdditional>true</m_bDontSaveAdditional>
@@ -153,17 +157,22 @@ cat > "$W/pdfjob.xml" <<XML
   <m_sFontDir>$(winpath "$CORE_FONTS")</m_sFontDir>
 </TaskQueueDataConvert>
 XML
-built x2t "$W/pdfjob.xml" >"$W/pdfsave.log" 2>&1 || fail "pdf save failed; see $W/pdfsave.log"
-py - "$SMOKE_PDF/sample.pdf" "$W/annotated.pdf" <<'PY' || fail "the comment was not saved: x2t wrote the original"
+built x2t "$W/pdfjob.xml" >"$W/pdfsave.log" 2>&1 || fail "$doc.pdf: save failed; see $W/pdfsave.log"
+py - "$SMOKE_PDF/$doc.pdf" "$W/$doc-saved.pdf" "$doc" <<'PY' || fail "$doc.pdf: the comment was not saved, or the XFA was kept"
 import re, sys
-original, saved = (open(p, "rb").read() for p in sys.argv[1:])
+original, saved = (open(p, "rb").read() for p in sys.argv[1:3])
 update = saved[len(original):]
 found = re.search(rb"/Contents \((.*?)\)\s*/", update, re.S)
 text = found.group(1).replace(rb"\000", b"\0").decode("utf-16", "replace") if found else ""
-print(f"    {len(original)} -> {len(saved)} bytes, comment: {text!r}")
+xfa = b"/XFA" in update
+print(f"    {sys.argv[3]}.pdf: {len(original)} -> {len(saved)} bytes, comment: {text!r}"
+      + (f", XFA kept: {xfa}" if sys.argv[3] == "hybrid" else ""))
 if not (saved.startswith(original) and b"/Subtype /Text" in update and "zqx-smoke-comment" in text):
     raise SystemExit(1)
+if sys.argv[3] == "hybrid" and (xfa or b"/AcroForm" not in update):
+    raise SystemExit(1)
 PY
+done
 fi
 
 echo "PASS"
