@@ -28,9 +28,11 @@ FRAME_ANCESTORS = "frame-ancestors 'self'"
 
 # Nothing the page loads or sends goes anywhere but this host, whatever the
 # editor's code would like: upstream's bundles still carry an analytics
-# loader, and the page sends nothing on its own. The exception is pictures,
-# from anywhere: a document can link one by its web address, which is its own
-# reference, as in every office suite. What sdkjs needs besides: eval and
+# loader, and the page sends nothing on its own. Pictures included: a picture
+# a document links to by its web address is fetched by x2t when it converts
+# the document, and reaches the page inside Editor.bin, so the page never asks
+# for it; a script that got into the page could otherwise send what it reads
+# out in a picture's address. What sdkjs needs besides: eval and
 # WebAssembly, inline scripts (the editor's pages and the start window have
 # them), and blob: and data: for what it builds in memory -- workers, fonts,
 # images. Measured by tests/c_e2e/host/test_network.py.
@@ -38,7 +40,7 @@ DIRECTIVES = (
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:",
     "style-src 'self' 'unsafe-inline'",
-    "img-src * data: blob:",
+    "img-src 'self' data: blob:",
     "font-src 'self' data: blob:",
     "connect-src 'self' data: blob:",
     "media-src 'self' data: blob:",
