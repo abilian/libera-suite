@@ -1,9 +1,9 @@
 """A window opened with an index of the machine's fonts loads the editor from
 it: its font list, its pictures, and each font by number.
 
-The index here is built from the payload's own fonts, without allfontsgen, so
-the editor lays out as it always does and the test takes no longer; what is
-checked is where each request went. Each window has its own list, so each of
+The index here is the payload's own fonts', so the editor lays out as it
+always does and the test takes no longer; what is checked is where each
+request went. Each window has its own list, so each of
 those requests has to name its window's session: RequireJS loads AllFonts.js
 from a path in the page's config, which names none, and the bridge adds it.
 """
@@ -11,26 +11,10 @@ from a path in the page's config, which names none, and the bridge adds it.
 from __future__ import annotations
 
 import re
-import shutil
 import urllib.parse
-from typing import TYPE_CHECKING
 
 from libera import payload as payload_mod
 from libera.payload import fonts
-
-if TYPE_CHECKING:
-    import pathlib
-
-
-def make_index_of_the_payloads_fonts(into: pathlib.Path) -> pathlib.Path:
-    """What fonts.build writes, made from what generate wrote."""
-    layout = payload_mod.resolve()
-    into.mkdir()
-    shutil.copy(layout.all_fonts, into / "AllFonts.js")
-    shutil.copy(layout.sdkjs_common / "font_selection.bin", into)
-    shutil.copytree(layout.font_thumbnails, into / fonts.THUMBNAILS)
-    fonts.write_web_all_fonts(into / "AllFonts.js", into / fonts.WEB_ALL_FONTS)
-    return into
 
 
 def sessions_asked_with(requested: list[str], pattern: str) -> set[str]:
@@ -42,8 +26,8 @@ def sessions_asked_with(requested: list[str], pattern: str) -> set[str]:
     }
 
 
-def test_the_editor_loads_its_windows_own_font_list(editor_with, tmp_path):
-    index = make_index_of_the_payloads_fonts(tmp_path / "index")
+def test_the_editor_loads_its_windows_own_font_list(editor_with):
+    index = fonts.get_shipped(payload_mod.resolve())
     editor = editor_with([], fonts=index)
     session = "0"  # the work folder's name, as editor_with makes it
 

@@ -1,4 +1,5 @@
-"""Generating fonts, the one install step that runs a payload binary.
+"""Running allfontsgen, the one payload binary the host runs besides x2t, and
+writing the converter's configuration.
 
 allfontsgen is stood in for by a shell script, because what is checked is how
 its two ways of failing are reported: exiting non-zero, which raised an error
@@ -15,7 +16,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from libera.payload import PayloadError, generate, locate
+from libera.payload import PayloadError, fonts, generate, locate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -35,32 +36,52 @@ def make_payload_with_allfontsgen(tmp_path: Path, script: str) -> Path:
     return root
 
 
-def test_a_failing_allfontsgen_says_what_it_said(tmp_path):
+def build_shipped(root: Path) -> int:
+    layout = locate.Layout(root)
+    return fonts.build(layout, fonts.get_shipped_dir(layout), machine=False)
+
+
+@pytest.fixture(name="state")
+def state_folder(tmp_path, monkeypatch):
+    monkeypatch.setattr(locate, "get_state_dir", lambda: tmp_path / "state")
+    return tmp_path / "state"
+
+
+def test_a_failing_allfontsgen_says_what_it_said(tmp_path, state):
     root = make_payload_with_allfontsgen(
         tmp_path, 'echo "no such directory" >&2; exit 3'
     )
 
     with pytest.raises(PayloadError, match=r"exit 3.*no such directory"):
-        generate.generate(root)
+        build_shipped(root)
 
 
-def test_finding_no_fonts_is_a_failure_whatever_it_exits(tmp_path):
-    root = make_payload_with_allfontsgen(tmp_path, "exit 0")
+def test_finding_no_fonts_is_a_failure_whatever_it_exits(tmp_path, state):
+    root = make_payload_with_allfontsgen(tmp_path, allfontsgen_making(0, 10))
 
-    with pytest.raises(PayloadError, match="made 0 web fonts"):
-        generate.generate(root)
+    with pytest.raises(PayloadError, match="listed 0 fonts"):
+        build_shipped(root)
+    assert not any(state.rglob("AllFonts.js")), "a failed index was kept"
 
 
-def allfontsgen_making(fonts: int, thumbnails: int) -> str:
-    """A stand-in that writes `fonts` web fonts and `thumbnails` pictures."""
-    return f"""
+def allfontsgen_making(count: int, thumbnails: int) -> str:
+    """A stand-in that lists `count` fonts and draws `thumbnails` pictures,
+    with a font selection of no font, which is enough to name the floor in."""
+    return rf"""
 for a in "$@"; do
   case "$a" in
-    --output-web=*) web="${{a#*=}}" ;;
+    --allfonts=*) all="${{a#*=}}" ;;
     --images=*) images="${{a#*=}}" ;;
+    --selection=*) selection="${{a#*=}}" ;;
   esac
 done
-i=0; while [ $i -lt {fonts} ]; do touch "$web/$i"; i=$((i+1)); done
+{{
+  echo 'window["__fonts_files"] = ['
+  i=0; while [ $i -lt {count} ]; do echo "\"/f$i.ttf\","; i=$((i+1)); done
+  echo '];'
+  echo 'window["g_fonts_selection_bin"] = "AAAAAA==";'
+}} > "$all"
+printf '\0\0\0\0' > "$selection"
 i=0; while [ $i -lt {thumbnails} ]; do touch "$images/fonts_thumbnail$i.png"; i=$((i+1)); done
 """
 
@@ -71,31 +92,51 @@ def with_sources(root: Path, count: int) -> Path:
     return root
 
 
-def test_a_font_for_each_source_and_every_thumbnail_is_a_payload(tmp_path):
+def test_a_font_for_each_source_and_every_thumbnail_is_an_index(tmp_path, state):
     root = with_sources(
         make_payload_with_allfontsgen(tmp_path, allfontsgen_making(32, 10)), 32
     )
 
-    assert generate.generate(root) == 32
+    assert build_shipped(root) == 32
+    index = fonts.get_shipped_dir(locate.Layout(root))
+    assert index.is_relative_to(state), "the index was written into the payload"
+    assert (index / fonts.WEB_ALL_FONTS).is_file()
 
 
-def test_a_run_that_stopped_partway_through_the_fonts_is_a_failure(tmp_path):
+def test_a_run_that_stopped_partway_through_the_fonts_is_a_failure(tmp_path, state):
     root = with_sources(
         make_payload_with_allfontsgen(tmp_path, allfontsgen_making(5, 10)), 32
     )
 
-    with pytest.raises(PayloadError, match="made 5 web fonts from 32"):
-        generate.generate(root)
+    with pytest.raises(PayloadError, match="listed 5 fonts from 32"):
+        build_shipped(root)
 
 
-def test_a_run_that_stopped_partway_through_the_thumbnails_is_a_failure(tmp_path):
+def test_a_run_that_stopped_partway_through_the_thumbnails_is_a_failure(
+    tmp_path, state
+):
     """On Windows it stopped at the second, and exited 0."""
     root = with_sources(
         make_payload_with_allfontsgen(tmp_path, allfontsgen_making(32, 1)), 32
     )
 
     with pytest.raises(PayloadError, match="drew 1 of 10"):
-        generate.generate(root)
+        build_shipped(root)
+
+
+def test_the_converter_configuration_names_the_payload_relatively(tmp_path):
+    """x2t resolves each path against the configuration's own folder, so the
+    payload can move, and be installed read-only, without writing it again."""
+    root = make_payload_with_allfontsgen(tmp_path, "exit 0")
+    (root / "bin" / "x2t").write_bytes(b"")
+
+    generate.generate(root)
+
+    config = (root / "bin" / "DoctRenderer.config").read_text(encoding="utf-8")
+    assert "<file>../sdkjs/common/Native/native.js</file>" in config
+    assert "<sdkjs>./../sdkjs</sdkjs>" in config
+    assert str(tmp_path) not in config
+    assert "<allfonts>" not in config
 
 
 def test_a_quit_stops_the_allfontsgen_still_running(tmp_path):

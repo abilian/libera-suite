@@ -39,6 +39,11 @@ def read_families(all_fonts: pathlib.Path) -> set[str]:
     return set(re.findall(r'\["([^"]+)", *-?\d', infos))
 
 
+def shipped_list() -> pathlib.Path:
+    """The payload's own fonts, as their index lists them."""
+    return fonts.get_shipped(payload_mod.resolve()) / "AllFonts.js"
+
+
 @pytest.fixture(scope="module")
 def index(tmp_path_factory) -> pathlib.Path:
     """One index of this machine's fonts, for the module: 7 to 17 s."""
@@ -49,7 +54,7 @@ def index(tmp_path_factory) -> pathlib.Path:
 
 @pytest.fixture(scope="module")
 def machine_only(index) -> str:
-    ours = read_families(payload_mod.resolve().all_fonts)
+    ours = read_families(shipped_list())
     theirs = read_families(index / "AllFonts.js")
     found = [f for f in CANDIDATES if f in theirs - ours]
     if not found:
@@ -58,7 +63,7 @@ def machine_only(index) -> str:
 
 
 def test_the_index_holds_the_payloads_fonts_and_the_machines(index):
-    ours = read_families(payload_mod.resolve().all_fonts)
+    ours = read_families(shipped_list())
     theirs = read_families(index / "AllFonts.js")
     assert ours <= theirs
     assert len(theirs) > len(ours)

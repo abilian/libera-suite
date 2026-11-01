@@ -215,6 +215,9 @@ generate_fonts() {
            "$payload/sdkjs/common/AllFonts.js" "$payload/sdkjs/common/font_selection.bin" \
            "$payload/sdkjs/common/Images"/fonts_thumbnail*
     mkdir -p "$payload/fonts" "$payload/sdkjs/common/Images"
+    # Where the host finds the fonts to index, as in an installed payload,
+    # whose fonts-src is a copy of some of them (dist.sh).
+    ln -sfn "$CORE_FONTS" "$payload/fonts-src"
 
     echo "==> allfontsgen ($CORE_FONTS)"
     built tools/allfontsgen \

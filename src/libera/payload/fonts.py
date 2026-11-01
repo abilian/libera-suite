@@ -1,17 +1,20 @@
-"""The fonts installed on this machine, indexed beside the payload's own.
+"""The fonts' index: the list x2t and the editor read, and the font menu's
+pictures.
 
-The payload's index (`generate`) lists the fonts it ships and nothing else.
-This one adds the machine's: allfontsgen's `--use-system`, plus the per-user
-folders it does not read on Linux. It lives in the state folder, one folder
-per fingerprint of the font folders, never in the payload; and nothing is
-copied, because the server serves each font from where it lies, by its number
-in the list. See notes/23-installed-fonts.md.
+Two kinds, both in the state folder, one folder per fingerprint of the font
+folders, never in the payload, which may be read-only. The shipped index lists
+the payload's fonts and nothing else; it takes a fraction of a second, so it
+is built when it is missing, and whatever needs it waits. The machine's adds
+the fonts installed on it: allfontsgen's `--use-system`, plus the per-user
+folders it does not read on Linux. Nothing is copied, because the server
+serves each font from where it lies, by its number in the list. See
+notes/23-installed-fonts.md.
 
-Each window keeps the list it was opened with, for the editor and for x2t
-alike, and a window opened after a newer index is built uses that one. The
-first is built when the payload is installed, where the first start waits
-anyway; a change to the machine's fonts is noticed as a window opens, and
-built behind it.
+Each window keeps the index it was opened with, for the editor and for x2t
+alike, and a window opened after a newer one is built uses that one. The
+machine's first is built when the payload is installed, where the first start
+waits anyway; a change to the machine's fonts is noticed as a window opens,
+and built behind it.
 """
 
 from __future__ import annotations
@@ -86,25 +89,43 @@ def get_index_dir(layout: locate.Layout) -> Path:
     return locate.get_state_dir() / "fonts" / make_fingerprint(layout)
 
 
-def choose(layout: locate.Layout) -> Path | None:
-    """A new window's index, or None for the payload's fonts alone.
+def get_shipped_dir(layout: locate.Layout) -> Path:
+    """Where the index of the payload's fonts alone belongs.
 
-    The index of the fonts as they are now; or, while that one is still to be
-    built, the newest earlier one whose fonts are all still there. A font
-    installed since is missing from it until a window opens after the build;
-    a font it lists and the server cannot find would leave the editor loading
-    forever.
+    Apart from the machine's, whose sweep would take it. ponytail: one per
+    payload ever used, a few hundred KB each, never removed.
     """
-    if not is_wanted():
-        return None
-    index = get_index_dir(layout)
-    if index.is_dir():
-        return index
-    earlier = [d for d in index.parent.glob("[!.]*") if d.is_dir()]
-    for found in sorted(earlier, key=_read_mtime, reverse=True):
-        if all(f.is_file() for f in read_font_files(found / "AllFonts.js")):
-            return found
-    return None
+    seen = [PROCESSING, *_read_folder_times([layout.fonts_src])]
+    return locate.get_state_dir() / "shipped-fonts" / _hash(seen)
+
+
+def choose(layout: locate.Layout) -> Path:
+    """A new window's index.
+
+    The index of the machine's fonts as they are now; or, while that one is
+    still to be built, the newest earlier one whose fonts are all still there.
+    A font installed since is missing from it until a window opens after the
+    build; a font it lists and the server cannot find would leave the editor
+    loading forever. With none, or the machine's fonts not wanted, the
+    payload's own.
+    """
+    if is_wanted():
+        index = get_index_dir(layout)
+        if index.is_dir():
+            return index
+        earlier = [d for d in index.parent.glob("[!.]*") if d.is_dir()]
+        for found in sorted(earlier, key=_read_mtime, reverse=True):
+            if all(f.is_file() for f in read_font_files(found / "AllFonts.js")):
+                return found
+    return get_shipped(layout)
+
+
+def get_shipped(layout: locate.Layout) -> Path:
+    """The index of the payload's fonts alone, built first if it is missing."""
+    index = get_shipped_dir(layout)
+    if not index.is_dir():
+        build(layout, index, machine=False)
+    return index
 
 
 def build_behind(
@@ -162,9 +183,9 @@ def _build_and_say(layout: locate.Layout, index: Path) -> None:
     )
 
 
-def build(layout: locate.Layout, index: Path) -> int:
-    """Index the payload's fonts and the machine's into `index`, and return
-    how many font files it lists.
+def build(layout: locate.Layout, index: Path, *, machine: bool = True) -> int:
+    """Index the payload's fonts, and the machine's unless told not to, into
+    `index`, and return how many font files it lists.
 
     Built aside and renamed into place, so an index is only ever whole: the
     thumbnails are drawn by position in the list, and a list without its
@@ -175,19 +196,32 @@ def build(layout: locate.Layout, index: Path) -> int:
     try:
         images = building / THUMBNAILS
         images.mkdir()
-        inputs = [*_get_payload_font_dirs(layout), *_get_user_dirs()]
+        inputs = [layout.fonts_src, *(_get_user_dirs() if machine else [])]
         generate.run_allfontsgen(
             layout,
-            "--use-system=true",
+            *(["--use-system=true"] if machine else []),
             "--input=" + ";".join(str(d) for d in inputs if d.is_dir()),
             f"--allfonts={building / 'AllFonts.js'}",
             f"--images={images}",
             f"--selection={building / 'font_selection.bin'}",
         )
-        # The counts, as generate checks them: exiting 0 proves nothing.
+        # The counts: allfontsgen exits 0 having found nothing when its
+        # directory walk has no live branch, and writes a well-formed
+        # AllFonts.js with an empty list. An editor built on that renders
+        # every glyph as a box. The build checks the same two (build/engine).
         count = len(read_font_files(building / "AllFonts.js"))
-        if count < len(read_font_files(layout.all_fonts)):
-            msg = f"allfontsgen listed {count} fonts, fewer than the payload's"
+        sources = sum(
+            1
+            for f in layout.fonts_src.rglob("*")
+            if f.suffix.lower() in generate.FONT_SUFFIXES
+        )
+        # ponytail: nine in ten, because allfontsgen passes over a source it
+        # cannot use (188 fonts from 189 files, measured); a run that stopped
+        # partway is far below that. An exact rule needs allfontsgen's own list.
+        if count == 0 or count < sources * 9 // 10:
+            msg = (
+                f"allfontsgen listed {count} fonts from {sources} in {layout.fonts_src}"
+            )
             raise PayloadError(msg)
         drawn = len(list(images.glob("fonts_thumbnail*.png")))
         if drawn < generate.THUMBNAILS:
@@ -195,7 +229,13 @@ def build(layout: locate.Layout, index: Path) -> int:
             raise PayloadError(msg)
         put_floor_first(building)
         write_web_all_fonts(building / "AllFonts.js", building / WEB_ALL_FONTS)
-        building.rename(index)
+        try:
+            building.rename(index)
+        except OSError:
+            # Another process built the same index first: `libera --convert`
+            # beside a window. Same fingerprint, same index.
+            if not index.is_dir():
+                raise
     finally:
         shutil.rmtree(building, ignore_errors=True)
     return count
@@ -318,32 +358,34 @@ def find_served(index: Path, path: str) -> Path | None:
 
 
 def make_fingerprint(layout: locate.Layout) -> str:
-    """What the index depends on, hashed: how it is processed, the payload's
-    font list, and the modification time of each folder of fonts, and of each
-    folder in it.
+    """What the index depends on, hashed: how it is processed, and the
+    modification time of each folder of fonts, the payload's among them, and
+    of each folder in it.
 
     Installing or removing a font changes its folder's time. One level down
     as well, because Linux keeps a folder per family under /usr/share/fonts.
     A font replaced in place under the same name is not seen.
     """
-    seen = [PROCESSING, f"{layout.all_fonts}|{_read_mtime(layout.all_fonts)}"]
-    tops = [*_get_payload_font_dirs(layout), *_get_system_dirs(), *_get_user_dirs()]
+    tops = [layout.fonts_src, *_get_system_dirs(), *_get_user_dirs()]
+    return _hash([PROCESSING, *_read_folder_times(tops)])
+
+
+def _read_folder_times(tops: list[Path]) -> list[str]:
+    seen = []
     for top in tops:
         if not top.is_dir():
             continue
         for folder in [top, *(d for d in top.iterdir() if d.is_dir())]:
             seen.append(f"{folder}|{_read_mtime(folder)}")
+    return seen
+
+
+def _hash(seen: list[str]) -> str:
     return hashlib.sha256("\n".join(seen).encode()).hexdigest()[:16]
 
 
 def _read_mtime(path: Path) -> int:
     return path.stat().st_mtime_ns
-
-
-def _get_payload_font_dirs(layout: locate.Layout) -> list[Path]:
-    """Where the payload's own fonts are, as its index says: fonts-src in an
-    installed payload, the core-fonts checkout in a build tree."""
-    return sorted({f.parent for f in read_font_files(layout.all_fonts)})
 
 
 def _get_system_dirs() -> list[Path]:

@@ -215,12 +215,14 @@ def _read_manifest(
 
 def _finish(dest: Path, say: Callable[[str], object]) -> None:
     """Generate the local files and confirm the result is usable."""
-    say("  generating fonts and configuration")
-    found = generate.generate(dest)
-    say(f"    {found} fonts")
+    say("  generating the configuration")
+    generate.generate(dest)
     if not locate.is_complete(dest):
         msg = "installed payload is incomplete"
         raise PayloadError(msg)
+    say("  indexing its fonts")
+    shipped = fonts.get_shipped(locate.Layout(dest))
+    say(f"    {len(fonts.read_font_files(shipped / 'AllFonts.js'))} fonts")
 
 
 def _check_room(where: Path, artifacts: list[Artifact]) -> None:

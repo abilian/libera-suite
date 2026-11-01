@@ -434,7 +434,7 @@ def convert_documents(args: argparse.Namespace) -> int:
 
 
 def _convert_one(
-    payload: Path, font_index: Path | None, work: Path, src: Path, ext: str
+    payload: Path, font_index: Path, work: Path, src: Path, ext: str
 ) -> Path:
     converting = session.Session(
         payload=payload, work=work, document=src, fonts=font_index

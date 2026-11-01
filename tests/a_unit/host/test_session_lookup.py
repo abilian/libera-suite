@@ -22,6 +22,17 @@ from libera.host.session import (
     drop_session,
     lookup,
 )
+from libera.payload import fonts
+
+
+@pytest.fixture
+def an_index(tmp_path, monkeypatch):
+    """A fonts' index that is not built: choosing one would run allfontsgen
+    out of a payload these tests do not have."""
+    monkeypatch.setattr(fonts, "choose", lambda _layout: tmp_path / "fonts")
+
+
+pytestmark = pytest.mark.usefixtures("an_index")
 
 
 @pytest.fixture
