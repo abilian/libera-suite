@@ -1,0 +1,104 @@
+From 681488b0ed13cb37946ce2f8c6659a472808179e Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Thu, 29 Oct 2026 15:49:48 +0100
+Subject: [PATCH] ooxml: read a linked picture from a web address only
+
+A picture whose relationship is external was read from whatever its
+target named. A web address is downloaded; anything else was opened
+as a local file, and a .docx linking a picture to a path on the
+user's disk had that file copied into every document written from it,
+and drawn into a PDF. Opening is the same conversion, so opening and
+saving such a document, then sending it back, sent the picture along.
+
+An external picture is now read only from a web address, by the
+prefixes the media manager already downloads; any other gets no
+picture, as a link that does not resolve does. Embedded pictures are
+not external and are read as before.
+---
+ OOXML/DocxFormat/Media/Media.cpp      | 8 ++++++++
+ OOXML/DocxFormat/Media/Media.h        | 4 ++++
+ OOXML/PPTXFormat/FileContainer.cpp    | 2 +-
+ OOXML/PPTXFormat/Logic/Fills/Blip.cpp | 6 +++---
+ 4 files changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/OOXML/DocxFormat/Media/Media.cpp b/OOXML/DocxFormat/Media/Media.cpp
+index bfd5847b47..307e404b4f 100644
+--- a/OOXML/DocxFormat/Media/Media.cpp
++++ b/OOXML/DocxFormat/Media/Media.cpp
+@@ -61,6 +61,14 @@ namespace OOX
+ 	{
+ 		return m_filename;
+ 	}
++	std::wstring Media::PathToRead()
++	{
++		const std::wstring& path = m_filename.m_strFilename;
++		// The prefixes CMediaManager::WriteImage downloads.
++		if (m_bExternal && 0 != path.find(L"http") && 0 != path.find(L"ftp") && 0 != path.find(L"www"))
++			return L"";
++		return path;
++	}
+ 	const CPath Media::DefaultDirectory() const
+ 	{
+ 		if (m_bDocument) return type().DefaultDirectory();
+diff --git a/OOXML/DocxFormat/Media/Media.h b/OOXML/DocxFormat/Media/Media.h
+index 4834451e56..cbbf8f5037 100644
+--- a/OOXML/DocxFormat/Media/Media.h
++++ b/OOXML/DocxFormat/Media/Media.h
+@@ -49,6 +49,10 @@ namespace OOX
+ 		bool IsExist();
+ 		bool IsExternal();
+ 		CPath filename();
++		// Where to read the picture from: its own file, or, outside the
++		// package, a web address only. A local path a document links to
++		// would be copied into what is written from it.
++		std::wstring PathToRead();
+ 
+ 		virtual void copy_to(const CPath& path) const;
+ 		virtual const CPath DefaultDirectory() const;
+diff --git a/OOXML/PPTXFormat/FileContainer.cpp b/OOXML/PPTXFormat/FileContainer.cpp
+index 2b05f4c0c2..01d9894269 100644
+--- a/OOXML/PPTXFormat/FileContainer.cpp
++++ b/OOXML/PPTXFormat/FileContainer.cpp
+@@ -126,7 +126,7 @@ namespace PPTX
+ 		smart_ptr<OOX::Image> p = IFileContainer::Get<OOX::Image>(rid);
+ 		if (!p.is_init())
+ 			return _T("");
+-		return p->filename().m_strFilename;
++		return p->PathToRead();
+ 	}
+ 	std::wstring FileContainer::GetLinkFromRId(const OOX::RId& rid)const
+ 	{
+diff --git a/OOXML/PPTXFormat/Logic/Fills/Blip.cpp b/OOXML/PPTXFormat/Logic/Fills/Blip.cpp
+index b808806104..194bc5f927 100644
+--- a/OOXML/PPTXFormat/Logic/Fills/Blip.cpp
++++ b/OOXML/PPTXFormat/Logic/Fills/Blip.cpp
+@@ -184,7 +184,7 @@ namespace PPTX
+ 						smart_ptr<OOX::Image> p = pRels->Get<OOX::Image>(*ExtLst[i].link_svg);
+ 						if (p.is_init())
+ 						{
+-							result = p->filename().m_strFilename;
++							result = p->PathToRead();
+ 							break;
+ 						}
+ 					}
+@@ -204,7 +204,7 @@ namespace PPTX
+ 				{
+ 					smart_ptr<OOX::Image> p = pRels->Get<OOX::Image>(*embed);
+ 					if (p.is_init())
+-						return p->filename().m_strFilename;
++						return p->PathToRead();
+ 				}
+ 
+ 				if (parentFileIs<FileContainer>())
+@@ -218,7 +218,7 @@ namespace PPTX
+ 				{
+ 					smart_ptr<OOX::Image> p = pRels->Get<OOX::Image>(*link);
+ 					if (p.is_init())
+-						return p->filename().m_strFilename;
++						return p->PathToRead();
+ 				}
+ 
+ 				if (parentFileIs<FileContainer>())
+-- 
+2.55.0
+
