@@ -36,7 +36,7 @@ Libera Suite is early. This page is a status list: it says what is built, what i
 | **Run from a terminal, the Dock says "Python"** | Only when you start `libera` in a terminal on macOS. A Dock tile is named after the bundle it was launched from: here, the Python interpreter's, which nothing in the application can change. The icon and the menu bar are ours either way; `Libera.app` says Libera. A document dropped on that Python tile is refused in Python's name; `Libera.app`'s tile takes it. |
 | **Diagrams cannot save** | It opens `.vsdx` and shows it. The converter cannot write any Visio format, so there is nothing to save and no blank to start from. |
 | **Edited PDF text does not reflow** | A line changed with *Edit Text* keeps its width, so new words go to a line of their own, set in one of our fonts when the PDF's cannot be used. |
-| **Some PDFs cannot be saved** | One certified against any change, and one that asks for a password to open. The save fails with a general message, and the file is left as it was. |
+| **Certified PDFs cannot be saved** | A PDF certified against any change. The save fails with a general message, and the file is left as it was. |
 | **A shallow menu bar, with few shortcuts shown on Linux and none on Windows** | Linux and Windows get File, Edit, View and Help, drawn in the window. On Linux, New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W, and no other item shows its key; on Windows none does. The keys work all the same: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P and Ctrl-Z. macOS gets those menus plus Window, with the usual shortcuts. |
 | **No tabs on Linux or Windows** | One window per document there. macOS has tabs. |
 | **Windows warns about the installer** | The downloaded installer is not yet code-signed, so SmartScreen says *"Windows protected your PC"* the first time. [Install](install.md#windows) has the way past it. The one-line PowerShell install never meets it. |
@@ -53,7 +53,7 @@ If you hit something that is *not* on this list, [tell us about it](../feedback.
 
 ### In the document window
 
-- **Password-protected documents.** A PDF that asks for a password opens and cannot be saved; no other kind opens.
+- **Password-protected documents.** A PDF that asks for a password opens and saves, keeping it; no other kind opens, and no document can be given a password.
 - **Digital signatures.**
 - **Mail merge.**
 - **Plugins.** Disabled upstream in this fork, so the panel never appears.

@@ -361,9 +361,16 @@
     // must answer with DesktopOfflineAppDocumentEndSave(error, hash, password).
     // Async on purpose: x2t takes about a second, and the editor expects the
     // call to return immediately and be told later.
-    LocalFileSave: function (params, password, _docinfo, fileType) {
-      log("LocalFileSave", arguments);
-      const body = JSON.stringify({ fileType: fileType || 0, params: params || "" });
+    LocalFileSave: (params, password, docinfo, fileType) => {
+      // Not the password: the log reaches the console and the host's report.
+      log("LocalFileSave", [params, password ? "(a password)" : "", docinfo, fileType]);
+      // The password is a PDF's, which the editor asked for itself; the host
+      // needs it to save.
+      const body = JSON.stringify({
+        fileType: fileType || 0,
+        params: params || "",
+        password: password || "",
+      });
       postToHost("/__host__/save", body, (xhr) => {
         const reply = answer(xhr);
         // No reply, or one without an error code, is a failed save.

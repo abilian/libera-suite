@@ -123,7 +123,7 @@ Un `.pdf` s'ouvre dans **Libera PDF**. Libera Suite est proposé dans *Ouvrir av
 
 **L'enregistrement s'ajoute au fichier.** Vos modifications sont écrites après le contenu d'origine du PDF, qui reste exactement tel qu'il était. Une signature qui autorise les commentaires reste donc valable pour la partie signée. Un PDF ne s'enregistre qu'en PDF.
 
-**Deux sortes de PDF ne s'enregistrent pas encore.** Un PDF certifié contre toute modification, et un PDF qui demande un mot de passe à l'ouverture : il s'ouvre une fois le mot de passe donné, vous pouvez le lire et le commenter, mais son enregistrement viendra dans une version ultérieure. Dans les deux cas l'enregistrement échoue en le disant, le fichier reste tel quel, et vos modifications restent dans la fenêtre.
+**Un PDF qui demande un mot de passe** s'ouvre une fois le mot de passe donné, et s'enregistre avec vos modifications, toujours sous le même mot de passe. **Un PDF certifié contre toute modification ne s'enregistre pas** : l'enregistrement échoue en le disant, le fichier reste tel quel, et vos modifications restent dans la fenêtre.
 
 Créer un formulaire n'est pas encore possible, ni convertir un PDF en document.
 

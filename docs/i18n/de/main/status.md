@@ -38,7 +38,7 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 | **Aus einem Terminal gestartet, zeigt das Dock „Python“** | Nur wenn Sie `libera` unter macOS in einem Terminal starten. Ein Dock-Symbol trägt den Namen des Programmpakets, aus dem es gestartet wurde, hier den des Python-Interpreters, und daran kann die Anwendung nichts ändern. Symbol und Menüleiste sind in jedem Fall unsere; `Libera.app` zeigt Libera an. Ein Dokument, das Sie auf dieses Python-Symbol ziehen, wird im Namen von Python abgelehnt; das Symbol von `Libera.app` nimmt es an. |
 | **Diagrams kann nicht speichern** | Es öffnet eine `.vsdx`-Datei und zeigt sie an. Der Konverter kann kein Visio-Format schreiben, also gibt es nichts zu speichern und keine leere Vorlage für den Anfang. |
 | **Geänderter PDF-Text bricht nicht neu um** | Eine mit *Text bearbeiten* geänderte Zeile behält ihre Breite, sodass neue Wörter in eine eigene Zeile kommen, in einer unserer Schriften, wenn die des PDFs nicht verwendet werden kann. |
-| **Manche PDFs lassen sich nicht speichern** | Eines, das gegen jede Änderung zertifiziert ist, und eines, das beim Öffnen ein Kennwort verlangt. Das Speichern schlägt mit einer allgemeinen Meldung fehl, und die Datei bleibt, wie sie war. |
+| **Zertifizierte PDFs lassen sich nicht speichern** | Ein PDF, das gegen jede Änderung zertifiziert ist. Das Speichern schlägt mit einer allgemeinen Meldung fehl, und die Datei bleibt, wie sie war. |
 | **Eine schmale Menüleiste, mit wenigen angezeigten Tastenkürzeln unter Linux und keinen unter Windows** | Linux und Windows haben File, Edit, View und Help, im Fenster gezeichnet. Unter Linux zeigen Neu, Öffnen und Schließen Ctrl-N, Ctrl-O und Ctrl-W, kein anderer Eintrag zeigt seine Taste; unter Windows keiner. Die Tasten funktionieren trotzdem: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Umschalt-S, Ctrl-P und Ctrl-Z. macOS hat dieselben Menüs plus Window, mit den üblichen Tastenkürzeln. |
 | **Keine Tabs unter Linux und Windows** | Dort ein Fenster pro Dokument. macOS hat Tabs. |
 | **Windows warnt vor dem Installationsprogramm** | Das heruntergeladene Installationsprogramm ist noch nicht signiert, daher zeigt SmartScreen beim ersten Mal *„Der Computer wurde durch Windows geschützt“*. [Installieren](install.md#windows) zeigt, wie Sie darüber hinwegkommen. Die Installation per PowerShell-Zeile ist nie betroffen. |
@@ -55,7 +55,7 @@ Wenn Sie auf etwas stoßen, das *nicht* auf dieser Liste steht, [melden Sie es u
 
 ### Im Dokumentfenster
 
-- **Kennwortgeschützte Dokumente.** Ein PDF, das ein Kennwort verlangt, öffnet sich und lässt sich nicht speichern; keine andere Art öffnet sich.
+- **Kennwortgeschützte Dokumente.** Ein PDF, das ein Kennwort verlangt, öffnet sich und wird gespeichert, mit seinem Kennwort; keine andere Art öffnet sich, und kein Dokument kann ein Kennwort bekommen.
 - **Digitale Signaturen.**
 - **Serienbriefe.**
 - **Plugins.** In diesem Fork vom Upstream-Projekt abgeschaltet, daher erscheint das Panel nie.

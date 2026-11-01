@@ -14,7 +14,7 @@ import pathlib
 import secrets
 import shutil
 import tempfile
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import IntEnum
 from typing import TYPE_CHECKING
 
@@ -48,6 +48,9 @@ class SaveRequest:
     file_type: int = 0
     save_as: bool = False
     printing: bool = False
+    # A PDF's password, which LocalFileSave is handed; out of the repr, so
+    # that no log of a request shows it.
+    password: str = field(default="", repr=False)
 
     @classmethod
     def from_body(cls, body: dict) -> SaveRequest:
@@ -60,6 +63,7 @@ class SaveRequest:
             file_type=file_type,
             save_as="saveas=true" in str(body.get("params") or ""),
             printing=bool(body.get("isPrint")),
+            password=str(body.get("password") or ""),
         )
 
 
@@ -265,6 +269,8 @@ def save_document(
         logger.warning("save refused: %s is a viewer", app.title)
         return {"error": SaveOutcome.DECLINED}
 
+    if request.password:
+        session.password = request.password
     open_file = session.read_current_document()
     untitled = open_file is not None and is_inside(session.scratch, open_file)
     plan = plan_save(

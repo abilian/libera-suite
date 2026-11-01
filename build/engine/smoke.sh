@@ -146,8 +146,12 @@ else
 # computed over a file ID pypdf writes 32 bytes long: the writer kept 16 and
 # saved no comment (core 0181). Its comment is encrypted in the file, so the
 # check there is that an annotation was written, and the file still says it
-# is encrypted.
-for doc in sample hybrid encrypted; do
+# is encrypted. protected.pdf is AES-256 with the password "secret", given to
+# open it with and to save it under: given the first alone, x2t takes the
+# change of password for a request to remove it, and rewrites the whole PDF.
+for doc in sample hybrid encrypted protected; do
+password=""
+[ "$doc" = protected ] && password="<m_sPassword>secret</m_sPassword><m_sSavePassword>secret</m_sSavePassword>"
 rm -rf "$W/pdfdoc" && mkdir -p "$W/pdfdoc/changes"
 cp "$SMOKE_PDF/$doc.pdf" "$W/pdfdoc/Editor.bin"
 cp "$SMOKE_PDF/changes0.txt" "$W/pdfdoc/changes/changes0.json"
@@ -159,6 +163,7 @@ cat > "$W/pdfjob.xml" <<XML
   <m_nFormatTo>513</m_nFormatTo>
   <m_bFromChanges>true</m_bFromChanges>
   <m_bDontSaveAdditional>true</m_bDontSaveAdditional>
+  $password
   <m_sAllFontsPath>$(winpath "$PAYLOAD/AllFonts.js")</m_sAllFontsPath>
   <m_sFontDir>$(winpath "$CORE_FONTS")</m_sFontDir>
 </TaskQueueDataConvert>
@@ -171,7 +176,7 @@ update = saved[len(original):]
 found = re.search(rb"/Contents \((.*?)\)\s*/", update, re.S)
 text = found.group(1).replace(rb"\000", b"\0").decode("utf-16", "replace") if found else ""
 xfa = b"/XFA" in update
-encrypted = sys.argv[3] == "encrypted"
+encrypted = sys.argv[3] in ("encrypted", "protected")
 print(f"    {sys.argv[3]}.pdf: {len(original)} -> {len(saved)} bytes, "
       + ("encrypted" if encrypted else f"comment: {text!r}")
       + (f", XFA kept: {xfa}" if sys.argv[3] == "hybrid" else ""))
