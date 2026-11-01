@@ -92,20 +92,16 @@ def parse_family(os_release: str) -> str | None:
 # and anything built from source land here, and on those four commands of which
 # none exists, printing them all would be four wrong answers. The component
 # names are the ones distributions actually use.
-COMPONENTS = """  Libera Suite needs three things your distribution packages:
-
-    PyGObject             python3-gi, python-gobject, pygobject3
-    the GTK 3 typelib     gir1.2-gtk-3.0, gtk3
-    the WebKitGTK typelib gir1.2-webkit2-4.1, webkit2gtk4.1 (4.1, or 4.0)
-
-  The Flatpak brings all three with it and needs none of this."""
+COMPONENTS = """  PyGObject              python3-gi, python-gobject, pygobject3
+  the GTK 3 typelib      gir1.2-gtk-3.0, gtk3
+  the WebKitGTK typelib  gir1.2-webkit2-4.1, webkit2gtk4.1 (4.1, or 4.0)"""
 
 
 def format_install_hint(os_release: str) -> str:
     """The line to type, or what to ask for where there is no line."""
     known = parse_family(os_release)
     if known:
-        return PACKAGES[known]
+        return f"  {PACKAGES[known]}"
     return COMPONENTS
 
 
@@ -268,7 +264,7 @@ def show_problem(heading: str, paragraphs: list[str], command: str = "") -> None
 
 
 def detect_venv_kind(prefix: str | None = None) -> str:
-    """How this copy was installed: "pipx", "uv-tool" or "venv".
+    """How this copy was installed: "pipx", "uv-tool", "uvx" or "venv".
 
     Which decides the advice, and getting it wrong wastes somebody's afternoon.
     A developer running `uv run libera` from a checkout was told to
@@ -277,74 +273,90 @@ def detect_venv_kind(prefix: str | None = None) -> str:
     different reasons before it could have helped.
 
     Read from what each installer leaves behind rather than guessed from the
-    path: pipx writes `pipx_metadata.json` into every venv it makes and uv
-    writes `uv-receipt.toml`. Anything else is an ordinary virtualenv, which
-    for this project means a checkout.
+    path: pipx writes `pipx_metadata.json` into every venv it makes, `uv tool`
+    writes `uv-receipt.toml`, and `uvx` runs from uv's cache, whose folders
+    carry a `CACHEDIR.TAG`. Anything else is an ordinary virtualenv, which for
+    this project means a checkout.
     """
     root = pathlib.Path(prefix or sys.prefix)
     if (root / "pipx_metadata.json").exists() or "/pipx/venvs/" in str(root):
         return "pipx"
     if (root / "uv-receipt.toml").exists():
         return "uv-tool"
+    if (root / "CACHEDIR.TAG").exists():
+        return "uvx"
     return "venv"
 
 
-def _explain_how_to_open_the_virtualenv(interpreter: str | None = None) -> str:
-    """The lines to type, for the way this copy was actually installed.
+# The interpreter PyGObject is built for, where the distribution installs it.
+SYSTEM_PYTHON = "/usr/bin/python3"
 
-    `interpreter` is the system Python that has PyGObject, and is passed only
-    when it is a different version from ours. The virtualenv then has to be
-    built on that one; a flag cannot reach across versions.
+CANNOT_OPEN = "Libera Suite cannot open a window."
+
+
+def _explain_how_to_reach_the_system(interpreter: str, *, same_version: bool) -> str:
+    """What to type so that this copy runs where the system's PyGObject is.
+
+    A virtualenv sees the system's packages only when it was made to, and only
+    on the Python they were built for; no flag reaches a compiled extension
+    across versions, so the commands name the interpreter every time.
     """
-    on = f" --python {interpreter}" if interpreter else ""
+    pipx = f"  pipx install --python {interpreter} --system-site-packages libera"
     kind = detect_venv_kind()
     if kind == "pipx":
         return (
-            f"  pipx uninstall libera\n  pipx install{on} --system-site-packages libera"
+            "Reinstall it on the system's Python, with its packages in reach:\n\n"
+            f"  pipx uninstall libera\n{pipx}"
         )
-    if kind == "uv-tool":
+    if kind in {"uv-tool", "uvx"}:
+        # Neither has a --system-site-packages, so no spelling of either works.
+        remove = "  uv tool uninstall libera\n" if kind == "uv-tool" else ""
         return (
-            "`uv tool install` has no --system-site-packages, so on Linux there "
-            "is no\nspelling of it that works. Install it with pipx instead:\n\n"
-            "  uv tool uninstall libera\n"
-            f"  pipx install{on} --system-site-packages libera"
+            "uv cannot make an environment that reaches them. Install it with pipx "
+            f"instead:\n\n{remove}{pipx}"
         )
-    # A plain virtualenv, which for this project means somebody's checkout.
-    if interpreter:
-        # This first said `uv venv --python ... --system-site-packages`
-        # followed by a sync, which sent somebody round the loop. uv rebuilds
-        # the environment whenever the interpreter it wants differs from the
-        # one the venv is on, so the sync threw that venv away, put
-        # the project's pinned version back, and lost both flags on the way.
-        #
-        # UV_PYTHON is read ahead of .python-version, so setting it stops the
-        # environment being rebuilt underneath you -- and the pyvenv.cfg line
-        # then stays, because uv only rewrites that file when it makes the
-        # virtualenv again.
-        return f"  export UV_PYTHON={interpreter}\n  uv sync\n{_format_venv_fix()}"
-    # Name the file: this is the one case where the
-    # fix is a single line and the user is already in a terminal.
+    recreate = (
+        "Recreate the checkout's environment on the system's Python, with its "
+        "packages in reach:\n\n"
+    )
+    if same_version:
+        return (
+            f"{recreate}"
+            f"  uv venv --clear --system-site-packages --python {interpreter}\n"
+            "  uv sync"
+        )
+    # The project pins another version (.python-version), and uv rebuilds the
+    # environment on that one, flag lost, at the next command that does not
+    # name the interpreter: measured with `uv run`. UV_PYTHON is read first.
     return (
-        f"{_format_venv_fix()}\n\n"
-        "`uv sync` rewrites that file, so a fresh sync needs the line again."
+        f"{recreate}"
+        f"  export UV_PYTHON={interpreter}\n"
+        "  uv venv --clear --system-site-packages\n"
+        "  uv sync\n\n"
+        "Keep UV_PYTHON set, in your shell profile for instance: without it, the "
+        "next uv command rebuilds the environment on the project's Python."
     )
 
 
-def _format_venv_fix() -> str:
-    """The one line that lets this virtualenv see the system's PyGObject."""
-    return (
-        "  sed -i 's/^include-system-site-packages = false/"
-        f"include-system-site-packages = true/' \\\n      {sys.prefix}/pyvenv.cfg"
-    )
+def _sees_system_packages() -> bool:
+    cfg = pathlib.Path(sys.prefix) / "pyvenv.cfg"
+    if not cfg.exists():
+        return True
+    return "include-system-site-packages = true" in cfg.read_text(encoding="utf-8")
 
 
-FLATPAK_AVOIDS_IT = (
-    "The Flatpak avoids the whole question: it brings its own GTK and WebKit."
+FLATPAK = (
+    "Or install the Flatpak, which needs nothing from the system:\n\n"
+    "  curl -fsSL https://cdn.abilian.com/libera/install.sh | sh"
 )
 
 
 def explain_why_no_window() -> str | None:
     """None when a window can be opened; otherwise what to tell the user.
+
+    The failure first, then its cause in a sentence, then what to type, then
+    the Flatpak, which sidesteps all of it. Why each piece of advice is what
+    it is belongs in this module, not in the message.
 
     Only Linux is checked. macOS gets its backend with pywebview, and the
     Windows installer bundles pywebview and its .NET bridge itself.
@@ -354,38 +366,46 @@ def explain_why_no_window() -> str | None:
     if is_gtk_available():
         return None
 
+    ours = f"{sys.version_info.major}.{sys.version_info.minor}"
     system = _find_system_python_for_gtk()
     if system:
         interpreter, theirs = system
-        ours = f"{sys.version_info.major}.{sys.version_info.minor}"
         if theirs and theirs != ours:
-            return (
-                "Libera Suite needs GTK and WebKit. This machine has them, for "
-                f"Python {theirs} --\nand this copy of Libera Suite is running on "
-                f"Python {ours}. PyGObject is a compiled\nextension built for one "
-                f"Python, so nothing on {ours} can reach it, whatever flags\nthe "
-                "virtualenv was made with.\n\n"
-                f"{_explain_how_to_open_the_virtualenv(interpreter)}\n\n"
-                f"{FLATPAK_AVOIDS_IT}"
+            cause = (
+                f"GTK and WebKit are installed on this computer for Python {theirs}, "
+                f"but Libera Suite runs on Python {ours} ({sys.prefix}), which "
+                "cannot load them."
             )
-        return (
-            "Libera Suite needs GTK and WebKit, which are installed on this "
-            "machine -- but\nthis copy of Libera Suite is in a virtualenv that "
-            "cannot see them. PyGObject is\nnot a wheel, so an isolated "
-            "environment never finds it.\n\n"
-            f"{_explain_how_to_open_the_virtualenv()}\n\n"
-            f"{FLATPAK_AVOIDS_IT}"
+        else:
+            cause = (
+                "GTK and WebKit are installed on this computer, but the Python "
+                f"environment Libera Suite runs in ({sys.prefix}) does not see the "
+                "system's packages."
+            )
+        fix = _explain_how_to_reach_the_system(
+            interpreter, same_version=theirs in {"", ours}
         )
+        return f"{CANNOT_OPEN}\n\n{cause} {fix}\n\n{FLATPAK}"
 
     try:
         os_release = pathlib.Path("/etc/os-release").read_text(encoding="utf-8")
     except OSError:
         os_release = ""
-
-    return (
-        "Libera Suite needs GTK and WebKit, which pip cannot install.\n\n"
-        f"{format_install_hint(os_release)}\n\n"
-        "Then run the same command again -- and if you installed with pipx, "
-        "reinstall\nit as `pipx install --system-site-packages libera`, "
-        "because an isolated\nvirtualenv cannot see the packages above."
+    install = (
+        "Install them:"
+        if parse_family(os_release)
+        else "Install these, under the names your distribution gives them:"
     )
+    said = (
+        f"{CANNOT_OPEN}\n\nIt needs GTK and WebKit, which are not installed. "
+        f"{install}\n\n{format_install_hint(os_release)}"
+    )
+    if not _sees_system_packages():
+        # Installing them is not enough on its own: this environment will not
+        # see them either.
+        reach = _explain_how_to_reach_the_system(SYSTEM_PYTHON, same_version=True)
+        said += (
+            f"\n\nThe Python environment Libera Suite runs in ({sys.prefix}) will "
+            f"not see them either. {reach}"
+        )
+    return f"{said}\n\n{FLATPAK}"

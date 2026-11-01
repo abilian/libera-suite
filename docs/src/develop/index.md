@@ -25,17 +25,16 @@ uv sync
 
     The window is GTK and WebKit, whose Python half is not a wheel: it is `python3-gi`, which your distribution installs into `/usr/lib/python3/dist-packages`. A plain virtualenv never has it on `sys.path`, so `uv run libera FILE` will tell you it needs GTK even on a machine that has it.
 
+    Make the environment on the distribution's own Python, with its packages in reach:
+
     ```sh
-    export UV_PYTHON=/usr/bin/python3    # where your distribution's gi is
+    uv venv --clear --system-site-packages --python /usr/bin/python3
     uv sync
-    sed -i 's/^include-system-site-packages = false/include-system-site-packages = true/' .venv/pyvenv.cfg
     ```
 
-    `UV_PYTHON` is the line that matters on a distribution whose Python is newer than the `3.12` in `.python-version`, which Fedora's is. uv reads it ahead of that file, and without it `uv sync` rebuilds the environment on 3.12, where a `gi` built for 3.14 cannot be imported however the virtualenv was made.
+    uv keeps `--system-site-packages` through every later `uv sync` and `uv run`, as long as it does not rebuild the environment. It rebuilds when the interpreter differs from the `3.12` in `.python-version`, so on a distribution whose Python is newer, which Fedora's is, set `UV_PYTHON=/usr/bin/python3` before both commands and keep it set: uv reads it ahead of that file. Without it the next `uv run` rebuilds the environment on 3.12, where a `gi` built for 3.14 cannot be imported however the environment was made.
 
-    uv rewrites `pyvenv.cfg` when it builds the environment again, which is why the `sed` comes last. With `UV_PYTHON` set it stops rebuilding, so the line is still there after a sync that installs packages.
-
-    `libera` prints all three, with your own paths in them, when it finds itself in a virtualenv that cannot reach GTK.
+    `libera` prints these commands, with your own paths in them, when it cannot reach GTK.
 
     The test suite does not need this. It drives the editor through `libera --serve` and a headless browser, never opening a window. Only running the application does.
 
