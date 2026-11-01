@@ -175,19 +175,10 @@ fetch_repo() {
         src="$(remote_base)/$repo.git"
         [ -d "$MIRROR/$repo/.git" ] && src="$MIRROR/$repo"
         echo "==> clone $repo from $src"
-        git clone --quiet --no-checkout "$src" "$dst" || {
-            echo "FATAL: could not clone $repo from $src" >&2
-            echo "       Every repository in pins.toml is public, so a request" >&2
-            echo "       for a username here is usually GitHub throttling" >&2
-            echo "       unauthenticated traffic -- six clones of ~2 GB in a row" >&2
-            echo "       is the pattern it throttles." >&2
-            echo "       Wait and run it again, or clone from local copies:" >&2
-            echo "           MIRROR=/path/to/clones lb payload fetch" >&2
-            echo "       Host key verification failed: git config rewrites the" >&2
-            echo "       URL to ssh, which has never met github.com here." >&2
-            echo "       Run ssh -T git@github.com once, by hand, and check the key." >&2
-            exit 1
-        }
+        # Only the pinned commit is fetched, below: the history is 0.9 GB of
+        # core's 1.5, and nothing builds from it.
+        git init --quiet "$dst"
+        git -C "$dst" remote add origin "$src"
     fi
 
     # In the clone's own config, before the checkout, and on every run so an
@@ -203,8 +194,21 @@ fetch_repo() {
     git -C "$dst" config core.longpaths true
 
     echo "==> $repo @ $sha"
-    git -C "$dst" fetch --quiet --all 2>/dev/null ||
-        echo "    (fetch skipped: upstream unreachable or throttled)"
+    # By SHA, which GitHub serves for any commit it has. A tree cloned whole
+    # before this keeps its history and fetches nothing it already has.
+    git -C "$dst" cat-file -e "$sha^{commit}" 2>/dev/null ||
+        git -C "$dst" fetch --quiet --depth 1 origin "$sha" || {
+            echo "FATAL: could not fetch $repo @ $sha from $(git -C "$dst" remote get-url origin)" >&2
+            echo "       Every repository in pins.toml is public, so a request" >&2
+            echo "       for a username here is usually GitHub throttling" >&2
+            echo "       unauthenticated traffic." >&2
+            echo "       Wait and run it again, or fetch from local clones:" >&2
+            echo "           MIRROR=/path/to/clones lb payload fetch" >&2
+            echo "       Host key verification failed: git config rewrites the" >&2
+            echo "       URL to ssh, which has never met github.com here." >&2
+            echo "       Run ssh -T git@github.com once, by hand, and check the key." >&2
+            exit 1
+        }
     # Hard reset, so a re-run starts from pristine upstream rather than from
     # whatever the last patch attempt left behind.
     # A series that stopped halfway leaves git am's state behind, and the next
@@ -379,6 +383,11 @@ cmd_configure() {
         exit 1
     }
     icu_data_filter_check
+    # Every third-party library is installed now, and its ok_marker under
+    # install/ is what tells the next configure not to build it again. What
+    # built it is 3 GB or more (V8, depot_tools, OpenSSL, Boost, ICU) that
+    # nothing reads after this. Kept until here so a failed build resumes.
+    rm -rf "$OUT/core/third_party/work"
 }
 
 # What the failing component's source tree actually contains.

@@ -1,0 +1,41 @@
+From ac66d150ab3c24c32023c39a01c2f2e71865c133 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Tue, 27 Oct 2026 17:42:53 +0100
+Subject: [PATCH 170/171] v8: clone the 8.9.45 tag alone
+
+V8's history is 2 GB of the build tree and nothing builds from it.
+The fetch before the build went too: the checkout is the tag, and a
+fetch could only bring commits nobody checks out.
+---
+ Common/3dParty/v8/nc-build.py | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
+index 438454f2c6..4ad64d19ef 100644
+--- a/Common/3dParty/v8/nc-build.py
++++ b/Common/3dParty/v8/nc-build.py
+@@ -752,8 +752,11 @@ def fetch_and_patch():
+ 
+     # Fetch v8
+     print( "Fetching v8" )
+-    nc.run_command( [ "git", "clone", "https://chromium.googlesource.com/v8/v8.git", v8_src_path ], "Clone v8" )
+-    nc.run_command( [ "git", "checkout", "8.9.45" ], "Git checkout 8.9.45", v8_src_path )
++    # The tag alone: V8's history is 2 GB, and nothing builds from it.
++    nc.run_command(
++        [ "git", "clone", "--depth", "1", "--branch", "8.9.45", "https://chromium.googlesource.com/v8/v8.git", v8_src_path ],
++        "Clone v8 8.9.45"
++    )
+ 
+     nc.create_work_dir_ok_marker()
+ 
+@@ -770,7 +773,6 @@ def build_and_install():
+     # Clean v8 state
+     nc.run_command( [ "git", "reset", "--hard" ], "Git reset", v8_src_path )
+     nc.run_command( [ "git", "clean", "-fdx" ], "Git clean", v8_src_path )
+-    nc.run_command( [ "git", "fetch", "origin" ], "Git fetch", v8_src_path )
+ 
+     if nc.is_apple_silicon():
+         disable_luci_go_cipd_dep()
+-- 
+2.55.0
+

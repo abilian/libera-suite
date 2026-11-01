@@ -115,8 +115,10 @@ find "$STAGE/bin" \( -name 'libicui18n*' -o -name 'libicuio*' -o -name 'libicute
 # writing one does not open them. Back with the viewer. And on macOS the
 # second copy of the signature library, beside the framework that x2t and
 # libx2tlib link: nothing names the dylib. Measured with smoke, every
-# integration and e2e test passing without both.
-rm -f "$STAGE/bin/cmap.bin"
+# integration and e2e test passing without both. And docbuilder, a program
+# for scripting documents in JavaScript, which no binary links and the host
+# never runs.
+rm -f "$STAGE/bin/cmap.bin" "$STAGE/bin/docbuilder$EXE"
 [ -d "$STAGE/bin/ooxmlsignature.framework" ] && rm -f "$STAGE/bin"/libooxmlsignature*.dylib
 # Local symbols, which nothing reads at run time: 28 MB of the 187 on macOS
 # (libx2tlib alone 83 to 65 MB), measured with every integration and e2e test
