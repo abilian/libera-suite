@@ -1,0 +1,51 @@
+From d93430c62904068198b46ecc4a572ff068e60e76 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 26 Oct 2026 18:57:16 +0100
+Subject: [PATCH] doctrenderer: let DOCTRENDERER_CACHE_DIR hold the V8 code
+ cache
+
+The code cache of each editor's scripts was written beside them, as
+sdkjs/<editor>/sdk-all.cache. When the scripts are installed by a
+package manager, that writes 8 MB per editor into a folder it owns,
+which its uninstall leaves behind; when the folder is read-only, the
+cache is silently never written, and every conversion through
+doctrenderer compiles the scripts again (0.62 s against 0.30 s for a
+PDF export, measured). DOCTRENDERER_CACHE_DIR names a folder to keep
+it in instead, as <dir>/<editor>-sdk-all.cache. Unset, nothing changes.
+---
+ DesktopEditor/doctrenderer/editors.cpp | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/DesktopEditor/doctrenderer/editors.cpp b/DesktopEditor/doctrenderer/editors.cpp
+index 3c1d5fd61d..86e3ae6908 100644
+--- a/DesktopEditor/doctrenderer/editors.cpp
++++ b/DesktopEditor/doctrenderer/editors.cpp
+@@ -1,6 +1,7 @@
+ ﻿#include "./editors.h"
+ 
+ #include "../common/StringBuilder.h"
++#include "../common/SystemUtils.h"
+ 
+ namespace NSDoctRenderer
+ {
+@@ -206,6 +207,17 @@ String.prototype.replaceAll = function(str, newStr)\
+ 
+ 		if (!sCachePath.empty())
+ 		{
++			// The code cache is written beside the scripts, which may be read-only,
++			// or belong to a package manager that does not expect new files there.
++			// DOCTRENDERER_CACHE_DIR names a folder to keep it in instead:
++			// <dir>/word-sdk-all.cache and so on.
++			std::wstring sCacheDir = NSSystemUtils::GetEnvVariable(L"DOCTRENDERER_CACHE_DIR");
++			if (!sCacheDir.empty())
++			{
++				std::wstring sEditor = NSFile::GetFileName(NSFile::GetDirectoryName(sCachePath));
++				sCachePath = sCacheDir + L"/" + sEditor + L"-" + NSFile::GetFileName(sCachePath);
++			}
++
+ 			context->runScript(builder.GetData(), try_catch, config->m_bIsUseCache ? sCachePath : L"");
+ 			RunEditorFooter(context, try_catch, config);
+ 		}
+-- 
+2.55.0
+
