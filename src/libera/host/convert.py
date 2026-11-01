@@ -263,11 +263,11 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
     suffix = src.suffix.lower()
     if suffix in CSV_SUFFIXES:
         run = run_x2t(session, str(write_csv_open_job(session, src, editor_bin)))
-    elif suffix in {".md", ".mht", ".fb2"}:
+    elif suffix in {".md", ".mht", ".fb2", ".epub"}:
         # Refused without an encoding, like a CSV: rc 88. None had ever
-        # opened, though Words has listed all three since the start. So had
-        # .epub, which waits for its archive to be probed
-        # (notes/plans/converter-hardening.md).
+        # opened, though Words has listed all four since the start. An EPUB
+        # was probed first, as an archive: nothing it names outside itself is
+        # read or written (notes/plans/converter-hardening.md).
         job = write_job(
             session,
             "open.xml",

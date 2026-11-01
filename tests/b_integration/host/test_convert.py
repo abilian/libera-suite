@@ -629,6 +629,30 @@ def test_a_format_that_needs_an_encoding_opens(tmp_path, ext, content):
     assert "Un mot et cœur" in text.read_text(encoding="utf-8-sig")
 
 
+def test_an_epub_opens(tmp_path):
+    """Words listed .epub and never opened one either (rc 88). The EPUB is
+    one Words wrote, from a text file."""
+    source = tmp_path / "book.txt"
+    source.write_text("Un mot et cœur\n", encoding="utf-8")
+    book = tmp_path / "book.epub"
+    export(
+        open_in(apps.WORDS, source, tmp_path / "first"),
+        book,
+        apps.WORDS.ids_by_ext["epub"],
+        None,
+    )
+    text = tmp_path / "book-again.txt"
+
+    export(
+        open_in(apps.WORDS, book, tmp_path / "second"),
+        text,
+        apps.WORDS.ids_by_ext["txt"],
+        None,
+    )
+
+    assert "Un mot et cœur" in text.read_text(encoding="utf-8-sig")
+
+
 # --- x2t's CSV reader skipped a character every 500,000 --------------------
 #
 # CSVReader drops the text it has read once it passes 500,000 characters, and
