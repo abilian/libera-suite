@@ -90,10 +90,20 @@ def build_core(repo: Path, into: Path) -> str:
     minutes after.
     """
     platform = locate.get_current_platform()
+    if platform not in TAGS:
+        msg = f"libera-core builds on {', '.join(TAGS)}, not on {platform}"
+        raise RefusedError(msg)
     box = None
     if platform.startswith("linux-"):
         box = buildbox.Box(buildbox.BoxOptions(arch=host_arch()))
     tree = box.options.tree if box else build_root()
+    # The Mac's default is an external volume, which another Mac has not got.
+    if not box and not tree.parent.is_dir():
+        msg = (
+            f"the build folder {tree} has no parent folder here: set BUILD_ROOT"
+            " (on macOS, to a folder on a case-sensitive volume)"
+        )
+        raise RefusedError(msg)
     dist = Path("out", "core-dist")
     root = "/build" if box else tree.as_posix()
     steps = [

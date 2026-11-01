@@ -110,3 +110,35 @@ def test_the_editors_say_what_they_are_built_from(dist, tmp_path):
     assert record["payload_version"] == "0.7"
     assert record["source"] == {"libera_commit": "abc"}
     assert "platform" not in record, "libera-web is every platform's"
+
+
+def refuse_to_build(*args, **kwargs):
+    msg = "the refusal comes before any build"
+    raise AssertionError(msg)
+
+
+@pytest.fixture(name="no_build")
+def nothing_runs(monkeypatch):
+    monkeypatch.setattr(components, "run_here", refuse_to_build)
+    monkeypatch.setattr(components, "source_problems", refuse_to_build)
+
+
+@pytest.mark.usefixtures("no_build")
+def test_a_platform_with_no_wheel_tag_is_refused_before_the_build(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(
+        components.locate, "get_current_platform", lambda: "macos-x86_64"
+    )
+    with pytest.raises(RefusedError, match="not on macos-x86_64"):
+        components.build_core(REPO, tmp_path)
+
+
+@pytest.mark.usefixtures("no_build")
+def test_a_build_folder_on_a_missing_volume_asks_for_build_root(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        components.locate, "get_current_platform", lambda: "macos-arm64"
+    )
+    monkeypatch.setenv("BUILD_ROOT", str(tmp_path / "no-volume" / "euro-office-build"))
+    with pytest.raises(RefusedError, match="set BUILD_ROOT"):
+        components.build_core(REPO, tmp_path)
