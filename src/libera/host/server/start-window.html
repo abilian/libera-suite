@@ -136,13 +136,14 @@
         color: var(--text-tertiary); overflow: hidden;
         text-overflow: ellipsis; white-space: nowrap; }
       .empty { color: var(--text-tertiary); }
-      .problem {
+      .problem, .notice {
         margin: 16px 0 0;
         padding: 9px 12px;
         border: 1px solid var(--border-regular-control);
         border-radius: var(--radius);
         background: var(--background-normal);
       }
+      .notice .choices { display: flex; gap: 8px; margin-top: 8px; }
       footer {
         margin: 20px 20px 0;
         padding: 12px 0 20px;
@@ -215,6 +216,16 @@
       </ul>
 
       <p class="problem" id="problem" hidden></p>
+
+      <!-- Asked once: what 0.6 and earlier downloaded, which this version
+           never reads (payload/leftovers.py). -->
+      <div class="notice" id="old-payloads" hidden>
+        <span></span>
+        <div class="choices">
+          <button id="remove-old">{{Remove them}}</button>
+          <button id="keep-old">{{Keep them}}</button>
+        </div>
+      </div>
 
     </main>
     <footer>
@@ -406,6 +417,28 @@
         );
       }
 
+      async function loadOldPayloads() {
+        const { size_mb: size } = await json("old-payloads");
+        if (!size) return;
+        const box = document.getElementById("old-payloads");
+        box.querySelector("span").textContent = tr(
+          "Earlier versions of Libera Suite left {size} MB of components on this computer, which this version does not use.",
+          { size },
+        );
+        // Either answer stands: the host asks no more.
+        const answer = (remove) => async () => {
+          box.hidden = true;
+          try {
+            await host("old-payloads", JSON.stringify({ remove }));
+          } catch (e) {
+            problem(tr("That did not work: {reason}", { reason: e.message || e }));
+          }
+        };
+        document.getElementById("remove-old").onclick = answer(true);
+        document.getElementById("keep-old").onclick = answer(false);
+        box.hidden = false;
+      }
+
       document.getElementById("open").onclick = once(() =>
         host("open-document", ""),
       );
@@ -417,6 +450,7 @@
         loadRecent,
       );
       section((reason) => tr("Could not load the details of the components: {reason}", { reason }), loadPayload);
+      section((reason) => tr("Could not load the details of the components: {reason}", { reason }), loadOldPayloads);
     </script>
   </body>
 </html>

@@ -291,7 +291,7 @@ def test_what_earlier_versions_downloaded_is_listed_then_removed(
     old = tmp_path / "payload"
     (old / "0.6" / "bin").mkdir(parents=True)
     (old / "0.6" / "bin" / "x2t").write_bytes(b"x" * 2_000_000)
-    monkeypatch.setattr(commands.payload_mod, "get_data_dir", lambda: old)
+    monkeypatch.setattr(commands.leftovers.locate, "get_data_dir", lambda: old)
     monkeypatch.setattr(
         commands.payload_mod,
         "resolve",

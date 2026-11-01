@@ -3,6 +3,7 @@
     locate     where the payload is, and whether it is the right one
     generate   the converter's configuration, and running allfontsgen
     fonts      the fonts' indexes, in the state folder
+    leftovers  what 0.6 and earlier downloaded, removed when asked
 
 One module per verb, in that order, and nothing imports upward. From 0.7 the
 payload is two packages, libera-core and libera-web, which pip installs with

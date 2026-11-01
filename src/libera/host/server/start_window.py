@@ -11,7 +11,7 @@ import re
 
 from libera.host import apps, language
 from libera.host.server.api import Request, Response, answer_json, endpoint
-from libera.payload import locate
+from libera.payload import leftovers, locate
 
 
 @endpoint("GET", "start")
@@ -82,3 +82,23 @@ def serve_payload(r: Request) -> Response:
         "built": info.get("built"),
     }
     return answer_json(body)
+
+
+@endpoint("GET", "old-payloads")
+def serve_old_payloads(_r: Request) -> Response:
+    """What earlier versions downloaded, in MB, for the start window to offer
+    to remove; 0 when there is none, or it has asked once already."""
+    if not leftovers.should_offer():
+        return answer_json({"size_mb": 0})
+    size = sum(leftovers.measure(root) for root in leftovers.find())
+    return answer_json({"size_mb": round(size / 1e6)})
+
+
+@endpoint("POST", "old-payloads")
+def answer_old_payloads(r: Request) -> Response:
+    """The answer, which stands: removed or kept, the window asks no more."""
+    remove = bool(r.read_json().get("remove"))
+    if remove:
+        leftovers.remove()
+    leftovers.mark_asked()
+    return answer_json({"removed": remove})

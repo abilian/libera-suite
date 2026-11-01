@@ -43,6 +43,8 @@ API = {
     ("GET", "start"),
     ("GET", "apps"),
     ("GET", "payload"),
+    ("GET", "old-payloads"),
+    ("POST", "old-payloads"),
     # The regression harness.
     ("GET", "report"),
     ("POST", "shot"),
