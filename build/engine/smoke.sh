@@ -142,7 +142,12 @@ else
 # save rewrites the form's dictionary and has to leave the XFA out (core
 # 0176), or Acrobat, which shows the XFA, shows the form as it was. It
 # also has an Info dictionary, whose Creator the save has to keep.
-for doc in sample hybrid; do
+# encrypted.pdf is sample's text encrypted by pypdf with RC4, whose key is
+# computed over a file ID pypdf writes 32 bytes long: the writer kept 16 and
+# saved no comment (core 0181). Its comment is encrypted in the file, so the
+# check there is that an annotation was written, and the file still says it
+# is encrypted.
+for doc in sample hybrid encrypted; do
 rm -rf "$W/pdfdoc" && mkdir -p "$W/pdfdoc/changes"
 cp "$SMOKE_PDF/$doc.pdf" "$W/pdfdoc/Editor.bin"
 cp "$SMOKE_PDF/changes0.txt" "$W/pdfdoc/changes/changes0.json"
@@ -166,9 +171,13 @@ update = saved[len(original):]
 found = re.search(rb"/Contents \((.*?)\)\s*/", update, re.S)
 text = found.group(1).replace(rb"\000", b"\0").decode("utf-16", "replace") if found else ""
 xfa = b"/XFA" in update
-print(f"    {sys.argv[3]}.pdf: {len(original)} -> {len(saved)} bytes, comment: {text!r}"
+encrypted = sys.argv[3] == "encrypted"
+print(f"    {sys.argv[3]}.pdf: {len(original)} -> {len(saved)} bytes, "
+      + ("encrypted" if encrypted else f"comment: {text!r}")
       + (f", XFA kept: {xfa}" if sys.argv[3] == "hybrid" else ""))
-if not (saved.startswith(original) and b"/Subtype /Text" in update and "zqx-smoke-comment" in text):
+if not (saved.startswith(original) and b"/Subtype /Text" in update):
+    raise SystemExit(1)
+if encrypted and b"/Encrypt" not in update or not encrypted and "zqx-smoke-comment" not in text:
     raise SystemExit(1)
 if sys.argv[3] == "hybrid" and (xfa or b"/AcroForm" not in update):
     raise SystemExit(1)
