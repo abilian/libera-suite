@@ -1,0 +1,39 @@
+From f4523bce0f92d0128c486910088a437aa52d2fba Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Fri, 30 Oct 2026 08:46:59 +0100
+Subject: [PATCH] pdf: write a form field's value on the field
+
+The writer put a value on the first ancestor that already had one, and
+every field under that ancestor inherits it. Adobe LiveCycle writes an
+empty value at the root of its forms, so one name typed into a French
+Cerfa became the value of all its fields. A field with a name of its
+own now owns its values.
+---
+ PdfFile/SrcWriter/Annotation.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/PdfFile/SrcWriter/Annotation.cpp b/PdfFile/SrcWriter/Annotation.cpp
+index 110c1d33b6..b07267d427 100644
+--- a/PdfFile/SrcWriter/Annotation.cpp
++++ b/PdfFile/SrcWriter/Annotation.cpp
+@@ -1380,11 +1380,17 @@ namespace PdfWriter
+ 	{
+ 		if (Get(sV))
+ 			return this;
++		// A field with a name of its own owns its value: what an ancestor holds
++		// is inherited by every field under it, so writing there fills them all.
++		if (Get("T"))
++			return NULL;
+ 		CDictObject* pParent = m_pParent;
+ 		while (pParent)
+ 		{
+ 			if (pParent->Get(sV))
+ 				return pParent;
++			if (pParent->Get("T"))
++				return NULL;
+ 			CObjectBase* pParent2 = pParent->Get("Parent");
+ 			if (pParent2 && pParent2->GetType() == object_type_DICT)
+ 				pParent = (CDictObject*)pParent2;
+-- 
+2.55.0
+

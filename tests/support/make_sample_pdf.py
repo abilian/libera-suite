@@ -61,6 +61,40 @@ def make_nested_pdf(path: Path) -> None:
     write_pdf(path, objects)
 
 
+# The fields of make_form_pdf: (object number, name, rectangle).
+FORM_FIELDS = ((6, "name", (150, 700, 400, 725)), (7, "city", (150, 660, 400, 685)))
+
+
+def make_form_pdf(path: Path) -> None:
+    """Two text fields, each named, under a parent field that holds an empty
+    value, as Adobe's LiveCycle Designer writes its forms (Cerfas among
+    them): what a field does not hold itself, it inherits from there."""
+    stream = b"BT /F1 12 Tf 72 708 Td (Name) Tj 0 -40 Td (City) Tj ET"
+    widgets = [
+        b"<< /Type /Annot /Subtype /Widget /FT /Tx /T (%s) /Parent 8 0 R /P 3 0 R"
+        b" /Rect [%d %d %d %d] /DA (/F1 12 Tf 0 g) /F 4 >>" % (name.encode(), *rect)
+        for _, name, rect in FORM_FIELDS
+    ]
+    write_pdf(
+        path,
+        [
+            (
+                b"<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [8 0 R]"
+                b" /DA (/F1 12 Tf 0 g) /DR << /Font << /F1 5 0 R >> >> >> >>"
+            ),
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            (
+                b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R"
+                b" /Resources << /Font << /F1 5 0 R >> >> /Annots [6 0 R 7 0 R] >>"
+            ),
+            b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+            FONT,
+            *widgets,
+            b"<< /T (form) /V () /Kids [6 0 R 7 0 R] >>",
+        ],
+    )
+
+
 def write_pdf(path: Path, objects: list[bytes]) -> None:
     """Object N is objects[N - 1]; the first is the catalogue."""
     out = b"%PDF-1.4\n"
