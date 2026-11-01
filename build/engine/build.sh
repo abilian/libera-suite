@@ -246,14 +246,15 @@ fetch_repo() {
 
 # git am makes a commit per patch. Without an identity it applies the series,
 # fails at the first commit, and leaves the tree mid-am -- which reads as a
-# rejected patch rather than an unconfigured machine.
-require_git_identity() {
+# rejected patch rather than an unconfigured machine. It used to stop here and
+# ask for one, which a machine building the core's sdist from PyPI need not
+# have, and which a scheduled task on the Windows builder did not see though
+# its ssh sessions do. A commit's author comes from its patch; the committer is
+# a local detail of a build tree, so one is supplied when git has none.
+ensure_git_committer() {
     git config --get user.email >/dev/null && git config --get user.name >/dev/null && return 0
-    echo "FATAL: git has no user.email/user.name, and the patch queue is applied" >&2
-    echo "       with git am, which makes commits. Set them and re-run:" >&2
-    echo "         git config --global user.email you@example.com" >&2
-    echo "         git config --global user.name 'Your Name'" >&2
-    exit 1
+    export GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME:-Libera build}"
+    export GIT_COMMITTER_EMAIL="${GIT_COMMITTER_EMAIL:-build@libera.invalid}"
 }
 
 # ICU's data, cut down to what core reads: the character-set converters and the
@@ -286,7 +287,7 @@ icu_data_filter_check() {
 
 cmd_fetch() {
     require_case_sensitive
-    require_git_identity
+    ensure_git_committer
     mkdir -p "$SRC" "$OUT"
     # No argument means every pinned repo. Only core is built here; the rest are
     # the payload (sdkjs, web-apps) and the fonts x2t needs.
