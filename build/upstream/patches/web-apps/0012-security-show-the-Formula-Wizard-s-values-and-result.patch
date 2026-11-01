@@ -1,0 +1,68 @@
+From 8bdfc0902cd0a7148d708c51ba6e36751731711e Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Fri, 16 Oct 2026 08:56:31 +0000
+Subject: [PATCH] security: show the Formula Wizard's values and results as
+ text
+
+The Function Arguments dialog wrote each argument's value, the
+function's result and the formula's result into the page as HTML. A
+workbook with markup in a cell, and a formula reading that cell, ran
+the markup in the editor's page when the dialog was opened on the
+formula. The values are now escaped, and the results set as text.
+
+Found unfixed in Euro-Office's web-apps main and ONLYOFFICE's develop
+on 2026-10-29.
+
+Assisted-by: OpenAI Codex
+Taken from ElixirOffice's fork, https://github.com/leag1234/web-apps,
+commit a9beb39191959bad34fdec8703fdbba95eb91964 (a snapshot of their
+0.2.1, branch elixiroffice); the six lines that show a document's
+values, not the ones that escape the editor's own function names.
+---
+ .../spreadsheeteditor/main/app/view/FormulaWizard.js | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/apps/spreadsheeteditor/main/app/view/FormulaWizard.js b/apps/spreadsheeteditor/main/app/view/FormulaWizard.js
+index 5a1c68faa5..42770936c5 100644
+--- a/apps/spreadsheeteditor/main/app/view/FormulaWizard.js
++++ b/apps/spreadsheeteditor/main/app/view/FormulaWizard.js
+@@ -169,9 +169,9 @@ define([
+                 this.recalcArgTableSize();
+ 
+                 var result = props.asc_getFunctionResult();
+-                this.lblFunctionResult.html('= ' + ((result!==undefined && result!==null) ? result : ''));
++                this.lblFunctionResult.text('= ' + ((result!==undefined && result!==null) ? result : ''));
+                 result = props.asc_getFormulaResult();
+-                this.lblFormulaResult.html(this.textValue + ': ' + ((result!==undefined && result!==null)? result : ''));
++                this.lblFormulaResult.text(this.textValue + ': ' + ((result!==undefined && result!==null)? result : ''));
+ 
+                 var argres = props.asc_getArgumentsResult(),
+                     argtype = props.asc_getArgumentsType(),
+@@ -376,7 +376,7 @@ define([
+                 me.args[argcount].lblName.html('<b>' + me.args[argcount].argName + '</b>');
+             else
+                 me.args[argcount].lblName.html(me.args[argcount].argName);
+-            me.args[argcount].lblValue.html('= '+ ( argres!==null && argres!==undefined ? argres : '<span style="opacity: 0.6; font-weight: bold;">' + me.args[argcount].argTypeName + '</span>'));
++            me.args[argcount].lblValue.html('= '+ ( argres!==null && argres!==undefined ? _.escape(argres) : '<span style="opacity: 0.6; font-weight: bold;">' + me.args[argcount].argTypeName + '</span>'));
+ 
+             Common.UI.FocusManager.insert(this, txt, -1 * this.getFooterButtons().length);
+         },
+@@ -388,12 +388,12 @@ define([
+             var res = me.api.asc_insertArgumentsInFormula(me.getArgumentsValue(), index, arg.argType, this.funcprops ? this.funcprops.origin : undefined, !!endInsert),
+                 argres = res ? res.asc_getArgumentsResult() : undefined;
+             argres = argres ? argres[index] : undefined;
+-            arg.lblValue.html('= '+ (argres!==null && argres !==undefined ? argres : '<span style="opacity: 0.6; font-weight: bold;">' + arg.argTypeName + '</span>' ));
++            arg.lblValue.html('= '+ (argres!==null && argres !==undefined ? _.escape(argres) : '<span style="opacity: 0.6; font-weight: bold;">' + arg.argTypeName + '</span>' ));
+ 
+             var result = res ? res.asc_getFunctionResult() : undefined;
+-            me.lblFunctionResult.html('= ' + ((result!==undefined && result!==null)? result : ''));
++            me.lblFunctionResult.text('= ' + ((result!==undefined && result!==null)? result : ''));
+             result = res ? res.asc_getFormulaResult() : undefined;
+-            me.lblFormulaResult.html(me.textValue + ':' + ((result!==undefined && result!==null)? result : ''));
++            me.lblFormulaResult.text(me.textValue + ':' + ((result!==undefined && result!==null)? result : ''));
+             if (endInsert && res) {
+                 argres = res.asc_getArguments();
+                 argres && arg.argInput.setValue(argres[index]);
+-- 
+2.55.0
+

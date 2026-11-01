@@ -1,0 +1,48 @@
+From 11b8a74a2e44e42142f40a45fb80f50e210e1fe5 Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Fri, 16 Oct 2026 08:56:31 +0000
+Subject: [PATCH] security: show a tracked change's font and style names as
+ text
+
+The review popover builds its message as HTML and inserted the font
+name of a formatting change, and the name of a paragraph's new style,
+as they are in the document. A document whose font or style name is
+markup ran it in the editor's page when the cursor entered the change.
+Both are now encoded, as the inserted and deleted text already were.
+
+Found unfixed in Euro-Office's web-apps main and ONLYOFFICE's develop
+on 2026-10-29.
+
+Assisted-by: OpenAI Codex
+Taken from ElixirOffice's fork, https://github.com/leag1234/web-apps,
+commit a9beb39191959bad34fdec8703fdbba95eb91964 (a snapshot of their
+0.2.1, branch elixiroffice); the two lines only.
+---
+ apps/common/main/lib/controller/ReviewChanges.js | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/apps/common/main/lib/controller/ReviewChanges.js b/apps/common/main/lib/controller/ReviewChanges.js
+index 3731a9b253..c3993fcc2e 100644
+--- a/apps/common/main/lib/controller/ReviewChanges.js
++++ b/apps/common/main/lib/controller/ReviewChanges.js
+@@ -416,7 +416,7 @@ define([
+                         if (value.Get_Shd() !== undefined)
+                             proptext += (me.textShd + cmm);
+                         if (value.Get_FontFamily() !== undefined)
+-                            proptext += (value.Get_FontFamily() + cmm);
++                            proptext += (Common.Utils.String.htmlEncode(value.Get_FontFamily()) + cmm);
+                         if (value.Get_FontSize() !== undefined)
+                             proptext += (value.Get_FontSize() + cmm);
+                         if (value.Get_Spacing() !== undefined)
+@@ -487,7 +487,7 @@ define([
+                             proptext += (me.textNum + cmm);
+                         if (value.Get_PStyle() !== undefined) {
+                             var style = me.api.asc_GetStyleNameById(value.Get_PStyle());
+-                            if (!_.isEmpty(style)) proptext += (style + cmm);
++                            if (!_.isEmpty(style)) proptext += (Common.Utils.String.htmlEncode(style) + cmm);
+                         }
+ 
+                         if (!_.isEmpty(proptext)) {
+-- 
+2.55.0
+
