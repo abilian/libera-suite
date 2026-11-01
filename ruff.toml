@@ -71,6 +71,12 @@ lint.extend-ignore = [
     "S603",    # subprocess call -- argv form, no shell, binary from our own payload
     "PLC0415", # x2t is found through the session, which is bound per thread
 ]
+# signing.py runs libera-sign out of the payload, beside x2t: the signing
+# library has a C++ interface only, so that program is the only way to it.
+"src/libera/host/signing.py" = [
+    "S404",    # subprocess import
+    "S603",    # subprocess call -- argv form, no shell, binary from our own payload
+]
 # The two container-side checks. Neither is shipped and neither runs on a
 # user's machine: they exist inside a build container, once, to prove that the
 # thing just built actually does something.

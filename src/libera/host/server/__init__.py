@@ -8,6 +8,7 @@ By what is asked for, in this order, nothing importing upward:
     spelling       the personal dictionary
     editor         the editor's page: its bridge, its reports, its address
     document       the open document: handing it over, its edits, saving it
+    signatures     the document's digital signatures, and the certificate
     opening        getting documents into windows: open, recent, new
     payload_files  the payload as static files, the bridge spliced in
     admission      who may ask; the headers on every answer
@@ -16,7 +17,7 @@ By what is asked for, in this order, nothing importing upward:
     listener       the socket, the threads, the port
 
 Endpoints are functions from a `api.Request` to a `api.Response`,
-marked `@endpoint(method, name)` where they are defined. In the five domain
+marked `@endpoint(method, name)` where they are defined. In the six domain
 modules a marked name is an entry point, an underscored one a helper, and any
 other is used elsewhere in the host.
 

@@ -13,7 +13,7 @@ import pathlib
 import shutil
 import threading
 
-from libera.host import convert, desktop, hooks, saving
+from libera.host import convert, desktop, hooks, saving, signing
 from libera.host.convert import ConversionError
 from libera.host.server import diagnostics
 from libera.host.server.api import (
@@ -88,6 +88,7 @@ def serve_current(r: Request) -> Response:
         "path": str(p) if p else "",
         "protectable": protectable,
         "readsItself": reads_itself,
+        "signable": signing.is_signable(r.session),
     })
 
 

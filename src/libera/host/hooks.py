@@ -57,6 +57,10 @@ class Shell(Protocol):
         """Whether to save a protected document as `document`, in a format
         that carries no password."""
 
+    def confirm_save_before_signing(self, document: Path) -> bool:
+        """Whether to save `document`'s edits so that it can be signed: a
+        document is signed as it is on disk."""
+
     def choose_open_path(self, kind: str) -> str | None:
         """What to open, or None if the user cancelled."""
 
@@ -127,6 +131,9 @@ class HeadlessShell:
         logger.warning("reload: no window to reload")
 
     def confirm_unprotected(self, document: Path) -> bool:
+        return False
+
+    def confirm_save_before_signing(self, document: Path) -> bool:
         return False
 
     def ask_to_recover(self, document: Path) -> bool:

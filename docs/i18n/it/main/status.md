@@ -13,6 +13,7 @@ L'interfaccia di Libera Suite è in inglese: menu e pulsanti sono citati qui com
 | **Esportare** | Save As propone un elenco di formati per ogni applicazione, PDF compreso. Ogni formato proposto è verificato con una conversione reale, di cui si rilegge il testo. |
 | **PDF** | Commenti, evidenziazioni e disegni, moduli compilati, pagine aggiunte, eliminate, ruotate e spostate, piccole correzioni di testo. Il salvataggio aggiunge le tue modifiche dopo l'originale, che resta com'era. [Lavorare con i documenti](../guide/documents.md#pdfs) ha i dettagli. |
 | **Documenti protetti da password** | Documenti, fogli di calcolo, presentazioni e PDF protetti da password la chiedono, e il salvataggio la conserva. File ▸ Proteggi ne dà una, la cambia o la toglie, tranne che per un PDF firmato o limitato dal suo autore. [Lavorare con i documenti](../guide/documents.md#passwords) ha i dettagli. |
+| **Firme digitali** | I documenti Word, Excel e PowerPoint mostrano le loro firme, valide o no, e restano in sola lettura finché sono firmati. Per firmare servono un file di chiave, PKCS#12 o PEM, e la sua passphrase. [Lavorare con i documenti](../guide/documents.md#signatures) ha i dettagli. |
 | **Immagini** | Conservate all'apertura e al salvataggio; Inserisci ▸ Immagine funziona. |
 | **Stampare** | Genera un PDF, chiede dove conservarlo e lo apre nel tuo lettore di PDF. |
 | **Controllo ortografico** | Sei lingue, con suggerimenti. Vedi sotto. |
@@ -57,7 +58,6 @@ Se incontri qualcosa che *non* è in questo elenco, [segnalacelo](../feedback.md
 
 ### Nella finestra del documento
 
-- **Firme digitali.**
 - **Stampa unione.**
 - **Plugin.** Disattivati nel progetto originale di questo fork, quindi il pannello non compare mai.
 - **Macro.** Disattivate. Le macro proprie dei componenti sono in JavaScript e non eseguono il VBA dei documenti di Microsoft Office, quindi le macro di un documento non vengono eseguite. Vengono però conservate: salvando un `.docm`, un `.xlsm` o un `.pptm` il suo VBA resta intatto. [La roadmap](/en/develop/roadmap/), in inglese, descrive cosa arriverà al loro posto.

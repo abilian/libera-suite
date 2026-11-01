@@ -45,6 +45,28 @@ class PasswordAsked:
     answer: Callable[[str], None]
 
 
+@dataclass(frozen=True)
+class ChosenCertificate:
+    """A key and its certificate, chosen in one window to sign with, and
+    what they say (signing.choose_certificate). In memory only, the
+    passphrase out of every repr.
+
+    `id` is what the editor holds and hands back to `Sign`: a token of this
+    window's, never a path or the passphrase.
+    """
+
+    key: pathlib.Path
+    cert: pathlib.Path | None
+    passphrase: str = field(repr=False)
+    name: str
+    date: str
+    id: str = field(default_factory=lambda: secrets.token_hex(8))
+
+    def for_editor(self) -> dict:
+        """What the sign dialog shows: OnNativeReturnCallback's object."""
+        return {"id": self.id, "name": self.name, "date": self.date}
+
+
 @dataclass(eq=False)
 class Session:
     """One window: where its files are, what is open in it, and what the host
@@ -105,6 +127,8 @@ class Session:
     # 90 for none given or 91 for a wrong one, and what tries the one typed
     # (opening.ask_password).
     password_asked: PasswordAsked | None = field(default=None, repr=False)
+    # The certificate this window signs with, once chosen in its dialog.
+    certificate: ChosenCertificate | None = field(default=None, repr=False)
 
     @property
     def id(self) -> str:

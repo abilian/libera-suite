@@ -13,6 +13,7 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 | **Exportar** | Save As ofrece una lista de formatos para cada aplicación, PDF incluido. Cada formato ofrecido se comprueba con una conversión real, cuyo texto se vuelve a leer. |
 | **PDF** | Comentarios, resaltados y dibujos, formularios rellenados, páginas añadidas, eliminadas, giradas y movidas, pequeñas correcciones de texto. Al guardar, tus cambios van después del original, que queda como estaba. [Trabajar con documentos](../guide/documents.md#pdfs) tiene el detalle. |
 | **Documentos con contraseña** | Los documentos, hojas de cálculo, presentaciones y PDF protegidos con contraseña la piden, y al guardar se conserva. Archivo ▸ Proteger pone una, la cambia o la quita, salvo en un PDF firmado o restringido por su autor. [Trabajar con documentos](../guide/documents.md#passwords) tiene los detalles. |
+| **Firmas digitales** | Los documentos de Word, Excel y PowerPoint muestran sus firmas, válidas o no, y quedan en solo lectura mientras están firmados. Para firmar hace falta un archivo de clave, PKCS#12 o PEM, y su contraseña. [Trabajar con documentos](../guide/documents.md#signatures) tiene los detalles. |
 | **Imágenes** | Se conservan al abrir y al guardar; Insertar ▸ Imagen funciona. |
 | **Imprimir** | Genera un PDF, pregunta dónde guardarlo y lo abre en tu visor de PDF. |
 | **Corrección ortográfica** | Seis idiomas, con sugerencias. Más abajo, los detalles. |
@@ -57,7 +58,6 @@ Si te encuentras con algo que *no* está en esta lista, [cuéntanoslo](../feedba
 
 ### En la ventana del documento
 
-- **Firmas digitales.**
 - **Combinar correspondencia.**
 - **Complementos.** Desactivados en el proyecto original de este fork, así que el panel nunca aparece.
 - **Macros.** Desactivadas. Las macros propias de los componentes son JavaScript y no ejecutan el VBA de los documentos de Microsoft Office, así que las macros de un documento no se ejecutan. Se conservan: al guardar un `.docm`, `.xlsm` o `.pptm`, su VBA queda intacto. [La hoja de ruta](/en/develop/roadmap/), en inglés, describe qué llegará en su lugar.

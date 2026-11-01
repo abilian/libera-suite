@@ -13,6 +13,7 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 | **Exportieren** | Save As bietet für jede Anwendung eine Formatliste an, PDF eingeschlossen. Jedes angebotene Format wird durch eine echte Konvertierung geprüft, deren Text danach wieder gelesen wird. |
 | **PDFs** | Kommentare, Markierungen und Zeichnungen, ausgefüllte Formulare, eingefügte, gelöschte, gedrehte und verschobene Seiten, kleine Textkorrekturen. Beim Speichern kommen Ihre Änderungen hinter das Original, das bleibt, wie es war. [Mit Dokumenten arbeiten](../guide/documents.md#pdfs) hat die Einzelheiten. |
 | **Kennwortgeschützte Dokumente** | Kennwortgeschützte Dokumente, Tabellen, Präsentationen und PDFs fragen nach ihrem Kennwort, und beim Speichern bleibt es erhalten. Datei ▸ Schützen gibt eines, ändert oder entfernt es, außer bei einem signierten oder von seinem Autor eingeschränkten PDF. [Mit Dokumenten arbeiten](../guide/documents.md#passwords) beschreibt die Einzelheiten. |
+| **Digitale Signaturen** | Word-, Excel- und PowerPoint-Dokumente zeigen ihre Signaturen, gültig oder nicht, und bleiben schreibgeschützt, solange sie signiert sind. Zum Signieren braucht es eine Schlüsseldatei, PKCS#12 oder PEM, und ihr Kennwort. [Mit Dokumenten arbeiten](../guide/documents.md#signatures) beschreibt die Einzelheiten. |
 | **Bilder** | Bleiben beim Öffnen und Speichern erhalten; Einfügen ▸ Bild funktioniert. |
 | **Drucken** | Erzeugt ein PDF, fragt, wo es aufbewahrt werden soll, und öffnet es in Ihrem PDF-Betrachter. |
 | **Rechtschreibprüfung** | Sechs Sprachen, mit Vorschlägen. Siehe unten. |
@@ -57,7 +58,6 @@ Wenn Sie auf etwas stoßen, das *nicht* auf dieser Liste steht, [melden Sie es u
 
 ### Im Dokumentfenster
 
-- **Digitale Signaturen.**
 - **Serienbriefe.**
 - **Plugins.** In diesem Fork vom Upstream-Projekt abgeschaltet, daher erscheint das Panel nie.
 - **Makros.** Abgeschaltet. Die Makros der Komponenten sind JavaScript und führen kein VBA aus Microsoft-Office-Dokumenten aus, daher werden die Makros eines Dokuments nicht ausgeführt. Sie bleiben erhalten: Beim Speichern einer `.docm`-, `.xlsm`- oder `.pptm`-Datei bleibt ihr VBA unverändert. [Die Roadmap](/en/develop/roadmap/), auf Englisch, beschreibt, was stattdessen kommt.

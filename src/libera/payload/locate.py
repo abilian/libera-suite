@@ -112,6 +112,13 @@ class Layout:
         return self.bin / f"x2t{EXE}"
 
     @property
+    def sign(self) -> Path:
+        """libera-sign, which signs and checks OOXML packages (core 0190).
+        Not part of `is_complete`: a build tree from before it still opens
+        documents, and offers no signatures."""
+        return self.bin / f"libera-sign{EXE}"
+
+    @property
     def allfontsgen(self) -> Path:
         return self.bin / "tools" / f"allfontsgen{EXE}"
 
