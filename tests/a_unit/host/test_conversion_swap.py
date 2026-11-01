@@ -142,10 +142,12 @@ def test_an_x2t_that_hangs_is_a_failed_conversion(edited, monkeypatch):
     """It held its slot and its request thread for good, and the save never
     answered."""
 
-    def hangs(cmd, **kwargs):
-        raise convert.subprocess.TimeoutExpired(cmd, kwargs["timeout"])
+    def hangs(argv, env):
+        # What run_watched says when it stops one (test_x2t_watch.py).
+        msg = f"x2t did not finish in {convert.X2T_TIMEOUT} s"
+        raise convert.ConversionError(msg)
 
-    monkeypatch.setattr(convert.subprocess, "run", hangs)
+    monkeypatch.setattr(convert, "run_watched", hangs)
     monkeypatch.setattr(convert.generate, "make_code_cache_dir", lambda _: edited.work)
 
     with pytest.raises(convert.ConversionError, match="did not finish"):

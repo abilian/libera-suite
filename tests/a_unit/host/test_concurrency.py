@@ -133,7 +133,7 @@ def test_only_so_many_converters_run_at_once(session, monkeypatch):
         with guard:
             running -= 1
 
-    monkeypatch.setattr(convert.subprocess, "run", slow_run)
+    monkeypatch.setattr(convert, "run_watched", slow_run)
     monkeypatch.setattr(convert.generate, "make_code_cache_dir", lambda _: session.work)
 
     # More than may run, whatever this machine's core count: a fixed dozen let
@@ -142,7 +142,7 @@ def test_only_so_many_converters_run_at_once(session, monkeypatch):
     run_together(lambda _: convert.run_x2t(session, "job.xml"), range(asking))
 
     # Equal, not at most: zero would also be at most, and is what a run_x2t
-    # that stopped calling subprocess.run would give.
+    # that stopped calling run_watched would give.
     assert most == convert.X2T_AT_ONCE
 
 

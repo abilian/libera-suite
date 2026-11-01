@@ -16,9 +16,12 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import time
+import zipfile
 from typing import TYPE_CHECKING
 from xml.sax.saxutils import escape
 
+from libera.host import desktop
 from libera.host.changelog import ChangeLog
 from libera.payload import generate, locate
 
@@ -55,6 +58,17 @@ _X2T_SLOTS = threading.BoundedSemaphore(X2T_AT_ONCE)
 # legitimate conversion is ever measured near it.
 X2T_TIMEOUT = 600
 
+# How much memory one conversion may hold, in RAM or out of it. A 6 KB document
+# of nested entities took x2t to 3.9 GB, and a 3 MB archive whose part unpacks
+# to 3 GB to 3.1 GB (notes/plans/converter-hardening.md): the laptop swaps
+# before the timeout ends it. Whatever x2t falls for next, it costs a refused document.
+# The largest legitimate conversion measured, a 200,000-row spreadsheet with a
+# formula on each row exported to .ods, held 2.0 GB (2026-10-29, macOS); this
+# is a quarter above it.
+X2T_MEMORY = 2560 << 20
+# How often it is looked at: a spike faster than this overshoots that long.
+X2T_WATCH = 0.2
+
 
 def run_x2t(session: Session, *args: str) -> subprocess.CompletedProcess:
     """Run x2t out of the payload, in the environment `locate.make_tool_env`
@@ -63,19 +77,37 @@ def run_x2t(session: Session, *args: str) -> subprocess.CompletedProcess:
     env = locate.make_tool_env(session.layout.bin)
     env["DOCTRENDERER_CACHE_DIR"] = str(generate.make_code_cache_dir(session.layout))
     with _X2T_SLOTS:
+        return run_watched([str(session.layout.x2t), *args], env)
+
+
+def run_watched(argv: list[str], env: dict[str, str]) -> subprocess.CompletedProcess:
+    """`argv` to the end, unless it holds more than X2T_MEMORY or runs past
+    X2T_TIMEOUT: then it is stopped, and the conversion fails saying which."""
+    proc = subprocess.Popen(
+        argv,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+        creationflags=locate.NO_WINDOW,
+    )
+    deadline = time.monotonic() + X2T_TIMEOUT
+    while True:
         try:
-            return subprocess.run(
-                [str(session.layout.x2t), *args],
-                capture_output=True,
-                text=True,
-                check=False,
-                env=env,
-                creationflags=locate.NO_WINDOW,
-                timeout=X2T_TIMEOUT,
-            )
-        except subprocess.TimeoutExpired as e:
-            msg = f"x2t did not finish in {X2T_TIMEOUT} s"
-            raise ConversionError(msg) from e
+            # Retrying after a timeout loses no output (the subprocess docs).
+            out, err = proc.communicate(timeout=X2T_WATCH)
+        except subprocess.TimeoutExpired:
+            held = desktop.memory_bytes(proc.pid)
+            if held > X2T_MEMORY:
+                msg = f"x2t held {held >> 20} MB, more than {X2T_MEMORY >> 20} MB"
+            elif time.monotonic() > deadline:
+                msg = f"x2t did not finish in {X2T_TIMEOUT} s"
+            else:
+                continue
+            proc.kill()
+            proc.communicate()
+            raise ConversionError(msg) from None
+        return subprocess.CompletedProcess(argv, proc.returncode, out, err)
 
 
 # x2t's own ids, from sdkjs's c_oAscEncodings and c_oAscCsvDelimiter.
@@ -171,6 +203,35 @@ def write_csv_open_job(
     )
 
 
+# The most a package may say it unpacks to. x2t unpacks a whole .docx, .xlsx or
+# .odt to the temporary folder and reads a whole part into memory, with no
+# budget: a 4 MB file wrote 4 GB, and a 3 MB one held 3.1 GB
+# (notes/plans/converter-hardening.md). The largest legitimate package
+# measured says 72 MB: the 200,000-row spreadsheet behind X2T_MEMORY. The
+# sizes are the package's own word and can lie; the budget in the converter
+# itself, with the payload that brings libxml2 2.9.14, counts the real bytes.
+PACKAGE_LIMIT = 1 << 30
+
+
+def check_package(src: pathlib.Path) -> None:
+    """Refuse a package that says it unpacks to more than PACKAGE_LIMIT,
+    before x2t starts on it. Anything that is not a ZIP package is x2t's."""
+    if not zipfile.is_zipfile(src):
+        return
+    try:
+        with zipfile.ZipFile(src) as package:
+            total = sum(member.file_size for member in package.infolist())
+    except zipfile.BadZipFile:
+        # Damaged past what Python reads: x2t, which reads more, decides.
+        return
+    if total > PACKAGE_LIMIT:
+        msg = (
+            f"{src.name} unpacks to {total >> 20} MB,"
+            f" more than {PACKAGE_LIMIT >> 20} MB"
+        )
+        raise ConversionError(msg)
+
+
 def convert_to_editor_bin(session: Session, src: pathlib.Path) -> None:
     """Convert a document into the session's Editor.bin. See `_convert_in`."""
     # It replaces the session's doc/ directory, change log included.
@@ -193,6 +254,7 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
     first, so a conversion that failed took the document it was replacing with
     it -- and a reload that could not reopen its own folded edits lost them.
     """
+    check_package(src)
     staged = session.work / "doc.new"
     shutil.rmtree(staged, ignore_errors=True)
     staged.mkdir(parents=True)
