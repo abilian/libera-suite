@@ -172,7 +172,23 @@ def type_into(editor, rect: tuple[int, int, int, int], text: str) -> None:
         viewer["x"] + left + (x1 + x2) / 2 * scale,
         viewer["y"] + top + (792 - (y1 + y2) / 2) * scale,
     )
-    editor.page.keyboard.type(text, delay=50)
+    # The PDF editor drops a key typed within about 50 ms of a field's first:
+    # the first puts the field into editing, and the next comes too soon. At
+    # 30 ms a key the second always went, at 50 ms in four runs of ten, at 80
+    # never (measured 2026-11-01, upstream's editor, with or without our
+    # changes). A person typing that fast loses it too; release-0.7 has it.
+    editor.page.keyboard.type(text[0])
+    time.sleep(0.2)
+    editor.page.keyboard.type(text[1:], delay=50)
+    # And a click away straight after the last key, while the field is still
+    # taking it, does not commit it: once in five runs the value stayed
+    # uncommitted. A person never clicks that soon; the test waits until the
+    # field holds the text.
+    editor.frame.wait_for_function(
+        "(t) => { const f = Asc.editor.getPDFDoc().activeForm;"
+        " return !!f && f.GetValue() === t; }",
+        arg=text,
+    )
     editor.page.mouse.click(viewer["x"] + 5, viewer["y"] + 5)
 
 
@@ -187,27 +203,19 @@ def test_a_filled_field_keeps_its_value_to_itself(
     make_form_pdf(pdf)
     original = pdf.read_bytes()
     editor = editor_with([], document=pdf)
-    session = next(iter(sessions.SESSIONS.values()))
     (number, _, rect), (other, _, _) = FORM_FIELDS
 
     type_into(editor, rect, MARK)
-    # Typing sends changes before the value is committed, when the field
-    # loses the focus; a save in between has no value to write.
-    deadline = time.monotonic() + 10
-    size = -1
-    while time.monotonic() < deadline:
-        committed = editor.frame.evaluate(
-            "() => Asc.editor.getPDFDoc().GetField('form.name').GetParentValue()"
-        )
-        now = session.change_log.path.stat().st_size if session.change_log else 0
-        if committed == MARK and now and now == size:
-            break
-        size = now
-        time.sleep(0.5)
-    saved = tmp_path / "saved.pdf"
-    convert.export(session, saved, 513, None)
+    # Saved with the editor's own Save, as a person saves: it commits the
+    # field still being edited (`BlurActiveObject`) and sends the changes it
+    # holds first. An export from the host once the change log looked still
+    # was sometimes ahead of them, and wrote the form as it was; and a click
+    # away from the field did not always commit it (2026-11-01).
+    with editor.answered("save") as saved:
+        editor.press("ControlOrMeta+s")
+    assert saved.value.json()["error"] == 0
 
-    data = saved.read_bytes()
+    data = pdf.read_bytes()
     assert data.startswith(original)
     mark = b"\\000".join(bytes([c]) for c in MARK.encode())
 
