@@ -3,7 +3,7 @@ date: 2026-10-26
 description: Libera Suite 0.6 spreekt elke taal van haar toepassingen, maakt documenten op zoals Word als een lettertype ontbreekt, houdt Markdown-koppen en controleert Nederlandse spelling.
 ---
 
-# Libera Suite 0.6: elke taal, en pagina's die afbreken zoals in Word
+# Libera Suite 0.6: 44 talen en betere ondersteuning voor macOS
 
 Libera Suite 0.6 is uit. Haar menu's en vensters spreken nu alle 44 talen van haar toepassingen, en een document waarvan je de lettertypen niet hebt, wordt opgemaakt zoals in Word.
 
@@ -19,7 +19,7 @@ Sinds 0.5 volgen de toepassingen de taal van je systeem, maar de menubalk, het s
 
 Alleen de Franse, Duitse, Italiaanse en Spaanse vertaling is nagelezen door iemand met die taal als moedertaal. De andere, ook de Nederlandse, zijn concepten: staat er een verkeerd of onhandig woord in jouw taal, [laat het ons weten](../feedback.md), en je verbetering komt in de volgende versie.
 
-## Pagina's die afbreken zoals in Word
+## Vervangers voor ontbrekende lettertypen
 
 Vraagt een document om een lettertype dat je computer niet heeft, dan vervangt Libera Suite het nu zoals Word:
 
@@ -35,7 +35,7 @@ Vraagt een document om een lettertype dat je computer niet heeft, dan vervangt L
 - **Op Linux toont het menu Bestand zijn sneltoetsen:** Nieuw, Openen en Sluiten tonen Ctrl-N, Ctrl-O en Ctrl-W.
 - **Een OpenDocument-bestand zonder basispaginastijlen houdt zijn stijlen**, waar elke alinea eerder in de standaardstijl openging.
 
-## Wat hetzelfde blijft
+## Ongewijzigd
 
 - **Linux op arm64** installeert nog steeds 0.4.1: er is nog geen arm64-build van 0.6.
 

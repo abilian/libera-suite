@@ -3,7 +3,7 @@ date: 2026-10-12
 description: Libera Suite 0.4 marks a document already open elsewhere, in Libera Suite or in LibreOffice, renders OpenDocument files more faithfully, and adds drag and drop, a personal dictionary and conversion from the command line.
 ---
 
-# Libera Suite 0.4: safer in a shared folder, more faithful to OpenDocument
+# Libera Suite 0.4: document locking and OpenDocument fidelity
 
 Libera Suite 0.4 is out. It protects a document someone else has open, in Libera Suite or in LibreOffice. Its editors read and write the OpenDocument formats more accurately.
 

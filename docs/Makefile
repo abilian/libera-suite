@@ -66,7 +66,7 @@ check: preprocess
 
 # Publish
 publish: clean build
-	hop3 deploy --context prod -y
+	hop3 deploy -y
 
 # Alias for publish
 deploy: publish

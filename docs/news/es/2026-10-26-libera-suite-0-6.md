@@ -3,7 +3,7 @@ date: 2026-10-26
 description: Libera Suite 0.6 habla todos los idiomas de sus aplicaciones, maqueta como Word cuando falta una fuente, conserva los títulos de Markdown y revisa la ortografía en neerlandés.
 ---
 
-# Libera Suite 0.6: todos los idiomas, y páginas que se cortan como en Word
+# Libera Suite 0.6: 44 idiomas y mejor compatibilidad con macOS
 
 Libera Suite 0.6 ya está disponible. Sus menús y ventanas hablan ahora los 44 idiomas de sus aplicaciones, y un documento cuyas fuentes no tienes se maqueta como en Word.
 
@@ -19,7 +19,7 @@ Desde la 0.5 las aplicaciones siguen el idioma de tu sistema, pero la barra de m
 
 Solo las traducciones española, francesa, alemana e italiana las ha revisado un hablante nativo. Las demás son borradores: si una palabra en tu idioma está mal o suena rara, [escríbenos](../feedback.md), y tu corrección entrará en la próxima versión.
 
-## Páginas que se cortan como en Word
+## Sustitutos para las fuentes ausentes
 
 Cuando un documento pide una fuente que tu ordenador no tiene, Libera Suite la sustituye ahora como Word:
 
@@ -35,7 +35,7 @@ Cuando un documento pide una fuente que tu ordenador no tiene, Libera Suite la s
 - **En Linux, el menú Archivo muestra sus atajos:** Nuevo, Abrir y Cerrar muestran Ctrl-N, Ctrl-O y Ctrl-W.
 - **Un archivo OpenDocument sin estilos de página maestra conserva sus estilos**, donde cada párrafo se abría con el estilo predeterminado.
 
-## Lo que no cambia
+## Sin cambios
 
 - **Linux en arm64** sigue instalando la 0.4.1: aún no hay compilación arm64 de la 0.6.
 

@@ -3,7 +3,7 @@ date: 2026-10-12
 description: Libera Suite 0.4 kennzeichnet ein Dokument, das bereits anderswo geöffnet ist, in Libera Suite oder in LibreOffice, gibt OpenDocument-Dateien genauer wieder und bringt Ziehen und Ablegen, ein persönliches Wörterbuch und die Konvertierung auf der Kommandozeile.
 ---
 
-# Libera Suite 0.4: sicherer im geteilten Ordner, genauer mit OpenDocument
+# Libera Suite 0.4: Dokumentsperren und genauere OpenDocument-Wiedergabe
 
 Libera Suite 0.4 ist erschienen. Sie schützt ein Dokument, das jemand anderes geöffnet hat, in Libera Suite wie in LibreOffice. Ihre Editoren lesen und schreiben die OpenDocument-Formate genauer.
 

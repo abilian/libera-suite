@@ -36,7 +36,7 @@ Libera Suite legge e scrive i tuoi documenti sul tuo disco e non li invia da nes
 
 Si collega a internet per scaricare i componenti di Euro-Office durante l'installazione. [La documentazione elenca](../index.md#what-leaves-your-machine) ciascuna delle sue connessioni, e il codice sorgente permette di verificarlo.
 
-## Come installarla
+## Installazione
 
 - **Linux** (x86_64 e arm64): un comando nel terminale, che installa un pacchetto Flatpak quando Flatpak è presente.
 - **macOS** (Apple Silicon): un comando nel terminale, con o senza Homebrew.
@@ -56,7 +56,7 @@ Se scegli il software per un'organizzazione, dicci quali funzioni le servirebber
 
 [Commenti](../feedback.md) spiega come scriverci.
 
-## Chi la sviluppa
+## Abilian ed Euro-Office
 
 Libera Suite è sviluppata da [Abilian](https://abilian.com), un'azienda francese di software libero. È costruita sui componenti di [Euro-Office](https://github.com/Euro-Office), un fork di [ONLYOFFICE](https://www.onlyoffice.com/), il software di Ascensio System SIA. Questi componenti forniscono il motore dei documenti e il supporto dei formati. Abilian ha scritto l'applicazione desktop che li ospita: le finestre, i menu, l'apertura e il salvataggio dei file, il pacchetto.
 

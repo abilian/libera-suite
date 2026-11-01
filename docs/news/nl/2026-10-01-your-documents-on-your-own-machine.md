@@ -24,7 +24,7 @@ Een Word-, Excel- of PowerPoint-bestand opent met de opmaak intact: lettertypen,
 
 De vier toepassingen delen een startvenster met je recente documenten, spellingcontrole in vijf talen, export naar PDF, afdrukken en herstel van je werk na een crash.
 
-## Vrije software, zonder kosten
+## Vrije software zonder kosten
 
 Libera Suite vraagt geen licentie en geen abonnement. Je kunt ze op zoveel computers installeren als je wilt en zo lang houden als je wilt. Ze heeft geen server van ons nodig om te werken.
 
@@ -36,7 +36,7 @@ Libera Suite leest en schrijft je documenten op je eigen schijf en stuurt ze ner
 
 Ze gaat online om bij de installatie de Euro-Office-componenten te downloaden. [De documentatie somt](../index.md#what-leaves-your-machine) elke verbinding op die ze maakt, en met de broncode kun je dat controleren.
 
-## Zo installeer je Libera Suite
+## Installatie
 
 - **Linux** (x86_64 en arm64): één opdracht in de terminal, die een Flatpak-pakket installeert als Flatpak aanwezig is.
 - **macOS** (Apple Silicon): één opdracht in de terminal, met of zonder Homebrew.
@@ -56,7 +56,7 @@ Kies je software voor een organisatie, laat ons dan weten welke functies die nod
 
 [Feedback](../feedback.md) legt uit hoe je ons schrijft.
 
-## Wie haar ontwikkelt
+## Abilian en Euro-Office
 
 Libera Suite wordt ontwikkeld door [Abilian](https://abilian.com), een Frans bedrijf in vrije software. Ze is gebouwd op de componenten van [Euro-Office](https://github.com/Euro-Office), een fork van [ONLYOFFICE](https://www.onlyoffice.com/), de software van Ascensio System SIA. Die componenten leveren de documentengine en de ondersteuning van de formaten. Abilian schreef de desktoptoepassing waarin ze draaien: de vensters, de menu's, het openen en opslaan van bestanden, en de verpakking.
 
