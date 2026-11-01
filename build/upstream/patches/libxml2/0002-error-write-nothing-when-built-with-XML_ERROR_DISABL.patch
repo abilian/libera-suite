@@ -1,0 +1,44 @@
+From 2bda22c6bb42632f359ed483e19ba22c35c62dbd Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Thu, 29 Oct 2026 11:36:43 +0100
+Subject: [PATCH 2/2] error: write nothing when built with
+ XML_ERROR_DISABLE_MODE
+
+Core's CMake defines XML_ERROR_DISABLE_MODE, and the copy of libxml2
+core carries then makes the default error handler do nothing, so a
+malformed document does not write parser messages to x2t's standard
+error. Carried over from that copy. Its other changes, in the files
+core compiles, are libxml2 fixes that 2.9.14 has, WebAssembly
+switches, and a few small ones, not carried over.
+---
+ error.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/error.c b/error.c
+index 9ff1c2b..fbc8495 100644
+--- a/error.c
++++ b/error.c
+@@ -67,6 +67,7 @@ void XMLCDECL xmlGenericErrorDefaultFunc	(void *ctx ATTRIBUTE_UNUSED,
+  *
+  * Default handler for out of context error messages.
+  */
++#ifndef XML_ERROR_DISABLE_MODE
+ void XMLCDECL
+ xmlGenericErrorDefaultFunc(void *ctx ATTRIBUTE_UNUSED, const char *msg, ...) {
+     va_list args;
+@@ -78,6 +79,12 @@ xmlGenericErrorDefaultFunc(void *ctx ATTRIBUTE_UNUSED, const char *msg, ...) {
+     vfprintf((FILE *)xmlGenericErrorContext, msg, args);
+     va_end(args);
+ }
++#else
++void XMLCDECL
++xmlGenericErrorDefaultFunc(void *ctx ATTRIBUTE_UNUSED,
++                           const char *msg ATTRIBUTE_UNUSED, ...) {
++}
++#endif
+ 
+ /**
+  * initGenericErrorDefaultFunc:
+-- 
+2.55.0
+

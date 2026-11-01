@@ -40,6 +40,9 @@ TAGS = {
 }
 
 
+# The sources the converter is built from.
+CORE_SOURCES = ("core", "libxml2")
+
 # The sources the editors are built from, and the fonts and blanks they ship.
 WEB_SOURCES = ("sdkjs", "web-apps", "document-templates", "dictionaries", "core-fonts")
 
@@ -111,8 +114,9 @@ def build_core(repo: Path, into: Path) -> str:
         "build/engine/build.sh build",
         f"DIST={root}/{dist.as_posix()} build/engine/dist.sh --only core",
     ]
-    if source_problems(repo, tree / "src", only=("core",)):
-        steps.insert(0, "build/engine/build.sh fetch core")
+    # libxml2 is core's XML parser, built into it from its own pin.
+    if source_problems(repo, tree / "src", only=CORE_SOURCES):
+        steps.insert(0, f"build/engine/build.sh fetch {' '.join(CORE_SOURCES)}")
     # Here, what is missing is said before the fetch, not after it; in the
     # container, the image has it all.
     if not box:

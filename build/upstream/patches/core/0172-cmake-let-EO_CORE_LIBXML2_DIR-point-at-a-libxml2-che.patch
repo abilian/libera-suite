@@ -1,0 +1,52 @@
+From 04702528c1423219e6dd6f1a5dbbf7083fcd0b85 Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Thu, 29 Oct 2026 11:37:16 +0100
+Subject: [PATCH] cmake: let EO_CORE_LIBXML2_DIR point at a libxml2 checked out
+ elsewhere
+
+The copy of libxml2 kept in DesktopEditor/xml is about 2.9.4, whatever
+its NEWS says, and a 6 KB document of nested parameter entities takes
+it to 3.9 GB (CVE-2021-3541, fixed in 2.9.11). Given a checkout of a
+later release, with its xmlversion.h written, add_libxml compiles that
+instead. The Apple import named the kept copy's headers itself, after
+add_libxml had already given it the same directory; that line goes, so
+it follows the choice.
+---
+ Apple/CMakeLists.txt                         | 1 -
+ DesktopEditor/xml/build/cmake/CMakeLists.txt | 8 +++++++-
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/Apple/CMakeLists.txt b/Apple/CMakeLists.txt
+index c2d45b69bb..0cf65d667b 100644
+--- a/Apple/CMakeLists.txt
++++ b/Apple/CMakeLists.txt
+@@ -424,7 +424,6 @@ target_include_directories(IWorkFile PRIVATE
+ 
+     ${CMAKE_CURRENT_SOURCE_DIR}
+ 
+-    ${DESKTOP_EDITOR_ROOT}/xml/libxml2/include
+ 
+     # apple.pri
+     ${APPLE_INSTALL_DIR}
+diff --git a/DesktopEditor/xml/build/cmake/CMakeLists.txt b/DesktopEditor/xml/build/cmake/CMakeLists.txt
+index 2a3783145a..416aa33fa5 100644
+--- a/DesktopEditor/xml/build/cmake/CMakeLists.txt
++++ b/DesktopEditor/xml/build/cmake/CMakeLists.txt
+@@ -4,7 +4,13 @@ project(libxml)
+ 
+ function(add_libxml TARGET XML_ROOT_DIR ONLY_LIBXML)
+ 
+-    set(LIBXML2_SOURCES_DIR "${XML_ROOT_DIR}/libxml2")
++    # EO_CORE_LIBXML2_DIR points at a libxml2 checked out elsewhere, with its
++    # include/libxml/xmlversion.h written, in place of the copy kept here.
++    if( DEFINED EO_CORE_LIBXML2_DIR )
++        set(LIBXML2_SOURCES_DIR "${EO_CORE_LIBXML2_DIR}")
++    else()
++        set(LIBXML2_SOURCES_DIR "${XML_ROOT_DIR}/libxml2")
++    endif()
+ 
+     target_sources( ${TARGET} PRIVATE
+         ${LIBXML2_SOURCES_DIR}/buf.c
+-- 
+2.55.0
+

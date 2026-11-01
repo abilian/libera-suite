@@ -166,5 +166,5 @@ def test_a_build_here_checks_the_toolchain_before_it_fetches(monkeypatch, tmp_pa
     steps = str(ran.value).splitlines()
     assert steps[1:3] == [
         "build/engine/toolchain.sh check",
-        "build/engine/build.sh fetch core",
+        "build/engine/build.sh fetch core libxml2",
     ]

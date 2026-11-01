@@ -16,6 +16,15 @@ document-templates = "554851735b1fb1890a02ba1d57fed3e6c8b21425"  # 2026-10-08, D
 # the repository is 327 MB because it also carries thesauri and hyphenation,
 # neither of which the spell checker reads.
 dictionaries = "08d46f8631b82af00f83b28657c54ed1aaf9e3fc"  # 2026-03-27
+# The XML parser x2t reads every document with, built into core in place of
+# the copy core carries (about 2.9.4, whatever its NEWS says), which a 6 KB
+# document took to 3.9 GB: notes/plans/converter-hardening.md. Not
+# Euro-Office's, so its address is under [urls].
+libxml2 = "7846b0a677f8d3ce72486125fa281e92ac9970e8"  # v2.9.14, 2022-05-02
 
 [remote]
 base = "https://github.com/Euro-Office"
+
+# Where a repository that is not Euro-Office's is fetched from.
+[urls]
+libxml2 = "https://github.com/GNOME/libxml2.git"
