@@ -6,7 +6,20 @@ Two versions move here and they move independently. The **application** is this 
 
 ## [Unreleased]
 
-What a release brings is written up when it is made; these are the fixes recorded as they landed.
+## [0.7.0b1] - 2026-11-01
+
+A beta: pip installs it only when asked (`pipx install --pip-args=--pre libera==0.7.0b1`), and the install scripts and the Homebrew tap stay on 0.6.0. The first with payload **0.7**, and the first whose editors are installed with the application rather than downloaded on first use. Its installers are not signed yet; 0.7.0 will be.
+
+### Added
+
+- **PDFs, edited and filled in.** A PDF opens in the PDF editor: comments, highlights, drawings, text boxes, small corrections to its text, pages added, deleted, rotated and moved. Forms fill in, a French Cerfa and the US IRS forms among those tried, and a form that also carries an XFA version is saved without it, so that Acrobat shows the fields as filled. Saving adds the changes after the original's bytes, which stay as they were. A PDF certified against any change is not saved, and says why. Libera Suite is offered in Open With for a PDF, never as the default.
+- **Documents with a password.** A Word, Excel, PowerPoint or OpenDocument file protected by a password asks for it as it opens, and again after a wrong one, and saving keeps it protected; so does a PDF. File ▸ Protect adds, changes and removes a document's password, a PDF's included, unless it is signed, restricted by its author or partly unencrypted. A save to a format that cannot keep a password (text, CSV, RTF, HTML, Markdown, EPUB) asks first. Edits recovered after a crash ask for the password again. LibreOffice 26's own encryption cannot be read yet, and Libera Suite says so.
+- **Digital signatures.** A signed Word, Excel or PowerPoint document shows its signatures as it opens, each valid or not, and opens read-only. Protection ▸ Signature signs it, invisibly or on a signature line, with a key file (PKCS#12 or PEM) and its passphrase, kept only while the window is open; Signature details shows the signer's certificate, and Edit document removes the signatures. *Valid* means the document has not changed since it was signed: who issued the certificate is not checked yet. Not yet: signing a protected document, an OpenDocument file or a PDF, and Windows's certificate store.
+
+### Changed
+
+- **The editors come with the application.** `pip install libera` installs them and the converter as two more packages, `libera-core` and `libera-web`, built from source where PyPI has no wheel for the machine, and nothing is downloaded on first start. `libera --payload-remove` deletes what 0.6 and earlier downloaded, and the start window offers it once.
+- **The converter starts in about half the time**, 72 ms to 38 on a Mac with nothing to convert, so every open and save is quicker by that much.
 
 ### Fixed
 
@@ -15,6 +28,7 @@ What a release brings is written up when it is made; these are the fixes recorde
 
 ### Security
 
+- **A password-protected document that has been tampered with is refused.** The converter noticed that its integrity check failed, and opened it all the same; it now says the document cannot be opened. The fix is ElixirOffice's.
 - **A document no longer brings your files into what you send back.** A picture linked to a path on your disk was copied into every document saved or converted from it, and drawn into its PDF, so opening such a document, saving it and returning it returned the picture. A linked picture is now read from a web address only. A picture inside an SVG is drawn only if the SVG carries it.
 - **A document's text no longer runs as code in the editor.** A tracked change's font or style name, and the values the Formula Wizard shows, were written into the page as HTML, so a document carrying markup there ran it when the change was selected or the wizard opened. A link to a `javascript:` address ran once you clicked through the warning. All are shown or refused as text now.
 - **The editor's page loads pictures from Libera Suite only.** A picture a document links to is fetched by the converter when the document opens, so the page never needed pictures from elsewhere, and a script in it can no longer send anything out in a picture's address.
