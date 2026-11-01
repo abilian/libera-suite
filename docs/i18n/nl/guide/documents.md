@@ -127,6 +127,14 @@ Een `.pdf` opent in **Libera PDF**. Libera Suite wordt voor een pdf aangeboden o
 
 Een formulier maken kan nog niet, en een pdf omzetten naar een document ook niet.
 
+## Documenten met een wachtwoord {#passwords}
+
+Een document dat met een wachtwoord is beveiligd, door Word, LibreOffice of Libera Suite, vraagt erom bij het openen, en opnieuw na een verkeerd wachtwoord. Bij het opslaan blijft het wachtwoord behouden: het bestand wordt beveiligd geschreven, zoals het was. Een afdruk is een pdf die met hetzelfde wachtwoord is beveiligd. Opgeslagen als tekst of CSV is het document niet beveiligd, omdat die formaten geen beveiliging kennen.
+
+**De eigen beveiliging van LibreOffice 26 kan nog niet worden gelezen.** Standaard versleutelt LibreOffice 26 een OpenDocument-bestand op een manier die Libera Suite niet leest, en Libera Suite zegt dat in plaats van om het wachtwoord te vragen. LibreOffice schrijft de oudere versleuteling, die Libera Suite wel leest, als de ODF-formaatversie op 1.3 staat.
+
+Een document een wachtwoord geven, of het wijzigen of verwijderen, kan nog niet.
+
 ## Spellingcontrole {#spell-checking}
 
 Spelfouten worden onderstreept, en met de rechtermuisknop krijg je suggesties. Welk woordenboek gebruikt wordt, volgt **de taal van het document**, die je per document instelt in de **statusbalk** onder in het venster.
@@ -175,6 +183,8 @@ Wil je voor één keer een ander bestand gebruiken, zonder dit bestand aan te ra
 ## Waar je werkbestanden staan
 
 Zolang een document open is, houdt Libera Suite een sessiemap bij naast zijn applicatiegegevens. Daarin staan de werkkopie en een doorlopend logboek van je wijzigingen, waardoor opslaan snel gaat en ongedaan maken betrouwbaar is. Het is geen back-up: het document staat waar je het hebt opgeslagen.
+
+Bij een document met een wachtwoord is die werkkopie niet versleuteld zolang het document open is: elk programma dat de bestanden van je account kan lezen, kan haar lezen. Ze wordt toch bewaard, zoals bij elk document, zodat je wijzigingen een crash overleven, en bij het terughalen wordt opnieuw om het wachtwoord gevraagd.
 
 ---
 

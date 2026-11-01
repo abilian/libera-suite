@@ -127,6 +127,14 @@ Un `.pdf` se abre en **Libera PDF**. Libera Suite se ofrece en *Abrir con* para 
 
 Todavía no se puede crear un formulario, ni convertir un PDF en un documento.
 
+## Documentos con contraseña {#passwords}
+
+Un documento protegido con una contraseña, por Word, LibreOffice o Libera Suite, la pide al abrirse, y otra vez tras una contraseña incorrecta. Al guardar se conserva la contraseña: el archivo se escribe protegido, como estaba. Una impresión es un PDF protegido con la misma contraseña. Guardado como texto o CSV, el documento no queda protegido, porque esos formatos no tienen protección.
+
+**La protección propia de LibreOffice 26 aún no se puede leer.** De forma predeterminada, LibreOffice 26 cifra un archivo OpenDocument de un modo que Libera Suite no lee, y Libera Suite lo dice en lugar de pedir la contraseña. LibreOffice escribe el cifrado anterior, que Libera Suite lee, cuando su versión del formato ODF está en 1.3.
+
+Todavía no se puede poner una contraseña a un documento, ni cambiarla o quitarla.
+
 ## Corrección ortográfica {#spell-checking}
 
 Las faltas se subrayan; el clic derecho ofrece sugerencias. El diccionario que se usa depende del **idioma del documento**, que fijas en la **barra de estado** de la parte inferior de la ventana, documento a documento.
@@ -175,6 +183,8 @@ Para usar otro archivo durante un arranque, sin tocar este, indíquelo con `libe
 ## Dónde van tus archivos de trabajo
 
 Mientras un documento está abierto, Libera Suite mantiene una carpeta de sesión junto a sus datos de aplicación. Contiene la copia de trabajo y un registro continuo de tus cambios, lo que hace que guardar sea rápido y deshacer sea fiable. No es una copia de seguridad: el documento está donde lo guardaste.
+
+En un documento con contraseña, esa copia de trabajo no está cifrada mientras el documento está abierto: cualquier programa que pueda leer los archivos de tu cuenta puede leerla. Se conserva de todos modos, como con cualquier documento, para que tus cambios sobrevivan a un cierre inesperado, y recuperarlos vuelve a pedir la contraseña.
 
 ---
 

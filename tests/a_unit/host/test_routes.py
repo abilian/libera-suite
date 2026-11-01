@@ -13,6 +13,7 @@ from libera.host.server import routes
 API = {
     # The open document.
     ("GET", "opened"),
+    ("POST", "password"),
     ("GET", "current"),
     ("POST", "changes"),
     ("POST", "modified"),

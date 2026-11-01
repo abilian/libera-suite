@@ -12,6 +12,7 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 | **Abrir y guardar** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Save, Save As, New. |
 | **Exportar** | Save As ofrece una lista de formatos para cada aplicación, PDF incluido. Cada formato ofrecido se comprueba con una conversión real, cuyo texto se vuelve a leer. |
 | **PDF** | Comentarios, resaltados y dibujos, formularios rellenados, páginas añadidas, eliminadas, giradas y movidas, pequeñas correcciones de texto. Al guardar, tus cambios van después del original, que queda como estaba. [Trabajar con documentos](../guide/documents.md#pdfs) tiene el detalle. |
+| **Documentos con contraseña** | Los documentos, hojas de cálculo, presentaciones y PDF protegidos con contraseña la piden, y al guardar se conserva. [Trabajar con documentos](../guide/documents.md#passwords) tiene los detalles. |
 | **Imágenes** | Se conservan al abrir y al guardar; Insertar ▸ Imagen funciona. |
 | **Imprimir** | Genera un PDF, pregunta dónde guardarlo y lo abre en tu visor de PDF. |
 | **Corrección ortográfica** | Seis idiomas, con sugerencias. Más abajo, los detalles. |
@@ -38,6 +39,7 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 | **Iniciada desde un terminal, el Dock dice «Python»** | Solo cuando inicias `libera` en un terminal en macOS. Un icono del Dock toma el nombre del paquete de aplicación desde el que se inició, aquí el del intérprete de Python, y la aplicación no puede cambiarlo. El icono y la barra de menús son los nuestros en cualquier caso; `Libera.app` muestra Libera. Un documento que sueltas sobre ese icono de Python se rechaza en nombre de Python; el icono de `Libera.app` lo acepta. |
 | **Diagrams no puede guardar** | Abre un archivo `.vsdx` y lo muestra. El conversor no sabe escribir ningún formato de Visio: no hay nada que guardar ni una plantilla en blanco con la que empezar. |
 | **El texto editado de un PDF no se recompone** | Una línea cambiada con *Editar texto* conserva su anchura, así que las palabras nuevas pasan a una línea propia, en una de nuestras fuentes cuando no se puede usar la del PDF. |
+| **Los archivos protegidos por LibreOffice 26 no se abren** | De forma predeterminada, LibreOffice 26 cifra un archivo OpenDocument de un modo que Libera Suite aún no puede leer. Libera Suite lo dice en lugar de pedir la contraseña. |
 | **Los PDF certificados no se pueden guardar** | Un PDF certificado contra cualquier cambio. El guardado falla con un mensaje general, y el archivo queda como estaba. |
 | **Una barra de menús reducida, con pocos atajos visibles en Linux y ninguno en Windows** | Linux y Windows tienen File, Edit, View y Help, dibujados en la ventana. En Linux, Nuevo, Abrir y Cerrar muestran Ctrl-N, Ctrl-O y Ctrl-W, y ningún otro elemento muestra su tecla; en Windows, ninguno. Las teclas funcionan igualmente: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Mayús-S, Ctrl-P y Ctrl-Z. macOS tiene los mismos menús más Window, con los atajos habituales. |
 | **Sin pestañas en Linux ni Windows** | Allí, una ventana por documento. macOS tiene pestañas. |
@@ -55,7 +57,7 @@ Si te encuentras con algo que *no* está en esta lista, [cuéntanoslo](../feedba
 
 ### En la ventana del documento
 
-- **Documentos protegidos con contraseña.** Un PDF que pide contraseña se abre y se guarda, conservándola; ningún otro tipo se abre, y a ningún documento se le puede poner una contraseña.
+- **Poner una contraseña a un documento**, o cambiarla o quitarla. Un documento que ya tiene una se abre y se guarda, conservándola.
 - **Firmas digitales.**
 - **Combinar correspondencia.**
 - **Complementos.** Desactivados en el proyecto original de este fork, así que el panel nunca aparece.

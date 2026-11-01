@@ -125,6 +125,14 @@ A `.pdf` opens in **Libera PDF**. Libera Suite is offered in *Open With* for a P
 
 Creating a form is not possible yet, nor converting a PDF into a document.
 
+## Documents with a password {#passwords}
+
+A document protected by a password, by Word, LibreOffice or Libera Suite, asks for it as it opens, and again after a wrong one. Saving keeps the password: the file is written protected, as it was. A print is a PDF protected by the same password. Saved as text or CSV, the document is not protected, since those formats have no protection.
+
+**LibreOffice 26's own protection cannot be read yet.** By default, LibreOffice 26 encrypts an OpenDocument file in a way Libera Suite does not read, and Libera Suite says so instead of asking for the password. LibreOffice writes the older encryption, which Libera Suite reads, when its ODF format version is set to 1.3.
+
+Giving a document a password, or changing or removing one, is not possible yet.
+
 ## Spell checking
 
 Misspellings are underlined, and right-click offers suggestions. Which dictionary is used follows **the document's language**, which you set from the **status bar** at the bottom of the window, per document.
@@ -173,6 +181,8 @@ To use another file for one run, without touching this one, name it with `libera
 ## Where your working files go
 
 While a document is open, Libera Suite keeps a session directory alongside its application data. It holds the working copy and a running log of your changes, which makes saving fast and undo reliable. It is not a backup: the document is where you saved it.
+
+For a document with a password, that working copy is not encrypted while the document is open, so anything that can read your account's files can read it. It is kept all the same, as for any document, so that your changes survive a crash, and getting them back asks for the password again.
 
 ---
 

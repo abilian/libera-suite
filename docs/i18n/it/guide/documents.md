@@ -127,6 +127,14 @@ Un `.pdf` si apre in **Libera PDF**. Libera Suite è proposto in *Apri con* per 
 
 Non è ancora possibile creare un modulo, né convertire un PDF in un documento.
 
+## Documenti protetti da password {#passwords}
+
+Un documento protetto da una password, da Word, LibreOffice o Libera Suite, la chiede all'apertura, e di nuovo dopo una password sbagliata. Il salvataggio conserva la password: il file viene scritto protetto, com'era. Una stampa è un PDF protetto dalla stessa password. Salvato come testo o CSV, il documento non è protetto, perché quei formati non hanno protezione.
+
+**La protezione propria di LibreOffice 26 non si legge ancora.** Per impostazione predefinita, LibreOffice 26 cifra un file OpenDocument in un modo che Libera Suite non legge, e Libera Suite lo dice invece di chiedere la password. LibreOffice scrive la cifratura precedente, che Libera Suite legge, quando la sua versione del formato ODF è impostata su 1.3.
+
+Non è ancora possibile dare una password a un documento, né cambiarla o toglierla.
+
 ## Controllo ortografico {#spell-checking}
 
 Gli errori vengono sottolineati; il clic destro propone dei suggerimenti. Il dizionario usato dipende dalla **lingua del documento**, che imposti nella **barra di stato** in fondo alla finestra, documento per documento.
@@ -175,6 +183,8 @@ Per usare un altro file per un solo avvio, senza toccare questo, indicatelo con 
 ## Dove finiscono i tuoi file di lavoro
 
 Finché un documento è aperto, Libera Suite tiene una cartella di sessione accanto ai suoi dati applicativi. Contiene la copia di lavoro e un registro continuo delle tue modifiche, il che rende il salvataggio rapido e l'annullamento affidabile. Non è una copia di sicurezza: il documento è dove l'hai salvato.
+
+Per un documento protetto da password, quella copia di lavoro non è cifrata mentre il documento è aperto: qualunque programma possa leggere i file del tuo account può leggerla. Viene conservata comunque, come per ogni documento, perché le tue modifiche sopravvivano a un arresto anomalo, e recuperarle chiede di nuovo la password.
 
 ---
 

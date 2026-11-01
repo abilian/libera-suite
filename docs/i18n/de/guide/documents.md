@@ -127,6 +127,14 @@ Eine `.pdf`-Datei öffnet sich in **Libera PDF**. Libera Suite wird für ein PDF
 
 Ein Formular zu erstellen ist noch nicht möglich, ebenso wenig, ein PDF in ein Dokument umzuwandeln.
 
+## Kennwortgeschützte Dokumente {#passwords}
+
+Ein mit einem Kennwort geschütztes Dokument, ob von Word, LibreOffice oder Libera Suite, fragt beim Öffnen danach, und nach einem falschen Kennwort erneut. Beim Speichern bleibt das Kennwort erhalten: Die Datei wird geschützt geschrieben, wie sie war. Ein Ausdruck ist ein PDF, das mit demselben Kennwort geschützt ist. Als Text oder CSV gespeichert, ist das Dokument nicht geschützt, da diese Formate keinen Schutz kennen.
+
+**Den eigenen Schutz von LibreOffice 26 kann Libera Suite noch nicht lesen.** Standardmäßig verschlüsselt LibreOffice 26 eine OpenDocument-Datei auf eine Weise, die Libera Suite nicht liest, und Libera Suite sagt das, statt nach dem Kennwort zu fragen. LibreOffice schreibt die ältere Verschlüsselung, die Libera Suite liest, wenn seine ODF-Formatversion auf 1.3 gestellt ist.
+
+Einem Dokument ein Kennwort zu geben, es zu ändern oder zu entfernen, ist noch nicht möglich.
+
 ## Rechtschreibprüfung {#spell-checking}
 
 Fehler werden unterstrichen; ein Rechtsklick bietet Vorschläge an. Welches Wörterbuch verwendet wird, richtet sich nach **der Sprache des Dokuments**, die Sie in der **Statusleiste** am unteren Fensterrand einstellen, für jedes Dokument einzeln.
@@ -175,6 +183,8 @@ Um für einen Start eine andere Datei zu verwenden, ohne diese anzutasten, geben
 ## Wo Ihre Arbeitsdateien liegen
 
 Solange ein Dokument geöffnet ist, hält Libera Suite einen Sitzungsordner neben ihren Anwendungsdaten. Er enthält die Arbeitskopie und ein laufendes Protokoll Ihrer Änderungen, was das Speichern schnell und das Rückgängigmachen zuverlässig macht. Er ist keine Sicherung: Das Dokument liegt dort, wo Sie es gespeichert haben.
+
+Bei einem kennwortgeschützten Dokument ist diese Arbeitskopie nicht verschlüsselt, solange das Dokument geöffnet ist: Alles, was die Dateien Ihres Kontos lesen kann, kann auch sie lesen. Sie wird trotzdem aufbewahrt, wie bei jedem Dokument, damit Ihre Änderungen einen Absturz überstehen, und beim Zurückholen wird erneut nach dem Kennwort gefragt.
 
 ---
 

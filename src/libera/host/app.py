@@ -24,6 +24,7 @@ import webview
 from libera import payload as payload_mod, timeline
 from libera.host import (
     apps,
+    convert,
     hooks,
     instance,
     language,
@@ -375,16 +376,23 @@ def _convert_behind(
     """The document's conversion, while its window loads the editor. A
     document the converter refuses is said on screen, and its window closed."""
 
-    def failed(_error: ConversionError) -> None:
+    def failed(error: ConversionError) -> None:
         # convert has logged what x2t said; the user needs to hear it too.
+        if isinstance(error, convert.UnsupportedEncryptionError):
+            why = language.translate(
+                "It is protected by a password, with an encryption Libera "
+                "Suite cannot read yet. LibreOffice 26 encrypts this way."
+            )
+        else:
+            why = language.translate(
+                "The converter could not read it: it may be damaged, or in a "
+                "format Libera Suite cannot open."
+            )
         dialogs.say(
             language.translate(
                 "Libera Suite could not open “{name}”", name=document.name
             ),
-            language.translate(
-                "The converter could not read it: it may be damaged, or in a "
-                "format Libera Suite cannot open."
-            ),
+            why,
         )
         close_session_window(session)
 

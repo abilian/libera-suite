@@ -13,6 +13,7 @@ import pathlib
 import shutil
 
 from libera.host import desktop, hooks, saving
+from libera.host.convert import ConversionError
 from libera.host.server import diagnostics
 from libera.host.server.api import (
     NO_CONTENT,
@@ -33,8 +34,31 @@ def serve_opened(r: Request) -> Response:
     conversion its window was opened beside has finished."""
     if r.session.converting is not None:
         r.session.converting.join()
+    return _hand_over(r)
+
+
+def _hand_over(r: Request) -> Response:
+    """Editor.bin, or the question of the document's password, which the
+    bridge has the editor ask with its own dialog."""
+    asked = r.session.password_asked
+    if asked is not None:
+        return answer_json({"needPassword": asked.code})
     data = r.session.editor_bin.read_bytes()
     return answer_json({"b64": base64.b64encode(data).decode(), "len": len(data)})
+
+
+@endpoint("POST", "password")
+def take_password(r: Request) -> Response:
+    """The password typed into the editor's dialog: the document converted
+    with it, or the question again, when it was wrong (opening.ask_password)."""
+    asked = r.session.password_asked
+    if asked is None:
+        raise Refused(409, "no password was asked for")
+    try:
+        asked.answer(r.read_field("password", str))
+    except ConversionError as e:
+        raise Refused(500, str(e)) from e
+    return _hand_over(r)
 
 
 @endpoint("GET", "current")

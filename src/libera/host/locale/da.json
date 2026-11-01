@@ -38,6 +38,7 @@
   "Hide Others": "Skjul andre",
   "In PowerShell:\n\n{command}": "I PowerShell:\n\n{command}",
   "In a terminal:\n\n{command}": "I en terminal:\n\n{command}",
+  "It is protected by a password, with an encryption Libera Suite cannot read yet. LibreOffice 26 encrypts this way.": "Det er beskyttet med en adgangskode, med en kryptering, som Libera Suite endnu ikke kan læse. LibreOffice 26 krypterer på denne måde.",
   "Keep them": "Behold dem",
   "Leave It": "Lad være",
   "Libera Help": "Libera-hjælp",

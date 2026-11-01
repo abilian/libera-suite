@@ -127,6 +127,14 @@ Un `.pdf` s'ouvre dans **Libera PDF**. Libera Suite est proposé dans *Ouvrir av
 
 Créer un formulaire n'est pas encore possible, ni convertir un PDF en document.
 
+## Documents protégés par un mot de passe {#passwords}
+
+Un document protégé par un mot de passe, par Word, LibreOffice ou Libera Suite, le demande à l'ouverture, et le redemande après un mot de passe erroné. L'enregistrement garde le mot de passe : le fichier est écrit protégé, comme il l'était. Une impression est un PDF protégé par le même mot de passe. Enregistré en texte ou en CSV, le document n'est pas protégé, car ces formats n'ont pas de protection.
+
+**La protection propre à LibreOffice 26 ne se lit pas encore.** Par défaut, LibreOffice 26 chiffre un fichier OpenDocument d'une façon que Libera Suite ne lit pas, et Libera Suite le dit au lieu de demander le mot de passe. LibreOffice écrit l'ancien chiffrement, que Libera Suite lit, quand sa version du format ODF est réglée sur 1.3.
+
+Donner un mot de passe à un document, le changer ou le retirer n'est pas encore possible.
+
 ## Correction orthographique {#spell-checking}
 
 Les fautes sont soulignées ; le clic droit propose des suggestions. Le dictionnaire utilisé dépend de **la langue du document**, que vous réglez dans la **barre d'état** en bas de la fenêtre, pour chaque document.
@@ -175,6 +183,8 @@ Pour utiliser un autre fichier le temps d'un lancement, sans toucher à celui-ci
 ## Où vont vos fichiers de travail
 
 Tant qu'un document est ouvert, Libera Suite conserve un dossier de session à côté de ses données d'application. Il contient la copie de travail et le journal de vos modifications : l'enregistrement est ainsi rapide et l'annulation fiable. Ce n'est pas une sauvegarde : le document est là où vous l'avez enregistré.
+
+Pour un document protégé par un mot de passe, cette copie de travail n'est pas chiffrée tant que le document est ouvert : tout programme capable de lire les fichiers de votre compte peut la lire. Elle est conservée malgré tout, comme pour tout document, afin que vos modifications survivent à un plantage, et les récupérer redemande le mot de passe.
 
 ---
 

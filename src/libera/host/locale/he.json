@@ -38,6 +38,7 @@
   "Hide Others": "הסתר אחרים",
   "In PowerShell:\n\n{command}": "ב־PowerShell:\n\n{command}",
   "In a terminal:\n\n{command}": "במסוף:\n\n{command}",
+  "It is protected by a password, with an encryption Libera Suite cannot read yet. LibreOffice 26 encrypts this way.": "הוא מוגן בסיסמה, בהצפנה ש־Libera Suite עדיין אינו יכול לקרוא. כך מצפין LibreOffice 26.",
   "Keep them": "לשמור אותם",
   "Leave It": "השאר כך",
   "Libera Help": "עזרה של Libera",
