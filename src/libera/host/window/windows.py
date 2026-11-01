@@ -186,7 +186,10 @@ def fold_changes_in(session: Session) -> None:
     Raises ConversionError when it does not work; the edits are then still in
     the log, which is what a save merges.
     """
-    if not session.change_log:
+    # A PDF whose password File > Protect changed is folded with no edits
+    # too: its Editor.bin is still the file as it was opened, under the old
+    # password, for which the reloaded editor would then ask.
+    if not session.change_log and not convert.rewrites(session):
         return
 
     ext, fmt = session.editor.formats[0]
@@ -197,6 +200,8 @@ def fold_changes_in(session: Session) -> None:
     with session.lock:
         convert.export(session, staged, fmt, None)
         convert.convert_to_editor_bin(session, staged)
+        # Written under the document's password, which a PDF now opens with.
+        session.opened_with = session.password
     logger.info("reload: folded the edits into %s", staged.name)
 
 

@@ -283,12 +283,32 @@
   // the editor is given back when a save that carried another did not take.
   let protectable = false;
   let confirmed = "";
+  // The PDF editor, which reads the file itself and asks for its password.
+  let readsItself = false;
 
   const currentBody = getFromHostSync("/__host__/current");
   if (currentBody) {
     const current = JSON.parse(currentBody);
     docPath = current.path || "";
     protectable = !!current.protectable;
+    readsItself = !!current.readsItself;
+  }
+
+  // The password the PDF editor opened the PDF with: the host opens it with
+  // that to save it, a save on close included, and gives the file the
+  // editor's, which differs once File > Protect has changed it.
+  function reportOpeningPassword() {
+    const api = editorApi();
+    confirmed = (api && api.currentPassword) || "";
+    const body = JSON.stringify({ password: confirmed });
+    postToHost("/__host__/opening-password", body, (xhr) => {
+      if (xhr.status !== 204) {
+        report(
+          "error",
+          `the host did not take the PDF's password (HTTP ${xhr.status})`,
+        );
+      }
+    });
   }
 
   // The converted document, or the question of its password: x2t could not
@@ -355,6 +375,7 @@
     },
     onDocumentContentReady: function () {
       log("onDocumentContentReady", arguments);
+      if (readsItself) reportOpeningPassword();
       // At once, not on the next one-second tick: it is the moment the
       // document is on screen, and build/src/libera_build/bench.py times it.
       sendReport();

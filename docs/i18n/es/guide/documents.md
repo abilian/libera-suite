@@ -133,7 +133,7 @@ Un documento protegido con una contraseña, por Word, LibreOffice o Libera Suite
 
 **La protección propia de LibreOffice 26 aún no se puede leer.** De forma predeterminada, LibreOffice 26 cifra un archivo OpenDocument de un modo que Libera Suite no lee, y Libera Suite lo dice en lugar de pedir la contraseña. LibreOffice escribe el cifrado anterior, que Libera Suite lee, cuando su versión del formato ODF está en 1.3.
 
-**Archivo ▸ Proteger** pone una contraseña a un documento con *Añadir contraseña*, y ofrece *Cambiar contraseña* y *Eliminar contraseña* cuando ya tiene una. Cada uno guarda el documento al momento. Se ofrece para archivos de Word, Excel, PowerPoint y OpenDocument, los formatos que pueden llevar una contraseña. A un PDF todavía no se le puede poner una contraseña, ni cambiar la suya.
+**Archivo ▸ Proteger** pone una contraseña a un documento con *Añadir contraseña*, y ofrece *Cambiar contraseña* y *Eliminar contraseña* cuando ya tiene una. Cada uno guarda el documento al momento. Se ofrece para archivos de Word, Excel, PowerPoint, OpenDocument y PDF, los formatos que pueden llevar una contraseña. La nueva contraseña de un PDF reescribe el archivo entero: por eso Proteger no se ofrece para un PDF firmado, cuyas firmas no lo resistirían, ni para uno cuyo autor restringió la impresión, la copia o la edición, porque la nueva contraseña quitaría esas restricciones, ni para uno que deja una parte de sí sin cifrar, que la reescritura estropearía.
 
 ## Corrección ortográfica {#spell-checking}
 

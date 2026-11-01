@@ -133,7 +133,7 @@ Ein mit einem Kennwort geschütztes Dokument, ob von Word, LibreOffice oder Libe
 
 **Den eigenen Schutz von LibreOffice 26 kann Libera Suite noch nicht lesen.** Standardmäßig verschlüsselt LibreOffice 26 eine OpenDocument-Datei auf eine Weise, die Libera Suite nicht liest, und Libera Suite sagt das, statt nach dem Kennwort zu fragen. LibreOffice schreibt die ältere Verschlüsselung, die Libera Suite liest, wenn seine ODF-Formatversion auf 1.3 gestellt ist.
 
-**Datei ▸ Schützen** gibt einem Dokument mit *Kennwort hinzufügen* ein Kennwort und bietet *Kennwort ändern* und *Kennwort löschen* an, sobald es eines hat. Jedes speichert das Dokument sofort. Es wird für Word-, Excel-, PowerPoint- und OpenDocument-Dateien angeboten, die Formate, die ein Kennwort tragen können. Einem PDF kann noch kein Kennwort gegeben und sein eigenes nicht geändert werden.
+**Datei ▸ Schützen** gibt einem Dokument mit *Kennwort hinzufügen* ein Kennwort und bietet *Kennwort ändern* und *Kennwort löschen* an, sobald es eines hat. Jedes speichert das Dokument sofort. Es wird für Word-, Excel-, PowerPoint-, OpenDocument- und PDF-Dateien angeboten, die Formate, die ein Kennwort tragen können. Ein neues Kennwort schreibt ein PDF vollständig neu: Schützen wird daher weder für ein signiertes PDF angeboten, dessen Signaturen das nicht überstehen würden, noch für eines, dessen Autor Drucken, Kopieren oder Bearbeiten eingeschränkt hat, da das neue Kennwort diese Einschränkungen aufheben würde, noch für eines, das einen Teil von sich unverschlüsselt lässt, den das Neuschreiben verderben würde.
 
 ## Rechtschreibprüfung {#spell-checking}
 

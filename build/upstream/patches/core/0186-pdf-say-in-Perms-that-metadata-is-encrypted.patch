@@ -1,0 +1,31 @@
+From 9419e33d0d23f03828eb8eda41daf9cc836d131b Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Sat, 31 Oct 2026 20:49:15 +0100
+Subject: [PATCH 186/187] pdf: say in /Perms that metadata is encrypted
+
+The writer encrypts the metadata stream with the rest and writes no
+/EncryptMetadata, which then means true, but /Perms said 'F'. Readers
+that check it, pypdf among them, report the file's permissions as
+failing verification.
+---
+ PdfFile/SrcWriter/Encrypt.cpp | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/PdfFile/SrcWriter/Encrypt.cpp b/PdfFile/SrcWriter/Encrypt.cpp
+index 1ca05473c9..3ac33078e6 100644
+--- a/PdfFile/SrcWriter/Encrypt.cpp
++++ b/PdfFile/SrcWriter/Encrypt.cpp
+@@ -554,7 +554,9 @@ namespace PdfWriter
+ 			m_anPermEncrypt[i] = static_cast<unsigned char>(extended_perms & 0xff);
+ 			extended_perms >>= 8;
+ 		}
+-		m_anPermEncrypt[8]	= /*m_bEncryptMetadata ? 'T' : */'F';
++		// 'T': the metadata stream is encrypted with the rest, as /EncryptMetadata,
++		// which is not written, says by default. 'F' contradicted it.
++		m_anPermEncrypt[8]	= 'T';
+ 		m_anPermEncrypt[9]	= 'a';
+ 		m_anPermEncrypt[10]	= 'd';
+ 		m_anPermEncrypt[11]	= 'b';
+-- 
+2.55.0
+

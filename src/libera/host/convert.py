@@ -12,6 +12,7 @@ import csv
 import logging
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -460,18 +461,69 @@ def _passwords(session: Session) -> dict[str, str]:
     so. Given one, it encrypts every OOXML and OpenDocument format and PDF,
     and writes the formats that have no encryption, text and CSV among them,
     as they are (measured 2026-10-30): so it goes to every save, and x2t
-    decides. A PDF, which x2t opens itself, needs it to open with too, and the
-    same: given an opening password alone, x2t takes the empty saving one for
-    a change of password, and rewrites the whole PDF to remove it.
+    decides. A PDF, which x2t opens itself, needs the one it opens with too
+    (`Session.opened_with`): given the same twice, x2t appends the changes,
+    encrypted as the rest is; given two that differ, it rewrites the whole
+    PDF under the new one (`rewrites`), and an empty one removes it.
 
     The job file holding it is in the export's own directory, which mkdtemp
     makes readable by its owner alone, and which goes when the export does.
     """
-    if not session.password:
-        return {}
-    if session.editor.converted:
-        return {"m_sSavePassword": session.password}
-    return {"m_sPassword": session.password, "m_sSavePassword": session.password}
+    saving = {"m_sSavePassword": session.password} if session.password else {}
+    if session.editor.converted or not session.opened_with:
+        return saving
+    return {"m_sPassword": session.opened_with, **saving}
+
+
+# Every permission a PDF's /P grants (ISO 32000-2, table 22): print,
+# modify, copy, annotate, fill in, extract, assemble, print well.
+ALL_PERMITTED = 0b1111_0011_1100
+ENCRYPT_REF = re.compile(rb"/Encrypt\s+(\d+)\s+(\d+)\s+R")
+# What a PDF may leave in clear: its metadata, or what an Identity crypt
+# filter names. x2t's reader decrypts every stream of an encrypted PDF, these
+# included, and a change of password writes them out as garbage.
+LEFT_IN_CLEAR = re.compile(rb"/EncryptMetadata\s+false|/Identity(?![-\w])")
+CRYPT_FILTER = re.compile(rb"/Crypt\b")
+
+
+def may_change_password(pdf: pathlib.Path) -> bool:
+    """Whether File > Protect may give this PDF a password, or change or
+    remove its own: x2t then rewrites the whole file.
+
+    Not over a signature, which the rewrite breaks. Nor where the PDF's
+    encryption restricts what it permits, printing or copying say: the
+    rewrite gives the new password the owner's rights and permits everything
+    (measured 2026-10-31), so whoever had the password to open it alone would
+    lift its author's restrictions. Nor where it leaves something in clear
+    (`LEFT_IN_CLEAR`). An encryption dictionary this cannot read counts as
+    restricting.
+    """
+    # ponytail: read whole, once a window loads; a scan by chunks when a PDF
+    # of hundreds of MB makes that slow.
+    data = pdf.read_bytes()
+    if b"/ByteRange" in data:
+        return False
+    refs = ENCRYPT_REF.findall(data)
+    if not refs:
+        return b"/Encrypt" not in data
+    # The last: an incremental update may re-encrypt. Never in an object
+    # stream (ISO 32000-2, 7.5.7), so in clear.
+    num, gen = refs[-1]
+    found = re.findall(
+        rb"(?<!\d)" + num + rb"\s+" + gen + rb"\s+obj\b(.*?)endobj", data, re.DOTALL
+    )
+    if not found or LEFT_IN_CLEAR.search(found[-1]) or CRYPT_FILTER.search(data):
+        return False
+    permits = re.search(rb"/P\s*(-?\d+)", found[-1])
+    return (
+        permits is not None and int(permits.group(1)) & ALL_PERMITTED == ALL_PERMITTED
+    )
+
+
+def rewrites(session: Session) -> bool:
+    """Whether a save of this PDF changes its password: x2t then writes the
+    whole file again, where it otherwise appends the changes."""
+    return not session.editor.converted and session.opened_with != session.password
 
 
 def _export(
@@ -487,64 +539,57 @@ def _export(
     m_bFromChanges when changes/changes0.json exists, and hand x2t the font
     index it opened with. A CSV is written the way `like`, the file that is
     open, was.
+
+    A PDF whose password File > Protect changed is saved in two runs: the
+    changes appended under the password it opens with, which `_check_pdf_save`
+    can judge; then the password alone changed, which writes the whole file
+    again. In one run, that rewrite hid a replay that had failed: x2t then
+    rewrites the original under the new password, exit 0.
     """
     doc = snapshot / "doc"
     from_changes = bool(ChangeLog(doc / "changes" / "changes0.json"))
     options = read_csv_options(staged, like)
-    save = write_job(
-        session,
-        "save.xml",
-        snapshot,
-        m_sFileFrom=doc / "Editor.bin",
-        m_sFileTo=staged,
-        m_nFormatTo=fmt,
-        m_bFromChanges=str(from_changes).lower(),
-        m_bDontSaveAdditional="true",
-        # The index of filesystem paths. Not the browser's, which holds none:
-        # handed that one, x2t fails deep inside sdkjs with "Cannot read
-        # property 'length' of null".
-        m_sAllFontsPath=session.all_fonts,
-        m_sFontDir=session.font_dir,
-        **options,
-        **_passwords(session),
-    )
-    # Whatever is there already would pass the check below for x2t's output.
-    # File > Reload exports to the same name every time, so an export that
-    # wrote nothing read the previous reload's file back in, in place of the
-    # edits since.
-    staged.unlink(missing_ok=True)
-    run = run_x2t(session, str(save))
-    # A file, and not an empty one: x2t's exit status has said 0 over nothing.
-    if run.returncode != 0 or not staged.is_file() or staged.stat().st_size == 0:
-        logger.error(
-            "export failed rc=%s fromChanges=%s\n%s",
-            run.returncode,
+    source = doc / "Editor.bin"
+    if not rewrites(session):
+        _run_save(
+            session,
+            snapshot,
+            (source, staged),
             from_changes,
-            choose_x2t_output(run),
+            m_nFormatTo=fmt,
+            **options,
+            **_passwords(session),
         )
-        msg = f"x2t could not write {staged.name} (exit status {run.returncode})"
-        raise ConversionError(msg)
-    # A PDF is saved by replaying the change log onto the original. When the
-    # replay fails, x2t writes the original and exits 0: with its script
-    # missing, before the changes reached the log, on a PDF certified against
-    # changes (notes/plans/release-0.7.md, item B). A save with changes that
-    # comes back as the original saved none of them. Every save measured, a
-    # page removed, added, rotated or moved included, appended the changes to
-    # the original's bytes; one that rewrote them may have lost what it did not
-    # rewrite, and a signature over them with it, so it fails too.
-    if from_changes and not session.editor.converted:
-        original, saved = (doc / "Editor.bin").read_bytes(), staged.read_bytes()
-        if saved == original:
-            logger.error("export failed: x2t wrote %s without the changes", staged.name)
-            msg = f"x2t saved none of the changes to {staged.name}"
-            # The likely reason, when there is one to name: both certified
-            # PDFs tried were refused so, whatever their signature permitted.
-            if b"/DocMDP" in original:
-                msg += ", which carries a certification signature"
-            raise ConversionError(msg)
-        if not saved.startswith(original):
-            logger.error("export failed: x2t rewrote %s", staged.name)
-            msg = f"x2t rewrote {staged.name} instead of adding the changes to it"
+        if not session.editor.converted:
+            _check_pdf_save(source, staged, from_changes=from_changes)
+    else:
+        appended = snapshot / "appended.pdf"
+        same = session.opened_with
+        kept = {"m_sPassword": same, "m_sSavePassword": same} if same else {}
+        _run_save(
+            session,
+            snapshot,
+            (source, appended),
+            from_changes,
+            m_nFormatTo=fmt,
+            **options,
+            **kept,
+        )
+        _check_pdf_save(source, appended, from_changes=from_changes)
+        _run_save(
+            session,
+            snapshot,
+            (appended, staged),
+            False,
+            m_nFormatTo=fmt,
+            **options,
+            **_passwords(session),
+        )
+        if staged.read_bytes() == appended.read_bytes():
+            # What x2t writes when the password it was given does not open the
+            # PDF: the file as it was, exit 0.
+            logger.error("export failed: x2t kept %s's password", staged.name)
+            msg = f"x2t did not change the password of {staged.name}"
             raise ConversionError(msg)
     # x2t converts text to UTF-8 through a buffer sized one unit per character,
     # while a character outside the BMP, an emoji say, needs two. The conversion
@@ -562,4 +607,76 @@ def _export(
             staged.name,
         )
         msg = f"x2t wrote {staged.name} in something other than UTF-8"
+        raise ConversionError(msg)
+
+
+def _run_save(
+    session: Session,
+    snapshot: pathlib.Path,
+    files: tuple[pathlib.Path, pathlib.Path],
+    from_changes: bool,
+    **fields: str | int,
+) -> None:
+    """One run of x2t for a save, from the first of `files` (and the change
+    log) to the second; `fields` are the rest of its job, the format and the
+    passwords among them."""
+    source, staged = files
+    save = write_job(
+        session,
+        f"{staged.stem}.xml",
+        snapshot,
+        m_sFileFrom=source,
+        m_sFileTo=staged,
+        m_bFromChanges=str(from_changes).lower(),
+        m_bDontSaveAdditional="true",
+        # The index of filesystem paths. Not the browser's, which holds none:
+        # handed that one, x2t fails deep inside sdkjs with "Cannot read
+        # property 'length' of null".
+        m_sAllFontsPath=session.all_fonts,
+        m_sFontDir=session.font_dir,
+        **fields,
+    )
+    # Whatever is there already would pass the check below for x2t's output.
+    # File > Reload exports to the same name every time, so an export that
+    # wrote nothing read the previous reload's file back in, in place of the
+    # edits since.
+    staged.unlink(missing_ok=True)
+    run = run_x2t(session, str(save))
+    # A file, and not an empty one: x2t's exit status has said 0 over nothing.
+    if run.returncode != 0 or not staged.is_file() or staged.stat().st_size == 0:
+        logger.error(
+            "export failed rc=%s fromChanges=%s\n%s",
+            run.returncode,
+            from_changes,
+            choose_x2t_output(run),
+        )
+        msg = f"x2t could not write {staged.name} (exit status {run.returncode})"
+        raise ConversionError(msg)
+
+
+def _check_pdf_save(
+    source: pathlib.Path, staged: pathlib.Path, *, from_changes: bool
+) -> None:
+    """A PDF is saved by replaying the change log onto the original. When the
+    replay fails, x2t writes the original and exits 0: with its script
+    missing, before the changes reached the log, on a PDF certified against
+    changes (notes/plans/release-0.7.md, item B). A save with changes that
+    comes back as the original saved none of them. Every save measured, a
+    page removed, added, rotated or moved included, appended the changes to
+    the original's bytes; one that rewrote them may have lost what it did not
+    rewrite, and a signature over them with it, so it fails too."""
+    if not from_changes:
+        return
+    original, saved = source.read_bytes(), staged.read_bytes()
+    if saved == original:
+        logger.error("export failed: x2t wrote %s without the changes", staged.name)
+        msg = f"x2t saved none of the changes to {staged.name}"
+        # The likely reason, when there is one to name: both certified
+        # PDFs tried were refused so, whatever their signature permitted.
+        if b"/DocMDP" in original:
+            msg += ", which carries a certification signature"
+        raise ConversionError(msg)
+    if not saved.startswith(original):
+        logger.error("export failed: x2t rewrote %s", staged.name)
+        msg = f"x2t rewrote {staged.name} instead of adding the changes to it"
         raise ConversionError(msg)

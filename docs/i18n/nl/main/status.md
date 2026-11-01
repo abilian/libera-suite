@@ -12,7 +12,7 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 | **Openen en opslaan** | Words `.docx .odt .rtf .txt .md`, Tables `.xlsx .ods .csv`, Slides `.pptx .odp`. Opslaan, Opslaan als, Nieuw. |
 | **Exporteren** | Save As biedt per programma een lijst met formaten, pdf inbegrepen. Elk aangeboden formaat is gecontroleerd door er een document naar te converteren en de tekst ervan terug te lezen. |
 | **Pdf's** | Opmerkingen, markeringen en tekeningen, ingevulde formulieren, pagina's toegevoegd, verwijderd, gedraaid en verplaatst, kleine tekstcorrecties. Bij het opslaan komen je wijzigingen achter het origineel, dat blijft zoals het was. [Werken met documenten](../guide/documents.md#pdfs) heeft de details. |
-| **Documenten met een wachtwoord** | Documenten, spreadsheets, presentaties en pdf's met een wachtwoord vragen erom, en bij het opslaan blijft het behouden. Bestand ▸ Beveiligen geeft er een, wijzigt of verwijdert het, behalve bij een pdf. [Werken met documenten](../guide/documents.md#passwords) geeft de details. |
+| **Documenten met een wachtwoord** | Documenten, spreadsheets, presentaties en pdf's met een wachtwoord vragen erom, en bij het opslaan blijft het behouden. Bestand ▸ Beveiligen geeft er een, wijzigt of verwijdert het, behalve bij een ondertekende pdf of een die de auteur heeft beperkt. [Werken met documenten](../guide/documents.md#passwords) geeft de details. |
 | **Afbeeldingen** | Blijven behouden bij openen en opslaan; Invoegen ▸ Afbeelding werkt. |
 | **Afdrukken** | Maakt een pdf, vraagt waar je die wilt bewaren en opent hem in je pdf-viewer. |
 | **Spellingcontrole** | Zes talen, met suggesties. Zie hieronder. |
@@ -57,7 +57,6 @@ Loop je tegen iets aan dat *niet* op deze lijst staat, [laat het ons weten](../f
 
 ### In het documentvenster
 
-- **Een pdf een wachtwoord geven**, of het zijne wijzigen of verwijderen. Een pdf die er een heeft, opent en wordt opgeslagen met zijn wachtwoord; documenten, spreadsheets en presentaties hebben Bestand ▸ Beveiligen.
 - **Digitale handtekeningen.**
 - **Afdruk samenvoegen.**
 - **Plug-ins.** In deze fork upstream uitgeschakeld, dus het paneel verschijnt nooit.

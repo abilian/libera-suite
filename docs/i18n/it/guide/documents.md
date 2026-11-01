@@ -133,7 +133,7 @@ Un documento protetto da una password, da Word, LibreOffice o Libera Suite, la c
 
 **La protezione propria di LibreOffice 26 non si legge ancora.** Per impostazione predefinita, LibreOffice 26 cifra un file OpenDocument in un modo che Libera Suite non legge, e Libera Suite lo dice invece di chiedere la password. LibreOffice scrive la cifratura precedente, che Libera Suite legge, quando la sua versione del formato ODF è impostata su 1.3.
 
-**File ▸ Proteggi** dà una password a un documento con *Aggiungi password*, e propone *Cambia password* (in Tables e Slides *Modifica password*) ed *Elimina password* quando ne ha una. Ciascuno salva subito il documento. È proposto per i file Word, Excel, PowerPoint e OpenDocument, i formati che possono portare una password. A un PDF non si può ancora dare una password, né cambiare la sua.
+**File ▸ Proteggi** dà una password a un documento con *Aggiungi password*, e propone *Cambia password* (in Tables, Slides e per un PDF *Modifica password*) ed *Elimina password* quando ne ha una. Ciascuno salva subito il documento. È proposto per i file Word, Excel, PowerPoint, OpenDocument e PDF, i formati che possono portare una password. La nuova password di un PDF riscrive l'intero file: Proteggi non è quindi proposto per un PDF firmato, le cui firme non sopravvivrebbero, né per uno il cui autore ha limitato la stampa, la copia o la modifica, perché la nuova password toglierebbe quei limiti, né per uno che lascia una parte di sé non cifrata, che la riscrittura rovinerebbe.
 
 ## Controllo ortografico {#spell-checking}
 
