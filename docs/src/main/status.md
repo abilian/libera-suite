@@ -11,6 +11,7 @@ Libera Suite is early. This page is a status list: it says what is built, what i
 | **Export** | Save As offers a format popup per application, PDF included. Every format offered is checked by converting a document to it and reading its text back. |
 | **PDFs** | Comments, highlights and drawings, forms filled in, pages added, deleted, rotated and moved, small text corrections. Saving adds your changes after the original, which stays as it was. [Work with documents](../guide/documents.md#pdfs) has the detail. |
 | **Documents with a password** | Documents, spreadsheets, presentations and PDFs protected by a password ask for it, and saving keeps it. File ▸ Protect gives one, changes or removes it, but for a signed PDF or one whose author restricted it. [Work with documents](../guide/documents.md#passwords) has the detail. |
+| **Digital signatures** | Word, Excel and PowerPoint documents show their signatures, valid or not, and stay read-only while signed. Signing takes a key file, PKCS#12 or PEM, and its passphrase. [Work with documents](../guide/documents.md#signatures) has the detail. |
 | **Images** | Preserved on open and save; Insert ▸ Image works. |
 | **Print** | Renders to PDF, asks where to keep it, and opens it in your PDF viewer. |
 | **Spell checking** | Six languages, with suggestions. See below. |
@@ -55,7 +56,6 @@ If you hit something that is *not* on this list, [tell us about it](../feedback.
 
 ### In the document window
 
-- **Digital signatures.**
 - **Mail merge.**
 - **Plugins.** Disabled upstream in this fork, so the panel never appears.
 - **Macros.** Turned off. The components' own macros are JavaScript, and run none of the VBA in documents from Microsoft Office, so a document's macros are not run. They are kept: saving a `.docm`, `.xlsm` or `.pptm` leaves its VBA as it was. [The roadmap](../develop/roadmap.md) says what comes instead.

@@ -14,6 +14,7 @@ import pathlib
 import secrets
 import shutil
 import tempfile
+import zipfile
 from dataclasses import dataclass, field, replace
 from enum import IntEnum
 from typing import TYPE_CHECKING
@@ -305,6 +306,46 @@ def _drops_password(session: Session, plan: Destination) -> bool:
     return bool(session.password) and f".{plan.ext}" not in convert.KEEPS_PASSWORD
 
 
+def is_signed(path: pathlib.Path) -> bool:
+    """Whether a package carries digital signatures, read without running
+    anything: their parts, under `_xmlsignatures/` (host.signing)."""
+    try:
+        with zipfile.ZipFile(path) as package:
+            return any(n.startswith("_xmlsignatures/sig") for n in package.namelist())
+    except (OSError, zipfile.BadZipFile):
+        return False
+
+
+def _declines(
+    plan: Destination, open_file: pathlib.Path | None, *, drops_password: bool
+) -> bool:
+    """Whether a save stops before x2t runs, which it says in the log."""
+    # Asked first, a plain save included: the editor reads whether to offer
+    # File > Protect once, as it loads, so a document saved as text still
+    # offers it, and a password set there reaches a .txt. With no one to ask,
+    # the answer is no.
+    if drops_password and (
+        plan.target is None or not hooks.shell.confirm_unprotected(plan.target)
+    ):
+        logger.info("save cancelled: it would drop the password")
+        return True
+    if open_file is not None and plan.target == open_file and is_signed(open_file):
+        # x2t rebuilds the package from Editor.bin and writes no signature.
+        # The editor keeps a signed document read-only, and its Edit anyway
+        # removes the signatures first; a save that still meets them went
+        # around both, and would unsign the document without a word.
+        logger.error("save refused: %s is signed", open_file.name)
+        hooks.shell.tell(
+            language.translate("“{name}” is signed", name=open_file.name),
+            language.translate(
+                "Saving it would remove its signatures. To edit it, choose "
+                "File ▸ Protect ▸ Edit document, which removes them first."
+            ),
+        )
+        return True
+    return False
+
+
 def _save(session: Session, request: SaveRequest, *, may_ask: bool) -> dict:
     """save_document, once the session may be saved and has its password."""
     app = session.editor
@@ -326,17 +367,9 @@ def _save(session: Session, request: SaveRequest, *, may_ask: bool) -> dict:
         if chosen is None:
             return {"error": SaveOutcome.DECLINED}
         plan = plan.to(chosen, app)
-    # Asked first, a plain save included: the editor reads whether to offer
-    # File > Protect once, as it loads, so a document saved as text still
-    # offers it, and a password set there reaches a .txt. With no one to ask,
-    # the answer is no.
     drops_password = _drops_password(session, plan)
-    if drops_password and (
-        plan.target is None or not hooks.shell.confirm_unprotected(plan.target)
-    ):
-        logger.info("save cancelled: it would drop the password")
+    if _declines(plan, open_file, drops_password=drops_password):
         return {"error": SaveOutcome.DECLINED}
-
     final = _export(session, plan, open_file)
     if final is None:
         # convert has logged what x2t said; the editor is told the save failed.

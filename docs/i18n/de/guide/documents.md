@@ -135,6 +135,16 @@ Ein mit einem Kennwort geschütztes Dokument, ob von Word, LibreOffice oder Libe
 
 **Datei ▸ Schützen** gibt einem Dokument mit *Kennwort hinzufügen* ein Kennwort und bietet *Kennwort ändern* und *Kennwort löschen* an, sobald es eines hat. Jedes speichert das Dokument sofort. Es wird für Word-, Excel-, PowerPoint-, OpenDocument- und PDF-Dateien angeboten, die Formate, die ein Kennwort tragen können. Ein neues Kennwort schreibt ein PDF vollständig neu: Schützen wird daher weder für ein signiertes PDF angeboten, dessen Signaturen das nicht überstehen würden, noch für eines, dessen Autor Drucken, Kopieren oder Bearbeiten eingeschränkt hat, da das neue Kennwort diese Einschränkungen aufheben würde, noch für eines, das einen Teil von sich unverschlüsselt lässt, den das Neuschreiben verderben würde.
 
+## Signierte Dokumente {#signatures}
+
+Ein Word-, Excel- oder PowerPoint-Dokument kann digitale Signaturen tragen, von Word, von Libera Suite oder von Euro-Office. Libera Suite prüft sie beim Öffnen des Dokuments und listet sie im Bereich *Signatur* auf, jede gültig oder nicht, mit Unterzeichner und Datum. Ein signiertes Dokument öffnet sich schreibgeschützt, damit nichts ändert, was signiert wurde. *Gültig* heißt, dass sich das Dokument seit dem Signieren nicht geändert hat. Wer das Zertifikat ausgestellt hat, wird noch nicht geprüft: Der Name des Unterzeichners ist der, den das Zertifikat selbst angibt; sehen Sie sich deshalb die *Signaturdetails* an, bevor Sie ihm vertrauen.
+
+**Signieren.** *Schutz* ▸ *Signatur* ▸ *Digitale Signatur hinzufügen*, oder *Signaturzeile hinzufügen* für eine im Dokument gezeichnete Signatur, dann *Wählen* im Dialog *Dokument signieren*. Libera Suite fragt nach einer Schlüsseldatei, PKCS#12 (`.p12`, `.pfx`) oder PEM, nach der Zertifikatdatei, wenn die Schlüsseldatei keines enthält, und nach dem Kennwort des Schlüssels; Unterzeichner und Gültigkeit des Zertifikats erscheinen dann im Dialog, bevor Sie signieren. Das Kennwort bleibt erhalten, solange das Fenster offen ist, und wird nie geschrieben. Ein Dokument mit Änderungen wird zuerst gespeichert, da ein Dokument so signiert wird, wie es auf dem Datenträger ist.
+
+**Das Bearbeiten eines signierten Dokuments entfernt seine Signaturen.** *Datei* ▸ *Schützen* ▸ *Dokument bearbeiten* sagt es und fragt zuerst; *Signatur entfernen* im Bereich *Signatur* entfernt eine. *Signaturdetails* zeigt das Zertifikat des Unterzeichners.
+
+**Noch nicht**: ein kennwortgeschütztes Dokument, eine OpenDocument-Datei oder ein PDF signieren, und die Zertifikate im eigenen Speicher von Windows; eine Schlüsseldatei funktioniert auf jedem System. **Ein abgelaufenes Zertifikat signiert**, und seine Signatur wird als gültig aufgeführt: Prüfen Sie die Gültigkeit des Zertifikats im Dialog, bevor Sie signieren.
+
 ## Rechtschreibprüfung {#spell-checking}
 
 Fehler werden unterstrichen; ein Rechtsklick bietet Vorschläge an. Welches Wörterbuch verwendet wird, richtet sich nach **der Sprache des Dokuments**, die Sie in der **Statusleiste** am unteren Fensterrand einstellen, für jedes Dokument einzeln.

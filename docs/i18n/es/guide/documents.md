@@ -135,6 +135,16 @@ Un documento protegido con una contraseña, por Word, LibreOffice o Libera Suite
 
 **Archivo ▸ Proteger** pone una contraseña a un documento con *Añadir contraseña*, y ofrece *Cambiar contraseña* y *Eliminar contraseña* cuando ya tiene una. Cada uno guarda el documento al momento. Se ofrece para archivos de Word, Excel, PowerPoint, OpenDocument y PDF, los formatos que pueden llevar una contraseña. La nueva contraseña de un PDF reescribe el archivo entero: por eso Proteger no se ofrece para un PDF firmado, cuyas firmas no lo resistirían, ni para uno cuyo autor restringió la impresión, la copia o la edición, porque la nueva contraseña quitaría esas restricciones, ni para uno que deja una parte de sí sin cifrar, que la reescritura estropearía.
 
+## Documentos firmados {#signatures}
+
+Un documento de Word, Excel o PowerPoint puede llevar firmas digitales, hechas por Word, por Libera Suite o por Euro-Office. Libera Suite las comprueba al abrir el documento y las muestra en el panel *Firma*, cada una válida o no, con quién firmó y cuándo. Un documento firmado se abre en solo lectura, para que nada cambie lo firmado. *Válida* significa que el documento no ha cambiado desde que se firmó. Todavía no se comprueba quién emitió el certificado: el nombre del firmante es el que declara el propio certificado, así que consulta los *Detalles de la firma* antes de fiarte.
+
+**Firmar.** *Protección* ▸ *Firma* ▸ *Añadir firma digital*, o *Añadir línea de firma* para una firma dibujada en el documento, y después *Seleccionar* en el diálogo *Firmar documento*. Libera Suite pide un archivo de clave, PKCS#12 (`.p12`, `.pfx`) o PEM, el archivo del certificado cuando el de la clave no lo contiene, y la contraseña de la clave; el firmante y las fechas del certificado aparecen entonces en el diálogo antes de firmar. La contraseña se conserva mientras la ventana está abierta, y nunca se escribe. Un documento con cambios se guarda primero, porque un documento se firma tal como está en el disco.
+
+**Editar un documento firmado elimina sus firmas.** *Archivo* ▸ *Proteger* ▸ *Editar documento* lo dice y pregunta antes; *Eliminar la firma*, en el panel *Firma*, elimina una. *Detalles de la firma* muestra el certificado del firmante.
+
+**Todavía no**: firmar un documento protegido con contraseña, un archivo OpenDocument o un PDF, ni usar los certificados del almacén propio de Windows; un archivo de clave funciona en todos los sistemas. **Un certificado caducado firma**, y su firma aparece como válida: comprueba las fechas del certificado en el diálogo antes de firmar.
+
 ## Corrección ortográfica {#spell-checking}
 
 Las faltas se subrayan; el clic derecho ofrece sugerencias. El diccionario que se usa depende del **idioma del documento**, que fijas en la **barra de estado** de la parte inferior de la ventana, documento a documento.

@@ -135,6 +135,16 @@ Un document protégé par un mot de passe, par Word, LibreOffice ou Libera Suite
 
 **Fichier ▸ Protéger** donne un mot de passe à un document avec *Ajouter un mot de passe*, et propose *Modifier le mot de passe* et *Supprimer le mot de passe* une fois qu'il en a un. Chacun enregistre le document aussitôt. Il est proposé pour les fichiers Word, Excel, PowerPoint, OpenDocument et PDF, les formats qui peuvent porter un mot de passe. Le nouveau mot de passe d'un PDF réécrit le fichier entier : Protéger n'est donc pas proposé pour un PDF signé, dont les signatures n'y survivraient pas, ni pour un PDF dont l'auteur a restreint l'impression, la copie ou la modification, car son nouveau mot de passe lèverait ces restrictions, ni pour un PDF qui laisse une partie de lui-même en clair, que la réécriture abîmerait.
 
+## Documents signés {#signatures}
+
+Un document Word, Excel ou PowerPoint peut porter des signatures numériques, faites par Word, par Libera Suite ou par Euro-Office. Libera Suite les vérifie à l'ouverture du document et les liste dans le panneau *Signature*, chacune valide ou non, avec son signataire et sa date. Un document signé s'ouvre en lecture seule : rien ne modifie ainsi le contenu signé. *Valide* signifie que le document n'a pas changé depuis sa signature. L'émetteur du certificat n'est pas encore vérifié : le nom du signataire est celui que le certificat annonce lui-même, consultez donc *Détails de la signature* avant de vous y fier.
+
+**Signer.** *Protection* ▸ *Signature* ▸ *Ajouter une signature numérique*, ou *Ajouter la zone de signature* pour une signature dessinée dans le document, puis *Sélectionner* dans la boîte de dialogue *Signer le document*. Libera Suite demande un fichier de clé, PKCS#12 (`.p12`, `.pfx`) ou PEM, le fichier du certificat lorsque le fichier de clé n'en contient pas, et la phrase secrète de la clé ; le signataire et les dates du certificat s'affichent alors dans la boîte de dialogue avant la signature. La phrase secrète est gardée tant que la fenêtre est ouverte, et jamais écrite. Un document modifié est d'abord enregistré, puisqu'un document est signé tel qu'il est sur le disque.
+
+**Modifier un document signé supprime ses signatures.** *Fichier* ▸ *Protéger* ▸ *Modifier le document* le dit et demande d'abord ; *Supprimer la signature*, dans le panneau *Signature*, en supprime une. *Détails de la signature* montre le certificat du signataire.
+
+**Pas encore** : signer un document protégé par un mot de passe, un fichier OpenDocument ou un PDF, et les certificats du magasin propre à Windows ; un fichier de clé fonctionne sur tous les systèmes. **Un certificat expiré signe**, et sa signature est listée comme valide : vérifiez les dates du certificat dans la boîte de dialogue avant de signer.
+
 ## Correction orthographique {#spell-checking}
 
 Les fautes sont soulignées ; le clic droit propose des suggestions. Le dictionnaire utilisé dépend de **la langue du document**, que vous réglez dans la **barre d'état** en bas de la fenêtre, pour chaque document.

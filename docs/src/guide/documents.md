@@ -133,6 +133,16 @@ A document protected by a password, by Word, LibreOffice or Libera Suite, asks f
 
 **File ▸ Protect** gives a document a password with *Add password*, and has *Change password* and *Delete password* once it has one. Each saves the document at once. It is offered for Word, Excel, PowerPoint, OpenDocument and PDF files, the formats that can carry a password. A PDF's new password rewrites the whole file, so Protect is not offered for a signed PDF, whose signatures that would break, nor for one whose author restricted printing, copying or editing, since its new password would lift those restrictions, nor for one that leaves part of itself unencrypted, which the rewrite would garble.
 
+## Signed documents {#signatures}
+
+A Word, Excel or PowerPoint document can carry digital signatures, made by Word, by Libera Suite or by Euro-Office. Libera Suite checks them as the document opens and lists them in the *Signature* panel, each valid or not, with who signed and when. A signed document opens read-only, so that nothing changes what was signed. *Valid* means the document has not changed since it was signed. Who issued the certificate is not checked yet: the signer's name is what the certificate itself says, so look at *Signature details* before trusting it.
+
+**Signing.** *Protection* ▸ *Signature* ▸ *Add digital signature*, or *Add signature line* for a signature drawn in the document, then *Select* in the *Sign document* dialog. Libera Suite asks for a key file, PKCS#12 (`.p12`, `.pfx`) or PEM, its certificate file when the key file holds none, and the key's passphrase; the signer and the dates of the certificate then show in the dialog before you sign. The passphrase is kept while the window is open, and never written. A document with edits is saved first, since a document is signed as it is on disk.
+
+**Editing a signed document removes its signatures.** *File* ▸ *Protect* ▸ *Edit document* says so and asks first; *Remove Signature*, in the *Signature* panel, removes one. *Signature details* shows the signer's certificate.
+
+**Not yet**: signing a document protected by a password, an OpenDocument file or a PDF, and the certificates in Windows's own store; a key file works on every system. **An expired certificate signs**, and its signature is listed as valid: check the certificate's dates in the dialog before signing.
+
 ## Spell checking
 
 Misspellings are underlined, and right-click offers suggestions. Which dictionary is used follows **the document's language**, which you set from the **status bar** at the bottom of the window, per document.

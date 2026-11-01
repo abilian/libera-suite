@@ -100,23 +100,32 @@ def run_x2t(session: Session, *args: str) -> subprocess.CompletedProcess:
         return run_watched([str(session.layout.x2t), *args], env)
 
 
-def run_watched(argv: list[str], env: dict[str, str]) -> subprocess.CompletedProcess:
+def run_watched(
+    argv: list[str], env: dict[str, str], stdin: str | None = None
+) -> subprocess.CompletedProcess:
     """`argv` to the end, unless it holds more than X2T_MEMORY or runs past
-    X2T_TIMEOUT: then it is stopped, and the conversion fails saying which."""
+    X2T_TIMEOUT: then it is stopped, and the conversion fails saying which.
+    `stdin`, when given, is its standard input: a passphrase for libera-sign,
+    which reads hostile documents as x2t does (host.signing)."""
     proc = subprocess.Popen(
         argv,
+        stdin=subprocess.DEVNULL if stdin is None else subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
         env=env,
         creationflags=locate.NO_WINDOW,
     )
     deadline = time.monotonic() + X2T_TIMEOUT
+    given = stdin
     while True:
         try:
-            # Retrying after a timeout loses no output (the subprocess docs).
-            out, err = proc.communicate(timeout=X2T_WATCH)
+            # Retrying after a timeout loses no output (the subprocess docs);
+            # the input goes with the first call, which writes all of it.
+            out, err = proc.communicate(input=given, timeout=X2T_WATCH)
         except subprocess.TimeoutExpired:
+            given = None
             held = desktop.memory_bytes(proc.pid)
             if held > X2T_MEMORY:
                 msg = f"x2t held {held >> 20} MB, more than {X2T_MEMORY >> 20} MB"

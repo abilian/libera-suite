@@ -135,6 +135,16 @@ Een document dat met een wachtwoord is beveiligd, door Word, LibreOffice of Libe
 
 **Bestand ▸ Beveiligen** geeft een document een wachtwoord met *Wachtwoord toevoegen*, en biedt *Verander wachtwoord* en *Wachtwoord verwijderen* zodra het er een heeft. Elk slaat het document meteen op. Het wordt aangeboden voor Word-, Excel-, PowerPoint-, OpenDocument- en pdf-bestanden, de formaten die een wachtwoord kunnen dragen. Een nieuw wachtwoord herschrijft een pdf helemaal: Beveiligen wordt daarom niet aangeboden voor een ondertekende pdf, waarvan de handtekeningen dat niet zouden overleven, noch voor een pdf waarvan de auteur afdrukken, kopiëren of bewerken heeft beperkt, omdat het nieuwe wachtwoord die beperkingen zou opheffen, noch voor een pdf die een deel van zichzelf onversleuteld laat, dat het herschrijven zou beschadigen.
 
+## Ondertekende documenten {#signatures}
+
+Een Word-, Excel- of PowerPoint-document kan digitale handtekeningen dragen, gezet door Word, door Libera Suite of door Euro-Office. Libera Suite controleert ze bij het openen van het document en toont ze in het paneel *Handtekening*, elk geldig of niet, met wie ondertekende en wanneer. Een ondertekend document opent alleen-lezen, zodat niets verandert aan wat ondertekend is. *Geldig* betekent dat het document niet veranderd is sinds het ondertekend werd. Wie het certificaat uitgaf, wordt nog niet gecontroleerd: de naam van de ondertekenaar is wat het certificaat zelf zegt, dus bekijk de *Handtekening details* voordat je erop vertrouwt.
+
+**Ondertekenen.** *Beveiliging* ▸ *Handtekening* ▸ *Digitale handtekening toevoegen*, of *Voeg een handtekeningregel toe* voor een handtekening die in het document wordt getekend, en dan *Selecteren* in het venster *Onderteken document*. Libera Suite vraagt om een sleutelbestand, PKCS#12 (`.p12`, `.pfx`) of PEM, het certificaatbestand als het sleutelbestand er geen bevat, en het wachtwoord van de sleutel; de ondertekenaar en de data van het certificaat verschijnen dan in het venster voordat je ondertekent. Het wachtwoord blijft bewaard zolang het venster open is, en wordt nooit weggeschreven. Een document met wijzigingen wordt eerst opgeslagen, omdat een document wordt ondertekend zoals het op schijf staat.
+
+**Een ondertekend document bewerken verwijdert zijn handtekeningen.** *Bestand* ▸ *Beveiligen* ▸ *Document bewerken* zegt dat en vraagt eerst; *Handtekening verwijderen*, in het paneel *Handtekening*, verwijdert er een. *Handtekening details* toont het certificaat van de ondertekenaar.
+
+**Nog niet**: een document met een wachtwoord, een OpenDocument-bestand of een pdf ondertekenen, en de certificaten in de eigen opslag van Windows; een sleutelbestand werkt op elk systeem. **Een verlopen certificaat ondertekent**, en zijn handtekening wordt als geldig getoond: controleer de data van het certificaat in het venster voordat je ondertekent.
+
 ## Spellingcontrole {#spell-checking}
 
 Spelfouten worden onderstreept, en met de rechtermuisknop krijg je suggesties. Welk woordenboek gebruikt wordt, volgt **de taal van het document**, die je per document instelt in de **statusbalk** onder in het venster.

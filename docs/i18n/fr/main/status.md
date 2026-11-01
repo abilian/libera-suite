@@ -13,6 +13,7 @@ L'interface de Libera Suite est en anglais : les noms des menus et des boutons s
 | **Exporter** | Save As propose une liste de formats pour chaque application, PDF compris. Chaque format proposé est vérifié par une conversion réelle, dont le texte est relu. |
 | **PDF** | Commentaires, surlignages et dessins, formulaires remplis, pages ajoutées, supprimées, pivotées et déplacées, petites corrections de texte. L'enregistrement ajoute vos modifications après l'original, qui reste tel quel. [Travailler avec les documents](../guide/documents.md#pdfs) donne le détail. |
 | **Documents protégés par un mot de passe** | Les documents, classeurs, présentations et PDF protégés par un mot de passe le demandent, et l'enregistrement le garde. Fichier ▸ Protéger en donne un, le change ou le retire, sauf pour un PDF signé ou restreint par son auteur. [Travailler avec les documents](../guide/documents.md#passwords) donne le détail. |
+| **Signatures numériques** | Les documents Word, Excel et PowerPoint montrent leurs signatures, valides ou non, et restent en lecture seule tant qu'ils sont signés. Signer demande un fichier de clé, PKCS#12 ou PEM, et sa phrase secrète. [Travailler avec les documents](../guide/documents.md#signatures) donne le détail. |
 | **Images** | Conservées à l'ouverture et à l'enregistrement ; Insertion ▸ Image fonctionne. |
 | **Imprimer** | Produit un PDF, demande où le conserver et l'ouvre dans votre lecteur de PDF. |
 | **Correction orthographique** | Six langues, avec suggestions. Voir plus bas. |
@@ -57,7 +58,6 @@ Si vous rencontrez un problème qui ne figure *pas* dans cette liste, [signalez-
 
 ### Dans la fenêtre du document
 
-- **Les signatures numériques.**
 - **Le publipostage.**
 - **Les modules complémentaires.** Ils sont désactivés en amont dans ce fork : le panneau n'apparaît jamais.
 - **Les macros.** Désactivées. Les macros des composants sont écrites en JavaScript et n'exécutent pas le VBA des documents de Microsoft Office : les macros d'un document ne sont donc pas exécutées. Elles sont conservées : l'enregistrement d'un `.docm`, d'un `.xlsm` ou d'un `.pptm` laisse son VBA intact. [La feuille de route](/en/develop/roadmap/), en anglais, décrit la suite.

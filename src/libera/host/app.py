@@ -357,6 +357,9 @@ class WindowedShell:
     def confirm_unprotected(self, document: Path) -> bool:
         return dialogs.confirm_unprotected(document)
 
+    def confirm_save_before_signing(self, document: Path) -> bool:
+        return dialogs.confirm_save_before_signing(document)
+
     def ask_to_recover(self, document: Path) -> bool:
         return ask_to_recover(document)
 

@@ -104,6 +104,21 @@ def confirm_unprotected(document: Path) -> bool:
     return answer is Answer.YES
 
 
+def confirm_save_before_signing(document: Path) -> bool:
+    """Ask before a document with edits is saved so that it can be signed."""
+    answer = ask(
+        Question(
+            language.translate("Save “{name}” before signing it?", name=document.name),
+            language.translate(
+                "A document is signed as it is saved. Its edits are saved first."
+            ),
+            yes=language.translate("Save"),
+            no=language.translate("Cancel"),
+        )
+    )
+    return answer is Answer.YES
+
+
 def confirm_close(session_id: str) -> bool:
     """Ask before a window takes unsaved edits with it. False keeps it open.
 
