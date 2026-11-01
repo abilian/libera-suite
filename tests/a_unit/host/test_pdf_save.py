@@ -82,6 +82,16 @@ def test_a_certified_pdf_says_so(opened, tmp_path, monkeypatch):
         convert.export(opened, tmp_path / "saved.pdf", 513, None)
 
 
+def test_a_save_that_rewrites_the_original_fails(annotated, tmp_path, monkeypatch):
+    """Every save measured appended to the original's bytes, page operations
+    included; one that did not may have lost what it rewrote. ElixirOffice
+    refuses it too."""
+    make_x2t_write(monkeypatch, b"%PDF-1.4\n% another file, the comment in it\n%%EOF\n")
+
+    with pytest.raises(convert.ConversionError, match="rewrote"):
+        convert.export(annotated, tmp_path / "saved.pdf", 513, None)
+
+
 def test_a_save_with_the_changes_appended_succeeds(annotated, tmp_path, monkeypatch):
     saved = ORIGINAL + b"% an incremental update\n%%EOF\n"
     make_x2t_write(monkeypatch, saved)
