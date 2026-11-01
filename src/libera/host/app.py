@@ -66,7 +66,7 @@ from libera.host.window import (
     show_session_edited,
     take_dropped,
 )
-from libera.payload import fonts, generate, locate, prune
+from libera.payload import fonts, generate, locate
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -145,7 +145,6 @@ def run(
     # (the recent list, a new blank, the payload) is answered for a session,
     # even with no document shown, so there has to be one to answer for.
     timeline.mark("host")
-    prune.note_use(payload_root)
     layout = locate.Layout.of(payload_root)
     first_session = Session(
         payload=payload_root,
@@ -279,8 +278,6 @@ def _once_running() -> None:
     timeline.mark("gui-loop")
     menu.native.install()
     updates.check_in_background()
-    # Other versions of the payload that nobody has used for weeks.
-    prune.remove_unused_behind(locate.get_data_dir(), keep=locate.PAYLOAD_VERSION)
 
 
 class WindowedShell:

@@ -65,18 +65,18 @@ sed -i 's/^include-system-site-packages = false/include-system-site-packages = t
     /venv/pyvenv.cfg
 uv run --no-sync python -c 'import gi' \\
     || { echo 'FATAL: the venv still cannot import gi' >&2; exit 1; }"""
-# Installs whenever /dist holds other artifacts than the last install's, and
-# not only when no payload works: a payload rebuilt under the same version
-# passes --payload-status, and the state volume kept the one before it.
+# Unpacks whenever /dist holds other artifacts than the last unpack's: a
+# payload rebuilt under the same version is still another payload. Into the
+# state volume, and named by LIBERA_PAYLOAD, which resolve() takes first: the
+# workspace's own components are the mounted checkout's, which on a Mac are
+# macOS binaries.
 PREPARE = f"""{SYNC}
-if [ -e /dist/manifest.json ] && ! cmp -s /dist/manifest.json /state/installed-from.json
+if [ -e /dist/manifest.json ] && ! cmp -s /dist/manifest.json /state/unpacked-from.json
 then
-    uv run --no-sync libera --payload-install --from /dist \\
-        && cp /dist/manifest.json /state/installed-from.json
-else
-    uv run --no-sync libera --payload-status >/dev/null 2>&1 \\
-        || uv run --no-sync libera --payload-install --from /dist
+    uv run --no-sync lb components unpack --dist /dist --into /state/payload \\
+        && cp /dist/manifest.json /state/unpacked-from.json
 fi
+export LIBERA_PAYLOAD="${{LIBERA_PAYLOAD:-/state/payload}}"
 uv run --no-sync playwright install chromium >/dev/null 2>&1 \\
     || {{ echo 'FATAL: playwright could not install a browser' >&2; exit 1; }}"""
 
@@ -258,8 +258,6 @@ def run(options: LinuxOptions, engine: Engine | None = None) -> int:
 
     needs_payload = options.action not in {"versions", "shell", "lint"}
     dist, payload = choose_payload(options, arch) if needs_payload else (None, None)
-    if dist is not None:
-        versions.stamp_bundled_manifest(REPO, dist)
     step(f"{options.action}, on Linux ({arch})")
     argv = engine.run_argv(
         Run(

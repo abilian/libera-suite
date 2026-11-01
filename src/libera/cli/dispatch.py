@@ -193,37 +193,21 @@ def _add_convert_options(parser: argparse.ArgumentParser, *, shown: bool) -> Non
 
 
 def _add_payload_options(parser: argparse.ArgumentParser) -> None:
-    """The payload: the Euro-Office components, fetched, verified and installed
-    separately from the wheel, because they are ~90 MB of JavaScript and native
-    binaries. The help says components, which is what a user installs; the
-    options keep the name the code and the scripts use. The start window shows
-    the same information; these are for scripts and for a machine with no
-    window system."""
+    """The payload: the Euro-Office components, installed with the wheel as
+    two packages of their own. The help says components, which is what a user
+    installs; the options keep the name the code and the scripts use. The
+    start window shows the same information; these are for scripts and for a
+    machine with no window system."""
     group = parser.add_argument_group("components (the payload)")
     group.add_argument(
         "--payload-status",
         action="store_true",
-        help="where they are installed, and which version",
+        help="where they are, and which version",
     )
     group.add_argument(
-        "--payload-install",
+        "--payload-remove",
         action="store_true",
-        help="download them, check them and install them",
-    )
-    group.add_argument("--payload-remove", action="store_true", help="delete them")
-    group.add_argument(
-        "--from",
-        dest="source",
-        metavar="DIR_OR_URL",
-        help="install from a directory of built files, or download from this URL",
-    )
-    group.add_argument(
-        "--trust-manifest",
-        action="store_true",
-        help=(
-            "in a copy installed from source, which has no checksums of its own:"
-            " download without asking, checked against the download site's"
-        ),
+        help="delete what earlier versions downloaded, which this one does not use",
     )
 
 
@@ -290,10 +274,8 @@ def _choose_command(
 
     # Options that belong to one command, which every other ignored without a
     # word: `libera --from ./dist` opened the start window, and offered to
-    # download from the default origin.
+    # download from the default origin, when there was one.
     owned = (
-        ("--from", "--payload-install", args.source is not None),
-        ("--trust-manifest", "--payload-install", args.trust_manifest),
         ("--port", "--serve", args.port is not None),
         ("--work", "--serve", args.work is not None),
         ("--to", "--convert", args.to is not None),
@@ -343,7 +325,6 @@ def _find_command_flags(
     table = (
         ("--diagnose", args.diagnose, commands.diagnose),
         ("--payload-status", args.payload_status, commands.show_payload_status),
-        ("--payload-install", args.payload_install, commands.install_payload),
         ("--payload-remove", args.payload_remove, commands.remove_payload),
         ("--launcher-install", args.launcher_install, commands.install_launcher),
         ("--launcher-remove", args.launcher_remove, commands.remove_launcher),

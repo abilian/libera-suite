@@ -6,7 +6,6 @@ from pathlib import Path
 
 from libera_build import buildbox, flatpak, inventory, released_gui, tidy
 from libera_build.buildbox import BoxOptions
-from libera_build.containers import linux_platform
 from libera_build.inventory import Builder
 
 
@@ -77,7 +76,7 @@ def test_diagnose_must_say_a_window_and_a_bundled_payload():
     good = (
         "window     ok\n"
         "payload:   /app/share/libera/payload\n"
-        "found via: bundled\n"
+        "found via: components\n"
         "version:   0.4\n"
     )
     assert flatpak.diagnose_problems(good) == []
@@ -89,17 +88,6 @@ def test_diagnose_must_say_a_window_and_a_bundled_payload():
         )
         == 2
     )
-
-
-def test_only_this_architectures_core_is_bundled():
-    assert flatpak.staged_names("arm64", ["fonts-core.tar.gz"]) == [
-        "manifest.json",
-        "core-linux-arm64.tar.gz",
-        "editors.tar.gz",
-        "fonts-core.tar.gz",
-    ]
-    assert "fonts-core.tar.gz" in flatpak.staged_names("amd64", [])
-    assert linux_platform("amd64") == "linux-x86_64"
 
 
 def test_the_window_is_checked_on_remote_linux_builders_only():

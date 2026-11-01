@@ -86,7 +86,7 @@ def ship(options: ShipOptions) -> int:
         say("")
     if any(p in phases for p in ("publish", "check", "verify")):
         say("    the last word belongs to a machine that never built it:")
-        say("        libera --payload-install")
+        say("        pipx install libera && libera --payload-status")
     return 0
 
 

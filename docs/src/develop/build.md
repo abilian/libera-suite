@@ -73,10 +73,10 @@ lb payload dist                 # the distributable tarballs and their manifest
 
 Each is a thin wrapper over the script of the same name in `build/`; run those directly when you want to pass something the target does not.
 
-Then install what you built:
+Then put what you built into the workspace's two component packages, which `uv sync` installs, so that `libera` and `make test` find it with nothing set in the environment:
 
 ```sh
-libera --payload-install --from "$BUILD_ROOT/out/dist/0.2"
+lb components fill --dist "$BUILD_ROOT/out/dist/0.7"
 ```
 
 Or skip packaging entirely while developing and point at the build tree:
@@ -121,10 +121,10 @@ That is two commands, and either is useful alone:
 
 ```sh
 lb payload container               # fetch, configure, core, payload, dist, smoke, in the image
-lb payload install                 # the artifacts out of the volume and installed on this machine
+lb payload export                  # the artifacts out of the volume, and where they are
 ```
 
-`payload install` copies the tarballs out of the container's volume and installs them the way a user does, with every hash checked against `manifest.json`, so `make test` resolves the payload with nothing set in the environment. After a *native* `lb payload dist`, point it at that build instead: `lb payload install --from $BUILD_ROOT/out/dist/0.2`.
+`payload export` copies the tarballs out of the container's volume and prints where it put them. On a Linux machine, `lb components fill --dist` that folder puts them where `make test` finds them; on the Mac, whose own components are macOS binaries, `lb linux test` unpacks them inside the container.
 
 Underneath, the same container takes one step at a time:
 

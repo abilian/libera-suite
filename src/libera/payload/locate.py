@@ -35,6 +35,10 @@ PAYLOAD_VERSION: str = tomllib.loads(
     .read_text(encoding="utf-8")
 )["version"]
 
+# Where Libera Suite is published: the bundles, the install scripts, the
+# release pointer the update check reads, and the payloads of 0.6 and earlier.
+ORIGIN = "https://cdn.abilian.com/libera"
+
 # The payload's executables are x2t.exe and tools\allfontsgen.exe on Windows.
 EXE = ".exe" if os.name == "nt" else ""
 
@@ -69,15 +73,6 @@ def make_tool_env(bin_dir: Path) -> dict[str, str]:
 
 class PayloadError(RuntimeError):
     """Something is wrong with the payload, said in terms a user can act on."""
-
-
-class NoPayloadError(PayloadError):
-    """There is no payload anywhere `resolve` looks: the one case to offer an install.
-
-    A class of its own so the caller can tell it from the others by type.
-    It used to search the message for "no editor payload found", which any
-    rewording of the message would have broken without a sound.
-    """
 
 
 @dataclass(frozen=True)
@@ -157,7 +152,7 @@ class Layout:
 class Payload(Layout):
     """A usable payload, and how we came to be using it."""
 
-    # "LIBERA_PAYLOAD", "config", "bundled", "components" or "installed"
+    # "LIBERA_PAYLOAD", "config", "bundled" or "components"
     origin: str
 
     @classmethod
@@ -216,14 +211,10 @@ def make_state_dir_private() -> None:
 
 
 def get_data_dir() -> Path:
-    """Where an installed payload lives."""
+    """Where 0.6 and earlier downloaded their payloads, a folder per version,
+    about 400 MB each. Nothing reads them from 0.7 on, which installs the
+    components as packages; `libera --payload-remove` deletes them."""
     return get_state_dir() / "payload"
-
-
-def get_installed_dir() -> Path:
-    """Where `--payload-install` puts this application's payload, and where
-    `resolve` looks for it. Three callers used to spell it for themselves."""
-    return get_data_dir() / PAYLOAD_VERSION
 
 
 def get_sessions_dir() -> Path:
@@ -318,16 +309,13 @@ def get_current_platform() -> str:
 def find_bundled_dir() -> Path | None:
     """A payload shipped inside the application, under the same prefix.
 
-    Every channel that can ship 120 MB should ship it: a Flatpak, and later a
-    `.dmg` and the cask. Only PyPI cannot, which makes it the one channel where
-    fetching on first run earns its complexity. A bundle that downloads its own
-    editors on first launch has to ask a question in a window, reach the
-    network from a sandbox, and fail in front of somebody who has just
-    double-clicked. The Flatpak did all three, one of them silently.
+    The Windows installer ships one, beside the frozen application: it has no
+    site-packages for the components to be installed into. Every channel
+    that has one installs them as packages instead.
 
-    **Searched, not counted.** The Flatpak installs the wheel with
-    `--prefix=/app` and runs it under the *runtime's* interpreter, so
-    `sys.prefix` is `/usr` and says nothing about where the application went.
+    **Searched, not counted.** The Flatpak installed the wheel with
+    `--prefix=/app` and ran it under the *runtime's* interpreter, so
+    `sys.prefix` was `/usr` and said nothing about where the application went.
     Walking up from this file looking for the directory answers the question
     that actually matters -- is there a payload shipped alongside this
     installation -- and it is right for any prefix layout, which is what the
@@ -396,7 +384,7 @@ def is_complete(root: Path) -> bool:
 
 
 def resolve() -> Payload:
-    """Find the payload. Never downloads: see notes/05-packaging.md."""
+    """Find the payload, or say what to install."""
     env = os.environ.get("LIBERA_PAYLOAD")
     if env:
         # Taken exactly as given -- this is the development path, pointing at a
@@ -430,20 +418,18 @@ def resolve() -> Payload:
     if bundled is not None:
         return Payload.found(bundled, "bundled")
 
-    # Before the downloaded one, which an earlier version may have left: these
-    # came with this host, pinned to its version.
     components = find_components()
     if components is not None:
         return components
 
-    installed = get_installed_dir()
-    if is_complete(installed):
-        return Payload.found(installed, "installed")
-
+    # libera requires both, so this is an install that skipped its
+    # dependencies, or a platform with no core wheel whose build from source
+    # did not happen.
     msg = (
         f"Libera Suite's components are not installed"
         f" (this version needs {PAYLOAD_VERSION}).\n"
-        f"  install it:   libera --payload-install\n"
+        f"  install them:   pip install libera-core=={PAYLOAD_VERSION}"
+        f" libera-web=={PAYLOAD_VERSION}\n"
         f"  or point at a local build:   export LIBERA_PAYLOAD=/path/to/out/payload"
     )
-    raise NoPayloadError(msg)
+    raise PayloadError(msg)

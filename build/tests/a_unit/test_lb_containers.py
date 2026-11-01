@@ -113,7 +113,7 @@ def test_every_action_that_runs_the_suite_prepares_first():
         assert script.startswith(linux.PREPARE), action
     lint = linux.script_for(linux.LinuxOptions("lint"))
     assert lint.startswith(linux.SYNC)
-    assert "--payload-install" not in lint
+    assert "components unpack" not in lint
     assert "pytest -p no:cacheprovider -k x" in linux.script_for(
         linux.LinuxOptions("test", pytest_args=("-k", "x"))
     )
