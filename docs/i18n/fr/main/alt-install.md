@@ -99,11 +99,20 @@ libera --launcher-remove     # pour la retirer
 
 ## Une application à double-cliquer sous macOS {#a-double-clickable-application-on-macos}
 
-Il n'en existe pas encore de toute prête. Depuis une copie du code source, vous pouvez en construire une pour vous-même :
+Le script d'installation en écrit une, `Libera.app`, dans le dossier Applications de votre dossier personnel. Après toute autre installation, comme Homebrew, `pipx` ou `uv tool`, cette commande en fait autant :
+
+```sh
+libera --launcher-install
+libera --launcher-remove     # pour la retirer
+```
+
+Elle ouvre les documents d'un double-clic et affiche l'icône de Libera dans le Dock. C'est un petit lanceur pour le Python de l'installation qui l'a écrite : après la désinstallation de celle-ci, ou son passage à un autre Python, relancez `libera --launcher-install`.
+
+Depuis une copie du code source, vous pouvez en construire une pour cette copie :
 
 ```sh
 build/macos/macos-app.sh          # construit build/out/Libera.app
 open build/out/Libera.app
 ```
 
-Elle ouvre les documents d'un double-clic et affiche l'icône de Libera dans le Dock. Elle utilise le Python avec lequel elle a été construite et dépend donc de cette copie du code : laissez-la en place ; si la copie change d'emplacement, reconstruisez-la. Elle n'est pas signée : au premier lancement, macOS indique **« impossible d'ouvrir l'app car le développeur ne peut pas être vérifié »**. Sous macOS 15 et ultérieur, pour passer outre, allez dans *Réglages Système ▸ Confidentialité et sécurité ▸ Ouvrir quand même*.
+Elle utilise le Python de cette copie du code et en dépend donc : laissez-la en place ; si la copie change d'emplacement, reconstruisez-la. Elle n'est pas signée : au premier lancement, macOS indique **« impossible d'ouvrir l'app car le développeur ne peut pas être vérifié »**. Sous macOS 15 et ultérieur, pour passer outre, allez dans *Réglages Système ▸ Confidentialité et sécurité ▸ Ouvrir quand même*.

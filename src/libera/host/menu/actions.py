@@ -251,10 +251,14 @@ def _open_help() -> None:
     )
 
 
+# The documentation's editions besides English (docs/zensical.toml).
+EDITIONS = ("fr", "de", "it", "es", "nl")
+
+
 def find_help_url() -> str:
-    """The documentation's edition in the interface language: each of
-    language.TRANSLATED has one, and English is the rest."""
-    return f"{HELP_URL}{language.get_interface_language()}/"
+    """The documentation's edition in the interface language, or English."""
+    lang = language.get_interface_language()
+    return f"{HELP_URL}{lang if lang in EDITIONS else 'en'}/"
 
 
 def show_about() -> None:

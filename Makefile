@@ -35,6 +35,10 @@ verify: lint test docs ## everything: lint, tests, docs links, patch queue, conv
 	$(LB) payload patches
 	$(LB) payload smoke
 
+# The editors in every language they ship, not test's sample: about 9 minutes
+# more (tests/c_e2e/host/test_languages.py). Prerequisites see it too.
+verify: export LIBERA_ALL_LOCALES = 1
+
 # --- static ------------------------------------------------------------------
 
 lint: lint-py lint-js ## ruff, ty, pyrefly, mypy on src, plus biome on the bridge JS

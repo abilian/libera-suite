@@ -22,7 +22,7 @@ import AppKit
 import Foundation
 
 HERE = pathlib.Path(__file__).parent
-ICON = HERE.parent / "src" / "libera" / "icon.svg"
+ICON = HERE.parents[1] / "src" / "libera" / "icon.svg"
 
 # All seven from the same drawing, 16 included. The brand keeps a second mark
 # without the glyph for 16 to 31 px, on the grounds that below 32 the glyph

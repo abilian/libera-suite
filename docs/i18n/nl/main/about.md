@@ -12,7 +12,7 @@ Libera Suite bouwt voort op het werk van anderen. Het meeste van wat je ziet als
 
 Libera Suite bevat componenten van [**Euro-Office**](https://github.com/Euro-Office), zelf een fork van **ONLYOFFICE**, ontwikkeld door Ascensio System SIA. De documentengine, de bewerkingscomponenten, de formaatconverter en de ondersteuning voor elk formaat komen allemaal daarvandaan, aangepast met [een korte reeks patches](/en/develop/patches/) van onszelf. Het moeilijke deel van een kantoorsuite is twintig jaar lang de `.docx`-documenten van anderen correct leren lezen, en dat deel is van hen.
 
-Van dezelfde organisatie komen de lege sjablonen waarmee elk nieuw document begint, de spellingwoordenboeken (Engels, Frans, Duits, Spaans en Italiaans) en de lettertypen die Libera Suite meelevert: onder meer Liberation, Carlito, Caladea, Open Sans en Asana Math, elk onder een eigen vrije licentie.
+Van dezelfde organisatie komen de lege sjablonen waarmee elk nieuw document begint, de spellingwoordenboeken (Engels, Frans, Duits, Spaans, Italiaans en Nederlands) en de lettertypen die Libera Suite meelevert: onder meer Liberation, Carlito, Caladea, Open Sans en Asana Math, elk onder een eigen vrije licentie.
 
 Onder de componenten zitten nog veel meer bibliotheken, met V8 en Boost als de grootste, die de build van Euro-Office meebrengt.
 

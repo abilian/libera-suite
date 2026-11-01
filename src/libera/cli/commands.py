@@ -89,12 +89,12 @@ def install_payload(args: argparse.Namespace) -> int:
     except PayloadError as e:
         return _fail(e)
     print(f"Installed in {p.root}")
-    # The one moment a Linux user is looking at this program in a terminal and
-    # has just finished setting it up. Only said here: the
+    # The one moment a user is looking at this program in a terminal and has
+    # just finished setting it up. Only said here: the
     # command is called payload-install, and writing to the desktop's own
     # directories is not what that name promises.
     if launcher.explain_unsupported() is None and not launcher.is_installed():
-        print("  for an icon in the launcher, and Open With: libera --launcher-install")
+        print("  for an icon and Open With: libera --launcher-install")
     return 0
 
 
@@ -104,7 +104,7 @@ def install_launcher(_args: argparse.Namespace) -> int:
         return _fail(why)
     for path in launcher.install():
         print(f"wrote {path}")
-    print("Libera Suite is in the launcher, and offers to open the formats it reads.")
+    print("Libera Suite is among your applications, and opens what it reads.")
     return 0
 
 
@@ -114,7 +114,7 @@ def remove_launcher(_args: argparse.Namespace) -> int:
         return _fail(why)
     gone = launcher.remove()
     if not gone:
-        print("no desktop entry installed")
+        print("nothing to remove: it was not among your applications")
         return 0
     for path in gone:
         print(f"removed {path}")

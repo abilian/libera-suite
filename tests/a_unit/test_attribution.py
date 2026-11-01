@@ -18,6 +18,7 @@ So: compare them, and check each says the three things it has to.
 from __future__ import annotations
 
 import json
+import plistlib
 import re
 import xml.etree.ElementTree as ET
 
@@ -25,11 +26,11 @@ import pytest
 from support import repo_root
 
 from libera.host import about
+from libera.launcher import macos
 
 ROOT = repo_root()
 THEME = ROOT / "build" / "payload" / "theme" / "libera" / "meta" / "config.json"
 METAINFO = ROOT / "build" / "flatpak" / "eu.liberasuite.Libera.metainfo.xml"
-MACOS_APP = ROOT / "build" / "macos" / "macos-app.sh"
 
 
 def test_the_theme_and_the_host_say_the_same_thing() -> None:
@@ -62,12 +63,13 @@ def test_the_attribution_includes_rather_than_is_based_on() -> None:
     assert "based on" not in about.ATTRIBUTION.lower()
 
 
-def test_the_macos_bundle_carries_the_copyright_line() -> None:
+def test_the_macos_bundle_carries_the_copyright_line(tmp_path) -> None:
     """`Info.plist`'s NSHumanReadableCopyright is what AppKit's About shows."""
-    plist = MACOS_APP.read_text(encoding="utf-8")
-    assert "NSHumanReadableCopyright" in plist
+    macos.write_bundle(tmp_path / "Libera.app", python="python3", library="lib")
+    with (tmp_path / "Libera.app" / "Contents" / "Info.plist").open("rb") as f:
+        copyright_line = plistlib.load(f)["NSHumanReadableCopyright"]
     for phrase in ("Euro-Office", "ONLYOFFICE", "AGPL"):
-        assert phrase in plist, phrase
+        assert phrase in copyright_line, phrase
 
 
 def test_the_appstream_metadata_attributes_and_licenses() -> None:

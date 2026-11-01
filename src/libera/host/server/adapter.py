@@ -51,11 +51,17 @@ def make_app(payload: pathlib.Path) -> Callable[..., Iterable[bytes]]:
 
         return _answer(answer)
 
+    # Without the key: WebKitGTK fetches a worker's script without the page's
+    # cookie, and the refusal was in the log of every Linux window. The file
+    # is the one in the wheel, so the browser checks are all it needs.
     @app.route("/document_editor_service_worker.js", method=["GET", "HEAD"])
     def service_worker() -> bottle.HTTPResponse:
-        return _answer(
-            lambda session: payload_files.serve_service_worker(Request(session))
-        )
+        port = str(bottle.request.environ["SERVER_PORT"])
+        try:
+            admission.check_browser(bottle.request.headers, port)
+        except Refused as e:
+            return _to_bottle(_refusal(e.status, e.explain))
+        return _to_bottle(payload_files.serve_service_worker())
 
     @app.route("/<path:path>", method=["GET", "HEAD"])
     def static(path: str) -> bottle.HTTPResponse:

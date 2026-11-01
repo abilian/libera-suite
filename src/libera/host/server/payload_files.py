@@ -19,7 +19,7 @@ from libera.payload import fonts
 SERVICE_WORKER = pathlib.Path(__file__).with_name("service-worker.js")
 
 
-def serve_service_worker(_r: Request) -> Response:
+def serve_service_worker() -> Response:
     """Ours, replacing the payload's: see service-worker.js for why."""
     return Response(body=SERVICE_WORKER.read_bytes(), content_type=editor.JAVASCRIPT)
 

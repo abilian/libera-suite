@@ -8,8 +8,10 @@
 # not its pages: that section is English-only, and in every other edition its
 # tab links to it.
 #
-# `card_tagline` and `card_line` are the text of the edition's Open Graph card,
-# the picture a shared link shows: cards.py draws them.
+# `card_tagline`, `card_line`, `card_version` (the badge's word before the
+# version number) and `card_now_in` (before the interface's languages) are the
+# text of the edition's Open Graph card, the picture a shared link shows:
+# cards.py draws them.
 #
 # The interface of Libera Suite itself is English in every edition (the editor
 # is started with lang=en), so the pages keep its menu items in English. What
@@ -18,6 +20,8 @@
 [en]
 card_tagline = "Your documents, on your own machine."
 card_line = "A free and open source office suite for Windows, macOS and Linux"
+card_version = "Version"
+card_now_in = "Now in"
 months = ["January", "February", "March", "April", "May", "June", "July",
           "August", "September", "October", "November", "December"]
 date = "{day} {month} {year}"
@@ -28,6 +32,8 @@ all_news = "All news"
 [fr]
 card_tagline = "Vos documents, sur votre propre machine."
 card_line = "Une suite bureautique libre et gratuite pour Windows, macOS et Linux"
+card_version = "Version"
+card_now_in = "Désormais en"
 site_description = "Une suite bureautique libre et gratuite pour Windows, macOS et Linux. Elle ouvre et enregistre les fichiers Word, Excel, PowerPoint et LibreOffice, sans compte ni cloud."
 copyright = """
 Copyright &copy; 2026 Abilian SAS —
@@ -63,6 +69,8 @@ all_news = "Toutes les actualités"
 [de]
 card_tagline = "Ihre Dokumente, auf Ihrem eigenen Rechner."
 card_line = "Eine freie und kostenlose Office-Suite für Windows, macOS und Linux"
+card_version = "Version"
+card_now_in = "Jetzt auf"
 site_description = "Eine freie und kostenlose Office-Suite für Windows, macOS und Linux. Sie öffnet und speichert Word-, Excel-, PowerPoint- und LibreOffice-Dateien, ohne Konto und ohne Cloud."
 copyright = """
 Copyright &copy; 2026 Abilian SAS —
@@ -98,6 +106,8 @@ all_news = "Alle Neuigkeiten"
 [it]
 card_tagline = "I tuoi documenti, sulla tua macchina."
 card_line = "Una suite per ufficio libera e gratuita per Windows, macOS e Linux"
+card_version = "Versione"
+card_now_in = "Ora in"
 site_description = "Una suite per ufficio libera e gratuita per Windows, macOS e Linux. Apre e salva file Word, Excel, PowerPoint e LibreOffice, senza account né cloud."
 copyright = """
 Copyright &copy; 2026 Abilian SAS —
@@ -133,6 +143,8 @@ all_news = "Tutte le novità"
 [es]
 card_tagline = "Tus documentos, en tu propia máquina."
 card_line = "Una suite ofimática libre y gratuita para Windows, macOS y Linux"
+card_version = "Versión"
+card_now_in = "Ahora en"
 site_description = "Una suite ofimática libre y gratuita para Windows, macOS y Linux. Abre y guarda archivos de Word, Excel, PowerPoint y LibreOffice, sin cuenta ni nube."
 copyright = """
 Copyright &copy; 2026 Abilian SAS —
@@ -168,6 +180,8 @@ all_news = "Todas las noticias"
 [nl]
 card_tagline = "Je documenten, op je eigen computer."
 card_line = "Een vrij en gratis officepakket voor Windows, macOS en Linux"
+card_version = "Versie"
+card_now_in = "Nu in"
 site_description = "Een vrij en gratis officepakket voor Windows, macOS en Linux. Het opent en bewaart Word-, Excel-, PowerPoint- en LibreOffice-bestanden, zonder account of cloud."
 copyright = """
 Copyright &copy; 2026 Abilian SAS —

@@ -196,18 +196,24 @@ def test_save_as_follows_the_extension_the_user_typed(
     so it decides, and the format follows it.
     """
     chosen = tmp_path / "elsewhere.odt"
+    named: list[pathlib.Path] = []
     monkeypatch.setattr(
         hooks,
         "shell",
-        ScriptedShell(choose_save_path=lambda _name, _formats, _start_in: str(chosen)),
+        ScriptedShell(
+            choose_save_path=lambda _name, _formats, _start_in: str(chosen),
+            show_document=lambda _session, document: named.append(document),
+        ),
     )
 
     result = save_document(opened, SaveRequest(file_type=65, save_as=True))
 
     assert result == {"error": 0, "path": str(chosen)}
     assert chosen.read_bytes()[:2] == b"PK"  # an ODF package, not a docx
-    # Save As moves the session onto the new file; a plain Save now goes there.
+    # Save As moves the session onto the new file; a plain Save now goes there,
+    # and the window (and its tab) is called after it.
     assert opened.current_file.read_text() == str(chosen)
+    assert named == [chosen]
 
 
 def test_a_failed_save_as_leaves_the_session_on_the_open_document(
@@ -538,6 +544,45 @@ def test_a_text_file_saves_as_rtf_with_its_text(tmp_path):
 
     export(notes, rtf, apps.WORDS.ids_by_ext["rtf"], None)
     assert "après" in read_rtf_text(rtf)
+
+
+ODF_NS = (
+    'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
+    'xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" '
+    'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" '
+    'xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" '
+    'office:version="1.2"'
+)
+
+
+def test_an_odt_without_master_styles_keeps_its_styles(tmp_path):
+    """x2t's ODF reader skipped every style when styles.xml had no
+    office:master-styles, which is optional, and a generated FAQ came out
+    all in the default style. Patch 0169."""
+    document = tmp_path / "faq.odt"
+    with zipfile.ZipFile(document, "w") as odt:
+        odt.writestr("mimetype", "application/vnd.oasis.opendocument.text")
+        odt.writestr(
+            "styles.xml",
+            f"<office:document-styles {ODF_NS}><office:styles>"
+            '<style:style style:name="Titre" style:family="paragraph">'
+            '<style:text-properties fo:font-size="19pt" fo:font-weight="bold"/>'
+            "</style:style></office:styles></office:document-styles>",
+        )
+        odt.writestr(
+            "content.xml",
+            f"<office:document-content {ODF_NS}><office:body><office:text>"
+            '<text:p text:style-name="Titre">FAQ</text:p>'
+            "</office:text></office:body></office:document-content>",
+        )
+    faq = open_in(apps.WORDS, document, tmp_path / "session")
+    docx = tmp_path / "out.docx"
+
+    export(faq, docx, apps.WORDS.ids_by_ext["docx"], None)
+    styles = zipfile.ZipFile(docx).read("word/styles.xml").decode()
+    titre = re.search(r'<w:name w:val="Titre"/>.*?</w:style>', styles)
+    assert titre is not None
+    assert '<w:sz w:val="38"' in titre.group()
 
 
 def test_markdown_opens_and_saves(tmp_path):

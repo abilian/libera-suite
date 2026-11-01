@@ -298,6 +298,15 @@ grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$BUILD/payload/dictionaries.txt" | whi
         echo "FATAL: no $lang.aff/.dic in $src" >&2; exit 1; }
     mkdir -p "$PAYLOAD/dictionaries/$lang"
     cp "$src/$lang.aff" "$src/$lang.dic" "$PAYLOAD/dictionaries/$lang/"
+    # And the readme and licence texts, which their licences ask to travel
+    # with every copy: about 400 KB for all seven. Not the thesaurus's or the
+    # hyphenation's, whose data is left out.
+    for f in "$src"/*; do
+        case "$(basename "$f")" in
+            *.aff|*.dic|*.json|*hyph*|*thes*|th_*) ;;
+            *) cp "$f" "$PAYLOAD/dictionaries/$lang/" ;;
+        esac
+    done
 done || exit 1
 count="$(find "$PAYLOAD/dictionaries" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
 [ "$count" -gt 0 ] || { echo "FATAL: no dictionaries copied" >&2; exit 1; }

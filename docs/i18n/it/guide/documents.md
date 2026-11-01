@@ -25,6 +25,8 @@ libera ~/Documents/*.docx     # una finestra ciascuno
 
 Puoi anche aprire un documento dalla finestra del documento, con **File ▸ Apri** o **File ▸ Apri recenti**. Entrambi aprono una nuova finestra e lasciano stare il documento già aperto.
 
+**Su macOS i documenti possono aprirsi come schede** di un'unica finestra. Libera Suite segue l'impostazione del sistema, *Apri nuovo documento come pannello* in Impostazioni di Sistema ▸ Scrivania e Dock, come ogni applicazione per documenti su Mac. Se è su *Sempre*, ogni documento si apre in una scheda. Altrimenti si apre in una finestra propria, e **Finestra ▸ Merge All Windows** le riunisce. Il **+** in fondo alla barra delle schede apre la finestra iniziale in una nuova scheda, e il documento che scegli lì ne prende il posto. Una scheda si trascina fuori in una finestra propria.
+
 **Un documento trascinato** su una finestra di Libera Suite, compresa la finestra iniziale, si apre in una finestra tutta sua. Un'immagine trascinata su un documento vi viene inserita.
 
 **File ▸ Nuovo** propone, da qualsiasi finestra, un documento, un foglio di calcolo o una presentazione, ciascuno nella propria finestra. Su macOS, `⌘N` ne crea uno dello stesso tipo della finestra in primo piano. Nella finestra del documento, **File ▸ Crea nuovo** ti chiede quale dei tre creare.
@@ -74,13 +76,13 @@ Un file che ha già il nuovo nome viene sostituito. Il documento convertito non 
 
 ## La barra dei menu
 
-Su Linux e Windows la barra sta nella finestra: **File**, **Modifica**, **Visualizza** e **Aiuto**, quest'ultimo con *Guida di Libera* e *Informazioni su Libera Suite*. Da ciò che il menu offre lì derivano tre differenze. Nessuna voce mostra una scorciatoia da tastiera, ma Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Maiusc-S, Ctrl-P e Ctrl-Z fanno lì quello che i tasti ⌘ qui sotto fanno su un Mac. **Apri recenti** viene costruito all'avvio dell'applicazione: un documento aperto oggi vi compare domani. Nulla viene disattivato: Salva senza nulla da salvare non fa nulla.
+Su Linux e Windows la barra sta nella finestra: **File**, **Modifica**, **Visualizza** e **Aiuto**, quest'ultimo con *Guida di Libera* e *Informazioni su Libera Suite*. Da ciò che il menu offre lì derivano tre differenze. Su Linux, Nuovo, Apri e Chiudi mostrano Ctrl-N, Ctrl-O e Ctrl-W, e nessun'altra voce mostra il suo tasto; su Windows nessuna. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Maiusc-S, Ctrl-P e Ctrl-Z fanno lì quello che i tasti ⌘ qui sotto fanno su un Mac. **Apri recenti** viene costruito all'avvio dell'applicazione: un documento aperto oggi vi compare domani. Nulla viene disattivato: Salva senza nulla da salvare non fa nulla.
 
 Su macOS è una vera barra dei menu del Mac, con le stesse voci più **Finestra**. Le solite scorciatoie vi funzionano, che il documento abbia il focus o no:
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | Nuovo (del tipo della finestra in primo piano), Apri: ciascuno nella propria finestra |
+| `⌘N` `⌘O` | Nuovo (del tipo della finestra in primo piano), Apri: ciascuno nella propria finestra, o scheda |
 | `⌘S` `⇧⌘S` | Salva, Salva con nome |
 | `⌘P` | Stampa |
 | `⌘W` | Chiudi, chiedendo prima cosa fare delle modifiche non salvate |
@@ -114,7 +116,7 @@ Le immagini incorporate in un documento vengono conservate all'apertura e al sal
 
 Gli errori vengono sottolineati; il clic destro propone dei suggerimenti. Il dizionario usato dipende dalla **lingua del documento**, che imposti nella **barra di stato** in fondo alla finestra, documento per documento.
 
-Sono forniti dizionari per cinque lingue: inglese (americano e britannico), francese, tedesco, spagnolo e italiano. Una lingua senza dizionario non è un errore; le sue parole vengono semplicemente considerate corrette. Le parole aggiunte con *Add to dictionary* vengono conservate: da quel momento sono corrette in tutti i documenti e in tutte le lingue.
+Sono forniti dizionari per sei lingue: inglese (americano e britannico), francese, tedesco, spagnolo, italiano e olandese. Una lingua senza dizionario non è un errore; le sue parole vengono semplicemente considerate corrette. Le parole aggiunte con *Add to dictionary* vengono conservate: da quel momento sono corrette in tutti i documenti e in tutte le lingue.
 
 ## Il tuo nome nei documenti {#your-name-in-documents}
 

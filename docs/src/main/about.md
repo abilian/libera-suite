@@ -12,7 +12,7 @@ Libera Suite stands on other people's work. Most of what you see when you edit a
 
 Libera Suite includes components from [**Euro-Office**](https://github.com/Euro-Office), itself a fork of **ONLYOFFICE**, developed by Ascensio System SIA. The document engine, the editing components, the format converter and the support for each format all come from there, modified by [a short patch queue](../develop/patches.md) of our own. An office suite's hard part is twenty years of reading other people's `.docx` documents correctly, and that part is theirs.
 
-From the same organisation come the blanks every new document starts from, the spell-check dictionaries (English, French, German, Spanish and Italian) and the fonts Libera Suite ships: Liberation, Carlito, Caladea, Open Sans and Asana Math, among others, each under its own free licence.
+From the same organisation come the blanks every new document starts from, the spell-check dictionaries (English, French, German, Spanish, Italian and Dutch) and the fonts Libera Suite ships: Liberation, Carlito, Caladea, Open Sans and Asana Math, among others, each under its own free licence.
 
 Underneath the components sit many more libraries, V8 and Boost among the largest, which the Euro-Office build brings with it.
 

@@ -30,6 +30,7 @@ from unittest import mock
 from libera_build import (
     bench as bench_,
     buildbox,
+    fidelity as fidelity_,
     flatpak,
     linux,
     matrix,
@@ -175,6 +176,13 @@ PAYLOAD = Knob(
     "PAYLOAD",
     "an unpacked payload to mount as is, when no artifacts match this checkout",
     "DIR",
+)
+# Not LANG: every shell here has one, and it would reach every container.
+LINUX_LANG = Knob(
+    "--lang",
+    "LINUX_LANG",
+    "the container's LANG, the language the host speaks there, e.g. fr_FR.UTF-8",
+    "LOCALE",
 )
 VOLUME = Knob(
     "--volume", "VOLUME", "a named Docker volume instead of --build-dir", "NAME"
@@ -357,6 +365,10 @@ def app_macos(args: argparse.Namespace) -> Steps:
     ]
 
 
+def app_macos_launcher(_args: argparse.Namespace) -> Steps:
+    return [sh("macos/launcher.sh")]
+
+
 def app_flatpak(args: argparse.Namespace) -> Steps:
     options = FlatpakOptions(
         args.action, arch=given(args, ARCH) or host_arch(), dist=path_given(args, DIST)
@@ -396,6 +408,7 @@ def linux_(args: argparse.Namespace) -> Steps:
         arch=given(args, ARCH),
         dist=path_given(args, DIST),
         payload=path_given(args, PAYLOAD),
+        lang=given(args, LINUX_LANG),
         pytest_args=tuple(args.rest),
     )
     return [Call(linux.run, (options,))]
@@ -455,6 +468,10 @@ def tidy_(args: argparse.Namespace) -> Steps:
 
 def bench(args: argparse.Namespace) -> Steps:
     return [Call(bench_.main, (list(args.rest),))]
+
+
+def fidelity(args: argparse.Namespace) -> Steps:
+    return [Call(fidelity_.main, (list(args.rest),))]
 
 
 # --- the parser ----------------------------------------------------------------
@@ -707,11 +724,16 @@ def add_app(groups: Groups) -> None:
             "app macos --standalone", "app flatpak --arch arm64", "app flatpak-check"
         ),
     )
-    p = g.command("macos", "Libera.app, ad-hoc signed", app_macos)
+    p = g.command("macos", "Libera.app, unsigned", app_macos)
     p.add_argument(
         "--standalone",
         action="store_true",
         help="with Python, libera and the payload inside; default: runs this checkout",
+    )
+    g.command(
+        "macos-launcher",
+        "rebuild src/libera/macos/: the bundle's executable and icon, committed",
+        app_macos_launcher,
     )
     for name, action, summary in (
         ("flatpak", "build", "wheels, then the bundle, then the check"),
@@ -737,7 +759,12 @@ def add_linux(groups: Groups) -> None:
         "linux",
         "this repository's checks on Linux, in a container: the one place they run",
         "All need a Linux payload: `payload container`, or --dist DIR.\n\n"
-        + examples("linux lint", "linux test -k bridge", "linux gui --arch arm64"),
+        + examples(
+            "linux lint",
+            "linux test -k bridge",
+            "linux gui --arch arm64",
+            "linux gui --lang fr_FR.UTF-8",
+        ),
     )
     for action, summary in (
         ("test", "the suite; anything after it goes to pytest"),
@@ -749,7 +776,7 @@ def add_linux(groups: Groups) -> None:
         ("shell", "a shell in the test container"),
         ("image", "build, or rebuild, the test image"),
     ):
-        p = g.command(action, summary, linux_, ARCH_HERE, DIST, PAYLOAD)
+        p = g.command(action, summary, linux_, ARCH_HERE, DIST, PAYLOAD, LINUX_LANG)
         p.set_defaults(action=action, passes_on=action == "test")
 
 
@@ -870,6 +897,13 @@ def add_others(groups: Groups) -> None:
             "bench DOC.docx --idle 20",
             "bench --app Libera.app",
         ),
+    )
+    p.set_defaults(passes_on=True)
+    p = groups.leaf(
+        "fidelity",
+        "the same pages from the same build, twice (libera_build/fidelity.py)",
+        fidelity,
+        epilog=examples("fidelity", "fidelity DOC.docx --runs 3"),
     )
     p.set_defaults(passes_on=True)
 

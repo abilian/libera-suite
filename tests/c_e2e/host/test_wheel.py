@@ -1,12 +1,12 @@
 """The scroll wheel scrolls a spreadsheet.
 
-On a Mac sdkjs listens for the legacy `mousewheel` event and web-apps for
+On a Mac sdkjs listened for the legacy `mousewheel` event and web-apps for
 `wheel`, on the same element in the spreadsheet, and a browser fires an
 element's `mousewheel` listeners only when it has no `wheel` listener. Words
-and Slides scrolled; Tables did not move. The bridge registers `mousewheel` as
-`wheel` there. Chromium on a Mac reports a Mac user agent, so this sees the
-bug where it lives; elsewhere sdkjs asks for `wheel` itself and it passes
-either way.
+and Slides scrolled; Tables did not move. The bridge renamed `mousewheel` to
+`wheel` until upstream fixed it in sdkjs (3305546a3e, in our pin since payload
+0.5). Chromium on a Mac reports a Mac user agent, so this sees the bug where
+it lived.
 """
 
 from __future__ import annotations

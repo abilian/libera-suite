@@ -392,6 +392,17 @@ install_pip() {
             say "    the launcher entry is stale: run  libera --launcher-install"
         fi
     fi
+    # On macOS this is the whole install, so it brings Libera.app too: without
+    # it Finder has nothing to offer in Open With, and the Dock says Python.
+    # Written every time, because the virtualenv was just made again and may
+    # be on another Python, whose library the bundle names.
+    if [ "$os" = macos ]; then
+        if "$BIN/libera" --launcher-install >/dev/null; then
+            say "    Libera.app is in ~/Applications"
+        else
+            say "    no Libera.app: run  libera --launcher-install"
+        fi
+    fi
     say "    $(describe "$BIN/libera")"
 }
 

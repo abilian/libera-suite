@@ -241,6 +241,7 @@ def _put_in_place(
         locking.let_go(session)
         session.write_current_document(target)
         locking.hold(session, target)
+        hooks.shell.show_document(session, target)
 
 
 def save_document(

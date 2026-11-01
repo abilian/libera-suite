@@ -53,7 +53,7 @@ def serve_bridge(r: Request) -> Response:
     #                       them here from shortcuts.PAGE_YIELDS, the one
     #                       definition. Empty without a menu: `libera --serve` and
     #                       the harness have none and nothing to yield to.
-    #   LIBERA_PAGE_KEYS   the keys the page runs itself, off macOS, where no
+    #   LIBERA_PAGE_KEYS   the keys the page runs itself, on Windows, where no
     #                       menu bar has them -- shortcuts.PAGE_RUNS.
     #   LIBERA_LOCKED_BY   who else has the document open, from their lock
     #                       file, or null: the editor opens it in its locked
@@ -73,9 +73,9 @@ def serve_bridge(r: Request) -> Response:
 def list_owned_keys() -> list[dict]:
     """The key equivalents the native menu bar fires, for the page to yield.
 
-    macOS only, and not for want of a menu elsewhere: the GTK bar has no
-    accelerators at all (`menu/gtk.py` says why), so on Linux the page owns
-    every key and has nothing to yield.
+    macOS only. The GTK bar's accelerators reach the window before WebKit, so
+    the page never sees them to yield (`menu/gtk.py`), and the WinForms bar has
+    none.
 
     `shell.windowed` is the test for "this process has windows and therefore
     a menu".
@@ -226,8 +226,9 @@ def make_editor_url(port: int, session: Session, title: str) -> str:
 
 
 def list_page_keys() -> dict[str, dict]:
-    """The keys the page runs itself, by action: none on macOS, whose menu bar
-    has them as Cmd keys, and where Ctrl-N is a text-editing key."""
-    if sys.platform == "darwin":
+    """The keys the page runs itself, by action: on Windows only, whose bar has
+    no accelerators. The macOS and GTK bars have them, and on macOS Ctrl-N is a
+    text-editing key."""
+    if sys.platform != "win32":
         return {}
     return {name: key.as_json() for name, key in shortcuts.PAGE_RUNS.items()}

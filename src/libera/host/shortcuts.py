@@ -67,12 +67,13 @@ QUIT = Shortcut("q")
 # view and never reach the menu.
 PAGE_YIELDS: tuple[Shortcut, ...] = (NEW, CLOSE, QUIT)
 
-# Off macOS, the keys the page runs itself, by the name of what it runs.
+# On Windows, the keys the page runs itself, by the name of what it runs.
 #
-# No menu bar fires them there: the GTK and WinForms bars have no accelerators
-# (menu/gtk.py says why). The editor handles none of them either -- measured in the
-# Linux container, Ctrl-N reached the editor and no request followed. So the
-# page does what the editor's own File tab does for each.
+# No menu bar fires them there: the WinForms bar has no accelerators. The GTK
+# bar does, for these three (menu/gtk.py). The editor handles none of them
+# either -- measured in the Linux container, Ctrl-N reached the editor and no
+# request followed. So the page does what the editor's own File tab does for
+# each.
 #
 # Ctrl-Shift-S is not here because the editor already handles it: offline, its
 # shortcut runs asc_DownloadAs, which is the menu's Save As.

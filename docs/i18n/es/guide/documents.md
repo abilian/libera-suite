@@ -25,6 +25,8 @@ libera ~/Documents/*.docx     # una ventana para cada uno
 
 También puedes abrir un documento desde la ventana del documento, con **Archivo ▸ Abrir** o **Archivo ▸ Abrir reciente**. Los dos abren una ventana nueva y no tocan el documento que ya tienes abierto.
 
+**En macOS, los documentos pueden abrirse como pestañas** de una misma ventana. Libera Suite sigue el ajuste del sistema, *Preferir pestañas al abrir documentos* en Ajustes del Sistema ▸ Escritorio y Dock, como cualquier aplicación de documentos en Mac. Con *Siempre*, cada documento se abre en una pestaña. Si no, se abre en su propia ventana, y **Ventana ▸ Merge All Windows** las reúne. El **+** al final de la barra de pestañas abre la ventana de inicio en una pestaña nueva, y el documento que eliges ahí ocupa su lugar. Una pestaña se arrastra fuera para tener su propia ventana.
+
 **Un documento que sueltas** sobre una ventana de Libera Suite, incluida la ventana de inicio, se abre en una ventana propia. Una imagen que sueltas sobre un documento se inserta en él.
 
 **Archivo ▸ Nuevo** ofrece, desde cualquier ventana, un documento, una hoja de cálculo o una presentación, cada uno en su propia ventana. En macOS, `⌘N` crea uno del mismo tipo que la ventana en primer plano. En la propia ventana del documento, **Archivo ▸ Crear nuevo** te pregunta cuál de los tres quieres crear.
@@ -74,13 +76,13 @@ Un archivo que ya tiene el nuevo nombre se reemplaza. El documento que se convie
 
 ## La barra de menús
 
-En Linux y Windows la barra está dentro de la ventana: **Archivo**, **Edición**, **Ver** y **Ayuda**, este último con *Ayuda de Libera* y *Acerca de Libera Suite*. De lo que ofrece allí el menú se derivan tres diferencias. Ningún elemento muestra un atajo de teclado, pero Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Mayús-S, Ctrl-P y Ctrl-Z hacen allí lo que las teclas ⌘ de abajo hacen en un Mac. **Abrir reciente** se construye al iniciar la aplicación: un documento que abres hoy aparece en él mañana. Nada se atenúa: Guardar sin nada que guardar no hace nada.
+En Linux y Windows la barra está dentro de la ventana: **Archivo**, **Edición**, **Ver** y **Ayuda**, este último con *Ayuda de Libera* y *Acerca de Libera Suite*. De lo que ofrece allí el menú se derivan tres diferencias. En Linux, Nuevo, Abrir y Cerrar muestran Ctrl-N, Ctrl-O y Ctrl-W, y ningún otro elemento muestra su tecla; en Windows, ninguno. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Mayús-S, Ctrl-P y Ctrl-Z hacen allí lo que las teclas ⌘ de abajo hacen en un Mac. **Abrir reciente** se construye al iniciar la aplicación: un documento que abres hoy aparece en él mañana. Nada se atenúa: Guardar sin nada que guardar no hace nada.
 
 En macOS es una barra de menús de Mac de verdad, con los mismos elementos más **Ventana**. Los atajos habituales funcionan allí, tenga o no el foco el documento:
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | Nuevo (del tipo de la ventana en primer plano), Abrir: cada uno en su propia ventana |
+| `⌘N` `⌘O` | Nuevo (del tipo de la ventana en primer plano), Abrir: cada uno en su propia ventana, o pestaña |
 | `⌘S` `⇧⌘S` | Guardar, Guardar como |
 | `⌘P` | Imprimir |
 | `⌘W` | Cerrar, preguntando antes qué hacer con los cambios sin guardar |
@@ -114,7 +116,7 @@ Las imágenes incrustadas en un documento se conservan al abrir y al guardar. **
 
 Las faltas se subrayan; el clic derecho ofrece sugerencias. El diccionario que se usa depende del **idioma del documento**, que fijas en la **barra de estado** de la parte inferior de la ventana, documento a documento.
 
-Se incluyen diccionarios para cinco idiomas: inglés (de Estados Unidos y del Reino Unido), francés, alemán, español e italiano. Un idioma sin diccionario no es un error; sus palabras simplemente se consideran correctas. Las palabras que añades con *Add to dictionary* se conservan: desde ese momento son correctas en todos los documentos y en todos los idiomas.
+Se incluyen diccionarios para seis idiomas: inglés (de Estados Unidos y del Reino Unido), francés, alemán, español, italiano y neerlandés. Un idioma sin diccionario no es un error; sus palabras simplemente se consideran correctas. Las palabras que añades con *Add to dictionary* se conservan: desde ese momento son correctas en todos los documentos y en todos los idiomas.
 
 ## Tu nombre en los documentos {#your-name-in-documents}
 

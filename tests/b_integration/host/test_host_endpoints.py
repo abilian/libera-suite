@@ -303,6 +303,27 @@ def test_another_process_without_the_key_reads_nothing(live: LiveHost, path):
     assert refused.value.code == 403
 
 
+def test_the_service_worker_is_served_without_the_key(live: LiveHost):
+    """WebKitGTK fetches it without the page's cookie, and every Linux window
+    logged the refusal. It is a file from the wheel, and says nothing."""
+    url = live.url + "/document_editor_service_worker.js"
+    with urllib.request.urlopen(url, timeout=30) as answer:
+        assert b"document_editor_static_" in answer.read()
+
+
+def test_the_service_worker_still_refuses_another_site(live: LiveHost):
+    port = live.url.rsplit(":", 1)[1]
+    request = urllib.request.Request(
+        live.url + "/document_editor_service_worker.js",
+        headers={"Host": f"evil.example:{port}"},
+    )
+
+    with pytest.raises(urllib.error.HTTPError) as refused:
+        urllib.request.urlopen(request, timeout=30)
+
+    assert refused.value.code == 403
+
+
 # --- what a request can carry -----------------------------------------------
 #
 # Each endpoint read its body where it first needed it, so one it could not

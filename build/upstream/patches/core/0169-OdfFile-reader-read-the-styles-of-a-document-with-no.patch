@@ -1,0 +1,37 @@
+From 6d61dcb1492a024f9e7be95423e39a1915bc1037 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Fri, 23 Oct 2026 10:30:20 +0200
+Subject: [PATCH] OdfFile reader: read the styles of a document with no master
+ styles
+
+parse_styles left its whole block when styles.xml had no
+office:master-styles, so the named, automatic and default styles went
+with it, and every paragraph came out in the default style. Such files
+are valid ODF, and generators that write their own styles.xml often
+leave master styles out. Only the renaming of duplicate master pages
+needs them.
+---
+ OdfFile/Reader/Format/odf_document_impl.cpp | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/OdfFile/Reader/Format/odf_document_impl.cpp b/OdfFile/Reader/Format/odf_document_impl.cpp
+index 99b03c5f68..98edb4e1fa 100644
+--- a/OdfFile/Reader/Format/odf_document_impl.cpp
++++ b/OdfFile/Reader/Format/odf_document_impl.cpp
+@@ -782,11 +782,9 @@ void odf_document::Impl::parse_styles(office_element *element)
+ 		if(document)
+ 		{
+ 			office_master_styles * master_style = dynamic_cast<office_master_styles *>( document->office_master_styles_.get() );
+-			if (!master_style)
+-				break;
+-			unsigned int elements_master_page = master_style->style_master_page_.size();
+-			if(master_style->style_master_page_.size() > 1)
++			if(master_style && master_style->style_master_page_.size() > 1)
+ 			{
++				unsigned int elements_master_page = master_style->style_master_page_.size();
+ 				for (size_t i = 1; i < master_style->style_master_page_.size(); i++)
+ 				{
+ 					
+-- 
+2.55.0
+

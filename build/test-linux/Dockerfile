@@ -46,7 +46,16 @@ RUN apt-get update \
         python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
         xvfb xauth x11-utils scrot \
         desktop-file-utils \
+        locales \
     && rm -rf /var/lib/apt/lists/*
+
+# The locales of the catalogues, Dutch and Arabic for `lb linux --lang`. Slim
+# images carry C and POSIX only, and a LANG naming a locale that is not there
+# drops the whole process to ASCII: the window titles' dash then failed to
+# convert, and the check found no window it could name.
+RUN printf '%s UTF-8\n' en_US.UTF-8 fr_FR.UTF-8 de_DE.UTF-8 it_IT.UTF-8 \
+        es_ES.UTF-8 nl_NL.UTF-8 ar_EG.UTF-8 > /etc/locale.gen \
+    && locale-gen
 
 RUN pip3 install --break-system-packages --no-cache-dir "uv==${UV_VERSION}"
 

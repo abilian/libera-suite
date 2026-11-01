@@ -126,6 +126,20 @@ def admit(
     document names its session and is refused if that session has gone (see
     session.lookup).
     """
+    check_browser(headers, port)
+    presented = query.get("key", [""])[0] or _key_from(headers.get("Cookie"), port)
+    if not hmac.compare_digest(presented.encode(), instance.TOKEN.encode()):
+        logger.info("refused: no key, or the wrong one")
+        raise Refused(403)
+    try:
+        return lookup(query.get("session", [""])[0])
+    except NotReadyError as e:
+        raise Refused(404, str(e)) from e
+
+
+def check_browser(headers: Mapping[str, str], port: str) -> None:
+    """Admission's first three checks, on what a browser sends: Host,
+    Origin and Sec-Fetch-Site. Refused unless all three are ours."""
     host, origin = headers.get("Host"), headers.get("Origin")
     fetch_site = headers.get("Sec-Fetch-Site")
     own = f"127.0.0.1:{port}"
@@ -138,14 +152,6 @@ def admit(
             "refused: Host %s, Origin %s, Sec-Fetch-Site %s", host, origin, fetch_site
         )
         raise Refused(403)
-    presented = query.get("key", [""])[0] or _key_from(headers.get("Cookie"), port)
-    if not hmac.compare_digest(presented.encode(), instance.TOKEN.encode()):
-        logger.info("refused: no key, or the wrong one")
-        raise Refused(403)
-    try:
-        return lookup(query.get("session", [""])[0])
-    except NotReadyError as e:
-        raise Refused(404, str(e)) from e
 
 
 def _key_from(cookie: str | None, port: str) -> str:

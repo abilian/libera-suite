@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from libera import launcher
+from libera.launcher import desktop as launcher
 
 
 @pytest.fixture
@@ -118,9 +118,9 @@ def test_an_ordinary_linux_install_is_told_yes(data_home, monkeypatch):
     assert launcher.explain_unsupported() is None
 
 
-@pytest.mark.skipif(sys.platform.startswith("linux"), reason="the Linux answer is yes")
-def test_it_declines_where_there_is_no_launcher():
-    assert launcher.explain_unsupported() is not None
+def test_windows_is_told_its_installer_does_it(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert "installer" in (launcher.explain_unsupported() or "")
 
 
 @pytest.mark.skipif(

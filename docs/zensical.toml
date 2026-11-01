@@ -61,6 +61,7 @@ nav = [
     ]},
     { "News" = [
         { "All news" = "news/index.md" },
+        { "Libera Suite 0.6: every language, and pages that break where Word breaks them" = "news/2026-10-26-libera-suite-0-6.md" },
         { "Libera Suite 0.5: in your language, with your fonts" = "news/2026-10-20-libera-suite-0-5.md" },
         { "Libera Suite 0.4: safer in a shared folder, more faithful to OpenDocument" = "news/2026-10-12-libera-suite-0-4.md" },
         { "Libera Suite enters public beta" = "news/2026-10-01-your-documents-on-your-own-machine.md" },

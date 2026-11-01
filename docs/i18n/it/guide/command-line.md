@@ -29,14 +29,14 @@ Il comando è `libera`, su Linux e macOS. Installato come Flatpak diventa `flatp
 | `libera --payload-status` | dove sono i componenti, la loro versione e il [codice sorgente](../licence.md#corresponding-source) da cui sono stati compilati |
 | `libera --payload-remove` | eliminarli. [Altro](../main/install.md#uninstall) |
 
-## Il menu delle applicazioni su Linux
+## Il menu delle applicazioni e Apri con
 
 | | |
 | :--- | :--- |
-| `libera --launcher-install` | aggiungere Libera Suite al menu delle applicazioni, con *Apri con*. [Altro](../main/alt-install.md#a-launcher-entry-on-linux) |
+| `libera --launcher-install` | aggiungere Libera Suite alle tue applicazioni, con *Apri con*: al menu delle applicazioni su Linux ([altro](../main/alt-install.md#a-launcher-entry-on-linux)), come `Libera.app` nella cartella Applicazioni su macOS ([altro](../main/alt-install.md#a-double-clickable-application-on-macos)). |
 | `libera --launcher-remove` | toglierlo di nuovo |
 
-Il Flatpak lo fa da sé.
+Il Flatpak, il programma di installazione per Windows e, su macOS, lo script di installazione lo fanno da sé.
 
 ## Se qualcosa va storto
 

@@ -13,11 +13,11 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 | **Exportar** | Save As ofrece una lista de formatos para cada aplicación, PDF incluido. Cada formato ofrecido se comprueba con una conversión real, cuyo texto se vuelve a leer. |
 | **Imágenes** | Se conservan al abrir y al guardar; Insertar ▸ Imagen funciona. |
 | **Imprimir** | Genera un PDF, pregunta dónde guardarlo y lo abre en tu visor de PDF. |
-| **Corrección ortográfica** | Cinco idiomas, con sugerencias. Más abajo, los detalles. |
-| **En tu idioma** | Las aplicaciones siguen el idioma de tu sistema, y un documento nuevo parte de la plantilla en blanco de tu región: papel A4 en todas partes salvo en Estados Unidos, y corrección ortográfica en tu idioma. En español, francés, alemán e italiano también los siguen la barra de menús, la ventana de inicio y los diálogos; en cualquier otro idioma están en inglés. |
+| **Corrección ortográfica** | Seis idiomas, con sugerencias. Más abajo, los detalles. |
+| **En tu idioma** | Las aplicaciones siguen el idioma de tu sistema, y un documento nuevo parte de la plantilla en blanco de tu región: papel A4 en todas partes salvo en Estados Unidos, y corrección ortográfica en tu idioma. También los siguen la barra de menús, la ventana de inicio y los diálogos, en todos los idiomas de las aplicaciones, y en árabe, hebreo y urdu la ventana de inicio se lee de derecha a izquierda. Solo las traducciones española, francesa, alemana e italiana las ha revisado un hablante nativo; las demás son borradores, y [las correcciones son bienvenidas](../feedback.md). |
 | **Documentos recientes** | Archivo ▸ Abrir reciente recuerda los últimos 20. |
-| **Varios documentos a la vez** | También de tipos distintos, una ventana para cada uno: desde Archivo ▸ Nuevo o Archivo ▸ Abrir, con doble clic en el gestor de archivos o con `libera *.docx`. El tipo de archivo elige la aplicación. |
-| **En el menú Inicio y en el menú de aplicaciones** | En Windows, el instalador añade Libera Suite al menú Inicio y al escritorio, y la incluye en *Abrir con* del Explorador de archivos. En Linux, el Flatpak la añade al menú de aplicaciones con su icono y sus asociaciones de archivos; `libera --launcher-install` hace lo mismo con cualquier otra instalación. |
+| **Varios documentos a la vez** | También de tipos distintos, una ventana para cada uno, o en macOS una pestaña para cada uno cuando el sistema prefiere pestañas: desde Archivo ▸ Nuevo o Archivo ▸ Abrir, con doble clic en el gestor de archivos o con `libera *.docx`. El tipo de archivo elige la aplicación. |
+| **Entre tus aplicaciones** | En Windows, el instalador añade Libera Suite al menú Inicio y al escritorio, y la incluye en *Abrir con* del Explorador de archivos. En Linux, el Flatpak la añade al menú de aplicaciones con su icono y sus asociaciones de archivos; `libera --launcher-install` hace lo mismo con cualquier otra instalación. En macOS, el script de instalación pone `Libera.app` en tu carpeta Aplicaciones, y `libera --launcher-install` hace lo mismo después de Homebrew: el Finder la ofrece en *Abrir con*, y el Dock muestra su icono y su nombre. |
 | **Una ventana de inicio** | `libera` sin argumentos: documento nuevo, abrir, documentos recientes y procedencia de los componentes. |
 | **Recuperación tras un cierre inesperado** | Los cambios sin guardar se te ofrecen la próxima vez que abres el documento. |
 | **Un documento abierto en otro lugar** | Si LibreOffice u otra instancia de Libera Suite ya lo tiene abierto, se marca como *bloqueado para edición*: puedes leerlo y modificarlo, y al guardar se pregunta dónde, de modo que el archivo de la otra instancia nunca se sobrescribe. Abrir un documento que ya muestra una ventana trae esa ventana al frente. Microsoft Office y Libera Suite no ven los bloqueos del otro: un documento abierto en Word no está protegido. |
@@ -33,21 +33,21 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 
 | | |
 | :--- | :--- |
-| **macOS habla de un desarrollador no identificado** | Solo con una `Libera.app` que has compilado tú: no está firmada con un Developer ID, así que Gatekeeper la bloquea la primera vez. [Otras formas de instalar](alt-install.md#a-double-clickable-application-on-macos) explica cómo seguir adelante. Una instalación con `pip`, `pipx` o Homebrew nunca se encuentra con esto. |
-| **Iniciada desde un terminal, el Dock dice «Python»** | Solo cuando inicias `libera` desde una instalación con `pipx` o un entorno virtual. Un icono del Dock toma el nombre del paquete de aplicación desde el que se inició, aquí el del intérprete de Python, y la aplicación no puede cambiarlo. El icono y la barra de menús son los nuestros en cualquier caso; `Libera.app` muestra Libera. Un documento que sueltas sobre ese icono de Python se rechaza en nombre de Python; el icono de `Libera.app` lo acepta. |
+| **macOS habla de un desarrollador no identificado** | Solo con una `Libera.app` compilada desde una copia del código fuente: no está firmada con un Developer ID, así que Gatekeeper la bloquea la primera vez. [Otras formas de instalar](alt-install.md#a-double-clickable-application-on-macos) explica cómo seguir adelante. Una instalación con `pip`, `pipx` o Homebrew nunca se encuentra con esto. |
+| **Iniciada desde un terminal, el Dock dice «Python»** | Solo cuando inicias `libera` en un terminal en macOS. Un icono del Dock toma el nombre del paquete de aplicación desde el que se inició, aquí el del intérprete de Python, y la aplicación no puede cambiarlo. El icono y la barra de menús son los nuestros en cualquier caso; `Libera.app` muestra Libera. Un documento que sueltas sobre ese icono de Python se rechaza en nombre de Python; el icono de `Libera.app` lo acepta. |
 | **Diagrams no puede guardar** | Abre un archivo `.vsdx` y lo muestra. El conversor no sabe escribir ningún formato de Visio: no hay nada que guardar ni una plantilla en blanco con la que empezar. |
 | **No se pueden editar PDF** | Los PDF solo se generan. Abrir uno para editarlo no está conectado. |
-| **Una barra de menús reducida, sin atajos visibles en Linux y Windows** | Linux y Windows tienen File, Edit, View y Help, dibujados en la ventana, sin atajos de teclado visibles. Las teclas funcionan igualmente: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Mayús-S, Ctrl-P y Ctrl-Z. macOS tiene los mismos menús más Window, con los atajos habituales. |
-| **Sin pestañas** | Una ventana por documento. |
+| **Una barra de menús reducida, con pocos atajos visibles en Linux y ninguno en Windows** | Linux y Windows tienen File, Edit, View y Help, dibujados en la ventana. En Linux, Nuevo, Abrir y Cerrar muestran Ctrl-N, Ctrl-O y Ctrl-W, y ningún otro elemento muestra su tecla; en Windows, ninguno. Las teclas funcionan igualmente: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Mayús-S, Ctrl-P y Ctrl-Z. macOS tiene los mismos menús más Window, con los atajos habituales. |
+| **Sin pestañas en Linux ni Windows** | Allí, una ventana por documento. macOS tiene pestañas. |
 | **Windows avisa sobre el instalador** | El instalador descargado aún no está firmado, así que la primera vez SmartScreen muestra *«Windows protegió su PC»*. [Instalar](install.md#windows) explica cómo seguir adelante. La instalación con la línea de PowerShell nunca se encuentra con esto. |
 
 Si te encuentras con algo que *no* está en esta lista, [cuéntanoslo](../feedback.md).
 
 ## Hecho en parte
 
-**La barra de menús en Linux y Windows.** Está dibujada en la ventana, con Archivo, Edición, Ver y Ayuda; cada elemento funciona. Ninguno muestra un atajo de teclado, pero las teclas habituales funcionan: Ctrl-N crea un documento nuevo del mismo tipo, Ctrl-O abre uno, Ctrl-W cierra la ventana (preguntando antes por los cambios sin guardar), y los atajos propios de los componentes, Ctrl-S, Ctrl-Mayús-S (Guardar como), Ctrl-P y Ctrl-Z, también funcionan. En Windows, Ctrl-N, Ctrl-O y Ctrl-W aún no se han comprobado en una máquina real. Archivo ▸ Nuevo ▸ Documento, Hoja de cálculo o Presentación funciona, igual que las tarjetas Nuevo de la ventana de inicio y la pestaña Archivo del propio documento.
+**La barra de menús en Linux y Windows.** Está dibujada en la ventana, con Archivo, Edición, Ver y Ayuda; cada elemento funciona. En Linux, Nuevo, Abrir y Cerrar muestran su atajo, y ningún otro elemento; en Windows, ninguno. Las teclas habituales funcionan igualmente: Ctrl-N crea un documento nuevo del mismo tipo, Ctrl-O abre uno, Ctrl-W cierra la ventana (preguntando antes por los cambios sin guardar), y los atajos propios de los componentes, Ctrl-S, Ctrl-Mayús-S (Guardar como), Ctrl-P y Ctrl-Z, también funcionan. En Windows, Ctrl-N, Ctrl-O y Ctrl-W aún no se han comprobado en una máquina real. Archivo ▸ Nuevo ▸ Documento, Hoja de cálculo o Presentación funciona, igual que las tarjetas Nuevo de la ventana de inicio y la pestaña Archivo del propio documento.
 
-**`Libera.app` en macOS.** `build/macos/macos-app.sh` la compila. Abre un documento con doble clic o soltado sobre su icono del Dock, aparece en *Abrir con* y muestra la marca de Libera en el Dock. Pero es un lanzador alrededor del intérprete con el que se compiló (no incluye, firma ni notariza nada): todavía no es algo que se pueda dar a otra persona.
+**`Libera.app` en macOS.** El script de instalación la escribe en tu carpeta Aplicaciones, y `libera --launcher-install` hace lo mismo después de cualquier otra instalación. Abre un documento con doble clic o soltado sobre su icono del Dock, aparece en *Abrir con* y muestra la marca de Libera en el Dock. Pero es un lanzador alrededor del Python de tu instalación (no incluye, firma ni notariza nada): todavía no es algo que se pueda dar a otra persona.
 
 ## Sin empezar
 
@@ -61,9 +61,9 @@ Si te encuentras con algo que *no* está en esta lista, [cuéntanoslo](../feedba
 
 ### En la aplicación
 
-- **Pestañas.** Las ventanas existen y el menú Window las enumera, pero no se pueden reunir en una sola ventana.
-- **Una aplicación redistribuible en macOS.** `Libera.app` funciona desde tu propia copia del código y no incluye ni intérprete ni componentes. Windows tiene una: su instalador lo trae todo.
-- **Actualizaciones automáticas** y **firma de código**. macOS trata una `Libera.app` compilada por ti como software de un desarrollador no identificado. Windows avisa sobre el instalador descargado.
+- **Pestañas en Linux y Windows.** Allí, una ventana por documento, que la barra de tareas agrupa.
+- **Una aplicación redistribuible en macOS.** `Libera.app` usa el Python de tu propia instalación y no incluye ni intérprete ni componentes. Windows tiene una: su instalador lo trae todo.
+- **Actualizaciones automáticas** y **firma de código**. macOS trata una `Libera.app` compilada desde una copia del código fuente como software de un desarrollador no identificado. Windows avisa sobre el instalador descargado.
 - **Una ayuda sin conexión**, legible sin navegador ni red. El menú Help abre este sitio; About funciona sin conexión. Más abajo, los detalles.
 
 ### En otros ámbitos
@@ -80,7 +80,7 @@ Hay un menú **Ayuda**, en todas las plataformas, que abre este sitio en tu nave
 
 ### Corrección ortográfica
 
-Libera Suite incluye diccionarios de **inglés (de Estados Unidos y del Reino Unido), francés, alemán, español e italiano**: 9,5 MB, elegidos porque el conjunto completo ocupa 327. Añadir un idioma requiere una línea en `build/payload/dictionaries.txt` y volver a compilar los componentes.
+Libera Suite incluye diccionarios de **inglés (de Estados Unidos y del Reino Unido), francés, alemán, español, italiano y neerlandés**: 12 MB con sus licencias, elegidos porque el conjunto completo ocupa 327. Añadir un idioma requiere una línea en `build/payload/dictionaries.txt` y volver a compilar los componentes.
 
 Un idioma sin diccionario no es un error: sus palabras simplemente se consideran correctas, como en la aplicación de escritorio del proyecto original. Las palabras añadidas con *Add to dictionary* se conservan, para todos los documentos y todos los idiomas.
 
@@ -92,7 +92,7 @@ Los cambios registrados y los comentarios se atribuyen a una persona, cuyo nombr
 
 ### Fuentes
 
-Libera Suite incluye un conjunto básico de fuentes: Liberation, Carlito, Caladea, Open Sans y algunas más, suficientes para mostrar fielmente documentos corrientes, en 7 MB. El conjunto completo ocupa 248 MB. Un documento que pide una fuente que no está en este conjunto usa la instalada en tu máquina, en pantalla y en su PDF, y solo recibe una fuente sustituta si tu máquina tampoco la tiene. Libera Suite hace la lista de tus fuentes en el primer arranque, y de nuevo en segundo plano cada vez que instalas o quitas una; las ventanas que abras después usan la lista nueva. Está por decidir si se amplía el conjunto, sobre todo para el chino, el japonés y el coreano.
+Libera Suite incluye un conjunto básico de fuentes: Liberation, Carlito, Caladea, Open Sans y algunas más, suficientes para mostrar fielmente documentos corrientes, en 7 MB. El conjunto completo ocupa 248 MB. Un documento que pide una fuente que no está en este conjunto usa la instalada en tu máquina, en pantalla y en su PDF, y solo recibe una fuente sustituta si tu máquina tampoco la tiene. Calibri, Cambria, Arial, Times New Roman y Courier New son la excepción: si tu máquina no las tiene, un documento recibe Carlito, Caladea o Liberation, que tienen los mismos anchos, y sus páginas se cortan en los mismos puntos que en Word, sean cuales sean las demás fuentes instaladas. Libera Suite hace la lista de tus fuentes en el primer arranque, y de nuevo en segundo plano cada vez que instalas o quitas una; las ventanas que abras después usan la lista nueva. Está por decidir si se amplía el conjunto, sobre todo para el chino, el japonés y el coreano.
 
 ### Fidelidad de la presentación
 

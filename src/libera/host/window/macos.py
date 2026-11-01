@@ -88,31 +88,96 @@ def run_on_gui_thread(work: Callable[[], T]) -> T:
     return answer
 
 
-def make_window(title: str, url: str, width: int, height: int) -> Window | None:
-    """pywebview's create_window, except for the first window after none.
+def make_window(
+    title: str, url: str, width: int, height: int, *, tabs: bool
+) -> Window | None:
+    """pywebview's create_window, made on the GUI thread once start() has run.
 
-    pywebview names the first window it knows "master" and makes it at once,
-    on the thread that asks, which it expects to be the one about to call
-    start(). Once the last window has closed and the application runs on
-    (stay_open), the next window is a "master" again, asked for by a request
-    thread, and AppKit refuses: "NSWindow should only be instantiated on the
-    main thread". So with no window, it is made on the GUI thread, by the two
-    steps create_window takes once start() has run. There, create_window only
-    lists it.
+    Two reasons. pywebview names the first window it knows "master" and makes
+    it at once, on the thread that asks, which it expects to be the one about
+    to call start(). Once the last window has closed and the application runs
+    on (stay_open), the next window is a "master" again, asked for by a
+    request thread, and AppKit refuses: "NSWindow should only be instantiated
+    on the main thread". And the tabbing mode has to be set before the window
+    is ordered front, in `before_show`, whose handler must be there before
+    pywebview builds the window. On the GUI thread create_window only lists
+    it, so there is time to add one; the two steps it skipped follow.
     """
     gui = webview.guilib
-    if webview.windows or gui is None:
-        # Another window open, or start() still to come: pywebview's own way.
-        return webview.create_window(title, url, width=width, height=height)
 
     def make() -> Window | None:
         window = webview.create_window(title, url, width=width, height=height)
-        if window is None or not window._initialize(gui=gui):
+        if window is None:
+            return None
+        window.events.before_show += lambda: _set_tabbing(window, tabs=tabs)
+        if gui is None:
+            # start() still to come, and it makes the window.
+            return window
+        if not window._initialize(gui=gui):
             return None
         gui.create_window(window)
         return window
 
+    if gui is None:
+        return make()
     return run_on_gui_thread(make)
+
+
+# The window whose tab group the next window joins. The tab bar's "+" sets it
+# to the window it belongs to, for the start window to open there as a tab;
+# the start window then sets it to itself, so that the document chosen in it
+# takes its tab. GUI thread only.
+_tab_to_join: list = []
+
+
+def _set_tabbing(window: Window, *, tabs: bool) -> None:
+    """Put a window in its tab group, or keep it out of every one.
+
+    A document window joins the front group when the system says to (its
+    "Prefer tabs" setting, which AppKit reads itself), or the start window's
+    group when it was chosen there. The start window joins a group only when
+    the tab bar's "+" asked for it.
+    """
+    native = window.native
+    if native is None:
+        msg = "pywebview sent before_show for a window it had not built"
+        raise RuntimeError(msg)
+    _answer_the_new_tab_button()
+    if not _tab_to_join:
+        if not tabs:
+            native.setTabbingMode_(AppKit.NSWindowTabbingModeDisallowed)
+        return
+    _tab_to_join.pop().addTabbedWindow_ordered_(native, AppKit.NSWindowAbove)
+    if not tabs:
+        # A start window, as a tab: what is chosen in it takes its place,
+        # unless it closes first.
+        _tab_to_join.append(native)
+        window.events.closed += _tab_to_join.clear
+
+
+def _answer_the_new_tab_button() -> None:
+    """The tab bar shows a "+" only when something answers newWindowForTab:.
+
+    pywebview's application delegate is the one place that worked: on its
+    window class the method was there and the button was not. The delegate
+    exists once pywebview has built a window, so this runs in before_show,
+    before the first one is on screen and its tab bar is built.
+    """
+    delegate = AppKit.NSApp.delegate()
+    if not delegate.respondsToSelector_(b"newWindowForTab:"):
+        objc.classAddMethods(type(delegate), [NEW_WINDOW_FOR_TAB])
+
+
+def _open_the_start_window(_self, _sender) -> None:
+    """The tab bar's "+": the start window, as a tab of the window in front.
+    Opened off the GUI thread, where pywebview creates a window."""
+    _tab_to_join[:] = [AppKit.NSApp.keyWindow()]
+    threading.Thread(target=hooks.shell.show_start_window, daemon=True).start()
+
+
+NEW_WINDOW_FOR_TAB = objc.selector(
+    _open_the_start_window, selector=b"newWindowForTab:", signature=b"v@:@"
+)
 
 
 def find_key_window(windows: Sequence[Window]) -> Window | None:
@@ -402,13 +467,6 @@ def prepare() -> None:
     # sharedApplication() is first called. Afterwards the menu bar says
     # "Python" for the life of the process and nothing can change it.
     _name_the_application()
-
-    # macOS gives any document-shaped window a tab bar, and a tab bar with
-    # one tab is a second title bar saying what the first one said. Tabs
-    # would need real support (newWindowForTab:, moving a document between
-    # windows); until Libera Suite has it, turn them off. Class-level and before
-    # the window exists, because a bar already on screen does not come off.
-    AppKit.NSWindow.setAllowsAutomaticWindowTabbing_(False)
 
     # Before the menu bar is built, which is the only time these are read.
     _quieten_system_items()

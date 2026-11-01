@@ -109,11 +109,22 @@ lint.extend-ignore = [
 "src/libera/host/language.py" = [
     "PLC0415", # Foundation is macOS-only, windll Windows-only
 ]
-# launcher.py runs update-desktop-database, which is the system's own tool and
+# The launcher package picks its platform's half in __init__, once, as the
+# menu package does.
+"src/libera/launcher/__init__.py" = [
+    "RUF067", # the choice of platform is the package's surface
+]
+# desktop.py runs update-desktop-database, which is the system's own tool and
 # the only way the Open With menu learns about a new association.
-"src/libera/launcher.py" = [
+"src/libera/launcher/desktop.py" = [
     "S404",  # subprocess import
     "S603",  # subprocess call -- argv form, no shell, a path from `which`
+]
+# macos.py runs lsregister, by its absolute path in the system volume: the only
+# way to have Finder notice a new bundle now rather than at its next scan.
+"src/libera/launcher/macos.py" = [
+    "S404",  # subprocess import
+    "S603",  # subprocess call -- argv form, no shell, a fixed system path
 ]
 # docs/ carries two generators for the site's images: shots.py drives the
 # shipped CLI and a browser, figures/ builds diagrams with svg-plus. Tools, not
@@ -290,14 +301,20 @@ lint.extend-ignore = [
     "N802", # naming
     "S310", # urlopen on a loopback URL the fixture just built is the point
 ]
-# test_launcher.py runs desktop-file-validate over the entry it just wrote,
+# test_desktop.py runs desktop-file-validate over the entry it just wrote,
 # because a faulty desktop file is ignored in silence and that tool is the only
 # thing that says why. It comes from the Linux test image, by name, and the
 # test skips where `which` does not find it.
-"tests/a_unit/test_launcher.py" = [
+"tests/a_unit/launcher/test_desktop.py" = [
     "S404", # subprocess import
     "S603", # subprocess call -- argv form, no shell
     "S607", # desktop-file-validate comes from the image, by name
+]
+# The bundle's own executable, run as Finder would start it: the one way to
+# know the prebuilt launcher still starts the interpreter its plist names.
+"tests/b_integration/launcher/test_macos_app.py" = [
+    "S404", # subprocess import
+    "S603", # subprocess call -- argv form, no shell, the bundle just written
 ]
 # The build tooling runs scripts and git; so do its tests, as the builders do.
 "build/src/libera_build/**/*.py" = [

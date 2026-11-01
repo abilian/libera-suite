@@ -29,14 +29,14 @@ La commande est `libera`, sous Linux et macOS. Installée en Flatpak, elle s'éc
 | `libera --payload-status` | l'emplacement des composants, leur version et le [code source](../licence.md#corresponding-source) dont ils sont issus |
 | `libera --payload-remove` | les supprimer. [Plus de détails](../main/install.md#uninstall) |
 
-## Le menu des applications sous Linux
+## Le menu des applications et Ouvrir avec
 
 | | |
 | :--- | :--- |
-| `libera --launcher-install` | ajouter Libera Suite au menu des applications, avec *Ouvrir avec*. [Plus de détails](../main/alt-install.md#a-launcher-entry-on-linux) |
+| `libera --launcher-install` | ajouter Libera Suite à vos applications, avec *Ouvrir avec* : au menu des applications sous Linux ([plus de détails](../main/alt-install.md#a-launcher-entry-on-linux)), en tant que `Libera.app` dans votre dossier Applications sous macOS ([plus de détails](../main/alt-install.md#a-double-clickable-application-on-macos)). |
 | `libera --launcher-remove` | l'en retirer |
 
-Le Flatpak s'en charge lui-même.
+Le Flatpak, l'installateur Windows et, sous macOS, le script d'installation s'en chargent eux-mêmes.
 
 ## En cas de problème
 

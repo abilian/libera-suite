@@ -228,24 +228,27 @@ def _add_payload_options(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_launcher_options(parser: argparse.ArgumentParser) -> None:
-    """Linux has no application bundle to hold this, so it is a command. The
-    Flatpak installs the same entry itself. Where it makes no sense the options
-    stay, so that they still answer with why, but the help leaves them out."""
+    """A desktop entry on Linux, Libera.app on macOS: what an install that gave
+    only a command lacks. The Flatpak and the Windows installer do it
+    themselves. Where it makes no sense the options stay, so that they still
+    answer with why, but the help leaves them out."""
     shown = launcher.explain_unsupported() is None
 
     def help_(text: str) -> str:
         return text if shown else argparse.SUPPRESS
 
-    group = parser.add_argument_group("the Linux launcher")
+    group = parser.add_argument_group("among your applications")
     group.add_argument(
         "--launcher-install",
         action="store_true",
-        help=help_("put Libera Suite in the launcher, with an icon and Open With"),
+        help=help_(
+            "put Libera Suite among your applications, with its icon and Open With"
+        ),
     )
     group.add_argument(
         "--launcher-remove",
         action="store_true",
-        help=help_("take the desktop entry and its icon away"),
+        help=help_("take it away again"),
     )
 
 

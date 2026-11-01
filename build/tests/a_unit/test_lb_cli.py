@@ -73,6 +73,7 @@ TOOLCHAIN = sh("engine/toolchain.sh", "check")
         (["payload", "patches"], [sh("engine/check-patches.sh")]),
         (["toolchain", "list"], [sh("engine/toolchain.sh", "list")]),
         (["app", "macos", "--standalone"], [sh("macos/macos-app.sh", STANDALONE="1")]),
+        (["app", "macos-launcher"], [sh("macos/launcher.sh")]),
     ],
 )
 def test_a_command_line_runs_its_scripts(argv, steps):
@@ -158,6 +159,7 @@ def test_linux_is_called_here_with_its_options(monkeypatch):
     monkeypatch.delenv("ARCH", raising=False)
     monkeypatch.delenv("DIST", raising=False)
     monkeypatch.delenv("PAYLOAD", raising=False)
+    monkeypatch.delenv("LINUX_LANG", raising=False)
     (call,) = cli.plan(["linux", "test", "-k", "bridge", "--arch", "arm64"])
     assert call == cli.Call(
         linux.run,
@@ -374,3 +376,9 @@ def test_the_flatpak_takes_the_container_builds_payload_when_given_none(
     builder = flatpak.Builder(FlatpakOptions("build", arch="amd64"), engine)
 
     assert builder.dist == tmp_path / "amd64"
+
+
+def test_linux_gui_takes_a_language(monkeypatch):
+    monkeypatch.delenv("LINUX_LANG", raising=False)
+    (call,) = cli.plan(["linux", "gui", "--lang", "fr_FR.UTF-8"])
+    assert call.args[0].lang == "fr_FR.UTF-8"

@@ -49,7 +49,9 @@ logger = logging.getLogger(__name__)
 WINDOW_SIZE = (1400, 900)
 
 
-def create_window(title: str, url: str, size: tuple[int, int] = WINDOW_SIZE) -> Window:
+def create_window(
+    title: str, url: str, size: tuple[int, int] = WINDOW_SIZE, *, tabs: bool = True
+) -> Window:
     """A window, or a NotReadyError where pywebview would return None.
 
     pywebview types create_window as `Window | None`; the callers all went
@@ -58,7 +60,7 @@ def create_window(title: str, url: str, size: tuple[int, int] = WINDOW_SIZE) -> 
     dereferences.
     """
     width, height = size
-    window = native.make_window(title, url, width, height)
+    window = native.make_window(title, url, width, height, tabs=tabs)
     if window is None:
         msg = f"pywebview could not make a window for {title}"
         raise NotReadyError(msg)
@@ -119,16 +121,15 @@ def find_front_session() -> Session | None:
 def find_front_window() -> Window | None:
     """The window a menu item or dialog should act on.
 
-    The window the toolkit says is in front, then pywebview's active window,
-    then the only window there is, because "no window" is never the right answer
-    while one is open.
+    The window the toolkit says is in front, then the first there is, because
+    "no window" is never the right answer while one is open.
     """
     if not webview.windows:
         return None
     # The key window is AppKit's to say, and AppKit is main-thread-only; the
     # menu, a new document and full screen ask from other threads.
     key = native.run_on_gui_thread(lambda: native.find_key_window(webview.windows))
-    return key or webview.active_window() or webview.windows[0]
+    return key or webview.windows[0]
 
 
 def copy_untitled(blank: Path, base: Path) -> Path:
@@ -233,6 +234,18 @@ def close_session_window(session: Session) -> None:
     window = find_window(session)
     if window is not None:
         native.close_window(window)
+
+
+def document_title(session: Session, document: Path) -> str:
+    """What a document window is called, and its tab on macOS."""
+    return f"{document.name} — {session.editor.title}"
+
+
+def show_session_document(session: Session, document: Path) -> None:
+    """Retitle the window showing that session after a Save As."""
+    window = find_window(session)
+    if window is not None:
+        window.set_title(document_title(session, document))
 
 
 def show_session_edited(session: Session, edited: bool) -> None:

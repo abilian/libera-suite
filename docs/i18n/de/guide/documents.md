@@ -25,6 +25,8 @@ libera ~/Documents/*.docx     # jedes in seinem Fenster
 
 Sie können ein Dokument auch aus dem Dokumentfenster heraus öffnen, über **Datei ▸ Öffnen** oder **Datei ▸ Zuletzt benutztes Dokument öffnen**. Beides öffnet ein neues Fenster und lässt das bereits geöffnete Dokument unberührt.
 
+**Unter macOS können sich Dokumente als Tabs** eines Fensters öffnen. Libera Suite folgt der Systemeinstellung *Beim Öffnen von Dokumenten Tabs bevorzugen* unter Systemeinstellungen ▸ Schreibtisch & Dock, wie jede Dokumentanwendung auf dem Mac. Steht sie auf *Immer*, öffnet sich jedes Dokument als Tab. Sonst öffnet es sich in einem eigenen Fenster, und **Fenster ▸ Merge All Windows** führt sie zusammen. Das **+** am Ende der Tableiste öffnet das Startfenster als neuen Tab, und das dort gewählte Dokument nimmt seinen Platz ein. Einen Tab ziehen Sie mit der Maus in ein eigenes Fenster.
+
 **Ein Dokument, das Sie** auf ein Fenster von Libera Suite ziehen, das Startfenster eingeschlossen, öffnet sich in einem eigenen Fenster. Ein Bild, das Sie auf ein Dokument ziehen, wird darin eingefügt.
 
 **Datei ▸ Neu** bietet aus jedem Fenster ein Dokument, eine Tabelle oder eine Präsentation an, jeweils in einem eigenen Fenster. Unter macOS erzeugt `⌘N` eines von der Art des vorderen Fensters. Im Dokumentfenster selbst fragt **Datei ▸ Neues Dokument erstellen**, welches der drei Sie anlegen möchten.
@@ -74,13 +76,13 @@ Eine Datei, die schon unter dem neuen Namen existiert, wird ersetzt. Das umgewan
 
 ## Die Menüleiste
 
-Unter Linux und Windows sitzt die Leiste im Fenster: **Datei**, **Bearbeiten**, **Ansicht** und **Hilfe**, Letzteres mit *Libera-Hilfe* und *Über Libera Suite*. Aus dem, was das Menü dort bietet, ergeben sich drei Unterschiede. Kein Eintrag zeigt ein Tastenkürzel an, aber Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Umschalt-S, Ctrl-P und Ctrl-Z tun dort, was die ⌘-Tasten unten auf einem Mac tun. **Zuletzt verwendet** wird beim Start der Anwendung aufgebaut; ein Dokument, das Sie heute öffnen, erscheint dort also morgen. Nichts wird ausgegraut: Speichern ohne etwas zu speichern tut nichts.
+Unter Linux und Windows sitzt die Leiste im Fenster: **Datei**, **Bearbeiten**, **Ansicht** und **Hilfe**, Letzteres mit *Libera-Hilfe* und *Über Libera Suite*. Aus dem, was das Menü dort bietet, ergeben sich drei Unterschiede. Unter Linux zeigen Neu, Öffnen und Schließen Ctrl-N, Ctrl-O und Ctrl-W, und kein anderer Eintrag zeigt seine Taste; unter Windows keiner. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Umschalt-S, Ctrl-P und Ctrl-Z tun dort, was die ⌘-Tasten unten auf einem Mac tun. **Zuletzt verwendet** wird beim Start der Anwendung aufgebaut; ein Dokument, das Sie heute öffnen, erscheint dort also morgen. Nichts wird ausgegraut: Speichern ohne etwas zu speichern tut nichts.
 
 Unter macOS ist es eine echte Mac-Menüleiste, mit denselben Einträgen plus **Fenster**. Die üblichen Tastenkürzel funktionieren dort, ob das Dokument den Fokus hat oder nicht:
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | Neu (von der Art des vorderen Fensters), Öffnen: jeweils in einem eigenen Fenster |
+| `⌘N` `⌘O` | Neu (von der Art des vorderen Fensters), Öffnen: jeweils in einem eigenen Fenster oder Tab |
 | `⌘S` `⇧⌘S` | Speichern, Speichern unter |
 | `⌘P` | Drucken |
 | `⌘W` | Schließen, zuvor Nachfrage zu nicht gespeicherten Änderungen |
@@ -114,7 +116,7 @@ In ein Dokument eingebettete Bilder bleiben beim Öffnen und Speichern erhalten.
 
 Fehler werden unterstrichen; ein Rechtsklick bietet Vorschläge an. Welches Wörterbuch verwendet wird, richtet sich nach **der Sprache des Dokuments**, die Sie in der **Statusleiste** am unteren Fensterrand einstellen, für jedes Dokument einzeln.
 
-Mitgeliefert werden Wörterbücher für fünf Sprachen: Englisch (USA und Großbritannien), Französisch, Deutsch, Spanisch und Italienisch. Eine Sprache ohne Wörterbuch ist kein Fehler; ihre Wörter gelten schlicht als richtig. Wörter, die Sie über *Add to dictionary* hinzufügen, bleiben erhalten: Sie gelten von da an in allen Dokumenten und allen Sprachen als richtig.
+Mitgeliefert werden Wörterbücher für sechs Sprachen: Englisch (USA und Großbritannien), Französisch, Deutsch, Spanisch, Italienisch und Niederländisch. Eine Sprache ohne Wörterbuch ist kein Fehler; ihre Wörter gelten schlicht als richtig. Wörter, die Sie über *Add to dictionary* hinzufügen, bleiben erhalten: Sie gelten von da an in allen Dokumenten und allen Sprachen als richtig.
 
 ## Ihr Name in Dokumenten {#your-name-in-documents}
 

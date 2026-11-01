@@ -1,6 +1,6 @@
 # Werken met documenten
 
-De menu's en vensters van Libera Suite zelf zijn in het Engels; die van de componenten zijn in het Nederlands. Menu's en knoppen staan hier zoals ze op het scherm verschijnen.
+De menu's en vensters van Libera Suite zelf zijn in het Nederlands, net als die van de componenten; de vertaling van Libera Suite zelf is nog niet nagelezen. Menu's en knoppen staan hier zoals ze op het scherm verschijnen.
 
 ## Openen {#open}
 
@@ -25,9 +25,11 @@ libera ~/Documents/*.docx     # elk in een eigen venster
 
 Je kunt een document ook vanuit een open document openen, via **Bestand ▸ Openen** of **Bestand ▸ Recente openen**. Allebei openen ze een nieuw venster; het document dat je al open hebt, blijft ongemoeid.
 
+**Op macOS kunnen documenten als tabbladen** van één venster openen. Libera Suite volgt de systeeminstelling *Open documenten in tabbladen* in Systeeminstellingen ▸ Bureaublad en Dock, zoals elk documentprogramma op de Mac. Staat die op *Altijd*, dan opent elk document als tabblad. Anders opent het in een eigen venster, en **Window ▸ Merge All Windows** voegt ze samen. De **+** aan het eind van de tabbladbalk opent het startvenster als nieuw tabblad, en het document dat je daar kiest neemt de plaats ervan in. Een tabblad sleep je naar buiten tot een eigen venster.
+
 **Een document dat je** op een venster van Libera Suite sleept, het startvenster inbegrepen, opent in een eigen venster. Een afbeelding die je op een document sleept, wordt erin ingevoegd.
 
-**File ▸ New** biedt vanuit elk venster een Document, een Spreadsheet of een Presentation aan, elk in een eigen venster. Op macOS maakt `⌘N` er een van dezelfde soort als het voorste venster. Binnen het document zelf krijg je dezelfde keuze via **Bestand ▸ Nieuw maken**.
+**Bestand ▸ Nieuw** biedt vanuit elk venster een Document, een Rekenblad of een Presentatie aan, elk in een eigen venster. Op macOS maakt `⌘N` er een van dezelfde soort als het voorste venster. Binnen het document zelf krijg je dezelfde keuze via **Bestand ▸ Nieuw maken**.
 
 ## Opslaan
 
@@ -37,7 +39,7 @@ Bij het opslaan wordt het werkformaat weer omgezet in een echt document; dat duu
 
 ## Exporteren
 
-Met Opslaan als exporteer je ook: het dialoogvenster heeft een keuzelijst **File Format**.
+Met Opslaan als exporteer je ook: het dialoogvenster heeft een keuzelijst **Bestandsformaat**.
 
 | | |
 | :--- | :--- |
@@ -74,31 +76,31 @@ Een bestand dat al onder de nieuwe naam bestaat, wordt vervangen. Het bestand da
 
 ## De menubalk
 
-Op Linux en Windows zit de balk in het venster: **File**, **Edit**, **View** en **Help**, met in die laatste *Libera Help* en *About Libera Suite*. Wat het menu daar biedt, levert drie verschillen op. Geen enkel item toont een sneltoets, maar Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z doen wat de ⌘-toetsen hieronder op een Mac doen. **Open Recent** wordt opgebouwd wanneer de applicatie start, dus een document dat je vandaag opent, verschijnt er morgen in. Niets wordt grijs, dus Save zonder iets om op te slaan doet niets.
+Op Linux en Windows zit de balk in het venster: **Bestand**, **Bewerken**, **Weergave** en **Help**, met in die laatste *Libera Help* en *Over Libera Suite*. Wat het menu daar biedt, levert drie verschillen op. Op Linux tonen Nieuw, Openen en Sluiten Ctrl-N, Ctrl-O en Ctrl-W, en geen ander item toont zijn toets; op Windows geen enkel. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P en Ctrl-Z doen wat de ⌘-toetsen hieronder op een Mac doen. **Open Recent** wordt opgebouwd wanneer de applicatie start, dus een document dat je vandaag opent, verschijnt er morgen in. Niets wordt grijs, dus Save zonder iets om op te slaan doet niets.
 
-Op macOS is het een echte Mac-menubalk, met dezelfde items plus **Window**. De gebruikelijke sneltoetsen werken daar, of het document nu de focus heeft of niet:
+Op macOS is het een echte Mac-menubalk, met dezelfde items plus **Venster**. De gebruikelijke sneltoetsen werken daar, of het document nu de focus heeft of niet:
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | New (van de soort van het voorste venster), Open: elk in een eigen venster |
+| `⌘N` `⌘O` | New (van de soort van het voorste venster), Open: elk in een eigen venster of tabblad |
 | `⌘S` `⇧⌘S` | Save, Save As |
 | `⌘P` | Print |
 | `⌘W` | Close, met eerst een vraag over niet-opgeslagen wijzigingen |
 | `⌘Z` `⇧⌘Z` | Undo, Redo |
 | `⌘F` | Find |
 | `⌘?` | Deze documentatie |
-| `⌘+` `⌘-` `⌘0` | Zoom In, Zoom Out, Fit Page |
-| `⌘8` | Formatting Marks |
+| `⌘+` `⌘-` `⌘0` | Inzoomen, Uitzoomen, Aan pagina aanpassen |
+| `⌘8` | Opmaaktekens |
 
-**File ▸ Open Recent** wordt opnieuw opgebouwd telkens als je het opent. Het menu **Window** toont alle geopende documenten.
+**Bestand ▸ Recent openen** wordt opnieuw opgebouwd telkens als je het opent. Het menu **Venster** toont alle geopende documenten.
 
 Save, Undo en Redo zijn grijs als er niets op te slaan of ongedaan te maken is. De componenten weigeren die opdrachten zonder iets te zeggen: een menu-item dat beschikbaar bleef, zou kapot lijken.
 
 ## Sluiten
 
-Wie een venster met niet-opgeslagen wijzigingen sluit, krijgt eerst een vraag: **Save**, **Don't Save** of **Cancel**.
+Wie een venster met niet-opgeslagen wijzigingen sluit, krijgt eerst een vraag: **Opslaan**, **Niet opslaan** of **Annuleren**.
 
-Kiezen voor Don't Save is niet definitief. Libera Suite bewaart wat je geschreven hebt, en biedt het opnieuw aan wanneer je dat document de volgende keer opent.
+Kiezen voor Niet opslaan is niet definitief. Libera Suite bewaart wat je geschreven hebt, en biedt het opnieuw aan wanneer je dat document de volgende keer opent.
 
 ## Afdrukken
 
@@ -114,7 +116,7 @@ Afbeeldingen die in een document zijn ingesloten, blijven bewaard bij openen en 
 
 Spelfouten worden onderstreept, en met de rechtermuisknop krijg je suggesties. Welk woordenboek gebruikt wordt, volgt **de taal van het document**, die je per document instelt in de **statusbalk** onder in het venster.
 
-Er worden woordenboeken voor vijf talen meegeleverd: Engels (VS en VK), Frans, Duits, Spaans en Italiaans. Een taal zonder woordenboek is geen fout; de woorden ervan gelden gewoon als juist. Woorden die je toevoegt met *Toevoegen aan woordenboek* blijven bewaard: vanaf dan zijn ze juist in elk document en elke taal.
+Er worden woordenboeken voor zes talen meegeleverd: Engels (VS en VK), Frans, Duits, Spaans, Italiaans en Nederlands. Een taal zonder woordenboek is geen fout; de woorden ervan gelden gewoon als juist. Woorden die je toevoegt met *Toevoegen aan woordenboek* blijven bewaard: vanaf dan zijn ze juist in elk document en elke taal.
 
 ## Je naam in documenten {#your-name-in-documents}
 

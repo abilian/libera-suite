@@ -23,6 +23,8 @@ libera ~/Documents/*.docx     # one window each
 
 You can also open a document from inside the document window, through **File ▸ Open** or **File ▸ Open Recent**. Either opens a new window; neither disturbs the document you already have open.
 
+**On macOS, documents can open as tabs** of one window. Libera Suite follows the system's setting, *Prefer tabs when opening documents* in System Settings ▸ Desktop & Dock, as every Mac document application does. Set to *Always*, each document opens as a tab. Otherwise it opens in a window of its own, and **Window ▸ Merge All Windows** gathers them. The **+** at the end of the tab bar opens the start window as a new tab, and the document you choose there takes its place. A tab can be dragged out into a window of its own.
+
 **Dropping a document** on any Libera Suite window, the start window included, opens it in a window of its own. An image dropped on a document is inserted into it.
 
 **File ▸ New** offers a Document, a Spreadsheet or a Presentation from any window, each in a window of its own. On macOS, `⌘N` makes one of the same kind as the front window. Inside the document window, you get the same choice from **File ▸ Create New**.
@@ -72,13 +74,13 @@ A file already there under the new name is replaced. Nothing is written over the
 
 ## The menu bar
 
-On Linux and Windows the bar sits inside the window: **File**, **Edit**, **View** and **Help**, the last holding *Libera Help* and *About Libera Suite*. Three differences follow from what the menu there offers. None of the items shows a keyboard shortcut, but Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P and Ctrl-Z do what the ⌘ keys below do on a Mac. **Open Recent** is built when the application starts, so a document you open today appears in it tomorrow. Nothing greys out, so Save with nothing to save does nothing.
+On Linux and Windows the bar sits inside the window: **File**, **Edit**, **View** and **Help**, the last holding *Libera Help* and *About Libera Suite*. Three differences follow from what the menu there offers. On Linux, New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W beside them, and no other item shows its key; on Windows none does. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P and Ctrl-Z do what the ⌘ keys below do on a Mac. **Open Recent** is built when the application starts, so a document you open today appears in it tomorrow. Nothing greys out, so Save with nothing to save does nothing.
 
 On macOS it is a real Mac menu bar, with the same items plus **Window**. The usual shortcuts work there whether or not the document has focus:
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | New (of the front window's kind), Open: each in its own window |
+| `⌘N` `⌘O` | New (of the front window's kind), Open: each in its own window, or tab |
 | `⌘S` `⇧⌘S` | Save, Save As |
 | `⌘P` | Print |
 | `⌘W` | Close, asking about unsaved changes first |
@@ -112,7 +114,7 @@ Images embedded in a document are preserved on open and save. **Insert ▸ Image
 
 Misspellings are underlined, and right-click offers suggestions. Which dictionary is used follows **the document's language**, which you set from the **status bar** at the bottom of the window, per document.
 
-Dictionaries for five languages ship: English (US and UK), French, German, Spanish and Italian. A language with no dictionary is not an error; its words are simply treated as correct. Words you add through *Add to dictionary* are kept: from then on they are correct in every document and every language.
+Dictionaries for six languages ship: English (US and UK), French, German, Spanish, Italian and Dutch. A language with no dictionary is not an error; its words are simply treated as correct. Words you add through *Add to dictionary* are kept: from then on they are correct in every document and every language.
 
 ## Your name in documents
 

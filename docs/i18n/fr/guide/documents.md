@@ -25,6 +25,8 @@ libera ~/Documents/*.docx     # une fenêtre chacun
 
 Vous pouvez aussi ouvrir un document depuis la fenêtre du document, par **Fichier ▸ Ouvrir** ou **Fichier ▸ Ouvrir récent**. L'un et l'autre ouvrent une nouvelle fenêtre et laissent en place le document déjà ouvert.
 
+**Sous macOS, les documents peuvent s'ouvrir en onglets** d'une même fenêtre. Libera Suite suit le réglage du système, *Préférer les onglets pour l’ouverture des documents* dans Réglages Système ▸ Bureau et Dock, comme toute application de documents sur Mac. Réglé sur *Toujours*, chaque document s'ouvre dans un onglet. Sinon, il s'ouvre dans sa propre fenêtre, et **Fenêtre ▸ Merge All Windows** les rassemble. Le **+** au bout de la barre d'onglets ouvre la fenêtre de démarrage dans un nouvel onglet, et le document choisi prend sa place. Un onglet se détache en une fenêtre par glisser-déposer.
+
 **Un document déposé** sur une fenêtre de Libera Suite, fenêtre de démarrage comprise, s'ouvre dans sa propre fenêtre. Une image déposée sur un document y est insérée.
 
 **Fichier ▸ Nouveau** propose un document, une feuille de calcul ou une présentation depuis n'importe quelle fenêtre, chacun dans sa propre fenêtre. Sous macOS, `⌘N` en crée un du même type que la fenêtre au premier plan. Dans la fenêtre du document, **Fichier ▸ Nouveau document** vous demande lequel des trois créer.
@@ -74,13 +76,13 @@ Un fichier qui porte déjà le nouveau nom est remplacé. Le document converti n
 
 ## La barre de menus
 
-Sous Linux et Windows, la barre se trouve dans la fenêtre : **Fichier**, **Édition**, **Affichage** et **Aide**, ce dernier contenant *Aide de Libera* et *À propos de Libera Suite*. Le menu y impose trois différences. Aucun élément n'affiche de raccourci clavier, mais Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Maj-S, Ctrl-P et Ctrl-Z font sur ces systèmes l'équivalent des touches ⌘ ci-dessous sur un Mac. **Ouvrir un fichier récent** est construit au lancement de l'application : un document ouvert aujourd'hui y apparaît demain. Rien n'est grisé : Enregistrer sans rien à enregistrer ne fait rien.
+Sous Linux et Windows, la barre se trouve dans la fenêtre : **Fichier**, **Édition**, **Affichage** et **Aide**, ce dernier contenant *Aide de Libera* et *À propos de Libera Suite*. Le menu y impose trois différences. Sous Linux, Nouveau, Ouvrir et Fermer affichent Ctrl-N, Ctrl-O et Ctrl-W, et aucun autre élément n'affiche sa touche ; sous Windows, aucun. Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Maj-S, Ctrl-P et Ctrl-Z font sur ces systèmes l'équivalent des touches ⌘ ci-dessous sur un Mac. **Ouvrir un fichier récent** est construit au lancement de l'application : un document ouvert aujourd'hui y apparaît demain. Rien n'est grisé : Enregistrer sans rien à enregistrer ne fait rien.
 
 Sous macOS, c'est une vraie barre de menus Mac, avec les mêmes éléments plus **Fenêtre**. Les raccourcis habituels y fonctionnent, que le document ait le focus ou non :
 
 | | |
 | :--- | :--- |
-| `⌘N` `⌘O` | Nouveau (du type de la fenêtre au premier plan), Ouvrir : chacun dans sa propre fenêtre |
+| `⌘N` `⌘O` | Nouveau (du type de la fenêtre au premier plan), Ouvrir : chacun dans sa propre fenêtre, ou son onglet |
 | `⌘S` `⇧⌘S` | Enregistrer, Enregistrer sous |
 | `⌘P` | Imprimer |
 | `⌘W` | Fermer, en demandant d'abord quoi faire des modifications non enregistrées |
@@ -114,7 +116,7 @@ Les images intégrées à un document sont conservées à l'ouverture et à l'en
 
 Les fautes sont soulignées ; le clic droit propose des suggestions. Le dictionnaire utilisé dépend de **la langue du document**, que vous réglez dans la **barre d'état** en bas de la fenêtre, pour chaque document.
 
-Des dictionnaires sont fournis pour cinq langues : l'anglais (américain et britannique), le français, l'allemand, l'espagnol et l'italien. Une langue sans dictionnaire n'est pas une erreur ; ses mots sont simplement considérés comme corrects. Les mots ajoutés par *Add to dictionary* sont conservés : ils sont désormais corrects dans tous les documents et toutes les langues.
+Des dictionnaires sont fournis pour six langues : l'anglais (américain et britannique), le français, l'allemand, l'espagnol, l'italien et le néerlandais. Une langue sans dictionnaire n'est pas une erreur ; ses mots sont simplement considérés comme corrects. Les mots ajoutés par *Add to dictionary* sont conservés : ils sont désormais corrects dans tous les documents et toutes les langues.
 
 ## Votre nom dans les documents {#your-name-in-documents}
 

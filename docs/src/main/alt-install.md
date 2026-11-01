@@ -99,11 +99,20 @@ libera --launcher-remove     # to take it out again
 
 ## A double-clickable application on macOS
 
-There is no ready-made one yet. From a source checkout you can build one for yourself:
+The install script writes one, `Libera.app`, into the Applications folder of your home folder. After any other install, such as Homebrew, `pipx` or `uv tool`, this does the same:
+
+```sh
+libera --launcher-install
+libera --launcher-remove     # to take it out again
+```
+
+It opens documents on a double-click and shows the Libera icon in the Dock. It is a small launcher for the Python of the install that wrote it, so after uninstalling that, or moving it to another Python, run `libera --launcher-install` again.
+
+From a source checkout you can build one for that checkout:
 
 ```sh
 build/macos/macos-app.sh          # builds build/out/Libera.app
 open build/out/Libera.app
 ```
 
-It opens documents on a double-click and shows the Libera icon in the Dock. It runs the Python it was built with, so it belongs to that checkout: leave it there, and rebuild it if the checkout moves. It is not signed, so the first launch says **"cannot be opened because the developer cannot be verified"**. On macOS 15 and later, the way past it is *System Settings ▸ Privacy & Security ▸ Open Anyway*.
+It runs the Python of the checkout, so it belongs there: leave it there, and rebuild it if the checkout moves. It is not signed, so the first launch says **"cannot be opened because the developer cannot be verified"**. On macOS 15 and later, the way past it is *System Settings ▸ Privacy & Security ▸ Open Anyway*.
