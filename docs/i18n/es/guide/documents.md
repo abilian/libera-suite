@@ -129,7 +129,7 @@ Todavía no se puede crear un formulario, ni convertir un PDF en un documento.
 
 ## Documentos con contraseña {#passwords}
 
-Un documento protegido con una contraseña, por Word, LibreOffice o Libera Suite, la pide al abrirse, y otra vez tras una contraseña incorrecta. Al guardar se conserva la contraseña: el archivo se escribe protegido, como estaba. Una impresión es un PDF protegido con la misma contraseña. Guardado como texto o CSV, el documento no queda protegido, porque esos formatos no tienen protección.
+Un documento protegido con una contraseña, por Word, LibreOffice o Libera Suite, la pide al abrirse, y otra vez tras una contraseña incorrecta. Al guardar se conserva la contraseña: el archivo se escribe protegido, como estaba. Una impresión es un PDF protegido con la misma contraseña. Guardado como texto, CSV, RTF, HTML, Markdown, EPUB o FB2, el documento no queda protegido, porque esos formatos no tienen protección.
 
 **La protección propia de LibreOffice 26 aún no se puede leer.** De forma predeterminada, LibreOffice 26 cifra un archivo OpenDocument de un modo que Libera Suite no lee, y Libera Suite lo dice en lugar de pedir la contraseña. LibreOffice escribe el cifrado anterior, que Libera Suite lee, cuando su versión del formato ODF está en 1.3.
 

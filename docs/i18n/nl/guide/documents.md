@@ -129,7 +129,7 @@ Een formulier maken kan nog niet, en een pdf omzetten naar een document ook niet
 
 ## Documenten met een wachtwoord {#passwords}
 
-Een document dat met een wachtwoord is beveiligd, door Word, LibreOffice of Libera Suite, vraagt erom bij het openen, en opnieuw na een verkeerd wachtwoord. Bij het opslaan blijft het wachtwoord behouden: het bestand wordt beveiligd geschreven, zoals het was. Een afdruk is een pdf die met hetzelfde wachtwoord is beveiligd. Opgeslagen als tekst of CSV is het document niet beveiligd, omdat die formaten geen beveiliging kennen.
+Een document dat met een wachtwoord is beveiligd, door Word, LibreOffice of Libera Suite, vraagt erom bij het openen, en opnieuw na een verkeerd wachtwoord. Bij het opslaan blijft het wachtwoord behouden: het bestand wordt beveiligd geschreven, zoals het was. Een afdruk is een pdf die met hetzelfde wachtwoord is beveiligd. Opgeslagen als tekst, CSV, RTF, HTML, Markdown, EPUB of FB2 is het document niet beveiligd, omdat die formaten geen beveiliging kennen.
 
 **De eigen beveiliging van LibreOffice 26 kan nog niet worden gelezen.** Standaard versleutelt LibreOffice 26 een OpenDocument-bestand op een manier die Libera Suite niet leest, en Libera Suite zegt dat in plaats van om het wachtwoord te vragen. LibreOffice schrijft de oudere versleuteling, die Libera Suite wel leest, als de ODF-formaatversie op 1.3 staat.
 

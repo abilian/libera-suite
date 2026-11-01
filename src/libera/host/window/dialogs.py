@@ -99,6 +99,11 @@ def confirm_close(session_id: str) -> bool:
     document = closing.read_current_document()
     if document is None or not closing.unsaved_marker.is_file():
         return True
+    if closing.password_asked is not None:
+        # Recovered edits of a protected document, its password not given:
+        # they cannot be saved (saving.save_document), and the marker left
+        # where it is offers them again the next time it is opened.
+        return True
     return _confirm_close(closing, document)
 
 

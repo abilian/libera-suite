@@ -256,4 +256,6 @@ def test_a_pdf_with_a_password_saves_still_encrypted(
     # Encrypted as the rest is: the mark, in UTF-16, is nowhere in clear.
     assert b"\\000".join(bytes([c]) for c in MARK.encode()) not in update
     assert password not in json.dumps(editor.reported())
+    assert any("LocalFileSave" in line for line in editor.console)
+    assert not [line for line in editor.console if password in line]
     assert password not in caplog.text

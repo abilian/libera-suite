@@ -221,6 +221,12 @@ class Session:
     def write_current_document(self, document: pathlib.Path) -> None:
         write_atomically(self.current_file, str(document))
 
+    def forget_password(self) -> None:
+        """Another document is coming into this session: the password was the
+        last one's. Kept, every save of the next would be encrypted with it."""
+        self.password = ""
+        self.password_asked = None
+
     def mark_modified(self, modified: bool) -> None:
         """Record whether the editor has edits the file does not.
 

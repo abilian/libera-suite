@@ -129,7 +129,7 @@ Ein Formular zu erstellen ist noch nicht möglich, ebenso wenig, ein PDF in ein 
 
 ## Kennwortgeschützte Dokumente {#passwords}
 
-Ein mit einem Kennwort geschütztes Dokument, ob von Word, LibreOffice oder Libera Suite, fragt beim Öffnen danach, und nach einem falschen Kennwort erneut. Beim Speichern bleibt das Kennwort erhalten: Die Datei wird geschützt geschrieben, wie sie war. Ein Ausdruck ist ein PDF, das mit demselben Kennwort geschützt ist. Als Text oder CSV gespeichert, ist das Dokument nicht geschützt, da diese Formate keinen Schutz kennen.
+Ein mit einem Kennwort geschütztes Dokument, ob von Word, LibreOffice oder Libera Suite, fragt beim Öffnen danach, und nach einem falschen Kennwort erneut. Beim Speichern bleibt das Kennwort erhalten: Die Datei wird geschützt geschrieben, wie sie war. Ein Ausdruck ist ein PDF, das mit demselben Kennwort geschützt ist. Als Text, CSV, RTF, HTML, Markdown, EPUB oder FB2 gespeichert, ist das Dokument nicht geschützt, da diese Formate keinen Schutz kennen.
 
 **Den eigenen Schutz von LibreOffice 26 kann Libera Suite noch nicht lesen.** Standardmäßig verschlüsselt LibreOffice 26 eine OpenDocument-Datei auf eine Weise, die Libera Suite nicht liest, und Libera Suite sagt das, statt nach dem Kennwort zu fragen. LibreOffice schreibt die ältere Verschlüsselung, die Libera Suite liest, wenn seine ODF-Formatversion auf 1.3 gestellt ist.
 

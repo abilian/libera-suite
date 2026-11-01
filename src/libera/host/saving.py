@@ -248,6 +248,19 @@ def _put_in_place(
         hooks.shell.show_document(session, target)
 
 
+def _refuses_to_save(session: Session) -> str:
+    """Why this session cannot be saved at all, or "" when it can."""
+    if not session.editor.editable:
+        # A viewer has nothing to write and x2t has no id to write it with.
+        return f"{session.editor.title} is a viewer"
+    if session.password_asked is not None:
+        # Recovered edits of a protected document are decrypted already, and
+        # x2t given no password writes them unprotected: not before the
+        # password is given (opening._ask_recovered_password).
+        return "the document's password is not given yet"
+    return ""
+
+
 def save_document(
     session: Session, request: SaveRequest, *, may_ask: bool = True
 ) -> dict:
@@ -264,9 +277,9 @@ def save_document(
     itself: a save that needs to ask where fails there instead.
     """
     app = session.editor
-    if not app.editable:
-        # A viewer has nothing to write and x2t has no id to write it with.
-        logger.warning("save refused: %s is a viewer", app.title)
+    refused = _refuses_to_save(session)
+    if refused:
+        logger.warning("save refused: %s", refused)
         return {"error": SaveOutcome.DECLINED}
 
     if request.password:

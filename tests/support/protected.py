@@ -49,6 +49,8 @@ def is_encrypted(path: pathlib.Path) -> bool:
     if path.read_bytes().startswith(b"\xd0\xcf\x11\xe0"):
         return True  # OOXML: an OLE file holding EncryptionInfo and the package
     with zipfile.ZipFile(path) as package:
+        if "META-INF/manifest.xml" not in package.namelist():
+            return False  # OOXML in the clear
         return b"encryption-data" in package.read("META-INF/manifest.xml")
 
 

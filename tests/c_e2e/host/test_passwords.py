@@ -40,4 +40,6 @@ def test_a_protected_document_asks_opens_and_saves_protected(
     assert SENTENCE.encode("utf-16-le") in text
     assert MARK.encode("utf-16-le") in text
     assert SECRET not in json.dumps(editor.reported())
+    assert any("SetAdvancedOptions" in line for line in editor.console)
+    assert not [line for line in editor.console if SECRET in line]
     assert SECRET not in caplog.text
