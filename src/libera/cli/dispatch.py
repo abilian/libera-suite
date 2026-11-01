@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
         os.environ["LIBERA_CONFIG"] = str(named)
     logs.setup(args.verbose, quiet=args.quiet)
     locate.make_state_dir_private()
-    return _choose_command(parser, args)(args)
+    return commands.run(_choose_command(parser, args), args)
 
 
 def _make_parser() -> argparse.ArgumentParser:
@@ -259,7 +259,7 @@ def _add_serve_options(parser: argparse.ArgumentParser) -> None:
 
 def _choose_command(
     parser: argparse.ArgumentParser, args: argparse.Namespace
-) -> Callable[[argparse.Namespace], int]:
+) -> Callable[[argparse.Namespace], None]:
     """The one command this run asked for: a flag, or opening documents.
 
     Checked here rather than made impossible by argparse, because
@@ -314,7 +314,7 @@ def _check_convert(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
 
 def _find_command_flags(
     args: argparse.Namespace,
-) -> list[tuple[str, Callable[[argparse.Namespace], int]]]:
+) -> list[tuple[str, Callable[[argparse.Namespace], None]]]:
     """Every command flag given, with the command it runs.
 
     One table saying which spellings are commands, read by both the
