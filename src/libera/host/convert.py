@@ -244,7 +244,7 @@ PACKAGE_LIMIT = 1 << 30
 # What LibreOffice 26 encrypts an OpenDocument file with by default, as its
 # manifest names them. x2t reads AES-CBC with PBKDF2 only: given either of
 # these, it exits 0 having written nothing, whatever the password
-# (notes/plans/release-0.8.md, measured 2026-10-30).
+# (notes/plans/release-0.7-protection.md, measured 2026-10-30).
 UNREADABLE_ENCRYPTION = (b"aes256-gcm", b"argon2id")
 
 

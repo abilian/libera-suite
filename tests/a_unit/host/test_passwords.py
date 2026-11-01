@@ -1,7 +1,7 @@
 """A protected document: x2t is given its password in a job, never on the
 command line; exits 90 and 91 leave the editor the question; every save
 passes the password on, since x2t given none writes the document
-unprotected (notes/plans/release-0.8.md, measured 2026-10-30).
+unprotected (notes/plans/release-0.7-protection.md, measured 2026-10-30).
 
 x2t is stood in for here; tests/b_integration/host/test_passwords.py runs it.
 """

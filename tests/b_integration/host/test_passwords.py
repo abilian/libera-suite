@@ -4,7 +4,7 @@ Each is made the way a save makes one: a document opened, then exported with
 its password, which x2t encrypts with (OLE for OOXML, AES-CBC for
 OpenDocument). Files saved by LibreOffice, and OOXML files encrypted the way
 Word does by msoffcrypto-tool, were measured on 2026-10-30
-(notes/plans/release-0.8.md): they behave as these do, but for LibreOffice
+(notes/plans/release-0.7-protection.md): they behave as these do, but for LibreOffice
 26's own ODF encryption, which is refused before x2t. No file saved by Word
 itself has been tried.
 """
@@ -129,7 +129,7 @@ def test_a_tampered_protected_document_is_refused(tmp_path, app: apps.App):
     """Its HMAC fails, and x2t opened it all the same (core 0183, from
     ElixirOffice). The right password, and still no document. A changed
     byte of the package was measured too, on files Word's way encrypts
-    (notes/plans/release-0.8.md)."""
+    (notes/plans/release-0.7-protection.md)."""
     protected = make_protected(app, app.ext, tmp_path)
     tamper(protected)
     session = open_in(app, protected, tmp_path / "work")
