@@ -263,9 +263,12 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
     suffix = src.suffix.lower()
     if suffix in CSV_SUFFIXES:
         run = run_x2t(session, str(write_csv_open_job(session, src, editor_bin)))
-    elif suffix == ".md":
-        # Refused without an encoding, like a CSV: rc 88. It had never opened.
-        markdown = write_job(
+    elif suffix in {".md", ".mht", ".fb2"}:
+        # Refused without an encoding, like a CSV: rc 88. None had ever
+        # opened, though Words has listed all three since the start. So had
+        # .epub, which waits for its archive to be probed
+        # (notes/plans/converter-hardening.md).
+        job = write_job(
             session,
             "open.xml",
             m_sFileFrom=src,
@@ -274,7 +277,7 @@ def _convert_in(session: Session, src: pathlib.Path) -> None:
             m_sFontDir=session.font_dir,
             m_nCsvTxtEncoding=UTF_8,
         )
-        run = run_x2t(session, str(markdown))
+        run = run_x2t(session, str(job))
     elif suffix == ".xlsb":
         # The three-argument form takes an .xlsb for a presentation and writes
         # an empty one (PPTY), exit 0: no .xlsb ever opened, Excel's included.
