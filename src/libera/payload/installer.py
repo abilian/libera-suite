@@ -221,7 +221,7 @@ def _finish(dest: Path, say: Callable[[str], object]) -> None:
         msg = "installed payload is incomplete"
         raise PayloadError(msg)
     say("  indexing its fonts")
-    shipped = fonts.get_shipped(locate.Layout(dest))
+    shipped = fonts.get_shipped(locate.Layout.of(dest))
     say(f"    {len(fonts.read_font_files(shipped / 'AllFonts.js'))} fonts")
 
 
@@ -392,7 +392,7 @@ def install(
         )
         _swap_in(staged, dest, say)
 
-    installed = Payload(dest, "installed")
+    installed = Payload.found(dest, "installed")
     _index_installed_fonts(installed, say)
     for gone in prune.remove_unused(dest.parent, keep=dest.name):
         say(f"  removed the unused payload {gone}")

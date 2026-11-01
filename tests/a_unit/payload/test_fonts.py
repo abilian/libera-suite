@@ -127,7 +127,7 @@ def machine(tmp_path, monkeypatch):
     monkeypatch.setattr(fonts, "_get_user_dirs", list)
     monkeypatch.setattr(locate, "get_state_dir", lambda: tmp_path / "state")
     monkeypatch.setenv(fonts.SWITCH, "1")
-    return locate.Layout(payload), system
+    return locate.Layout.of(payload), system
 
 
 def test_a_font_installed_in_a_family_folder_makes_the_index_stale(machine):

@@ -134,6 +134,7 @@ def test_only_so_many_converters_run_at_once(session, monkeypatch):
             running -= 1
 
     monkeypatch.setattr(convert.subprocess, "run", slow_run)
+    monkeypatch.setattr(convert.generate, "make_code_cache_dir", lambda _: session.work)
 
     # More than may run, whatever this machine's core count: a fixed dozen let
     # every one through on 24 cores, where X2T_AT_ONCE is 12.

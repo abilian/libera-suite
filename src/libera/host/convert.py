@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from xml.sax.saxutils import escape
 
 from libera.host.changelog import ChangeLog
-from libera.payload import locate
+from libera.payload import generate, locate
 
 if TYPE_CHECKING:
     from libera.host.session import Session
@@ -57,8 +57,11 @@ X2T_TIMEOUT = 600
 
 
 def run_x2t(session: Session, *args: str) -> subprocess.CompletedProcess:
-    """Run x2t out of the payload, in the environment `locate.make_tool_env` gives."""
+    """Run x2t out of the payload, in the environment `locate.make_tool_env`
+    gives, with its code cache in the state folder."""
     logger.debug("x2t %s", " ".join(args))
+    env = locate.make_tool_env(session.layout.bin)
+    env["DOCTRENDERER_CACHE_DIR"] = str(generate.make_code_cache_dir(session.layout))
     with _X2T_SLOTS:
         try:
             return subprocess.run(
@@ -66,7 +69,7 @@ def run_x2t(session: Session, *args: str) -> subprocess.CompletedProcess:
                 capture_output=True,
                 text=True,
                 check=False,
-                env=locate.make_tool_env(session.layout.bin),
+                env=env,
                 creationflags=locate.NO_WINDOW,
                 timeout=X2T_TIMEOUT,
             )

@@ -100,7 +100,7 @@ class Session:
     @property
     def layout(self) -> locate.Layout:
         """Where each part of the payload is: see locate.Layout."""
-        return locate.Layout(self.payload)
+        return locate.Layout.of(self.payload)
 
     @property
     def all_fonts(self) -> pathlib.Path:
@@ -278,7 +278,7 @@ def create_session(document: pathlib.Path | None = None) -> Session:
     was made.
     """
     template = next(iter(list(SESSIONS.values())))
-    layout = locate.Layout(template.payload)
+    layout = locate.Layout.of(template.payload)
     # The fonts as they are now, if their index is built; and if it is not, it
     # is built for the windows after this one.
     fonts.build_behind(layout, {s.fonts for s in list(SESSIONS.values())})
