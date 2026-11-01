@@ -1,6 +1,6 @@
 """Does the same build print the same document the same way twice?
 
-    lb fidelity [DOC...] [--runs N] [--out DIR]
+    lb fidelity [DOC...] [--runs N] [--out DIR] [--ref DIR]
 
 The first stage of measuring fidelity (notes/plans/00-roadmap.md): before a
 score against a reference can mean anything, two runs of one build on one
@@ -21,6 +21,16 @@ a user's file.
 The pages land in --out (build/out/fidelity by default), run-1/<id>/ and so
 on, where they can be looked at. Exit status 1 if any page differs, a page
 count differs, or a conversion fails.
+
+With --ref, the corpus is also scored against reference PDFs, `<id>.pdf` in
+that folder (exported from Word for the web, as notes/plans/release-0.7.md
+says): the first run's PDFs go to candidates/ and ElixirOffice's
+tools/fidelity/compare.py, from the corpus's own checkout, compares them page
+by page into score/, its report at score/report/index.html. It needs numpy,
+OpenCV and scikit-image, which uv installs for it; this module stays standard
+library only. Its main score, the penalty score out of 100, is theirs too,
+so the two projects' numbers compare. Only runs that gave the same pages
+are scored: a score of a build that varies would vary too.
 """
 
 from __future__ import annotations
@@ -40,6 +50,7 @@ from libera_build.repo import REPO
 CORPUS_REPO = "https://github.com/leag1234/elixiroffice"
 CORPUS_SHA = "764e83489d6991a571de05a88efcbf45fdc5596d"  # 2026-10-21
 CORPUS_DIR = "corpus/provisional"
+TOOLS_DIR = "tools/fidelity"
 CACHE = Path.home() / ".cache" / "libera-fidelity"
 OUT = REPO / "build" / "out" / "fidelity"
 # Pages are compared, not looked at closely: 96 dpi shows a moved line and
@@ -52,22 +63,29 @@ MIN_RUNS = 2
 SHA256 = re.compile(r"sha256=([0-9a-f]{64})\s*$")
 
 
-def fetch_corpus(cache: Path = CACHE) -> list[tuple[str, Path]]:
-    """The corpus at its pin, as (id, path), each file checked by its hash."""
+def checkout(cache: Path = CACHE) -> Path:
+    """ElixirOffice at the pin: its corpus, and the tools that score it."""
     root = cache / f"elixiroffice-{CORPUS_SHA[:12]}"
-    manifest = root / CORPUS_DIR / "manifest.csv"
-    if not manifest.is_file():
+    if (
+        not (root / CORPUS_DIR / "manifest.csv").is_file()
+        or not (root / TOOLS_DIR / "compare.py").is_file()
+    ):
         shutil.rmtree(root, ignore_errors=True)
         root.mkdir(parents=True)
         for step in (
             ["init", "-q"],
             ["remote", "add", "origin", CORPUS_REPO],
-            ["sparse-checkout", "set", CORPUS_DIR],
+            ["sparse-checkout", "set", CORPUS_DIR, TOOLS_DIR],
             ["fetch", "-q", "--depth", "1", "--filter=blob:none", "origin", CORPUS_SHA],
             ["checkout", "-q", "FETCH_HEAD"],
         ):
             subprocess.run(["git", "-C", str(root), *step], check=True)
-    return read_manifest(manifest)
+    return root
+
+
+def fetch_corpus(cache: Path = CACHE) -> list[tuple[str, Path]]:
+    """The corpus at its pin, as (id, path), each file checked by its hash."""
+    return read_manifest(checkout(cache) / CORPUS_DIR / "manifest.csv")
 
 
 def read_manifest(manifest: Path) -> list[tuple[str, Path]]:
@@ -168,6 +186,47 @@ def measure(documents: list[tuple[str, Path]], runs: int, out: Path) -> int:
     return 1 if failures else 0
 
 
+def score_command(root: Path, ref: Path, out: Path) -> list[str]:
+    """ElixirOffice's comparison of the candidates in out against ref. Their
+    pinned requirements need a Python their wheels exist for."""
+    tools = root / TOOLS_DIR
+    return [
+        "uv",
+        "run",
+        "--no-project",
+        "-q",
+        "-p",
+        "3.12",
+        "--with-requirements",
+        str(tools / "requirements.txt"),
+        "python",
+        "-s",
+        str(tools / "compare.py"),
+        "--ref-dir",
+        str(ref),
+        "--cand-dir",
+        str(out / "candidates"),
+        "--corpus",
+        str(root / CORPUS_DIR),
+        "--out",
+        str(out / "score"),
+    ]
+
+
+def score(documents: list[tuple[str, Path]], ref: Path, out: Path) -> int:
+    """The first run's PDFs scored against the references."""
+    missing = [name for name, _ in documents if not (ref / f"{name}.pdf").is_file()]
+    if missing:
+        msg = f"{ref}: no reference for {', '.join(missing)}"
+        raise SystemExit(msg)
+    candidates = out / "candidates"
+    shutil.rmtree(candidates, ignore_errors=True)
+    candidates.mkdir(parents=True)
+    for name, _ in documents:
+        shutil.copy(out / "run-1" / name / "document.pdf", candidates / f"{name}.pdf")
+    return subprocess.run(score_command(checkout(), ref, out), check=False).returncode
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="lb fidelity",
@@ -179,9 +238,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--out", type=Path, default=OUT, help=f"where the pages go ({OUT})"
     )
+    parser.add_argument(
+        "--ref",
+        type=Path,
+        metavar="DIR",
+        help="score the corpus against the reference PDFs here, <id>.pdf",
+    )
     args = parser.parse_args(argv)
     if args.runs < MIN_RUNS:
         parser.error("--runs: at least 2, or there is nothing to compare")
+    if args.ref and args.documents:
+        parser.error("--ref: the corpus only, whose manifest the comparison reads")
     if shutil.which("pdftoppm") is None:
         msg = (
             "pdftoppm is not installed:"
@@ -189,7 +256,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         raise SystemExit(msg)
     documents = name_documents(args.documents) if args.documents else fetch_corpus()
-    return measure(documents, args.runs, args.out)
+    same = measure(documents, args.runs, args.out)
+    if same or args.ref is None:
+        return same
+    return score(documents, args.ref, args.out)
 
 
 if __name__ == "__main__":
