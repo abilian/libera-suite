@@ -1,0 +1,35 @@
+From 643b269669319e025f105368093190dc5f03121f Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Tue, 6 Oct 2026 10:25:17 +0200
+Subject: [PATCH] fix(pdf): CPDFDoc no longer assigns the fields its prototype
+ computes
+
+widgets, annots and drawings are getters on CPDFDoc.prototype, with no
+setters, computed from the pages. The constructor still assigned all
+three, which strict mode refuses: "Cannot set property widgets of
+#<CPDFDoc> which has only a getter", and no PDF could be opened.
+---
+ pdf/src/document.js | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/pdf/src/document.js b/pdf/src/document.js
+index 8ad9623f9c..a00cd61831 100644
+--- a/pdf/src/document.js
++++ b/pdf/src/document.js
+@@ -110,9 +110,10 @@ var CPresentation = CPresentation || function(){};
+ 	 * @constructor
+ 	 */
+     function CPDFDoc(viewer) {
+-        this.widgets    = []; // непосредственно сами поля, которые отрисовываем (дочерние без потомков)
+-        this.annots     = [];
+-        this.drawings   = []; // из презентаций (чарты, шейпы, картинки)
++        // widgets, annots and drawings are getters on the prototype, computed
++        // from the pages (Object.defineProperties below), with no setters.
++        // Assigning them here threw in strict mode -- "Cannot set property
++        // widgets of #<CPDFDoc> which has only a getter" -- and no PDF opened.
+ 
+         this.maxApIdx               = -1;
+         this.CollaborativeEditing   = AscCommon.CollaborativeEditing;
+-- 
+2.55.0
+
