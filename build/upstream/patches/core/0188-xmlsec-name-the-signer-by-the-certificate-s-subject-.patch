@@ -1,0 +1,82 @@
+From a1f96063ac0676a5ce1b65a9169fdabfae8c8175 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Sun, 1 Nov 2026 08:44:36 +0100
+Subject: [PATCH 188/190] xmlsec: name the signer by the certificate's subject,
+ in UTF-8
+
+GetSignerName read the issuer's common name, the signer's only for a
+self-signed certificate: one a CA issued showed the CA as its signer.
+And X509_NAME_oneline wrote a non-ASCII name as \xHH escapes. Both names
+are now read with ASN1_STRING_to_UTF8; the issuer still goes into the
+signature's X509IssuerName.
+---
+ .../xmlsec/src/src/Certificate_openssl.h      | 45 +++++++++----------
+ 1 file changed, 22 insertions(+), 23 deletions(-)
+
+diff --git a/DesktopEditor/xmlsec/src/src/Certificate_openssl.h b/DesktopEditor/xmlsec/src/src/Certificate_openssl.h
+index 055a33a0d2..ed0aaae38c 100644
+--- a/DesktopEditor/xmlsec/src/src/Certificate_openssl.h
++++ b/DesktopEditor/xmlsec/src/src/Certificate_openssl.h
+@@ -400,37 +400,36 @@ public:
+ 		return sReturn;
+ 	}
+ 
++	// The signer is the certificate's subject, which signed: its issuer is who
++	// vouched for it, the same for a self-signed certificate only. Read as
++	// UTF-8, as X509_NAME_oneline does not: it wrote "\xC3\xA1" for an "a".
+ 	virtual std::wstring GetSignerName()
+ 	{
+ 		if (NULL == m_cert)
+ 			return L"";
+-
+-		const X509_NAME* name = X509_get_issuer_name(m_cert);
+-		char buffer[10000];
+-		memset(buffer, 0, 10000);
+-
+-		X509_NAME_oneline(name, buffer, 10000);
+-
+-		std::string sName(buffer);
+-		std::wstring sNameW = UTF8_TO_U(sName);
+-
+-		std::wstring::size_type pos = sNameW.find(L"CN=");
+-		if (std::wstring::npos != pos)
+-		{
+-			sNameW = sNameW.substr(pos + 3);
+-			pos = sNameW.find(L"/");
+-
+-			if (std::wstring::npos != pos)
+-			{
+-				sNameW = sNameW.substr(0, pos);
+-			}
+-		}
+-		return sNameW;
++		return GetCommonName(X509_get_subject_name(m_cert));
+ 	}
+ 
+ 	virtual std::wstring GetIssuerName()
+ 	{
+-		return GetSignerName();
++		if (NULL == m_cert)
++			return L"";
++		return GetCommonName(X509_get_issuer_name(m_cert));
++	}
++
++	static std::wstring GetCommonName(const X509_NAME* name)
++	{
++		int index = X509_NAME_get_index_by_NID(name, NID_commonName, -1);
++		if (index < 0)
++			return L"";
++		const ASN1_STRING* data = X509_NAME_ENTRY_get_data(X509_NAME_get_entry(name, index));
++		unsigned char* utf8 = NULL;
++		int length = ASN1_STRING_to_UTF8(&utf8, data);
++		if (length < 0)
++			return L"";
++		std::wstring result = NSFile::CUtf8Converter::GetUnicodeStringFromUTF8(utf8, length);
++		OPENSSL_free(utf8);
++		return result;
+ 	}
+ 
+ 	virtual std::string GetCertificateBase64()
+-- 
+2.55.0
+

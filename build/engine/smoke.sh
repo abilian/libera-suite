@@ -229,4 +229,60 @@ if not streams or padded or b"/Encrypt" in removed or changed.count(b"/Filter /S
 PY
 fi
 
+# libera-sign (core 0190), the program the host signs and checks OOXML with:
+# core's own legacy-signed.docx (ONLYOFFICE 9.4.0, OpenSSL 1.1.1f) is valid;
+# file.docx signed here with core's test key, as a signature line with its
+# two pictures, is valid, and gives them back; a copy whose document gained a
+# paragraph is not; removed, the signature is gone. The key has no passphrase:
+# an empty line on standard input.
+echo "==> libera-sign: verify, sign, tamper, remove"
+XMLSEC="$SRC/core/DesktopEditor/xmlsec/src/test"
+GUID="{5A1C0F4E-0000-4000-8000-0123456789AB}"
+py - "$W/valid.png" "$W/invalid.png" <<'PY'
+import struct, sys, zlib
+def png(rgb):
+    chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d))
+    rows = b"".join(b"\0" + bytes(rgb) * 40 for _ in range(20))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 40, 20, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b""))
+for path, rgb in zip(sys.argv[1:], ((0, 0, 200), (200, 0, 0))):
+    open(path, "wb").write(png(rgb))
+PY
+built libera-sign verify "$(winpath "$XMLSEC/legacy-signed.docx")" >"$W/legacy.json" || fail "libera-sign verify failed"
+echo | built libera-sign sign "$(winpath "$XMLSEC/file.docx")" "$(winpath "$W/signed.docx")" \
+    "$(winpath "$XMLSEC/keys/key.key")" "$(winpath "$XMLSEC/keys/cert.crt")" "$GUID" \
+    "$(winpath "$W/valid.png")" "$(winpath "$W/invalid.png")" || fail "libera-sign sign failed"
+built libera-sign verify "$(winpath "$W/signed.docx")" >"$W/signed.json" || fail "libera-sign verify failed"
+py - "$W/signed.docx" "$W/tampered.docx" <<'PY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as src, zipfile.ZipFile(sys.argv[2], "w", zipfile.ZIP_DEFLATED) as out:
+    for item in src.infolist():
+        data = src.read(item.filename)
+        if item.filename == "word/document.xml":
+            data = data.replace(b"</w:body>", b"<w:p><w:r><w:t>zqx</w:t></w:r></w:p></w:body>", 1)
+        out.writestr(item, data)
+PY
+built libera-sign verify "$(winpath "$W/tampered.docx")" >"$W/tampered.json" || fail "libera-sign verify failed"
+built libera-sign remove "$(winpath "$W/signed.docx")" "$(winpath "$W/removed.docx")" "$GUID" || fail "libera-sign remove failed"
+built libera-sign verify "$(winpath "$W/removed.docx")" >"$W/removed.json" || fail "libera-sign verify failed"
+py - "$W" "$GUID" <<'PY' || fail "libera-sign did not sign, check or remove as it should"
+import base64, json, pathlib, sys
+w, guid = pathlib.Path(sys.argv[1]), sys.argv[2]
+read = lambda name: json.loads((w / f"{name}.json").read_text(encoding="utf-8"))
+legacy, signed, tampered, removed = (read(n) for n in ("legacy", "signed", "tampered", "removed"))
+picture = lambda b64: base64.b64decode(b64 + "=" * (-len(b64) % 4))
+(one,) = signed["data"]
+print(f"    legacy: {[s['valid'] for s in legacy['data']]}, signed: {one['valid']} by {one['name']!r}, "
+      f"tampered: {[s['valid'] for s in tampered['data']]}, removed: {removed['count']} left")
+ok = (
+    [s["valid"] for s in legacy["data"]] == [0]
+    and one["valid"] == 0 and one["guid"] == guid
+    and picture(one["image_valid"]) == (w / "valid.png").read_bytes()
+    and picture(one["image_invalid"]) == (w / "invalid.png").read_bytes()
+    and [s["valid"] for s in tampered["data"]] == [1]
+    and removed["count"] == 0
+)
+raise SystemExit(0 if ok else 1)
+PY
+
 echo "PASS"
