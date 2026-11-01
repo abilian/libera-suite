@@ -4,6 +4,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 Two versions move here and they move independently. The **application** is this package, `libera`. The **editor payload** is the Euro-Office build it fetches on first use, versioned separately so that a fix to the host does not force a 120 MB re-download. `libera --version` prints both.
 
+## [Unreleased]
+
+What a release brings is written up when it is made; these are the fixes recorded as they landed.
+
+### Fixed
+
+- **Word 97-2003 documents open.** No `.doc` file had ever opened: the converter refused each one, waiting for a text encoding it was never given. The 166 `.doc` files of LibreOffice's Word export tests all open now. So do web archives (`.mht`), FictionBook (`.fb2`) and EPUB books, listed since the start and refused the same way.
+- **Flat OpenDocument spreadsheets and presentations open as what they are.** A `.fods` opened in Tables, or a `.fodp` in Slides, came in as a text document and could then be saved as nothing but PDF. An open now also fails, saying why, if the converter returns another kind of document than the editor's, where it showed an empty editor.
+
+### Security
+
+- **A document no longer brings your files into what you send back.** A picture linked to a path on your disk was copied into every document saved or converted from it, and drawn into its PDF, so opening such a document, saving it and returning it returned the picture. A linked picture is now read from a web address only. A picture inside an SVG is drawn only if the SVG carries it.
+- **A document's text no longer runs as code in the editor.** A tracked change's font or style name, and the values the Formula Wizard shows, were written into the page as HTML, so a document carrying markup there ran it when the change was selected or the wizard opened. A link to a `javascript:` address ran once you clicked through the warning. All are shown or refused as text now.
+- **The editor's page loads pictures from Libera Suite only.** A picture a document links to is fetched by the converter when the document opens, so the page never needed pictures from elsewhere, and a script in it can no longer send anything out in a picture's address.
+- **A small document can no longer take the converter to gigabytes.** A 6 KB file with nested XML entities took it to 3.9 GB of memory; the converter's XML parser is now libxml2 2.9.14, where it was a copy from 2016, and the same file converts in under a second. A package that says it unpacks to more than 1 GB is refused before conversion, and a conversion that holds more than 2.5 GB is stopped, saying so, before the machine swaps.
+
 ## [0.6.0] - 2026-10-26
 
 The first with payload **0.6**, so the editors are downloaded again once.
