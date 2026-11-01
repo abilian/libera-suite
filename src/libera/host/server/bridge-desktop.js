@@ -278,9 +278,18 @@
   // request turns any hiccup -- teardown included -- into a JS exception inside
   // the editor. Fetch once; the host tells us when it changes.
   let docPath = "";
+  // Whether File > Protect is offered: the host says, from the document's
+  // format. And the password the file on disk was last written with, which
+  // the editor is given back when a save that carried another did not take.
+  let protectable = false;
+  let confirmed = "";
 
   const currentBody = getFromHostSync("/__host__/current");
-  if (currentBody) docPath = JSON.parse(currentBody).path || "";
+  if (currentBody) {
+    const current = JSON.parse(currentBody);
+    docPath = current.path || "";
+    protectable = !!current.protectable;
+  }
 
   // The converted document, or the question of its password: x2t could not
   // open it without one (90), or not with the one typed (91). The editor's
@@ -289,6 +298,15 @@
     if (payload.needPassword) {
       w.asc_initAdvancedOptions(payload.needPassword);
       return;
+    }
+    // The password the host has for the document, a reload's above all: the
+    // editor's is gone with its page, and each save carries the editor's,
+    // so one it does not know would be saved as none. `true`: on open, which
+    // saves nothing.
+    const api = editorApi();
+    confirmed = payload.password || "";
+    if (payload.password && api && api.asc_setCurrentPassword) {
+      api.asc_setCurrentPassword(payload.password, true);
     }
     setTimeout(() => {
       w.DesktopOfflineAppDocumentEndLoad(DOC_DIR, payload.b64, payload.len);
@@ -372,9 +390,9 @@
     // must answer with DesktopOfflineAppDocumentEndSave(error, hash, password).
     // Async on purpose: x2t takes about a second, and the editor expects the
     // call to return immediately and be told later.
-    LocalFileSave: (params, password, docinfo, fileType) => {
-      // The password is a PDF's, which the editor asked for itself; the host
-      // needs it to save.
+    LocalFileSave: (params, password, _docinfo, fileType) => {
+      // The document's password as the editor has it, "" for none: the host
+      // saves under it (saving.SaveRequest).
       const body = JSON.stringify({
         fileType: fileType || 0,
         params: params || "",
@@ -386,9 +404,17 @@
         const error = reply.error === undefined ? 2 : reply.error;
         if (error === 0) {
           saved = true;
+          confirmed = password || "";
           // Save As moves the document; keep the cached path in step without a
           // reload.
           docPath = reply.path || docPath;
+        } else if (protectable && (password || "") !== confirmed) {
+          // File > Protect saves at once, and a save cancelled or failed left
+          // the editor with a password the file never got: its next save would
+          // write it unasked. The host has kept the file's (saving.py).
+          const api = editorApi();
+          if (api && api.asc_setCurrentPassword)
+            api.asc_setCurrentPassword(confirmed, true);
         }
         w.DesktopOfflineAppDocumentEndSave(error, "", password || "");
       });
@@ -458,7 +484,8 @@
     isSupportMacroses: () => false,
     isBlockchainSupport: () => false,
     IsSignaturesSupport: () => false,
-    IsProtectionSupport: () => false,
+    // File > Protect: set, change or remove a document's password.
+    IsProtectionSupport: () => protectable,
     IsSupportMedia: () => false,
     IsSupportNativePrint: () => false,
     IsCloudCryptoSupport: () => false,
@@ -829,13 +856,15 @@
   );
 
   // The arguments that carry a password, by method: logged as "(a password)",
-  // since the log reaches the console and the host's report.
-  const SECRET_ARGS = { LocalFileSave: 1, SetAdvancedOptions: 0 };
+  // since the log reaches the console and the host's report. LocalFileSave's
+  // sixth, from Words and the PDF editor, is the password before the last
+  // File > Protect (word/Local/api.js).
+  const SECRET_ARGS = { LocalFileSave: [1, 5], SetAdvancedOptions: [0] };
   function redacted(name, args) {
-    const at = SECRET_ARGS[name];
-    if (at === undefined || !args[at]) return args;
     const shown = Array.from(args);
-    shown[at] = "(a password)";
+    for (const at of SECRET_ARGS[name] || []) {
+      if (shown[at]) shown[at] = "(a password)";
+    }
     return shown;
   }
 

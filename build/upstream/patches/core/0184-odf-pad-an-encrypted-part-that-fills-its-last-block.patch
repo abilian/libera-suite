@@ -1,0 +1,30 @@
+From 0d82711c30e20e26a24d4c8017364bbc645e7d2f Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sfermigier@gmail.com>
+Date: Sat, 31 Oct 2026 11:46:13 +0100
+Subject: [PATCH] odf: pad an encrypted part that fills its last block
+
+From ElixirOffice's core 4c95116. AES-CBC with W3C padding adds a whole
+block when the compressed part is already a multiple of 16 bytes; the
+output buffer left it out, so LibreOffice refused about a quarter of
+the encrypted ODF files x2t wrote. x2t read them back all the same.
+---
+ OfficeCryptReader/source/CryptTransform.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/OfficeCryptReader/source/CryptTransform.cpp b/OfficeCryptReader/source/CryptTransform.cpp
+index 9b75ce99ef..8680fc3ddd 100644
+--- a/OfficeCryptReader/source/CryptTransform.cpp
++++ b/OfficeCryptReader/source/CryptTransform.cpp
+@@ -1374,7 +1374,8 @@ int ODFEncryptor::Encrypt (const std::wstring & wspassword, unsigned char* data,
+ 
+ 	bool bPadding = (cryptData.cipherAlgorithm == CRYPT_METHOD::AES_CBC);
+ 	
+-	if (bPadding && (size_out % PADDING_SIZE != 0))
++	// W3C padding includes a full block when the compressed input is aligned.
++	if (bPadding)
+ 		size_out = (size_out / PADDING_SIZE + 1) * PADDING_SIZE;
+ 
+ 	data_out = new unsigned char[size_out]; 	
+-- 
+2.55.0
+

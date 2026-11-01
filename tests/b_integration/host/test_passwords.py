@@ -21,6 +21,7 @@ from support.protected import (
     is_encrypted,
     make_protected,
     open_in,
+    read_odf_parts,
     tamper,
 )
 
@@ -161,3 +162,25 @@ def test_the_next_document_in_a_session_is_not_saved_with_the_last_password(
 
     assert not session.password
     assert not is_encrypted(saved)
+
+
+def test_every_encrypted_odf_part_ends_in_its_padding_block(tmp_path):
+    """AES-CBC with W3C padding adds a whole block to a part whose compressed
+    data already fills its last one, and x2t left that block out: LibreOffice
+    refused about a quarter of the encrypted ODF files it wrote, and x2t read
+    them back all the same (core 0184, from ElixirOffice). Which parts fill
+    their last block depends on the text, so the text varies until one does."""
+    full_blocks = []
+    for n in range(32):
+        made = tmp_path / str(n)
+        made.mkdir()
+        (made / "source.txt").write_text(SENTENCE + " x" * n + "\n", encoding="utf-8")
+        plain = open_in(apps.WORDS, made / "source.txt", made / "plain")
+        plain.password = SECRET
+        protected = made / "Protected.odt"
+        convert.export(plain, protected, apps.WORDS.ids_by_ext["odt"], None)
+        sessions.SESSIONS.clear()
+        parts = read_odf_parts(protected, SECRET)
+        assert SENTENCE.encode() in parts["content.xml"][0]
+        full_blocks += [name for name, (_, pad) in parts.items() if pad == 16]
+    assert full_blocks, "no part filled its last block: vary the text more"

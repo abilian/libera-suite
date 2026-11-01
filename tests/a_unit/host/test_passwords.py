@@ -14,7 +14,7 @@ import zipfile
 
 import pytest
 
-from libera.host import convert, opening
+from libera.host import convert, opening, saving
 from libera.host.session import Session
 
 SECRET = "s<cr&t"
@@ -190,3 +190,31 @@ def test_a_protected_document_is_saved_under_its_password(
 
 def test_a_document_without_one_is_saved_without(session, tmp_path, monkeypatch):
     assert "Password" not in job_of_save(session, tmp_path, monkeypatch, "saved.docx")
+
+
+def test_a_save_that_does_not_take_keeps_the_files_password(
+    session, tmp_path, monkeypatch
+):
+    """File > Protect saves at once. Cancelled or failed, the password it
+    carried never reached the file, and the next save, a print or the one on
+    close would have written the document under it."""
+    session.password = SECRET
+    monkeypatch.setattr(saving, "_export", lambda *_: None)
+
+    outcome = saving.save_document(session, saving.SaveRequest(password="new"))
+
+    assert outcome["error"] == saving.SaveOutcome.FAILED
+    assert session.password == SECRET
+
+
+def test_a_save_that_takes_gives_the_file_its_new_password(
+    session, tmp_path, monkeypatch
+):
+    session.password = SECRET
+    monkeypatch.setattr(saving, "_export", lambda *_: tmp_path / "saved.docx")
+    monkeypatch.setattr(session, "mark_modified", lambda _m: None)
+
+    outcome = saving.save_document(session, saving.SaveRequest(password=""))
+
+    assert outcome["error"] == saving.SaveOutcome.SAVED
+    assert not session.password
