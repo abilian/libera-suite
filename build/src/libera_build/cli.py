@@ -860,7 +860,7 @@ def add_components(groups: Groups) -> None:
     )
     g.command(
         "wheels",
-        "this machine's core wheel and the editors', built from the pinned sources",
+        "this machine's core wheel, from the core's sdist, and the editors'",
         components_wheels,
         OUT,
         epilog=examples("components wheels", "components wheels --out /tmp/wheels"),

@@ -1,5 +1,6 @@
 # The converter: x2t, allfontsgen and their libraries, one wheel per platform,
-# made by hatch_build.py; `lb components wheels` builds every platform's.
+# made by hatch_build.py, and an sdist that builds it where there is no wheel;
+# `lb components wheels` builds both on each platform.
 [project]
 name = "libera-core"
 # The payload version, which libera pins exactly; a test holds the three equal.
@@ -20,6 +21,19 @@ build-backend = "hatchling.build"
 packages = ["src/libera_core"]
 
 [tool.hatch.build.targets.wheel.hooks.custom]
+
+# The sdist builds the core where there is no wheel, so it carries what the
+# hook runs, at the paths it has in the repository: the pins, the patch
+# queues, the build scripts and the tooling they need.
+[tool.hatch.build.targets.sdist.force-include]
+"../../build/upstream" = "build/upstream"
+"../../build/engine" = "build/engine"
+"../../build/docker" = "build/docker"
+"../../build/windows" = "build/windows"
+"../../build/src/libera_build" = "build/src/libera_build"
+"../../src/libera/__init__.py" = "src/libera/__init__.py"
+"../../src/libera/manifest.py" = "src/libera/manifest.py"
+"../../src/libera/payload" = "src/libera/payload"
 
 # What the build reads, so that uv builds it again when one changes, and only
 # then.
