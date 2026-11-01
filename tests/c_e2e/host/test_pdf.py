@@ -13,7 +13,7 @@ import re
 import time
 
 import pytest
-from support import make_pdf, render
+from support import NESTED, make_nested_pdf, make_pdf, render
 
 from libera import payload as payload_mod
 from libera.host import convert, session as sessions
@@ -73,3 +73,67 @@ def test_a_comment_saves_as_an_incremental_update(
     assert contents is not None
     text = contents.group(1).replace(b"\\000", b"\0").decode("utf-16")
     assert MARK in text
+
+
+def test_pages_moved_keep_what_they_inherit(
+    editor_with, tmp_path, needs_the_pdf_editor
+):
+    """Each page inherits its size and rotation from its own Pages node, and
+    a moved page is written with them on itself. Reversing three pages takes
+    two moves, and x2t took the second page's from the third's node: the
+    page it read them from was the one at its position in the original, not
+    the one it was writing (ElixirOffice's 0.2.2; core 0178)."""
+    pdf = tmp_path / "Pages.pdf"
+    make_nested_pdf(pdf)
+    original = pdf.read_bytes()
+    editor = editor_with([], document=pdf)
+    session = next(iter(sessions.SESSIONS.values()))
+
+    # What a drop in the thumbnails does (thumbnails.js, reorderPagesMultiple).
+    editor.frame.evaluate(
+        "() => { const d = Asc.editor.getPDFDoc();"
+        " for (const [from, to] of [[2, 0], [2, 1]])"
+        "   d.DoAction(() => d.MovePages([from], to),"
+        "     AscDFH.historydescription_Pdf_MovePage, null, [0, 1, 2]); }"
+    )
+    deadline = time.monotonic() + 10
+    while not session.change_log and time.monotonic() < deadline:
+        time.sleep(0.2)
+    saved = tmp_path / "saved.pdf"
+    convert.export(session, saved, 513, None)
+
+    data = saved.read_bytes()
+    assert data.startswith(original)
+
+    def latest(number: int) -> bytes:
+        """An incremental update appends, so the last definition wins."""
+        start = data.rindex(b"\n%d 0 obj" % number)
+        return data[start : data.index(b"endobj", start)]
+
+    def inherited(number: int, key: bytes) -> bytes | None:
+        while True:
+            found = re.search(rb"/%s\s*(\[[^\]]*\]|\d+)" % key, latest(number))
+            if found:
+                return b" ".join(found.group(1).strip(b"[] ").split())
+            parent = re.search(rb"/Parent (\d+) 0 R", latest(number))
+            if parent is None:
+                return None
+            number = int(parent.group(1))
+
+    def pages(number: int) -> list[int]:
+        kids = re.search(rb"/Kids\s*\[([^\]]*)\]", latest(number))
+        if kids is None:
+            return [number]
+        refs = [int(n) for n in re.findall(rb"(\d+) 0 R", kids.group(1))]
+        return [page for kid in refs for page in pages(kid)]
+
+    # make_nested_pdf numbers page n's object 5 + 3n; its pages, reversed.
+    order = pages(2)
+    assert order == [5 + 3 * n for n in reversed(range(len(NESTED)))]
+    found = [
+        (inherited(page, b"MediaBox"), inherited(page, b"Rotate")) for page in order
+    ]
+    assert found == [
+        (b"0 0 %d %d" % (width, height), b"%d" % rotate)
+        for width, height, rotate in reversed(NESTED)
+    ]
