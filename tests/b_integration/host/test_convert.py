@@ -653,6 +653,63 @@ def test_an_epub_opens(tmp_path):
     assert "Un mot et cœur" in text.read_text(encoding="utf-8-sig")
 
 
+ODF_FLAT = (
+    '<?xml version="1.0" encoding="UTF-8"?><office:document'
+    ' xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"'
+    ' xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"'
+    ' xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"'
+    ' xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0"'
+    ' xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"'
+    ' office:version="1.2" office:mimetype="application/vnd.oasis.opendocument.{kind}">'
+    "<office:body>{body}</office:body></office:document>"
+)
+FODS = ODF_FLAT.format(
+    kind="spreadsheet",
+    body='<office:spreadsheet><table:table table:name="S"><table:table-row>'
+    '<table:table-cell office:value-type="string"><text:p>Un mot et cœur</text:p>'
+    "</table:table-cell></table:table-row></table:table></office:spreadsheet>",
+)
+FODP = ODF_FLAT.format(
+    kind="presentation",
+    body='<office:presentation><draw:page draw:name="P">'
+    '<draw:frame svg:x="2cm" svg:y="2cm" svg:width="10cm" svg:height="3cm">'
+    "<draw:text-box><text:p>Un mot et cœur</text:p></draw:text-box></draw:frame>"
+    "</draw:page></office:presentation>",
+)
+
+
+# What each editor saves to, for the test to read back.
+SAVED_AS = {"word": "docx", "cell": "xlsx", "slide": "pptx"}
+
+
+@pytest.mark.parametrize(
+    ("app", "name", "content", "expected"),
+    [
+        (apps.WORDS, "fdo59530.doc", None, "ccc"),
+        (apps.TABLES, "sheet.fods", FODS, "Un mot et cœur"),
+        (apps.SLIDES, "deck.fodp", FODP, "Un mot et cœur"),
+    ],
+    ids=["doc", "fods", "fodp"],
+)
+def test_a_listed_format_opens_as_its_editors_kind(
+    tmp_path, app, name, content, expected
+):
+    """Words listed .doc and refused every one (rc 88); Tables and Slides
+    opened a flat ODF file as a text document, which saved as nothing but
+    PDF. Each now opens as its editor's own kind and saves its text."""
+    document = tmp_path / name
+    if content is None:
+        shutil.copy(repo_root() / "tests/b_integration/host/data" / name, document)
+    else:
+        document.write_text(content, encoding="utf-8")
+    opened = open_in(app, document, tmp_path / "session")
+    saved = tmp_path / f"saved.{SAVED_AS[app.doctype]}"
+
+    export(opened, saved, app.ids_by_ext[saved.suffix[1:]], None)
+
+    assert expected.encode() in _read_text(saved)
+
+
 # --- x2t's CSV reader skipped a character every 500,000 --------------------
 #
 # CSVReader drops the text it has read once it passes 500,000 characters, and
