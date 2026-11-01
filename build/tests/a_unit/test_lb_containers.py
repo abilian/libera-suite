@@ -161,3 +161,8 @@ def test_a_docker_context_over_ssh_is_another_machine():
     assert remote_host("docker", {}, answer("unix:///var/run/docker.sock")) is None
     assert remote_host("docker", {"DOCKER_HOST": "tcp://x:2375"}, run) == "tcp://x:2375"
     assert remote_host("podman", {}, run) is None
+
+
+def test_an_engine_that_is_not_installed_is_refused_by_name():
+    with pytest.raises(RefusedError, match="no libera-no-such-engine here"):
+        Engine("libera-no-such-engine").refuse_absent()

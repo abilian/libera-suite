@@ -113,6 +113,10 @@ def build_core(repo: Path, into: Path) -> str:
     ]
     if source_problems(repo, tree / "src", only=("core",)):
         steps.insert(0, "build/engine/build.sh fetch core")
+    # Here, what is missing is said before the fetch, not after it; in the
+    # container, the image has it all.
+    if not box:
+        steps.insert(0, "build/engine/toolchain.sh check")
     script = "\n".join(["set -e", *steps])
     if not box:
         run_here(["sh", "-c", script], "the core", cwd=repo)
