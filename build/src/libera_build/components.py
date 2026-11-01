@@ -10,11 +10,13 @@ copy, so the workspace never holds another platform's binaries.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import tarfile
 from pathlib import Path
 
+from libera.manifest import Manifest
 from libera.payload import generate, locate
 from libera_build.process import run_here
 from libera_build.report import RefusedError, say, step
@@ -65,9 +67,26 @@ def fill_core(package: Path, dist: Path, platform: str, web: Path) -> None:
 
 
 def fill_web(package: Path, dist: Path) -> None:
+    """The editors, and the payload.json an installed payload has, from the
+    build's manifest: what --payload-status and the start window show, the
+    source among it, which the AGPL wants said. No platform: this wheel is
+    every platform's."""
     _empty(package)
     for name in ("editors.tar.gz", "fonts-core.tar.gz"):
         _unpack(dist / name, package)
+    if not (dist / "manifest.json").is_file():
+        msg = f"no manifest.json in {dist}"
+        raise RefusedError(msg)
+    manifest = Manifest.read(dist / "manifest.json")
+    record = {
+        "payload_version": manifest.payload_version,
+        "font_set": manifest.font_set,
+        "built": manifest.built,
+        "source": manifest.source,
+    }
+    (package / "payload.json").write_text(
+        json.dumps(record, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 def wheels(repo: Path, dist: Path, out: Path, stage_root: Path) -> int:

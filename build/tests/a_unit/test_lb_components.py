@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import tarfile
 from typing import TYPE_CHECKING
 
@@ -62,6 +63,15 @@ def a_dist(tmp_path):
     )
     make_tarball(dist / "editors.tar.gz", {"sdkjs/word/sdk-all.js": b"js"}, {})
     make_tarball(dist / "fonts-core.tar.gz", {"fonts-src/a.ttf": b"font"}, {})
+    (dist / "manifest.json").write_text(
+        json.dumps({
+            "payload_version": "0.7",
+            "built": "2026-10-27T06:00:00Z",
+            "font_set": "core",
+            "artifacts": [],
+            "source": {"libera_commit": "abc"},
+        })
+    )
     return dist
 
 
@@ -127,3 +137,16 @@ def test_a_platform_with_no_wheel_tag_is_refused(dist):
 
     with pytest.raises(RefusedError, match="no wheel tag for plan9-mips"):
         components.platforms_in(dist)
+
+
+def test_the_editors_say_what_they_are_built_from(repo, dist):
+    """What --payload-status says, the source among it, which the AGPL wants
+    said: an installed payload has it from the installer, the components
+    from the build."""
+    components.fill(repo, dist, "macos-arm64")
+
+    web = components.package_dir(repo, components.WEB)
+    record = json.loads((web / "payload.json").read_text())
+    assert record["payload_version"] == "0.7"
+    assert record["source"] == {"libera_commit": "abc"}
+    assert "platform" not in record, "libera-web is every platform's"

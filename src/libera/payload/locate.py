@@ -166,8 +166,14 @@ class Payload(Layout):
         return cls(layout.root, layout.core, origin)
 
     def read_record(self) -> dict:
+        """payload.json, or nothing for a build tree. The components' names
+        no platform, since libera-web is every platform's: theirs is this
+        machine's, which pip chose libera-core for."""
         f = self.record
-        return json.loads(f.read_text(encoding="utf-8")) if f.is_file() else {}
+        record = json.loads(f.read_text(encoding="utf-8")) if f.is_file() else {}
+        if self.origin == "components":
+            record.setdefault("platform", get_current_platform())
+        return record
 
 
 def get_xdg_data_home() -> Path:
