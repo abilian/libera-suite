@@ -3,14 +3,12 @@ editors, their fonts, dictionaries and blanks.
 
 The build needs a core, whose x2t turns the slide themes into what the editor
 loads, so libera-core is among this project's build requirements and its x2t
-is the one used. `lb components wheels` builds from a copy it has filled
-already, and says so in LIBERA_PREBUILT.
+is the one used.
 """
 
 from __future__ import annotations
 
 import importlib.util
-import os
 import shutil
 import sys
 import tempfile
@@ -24,7 +22,7 @@ class Editors(BuildHookInterface):
     @override
     def initialize(self, version: str, build_data: dict) -> None:
         self.staged: Path | None = None
-        if version == "editable" or os.environ.get("LIBERA_PREBUILT"):
+        if version == "editable":
             return
         repo = Path(self.root).parents[1]
         sys.path[:0] = [str(repo / "build" / "src"), str(repo / "src")]

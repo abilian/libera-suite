@@ -4,9 +4,8 @@ blanks, one wheel for all (notes/plans/pypi-components.md).
 
 Their projects are workspace members, whose build hooks call `build_core` and
 `build_web`: `uv sync` builds them from the pinned sources, as pip does where
-PyPI has no wheel. `lb components wheels` builds every platform's from a
-build's artifacts, in copies, so the workspace never holds a platform's
-binaries.
+PyPI has no wheel, and `lb components wheels` makes this machine's wheels the
+same way.
 """
 
 from __future__ import annotations
@@ -25,7 +24,6 @@ from libera_build.process import run_here
 from libera_build.release.phases.here import source_problems
 from libera_build.repo import build_root
 from libera_build.report import RefusedError, say, step
-from libera_build.versions import check_dist
 
 CORE = Path("components", "core")
 WEB = Path("components", "web")
@@ -40,26 +38,6 @@ TAGS = {
     "macos-arm64": "macosx_14_0_arm64",
     "windows-x86_64": "win_amd64",
 }
-
-
-def package_dir(repo: Path, project: Path) -> Path:
-    """The package folder of a component's project: src/libera_core..."""
-    return repo / project / "src" / f"libera_{project.name}"
-
-
-def fill_core(package: Path, dist: Path, platform: str, web: Path) -> None:
-    """The core for `platform`, with DoctRenderer.config written for the
-    editors at `web`."""
-    _empty(package)
-    _unpack_core(package, dist, platform)
-    generate.write_config(locate.Layout(web, package))
-
-
-def fill_web(package: Path, dist: Path) -> None:
-    """The editors, and the payload.json an installed payload has. No
-    platform in it: this wheel is every platform's."""
-    _empty(package)
-    _unpack_web(package, dist, {})
 
 
 # The sources the editors are built from, and the fonts and blanks they ship.
@@ -98,7 +76,7 @@ def build_web(repo: Path, into: Path, core_bin: Path) -> None:
         cwd=repo,
         env=env,
     )
-    _unpack_web(into, dist, {})
+    unpack_web(into, dist, {})
 
 
 def build_core(repo: Path, into: Path) -> str:
@@ -131,7 +109,7 @@ def build_core(repo: Path, into: Path) -> str:
     elif status := box.run(script):
         msg = f"the core: the build container failed ({status})"
         raise RefusedError(msg)
-    _unpack_core(into, tree / dist, platform)
+    unpack_core(into, tree / dist, platform)
     generate.write_config(locate.Layout(into.parent / "libera_web", into))
     return platform
 
@@ -144,8 +122,8 @@ def unpack(dest: Path, dist: Path, platform: str) -> int:
     tmp = dest.with_name(f".{dest.name}.tmp")
     shutil.rmtree(tmp, ignore_errors=True)
     tmp.mkdir(parents=True)
-    _unpack_core(tmp, dist, platform)
-    _unpack_web(tmp, dist, {"platform": platform})
+    unpack_core(tmp, dist, platform)
+    unpack_web(tmp, dist, {"platform": platform})
     generate.write_config(locate.Layout(tmp, tmp))
     shutil.rmtree(dest, ignore_errors=True)
     tmp.rename(dest)
@@ -153,7 +131,7 @@ def unpack(dest: Path, dist: Path, platform: str) -> int:
     return 0
 
 
-def _unpack_core(into: Path, dist: Path, platform: str) -> None:
+def unpack_core(into: Path, dist: Path, platform: str) -> None:
     _unpack(dist / f"core-{platform}.tar.gz", into)
     if not any((into / "bin").glob("x2t*")):
         msg = f"no x2t in core-{platform}.tar.gz, in {dist}"
@@ -161,7 +139,7 @@ def _unpack_core(into: Path, dist: Path, platform: str) -> None:
     _replace_links(into / "bin")
 
 
-def _unpack_web(into: Path, dist: Path, extra: dict[str, str]) -> None:
+def unpack_web(into: Path, dist: Path, extra: dict[str, str]) -> None:
     """The editors and their fonts, and payload.json from the build's
     manifest: what --payload-status and the start window show, the source
     among it, which the AGPL wants said."""
@@ -183,79 +161,22 @@ def _unpack_web(into: Path, dist: Path, extra: dict[str, str]) -> None:
     )
 
 
-def wheels(
-    repo: Path,
-    dist: Path,
-    out: Path,
-    stage_root: Path,
-    platforms: list[str] | None = None,
-) -> int:
-    """The core wheel of each platform in `dist`, or of `platforms`, then the
-    editors', from artifacts that must be this tree's payload version: the
-    wheels are named for it. Staged in `stage_root`, out of the workspace,
-    which uv would otherwise take a project in it for a part of."""
-    check_dist(repo, dist)
-    for platform in platforms or platforms_in(dist):
-        step(f"libera-core for {platform}")
-        package = stage(repo, CORE, stage_root / "core")
-        fill_core(package, dist, platform, package.parent / "libera_web")
-        env = {**PREBUILT, "LIBERA_CORE_TAG": TAGS[platform]}
-        _uv_build(stage_root / "core", out, env)
+def wheels(repo: Path, out: Path) -> int:
+    """This machine's core wheel, and the editors': `uv build` of the two
+    projects, whose hooks build them from the pinned sources. The editors'
+    build takes the core wheel just made, not the workspace's, which uv would
+    build a second time."""
+    step("libera-core")
+    run_here(_uv_build(repo / CORE, out), "building libera-core", cwd=repo)
     step("libera-web")
-    fill_web(stage(repo, WEB, stage_root / "web"), dist)
-    # Its build requires libera-core, which is in `out` now.
-    _uv_build(stage_root / "web", out, PREBUILT, "--find-links", str(out))
+    argv = _uv_build(repo / WEB, out, "--no-sources", "--find-links", str(out))
+    run_here(argv, "building libera-web", cwd=repo)
     say(f"\n    the wheels are in {out}")
     return 0
 
 
-# The copies `wheels` builds from are filled already: the hooks take them as
-# they are.
-PREBUILT = {**os.environ, "LIBERA_PREBUILT": "1"}
-
-
-def _uv_build(project: Path, out: Path, env: dict[str, str], *extra: str) -> None:
-    argv = ["uv", "build", "--wheel", "--out-dir", str(out), *extra, str(project)]
-    run_here(argv, "building a wheel", cwd=project, env=env)
-
-
-def stage(repo: Path, project: Path, dest: Path) -> Path:
-    """A copy of a component's project without its files, to fill and build
-    from: its package folder."""
-    shutil.rmtree(dest, ignore_errors=True)
-    package = package_dir(dest.parent, Path(dest.name))
-    package.mkdir(parents=True)
-    for name in ("pyproject.toml", "README.md", "hatch_build.py"):
-        if (repo / project / name).is_file():
-            shutil.copy2(repo / project / name, dest)
-    shutil.copy2(package_dir(repo, project) / "__init__.py", package)
-    return package
-
-
-def platforms_in(dist: Path) -> list[str]:
-    """The platforms whose core is in `dist`, refusing one with no tag."""
-    found = sorted(
-        p.name.removeprefix("core-").removesuffix(".tar.gz")
-        for p in dist.glob("core-*.tar.gz")
-    )
-    if not found:
-        msg = f"no core-*.tar.gz in {dist}"
-        raise RefusedError(msg)
-    if unknown := [p for p in found if p not in TAGS]:
-        msg = f"no wheel tag for {', '.join(unknown)}: add it to TAGS"
-        raise RefusedError(msg)
-    return found
-
-
-def _empty(package: Path) -> None:
-    """Everything in a package folder goes but its __init__.py."""
-    for entry in package.iterdir():
-        if entry.name == "__init__.py":
-            continue
-        if entry.is_dir() and not entry.is_symlink():
-            shutil.rmtree(entry)
-        else:
-            entry.unlink()
+def _uv_build(project: Path, out: Path, *extra: str) -> list[str]:
+    return ["uv", "build", "--wheel", "--out-dir", str(out), *extra, str(project)]
 
 
 def _unpack(tarball: Path, dest: Path) -> None:
