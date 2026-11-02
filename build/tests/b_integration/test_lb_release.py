@@ -16,15 +16,15 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from libera_build import repo
-from libera_build.artifacts import MIN_BUNDLE_BYTES
+from libera_build import detached, repo
+from libera_build.artifacts import MIN_BUNDLE_BYTES, MIN_CORE_BYTES
 from libera_build.containers import host_arch, linux_platform
 from libera_build.hosts import LocalHost
 from libera_build.inventory import Builder
 from libera_build.release import builds, precheck
 from libera_build.release.context import Context
 from libera_build.release.on import OnOptions, on
-from libera_build.release.phases import builders, here, update
+from libera_build.release.phases import builders, components, here, publishing, update
 from libera_build.release.ship import ShipOptions, ship
 from libera_build.report import RefusedError
 
@@ -37,6 +37,10 @@ if "fail" in args:
 if "vanish" in args:
     import os
     os.kill(os.getppid(), 9)
+if "slow" in args:
+    import time
+    time.sleep(1.5)
+    print("stand-in lb slept")
 if "cp1252" in args:
     sys.stdout.flush()
     sys.stdout.buffer.write(b"a\\x85b\\n")
@@ -95,8 +99,13 @@ ARM = Builder(linux_platform(host_arch()), "arm", None, False, "~/checkout")
 
 
 def context(driver: Path, home: Path, phases: list[str]) -> Context:
+    # A builder's job is polled every 15 s; here it ends at once.
     return Context(
-        root=driver, builders=[ARM], phases=phases, host_for=lambda _: LocalHost(home)
+        root=driver,
+        builders=[ARM],
+        phases=phases,
+        host_for=lambda _: LocalHost(home),
+        poll_seconds=0.05,
     )
 
 
@@ -385,3 +394,146 @@ def test_native_refuses_before_it_re_tars_anything(tmp_path, monkeypatch):
     ctx = Context(root=root, builders=[mac], phases=["native"])
     with pytest.raises(RefusedError, match="these trees are not at them"):
         here.native(ctx)
+
+
+class Flaky:
+    """A builder whose polls go unanswered `misses` times, as builder-windows'
+    did when it dropped off the network, while the job itself goes on."""
+
+    def __init__(self, home: Path, misses: int) -> None:
+        self.real = LocalHost(home)
+        self.misses = misses
+
+    def __getattr__(self, name):
+        return getattr(self.real, name)
+
+    def capture(self, script: str) -> str:
+        if detached.POLL_MARK in script and self.misses > 0:
+            self.misses -= 1
+            return "ssh: connect to host builder port 22: Operation timed out"
+        return self.real.capture(script)
+
+
+def test_a_build_outlives_polls_that_go_unanswered(driver, home):
+    """A dropped connection ended the phase that streamed a build, while the
+    build went on there; now it is a poll that missed."""
+    host = Flaky(home, misses=5)
+    ctx = replace(context(driver, home, ["update", "build"]), host_for=lambda _: host)
+    update.run(ctx)
+
+    assert builds.build_one(ctx, ARM, "slow", believe) is None
+
+    assert host.misses == 0
+    log = (driver / "tmp" / "remote" / f"{ARM.platform}.log").read_text()
+    assert "stand-in lb slept" in log
+
+
+def test_a_build_still_running_is_watched_not_started_again(driver, home):
+    """The driver died, or gave up on an unreachable builder: the same phase,
+    run again, watches the job there rather than starting a second build on
+    the same tree."""
+    ctx = context(driver, home, ["update", "build"])
+    update.run(ctx)
+    name = f"{ARM.platform} slow"
+    script = f"cd ~/checkout && {builds.LB} slow && echo {builds.MARK}=ok"
+    first = LocalHost(home).capture(detached.start_script(name, script))
+    assert "STARTED=1" in first
+
+    assert builds.build_one(ctx, ARM, "slow", believe) is None
+
+    log = (driver / "tmp" / "remote" / f"{ARM.platform}.log").read_text()
+    assert log.count("stand-in lb slept") == 1
+
+
+def test_a_builder_silent_too_long_ends_the_watch_saying_so(driver, home):
+    host = Flaky(home, misses=10**6)
+    ctx = replace(
+        context(driver, home, ["update", "build"]),
+        host_for=lambda _: host,
+        unreachable_seconds=0.3,
+    )
+    update.run(ctx)
+
+    problem = builds.build_one(ctx, ARM, "slow", believe)
+
+    assert "may still be running there" in problem
+
+
+class Silent:
+    """A builder that does not answer its first `misses` questions."""
+
+    def __init__(self, home: Path, misses: int) -> None:
+        self.real = LocalHost(home)
+        self.misses = misses
+
+    def __getattr__(self, name):
+        return getattr(self.real, name)
+
+    def capture(self, script: str) -> str:
+        if self.misses > 0:
+            self.misses -= 1
+            return "ssh: connect to host builder port 22: No route to host"
+        return self.real.capture(script)
+
+
+def test_a_builder_that_answers_on_its_third_try_is_checked(driver, home):
+    """One unanswered question refused the beta's whole run, twice."""
+    host = Silent(home, misses=2)
+    ctx = replace(context(driver, home, ["update", "build"]), host_for=lambda _: host)
+
+    assert precheck.check_builder(ctx, ARM) == []
+
+
+def test_a_builder_that_never_answers_is_refused_after_its_tries(driver, home):
+    host = Silent(home, misses=10**6)
+    ctx = replace(context(driver, home, ["update", "build"]), host_for=lambda _: host)
+
+    (problem,) = precheck.check_builder(ctx, ARM)
+
+    assert f"in {precheck.ANSWER_TRIES} tries" in problem
+
+
+WIN = Builder("windows-x86_64", "win", "C:/b/out/dist", False, "~/checkout")
+
+
+def test_the_components_phase_brings_each_builders_core_wheel_here(driver, home):
+    """`lb components wheels` run there, its wheel looked for there, then
+    fetched to build/out/pypi here, where publish uploads from."""
+    ctx = replace(context(driver, home, ["update", "components"]), builders=[WIN])
+    update.run(ctx)
+    made = home / "checkout" / "build" / "out" / "pypi" / "9.9"
+    made.mkdir(parents=True)
+    wheel = made / "libera_core-9.9-py3-none-win_amd64.whl"
+    with wheel.open("wb") as f:
+        f.truncate(MIN_CORE_BYTES)
+
+    components.run(ctx)
+
+    log = (driver / "tmp" / "remote" / "windows-x86_64.log").read_text()
+    assert "stand-in lb components wheels --out build/out/pypi/9.9" in log
+    here = driver / "build" / "out" / "pypi" / "9.9" / wheel.name
+    assert here.stat().st_size == MIN_CORE_BYTES
+
+
+def test_the_components_phase_fails_when_a_wheel_was_not_made(driver, home):
+    ctx = replace(context(driver, home, ["update", "components"]), builders=[WIN])
+    update.run(ctx)
+
+    with pytest.raises(RefusedError, match="1 of 1 builder"):
+        components.run(ctx)
+
+
+def test_publish_refuses_before_asking_when_the_components_are_missing(
+    driver, home, capsys
+):
+    """Before the question, and before anything goes up."""
+    ctx = replace(context(driver, home, ["publish"]), builders=[WIN], yes=False)
+    (driver / "dist").mkdir()
+    (driver / "dist" / "libera-9.9.9-py3-none-any.whl").write_bytes(b"")
+
+    with pytest.raises(RefusedError, match="nothing was published"):
+        publishing.publish(ctx)
+
+    said = capsys.readouterr().out
+    assert "libera_core-9.9-py3-none-win_amd64.whl is not here" in said
+    assert "asks for nothing" in said

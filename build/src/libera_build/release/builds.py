@@ -14,6 +14,7 @@ import concurrent.futures
 import time
 from typing import TYPE_CHECKING
 
+from libera_build import detached
 from libera_build.artifacts import size_problem
 from libera_build.hosts import LB, MARK, facts_from, remote_path
 from libera_build.release import plan
@@ -61,47 +62,37 @@ def run_builds(
 
 
 def build_one(ctx: Context, b: Builder, command: str, verify: Verify) -> str | None:
-    """Build on one machine. Returns a complaint, or None if it worked."""
+    """Build on one machine. Returns a complaint, or None if it worked.
+
+    The build runs detached on the builder and is polled from here (see
+    `detached`): a dropped connection is a poll that missed, and the build
+    goes on. A re-run of a phase whose job is still running watches that job
+    rather than starting a second build on the same tree.
+    """
     ctx.logs.mkdir(parents=True, exist_ok=True)
     log = ctx.logs / f"{b.platform}.log"
     host = ctx.host_for(b)
+    name = f"{b.platform} {command}"
     # `lb` as a module: a builder runs it with its own python3, nothing
     # installed, so the console script is not there. No `set -e`, and the
     # verdict comes back as a printed line.
     script = f"""
-    cd {remote_path(b.repo)} || {{ echo "{MARK}=no such directory"; exit; }}
-    echo "== $(hostname) $(uname -m), at $(git rev-parse --short HEAD)"
-    if {LB} {command}
-    then echo "{MARK}=ok"
-    else echo "{MARK}=lb {command} failed ($?)"
-    fi
-    """
+cd {remote_path(b.repo)} || {{ echo "{MARK}=no such directory"; exit; }}
+echo "== $(hostname) $(uname -m), at $(git rev-parse --short HEAD)"
+if {LB} {command}
+then echo "{MARK}=ok"
+else echo "{MARK}=lb {command} failed ($?)"
+fi
+"""
     started = time.monotonic()
-    verdict = ""
-    with log.open("w", encoding="utf-8") as fh:
-        process = host.start(script)
-        assert process.stdout is not None  # ken: start() pipes stdout
-        # A heartbeat rather than the output itself. `lb payload container`
-        # is tens of thousands of lines and two of them interleaved is noise;
-        # silence for two hours is worse. The log has everything.
-        last = started
-        # The last line that said something: a heartbeat that lands on a blank
-        # line otherwise reports "115 lines" and nothing about what they were.
-        said = ""
-        for lines, line in enumerate(process.stdout, start=1):
-            fh.write(line)
-            if line.startswith(f"{MARK}="):
-                verdict = line.split("=", 1)[1].strip()
-            said = line if line.strip() else said
-            now = time.monotonic()
-            if now - last >= HEARTBEAT_SECONDS:
-                fh.flush()
-                say(
-                    f"    {b.platform:<14} {mmss(now - started)}"
-                    f"  {lines} lines  {shorten(said)}"
-                )
-                last = now
-        process.wait()
+    begun = facts_from(host.capture(detached.start_script(name, script)))
+    if "STARTED" not in begun and "ATTACHED" not in begun:
+        return (
+            f"{b.platform}: the build did not start: {begun.get('START', 'no answer')}"
+        )
+    if "ATTACHED" in begun:
+        say(f"    {b.platform:<14} still running there from before: watching it")
+    verdict = watch(ctx, b, name, log, started)
     elapsed = mmss(time.monotonic() - started)
     if problem := plan.build_problem(b.platform, verdict, elapsed):
         return f"{problem}\n       {log}\n{tail(log)}"
@@ -109,6 +100,62 @@ def build_one(ctx: Context, b: Builder, command: str, verify: Verify) -> str | N
         return f"{problem}\n       {log}"
     say(f"    {b.platform:<14} done in {elapsed}")
     return None
+
+
+def watch(ctx: Context, b: Builder, name: str, log: Path, started: float) -> str:
+    """Poll a detached job until it ends; its verdict line, "" for none.
+
+    A heartbeat rather than the output itself: `lb payload container` is
+    tens of thousands of lines and two of them interleaved is noise; silence
+    for two hours is worse. The log has everything. A builder that does not
+    answer for `ctx.unreachable_seconds` ends the watch, saying the job may
+    still be running there: the same phase, run again, picks it up.
+    """
+    host = ctx.host_for(b)
+    offset, lines, verdict, said = 0, 0, "", ""
+    last_beat = last_heard = time.monotonic()
+    with log.open("w", encoding="utf-8") as fh:
+        while True:
+            poll = detached.parse_poll(host.capture(detached.poll_script(name, offset)))
+            now = time.monotonic()
+            if poll is None:
+                silent = now - last_heard
+                if silent >= ctx.unreachable_seconds:
+                    return (
+                        f"no answer from {b.target} for {mmss(silent)}; the job may "
+                        "still be running there, and the same phase, run again, "
+                        "watches it"
+                    )
+                if now - last_beat >= HEARTBEAT_SECONDS:
+                    say(
+                        f"    {b.platform:<14} {mmss(now - started)}"
+                        f"  no answer for {mmss(silent)}"
+                    )
+                    last_beat = now
+                time.sleep(ctx.poll_seconds)
+                continue
+            last_heard = now
+            if poll.gone:
+                return ""
+            fh.write(poll.text)
+            fh.flush()
+            offset = poll.size
+            for line in poll.text.splitlines():
+                lines += 1
+                if line.startswith(f"{MARK}="):
+                    verdict = line.split("=", 1)[1].strip()
+                # The last line that said something: a heartbeat that lands on
+                # a blank line otherwise reports "115 lines" and nothing else.
+                said = line if line.strip() else said
+            if poll.done or not poll.alive:
+                return verdict
+            if now - last_beat >= HEARTBEAT_SECONDS:
+                say(
+                    f"    {b.platform:<14} {mmss(now - started)}"
+                    f"  {lines} lines  {shorten(said)}"
+                )
+                last_beat = now
+            time.sleep(ctx.poll_seconds)
 
 
 def check_remote_file(b: Builder, host: Host, path: str, minimum: int) -> str | None:

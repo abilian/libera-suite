@@ -7,6 +7,7 @@ builder -- and hands them to the rules in `plan`, which decide.
 from __future__ import annotations
 
 import os
+import time
 from typing import TYPE_CHECKING
 
 from libera.manifest import Manifest
@@ -63,6 +64,9 @@ def run(ctx: Context) -> None:
     problems(found, "nothing was started.")
 
 
+ANSWER_TRIES = 4
+
+
 def check_builder(ctx: Context, b: Builder) -> list[str]:
     """Ask one builder about itself.
 
@@ -71,8 +75,7 @@ def check_builder(ctx: Context, b: Builder) -> list[str]:
     commit it is sent.
     """
     host = ctx.host_for(b)
-    out = host.capture(
-        f"""
+    script = f"""
         echo "ARCH=$(uname -m)"
         if cd {remote_path(b.repo)} 2>/dev/null; then
             echo "DIRTY=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
@@ -81,10 +84,19 @@ def check_builder(ctx: Context, b: Builder) -> list[str]:
             echo "NOREPO=1"
         fi
         """
-    )
+    # A few tries, a poll apart: builder-windows answered one minute and not
+    # the next on 2026-11-01, and one unanswered question refused a whole run.
+    out = host.capture(script)
     facts = facts_from(out)
+    for _ in range(ANSWER_TRIES - 1):
+        if "ARCH" in facts:
+            break
+        time.sleep(ctx.poll_seconds)
+        out = host.capture(script)
+        facts = facts_from(out)
     if "ARCH" not in facts:
-        return [f"{b.platform}: no answer from {b.target}\n       {out}"]
+        problem = f"{b.platform}: no answer from {b.target} in {ANSWER_TRIES} tries"
+        return [f"{problem}\n       {out}"]
     if "NOREPO" in facts and "update" not in ctx.phases:
         return [missing_repo(host, b, out)]
     where = "none yet, update makes it" if "NOREPO" in facts else facts.get("HEAD", "?")

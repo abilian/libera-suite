@@ -23,6 +23,12 @@ class Context:
     yes: bool = False  # publish without asking
     # How a builder is reached. ssh, unless a test hands builders it made.
     host_for: Callable[[Builder], Host] = field(default=ssh_host)
+    # How often a builder's detached job is polled, and how long it may not
+    # answer before the watch gives up (release.builds.watch): builder-windows
+    # was off the network for twenty minutes at a time on 2026-11-01, its
+    # build going on meanwhile.
+    poll_seconds: float = 15
+    unreachable_seconds: float = 45 * 60
 
     @property
     def logs(self) -> Path:

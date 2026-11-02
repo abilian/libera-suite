@@ -139,3 +139,50 @@ def test_each_platform_bundles_what_its_users_download():
     setup = "build/out/bundles/Libera-Suite-Setup-0.4.0.exe"
     assert installer == builders.Bundle("app windows", (setup, f"{setup}.sha256"))
     assert builders.bundle_of(MAC, "0.4.0") is None
+
+
+def test_the_components_are_built_after_the_cores_and_before_collect():
+    """They are built from the trees `build` has just brought to the pin."""
+    order = list(plan.PHASES)
+    assert order.index("build") < order.index("components") < order.index("collect")
+    assert "components" in plan.PER_BUILDER
+
+
+WANTED = [
+    "libera_core-0.7-py3-none-macosx_14_0_arm64.whl",
+    "libera_core-0.7.tar.gz",
+    "libera_web-0.7-py3-none-any.whl",
+    "libera-0.7.0b1-py3-none-any.whl",
+]
+PINS = ["libera-core==0.7", "libera-web==0.7", "pywebview>=5"]
+
+
+def test_a_release_with_every_file_and_the_right_pins_may_go_up():
+    assert (
+        plan.upload_problems(
+            set(WANTED), wanted=WANTED, payload_version="0.7", requires=PINS
+        )
+        == []
+    )
+
+
+def test_libera_alone_does_not_go_up():
+    """0.7.0b1 went up as libera alone, and nothing could install it."""
+    found = plan.upload_problems(
+        {WANTED[-1]}, wanted=WANTED, payload_version="0.7", requires=PINS
+    )
+
+    assert len(found) == 3
+    assert all("is not here" in f for f in found)
+
+
+def test_a_libera_that_pins_another_payload_does_not_go_up():
+    found = plan.upload_problems(
+        set(WANTED),
+        wanted=WANTED,
+        payload_version="0.7",
+        requires=["libera-core==0.7.dev1", "libera-web==0.7"],
+    )
+
+    (problem,) = found
+    assert "libera-core==0.7.dev1" in problem

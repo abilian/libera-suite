@@ -15,7 +15,7 @@ from libera_build.hosts import ssh_host
 from libera_build.release import plan, precheck
 from libera_build.release.builds import mmss
 from libera_build.release.context import Context
-from libera_build.release.phases import builders, here, publishing, update
+from libera_build.release.phases import builders, components, here, publishing, update
 from libera_build.report import say, step
 
 if TYPE_CHECKING:
@@ -40,6 +40,7 @@ ACTIONS: dict[str, Callable[[Context], None]] = {
     "update": update.run,
     "native": here.native,
     "build": builders.build,
+    "components": components.run,
     "collect": lambda ctx: publishing.origin(ctx, "collect"),
     "push": lambda ctx: publishing.origin(ctx, "push"),
     "check": lambda ctx: publishing.origin(ctx, "check"),

@@ -34,3 +34,23 @@ def size_problem(platform: str, name: str, size: int, minimum: int) -> str | Non
     if size < minimum:
         return f"{platform}: {name} is {size} bytes, which is not an artifact."
     return None
+
+
+# Where the release keeps what goes to PyPI beside `libera`: on each builder
+# under its checkout, and here, all of them together.
+PYPI_DIR = "build/out/pypi"
+
+
+def core_wheel_name(payload_version: str, tag: str) -> str:
+    """libera-core's wheel for one platform, by its platform tag."""
+    return f"libera_core-{payload_version}-py3-none-{tag}.whl"
+
+
+def core_sdist_name(payload_version: str) -> str:
+    """libera-core's source, which pip builds where PyPI has no wheel."""
+    return f"libera_core-{payload_version}.tar.gz"
+
+
+def web_wheel_name(payload_version: str) -> str:
+    """libera-web's wheel, the same on every platform."""
+    return f"libera_web-{payload_version}-py3-none-any.whl"

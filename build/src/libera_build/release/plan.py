@@ -24,19 +24,20 @@ PHASES = {
     "update": "send this commit to each builder and check it out there",
     "native": "the macOS core and its tarballs, here",
     "build": "the Linux and Windows cores, each on its builder, in parallel (hours)",
+    "components": "libera-core's wheel on each builder, libera-web here, for PyPI",
     "collect": "every core here, the manifest restamped over all of them",
     "push": "upload the payload to the origin (needs CDN_TOKEN)",
     "check": "read the origin back with no token and verify every hash",
     "bundles": "the Flatpaks and the Windows installer, each on its builder",
     "wheel": "make verify, then the wheel",
-    "publish": "the wheel to PyPI, bundles and install scripts to the origin (no undo)",
-    "verify": "read the published wheel back and check it against the origin",
+    "publish": "the components then libera to PyPI, bundles and scripts to the origin",
+    "verify": "the published wheel against the origin, and installed from PyPI alone",
 }
 
 # What `--only` can narrow. The rest act on every builder at once -- collect
 # reads them all -- so a run narrowed to one platform that went on to them
 # published cores nobody had rebuilt.
-PER_BUILDER = ("update", "native", "build", "bundles")
+PER_BUILDER = ("update", "native", "build", "components", "bundles")
 
 # The phases that reach outside this machine and cannot be taken back. PyPI
 # refuses a version it has already seen, so a mistaken `publish` costs a
@@ -206,3 +207,32 @@ def build_problem(platform: str, verdict: str, elapsed: str) -> str | None:
     if verdict != "ok":
         return f"{platform}: {verdict} after {elapsed}"
     return None
+
+
+def upload_problems(
+    present: set[str],
+    *,
+    wanted: Sequence[str],
+    payload_version: str,
+    requires: Sequence[str],
+) -> list[str]:
+    """Why what `publish` would upload is not a release a user can install.
+
+    `wanted` is every file a release puts on PyPI, `present` what is here.
+    0.7.0b1 went up as `libera` alone, naming libera-core and libera-web,
+    which were nowhere: every install of it failed to resolve.
+    """
+    found = [
+        f"{name} is not here: run the components phase, or wheel"
+        for name in wanted
+        if name not in present
+    ]
+    pins = {r.replace(" ", "") for r in requires}
+    for component in ("libera-core", "libera-web"):
+        if f"{component}=={payload_version}" not in pins:
+            named = sorted(r for r in pins if r.startswith(component)) or ["nothing"]
+            found.append(
+                f"the libera wheel asks for {', '.join(named)}, not "
+                f"{component}=={payload_version}: run wheel"
+            )
+    return found

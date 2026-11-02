@@ -123,3 +123,35 @@ def test_a_document_opened_in_the_running_application_is_timed_on_its_own(
         "editor-ready": 3.0,
         "settled": 3.5,
     })
+
+
+def test_a_poll_ignores_what_ssh_says_before_it():
+    from libera_build import detached
+
+    out = (
+        "** WARNING: connection is not using a post-quantum key exchange\n"
+        f"{detached.POLL_BEGIN}\n  indented line\nlast\n"
+        f"{detached.POLL_MARK} SIZE=42 DONE= ALIVE=1"
+    )
+    poll = detached.parse_poll(out)
+    assert poll is not None
+    assert poll.text == "  indented line\nlast"
+    assert (poll.size, poll.done, poll.alive) == (42, "", True)
+
+
+def test_a_poll_that_is_no_answer_is_none():
+    from libera_build import detached
+
+    assert detached.parse_poll("ssh: connect to host x: Host is down") is None
+    assert detached.parse_poll(f"{detached.POLL_MARK} SIZE=") is None
+    assert detached.parse_poll(f"{detached.POLL_MARK} GONE=1").gone
+
+
+def test_a_run_folder_is_one_safe_segment():
+    from libera_build import detached
+
+    assert detached.run_folder("windows-x86_64 payload all") == (
+        '"$HOME/.lb/runs/windows-x86_64-payload-all"'
+    )
+    # One segment, however the command is spelled: no slash survives.
+    assert detached.run_folder("../../x; rm -rf") == '"$HOME/.lb/runs/..-..-x-rm--rf"'
