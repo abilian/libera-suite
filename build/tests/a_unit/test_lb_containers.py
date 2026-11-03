@@ -105,7 +105,7 @@ def test_the_suite_takes_the_wheels_of_its_architecture_only(tmp_path):
     with pytest.raises(RefusedError, match="no libera-core wheel for linux-x86_64"):
         linux.choose_payload(options, "amd64")
 
-    (tmp_path / "libera_core-0.7-py3-none-manylinux_2_35_x86_64.whl").touch()
+    (tmp_path / "libera_core-0.7-py3-none-manylinux_2_34_x86_64.whl").touch()
     assert linux.choose_payload(options, "amd64") == (tmp_path, None)
 
 

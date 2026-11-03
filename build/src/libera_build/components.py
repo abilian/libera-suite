@@ -28,13 +28,15 @@ from libera_build.report import RefusedError, say, step
 CORE = Path("components", "core")
 WEB = Path("components", "web")
 
-# The tag each platform's core wheel gets. glibc 2.35, which a Linux core needs
-# (`lb release matrix` found that out); macOS 14, the minos of every binary in
-# the macOS core, read with otool: tagged 11, as the spike did, pip would
-# install it on macOS 11 to 13, where it cannot load.
+# The tag each platform's core wheel gets. glibc 2.34, the newest symbol
+# version a Linux core asks for since core 0032, which is RHEL 9: the 0.7 core
+# converts on AlmaLinux 9 in `lb release matrix`, and tagged 2.35 pip there
+# took the sdist and its hour of build instead. macOS 14, the minos of every
+# binary in the macOS core, read with otool: tagged 11, as the spike did, pip
+# would install it on macOS 11 to 13, where it cannot load.
 TAGS = {
-    "linux-x86_64": "manylinux_2_35_x86_64",
-    "linux-arm64": "manylinux_2_35_aarch64",
+    "linux-x86_64": "manylinux_2_34_x86_64",
+    "linux-arm64": "manylinux_2_34_aarch64",
     "macos-arm64": "macosx_14_0_arm64",
     "windows-x86_64": "win_amd64",
 }

@@ -10,6 +10,7 @@ Two versions move here and they move independently. The **application** is this 
 
 - **A Word document or a presentation signed here is valid in LibreOffice.** LibreOffice called every such signature made by 0.7.0b1 broken: the converter writes the files that list a package's parts with spaces between their entries, which LibreOffice counts in what is signed and the signer did not. They are now written without, which changes nothing they say. Spreadsheets were not affected.
 - **A document signed in LibreOffice shows its signature as valid**, where every one was called broken; so do signatures Office made that were called broken: a Word document from Office 2010 with custom data in it, a PowerPoint 2007 presentation, and documents signed by some other programs. A document changed after it was signed is still refused.
+- **On RHEL 9 and its rebuilds, pip installs the converter rather than building it.** The Linux `libera-core` wheel was marked for glibc 2.35, one more than the converter needs, so pip there took the source package and spent most of an hour building it.
 
 ## [0.7.0b1] - 2026-11-01
 
