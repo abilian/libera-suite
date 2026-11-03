@@ -6,6 +6,10 @@ Two versions move here and they move independently. The **application** is this 
 
 ## [Unreleased]
 
+### Fixed
+
+- **A Word document or a presentation signed here is valid in LibreOffice.** LibreOffice called every such signature made by 0.7.0b1 broken: the converter writes the files that list a package's parts with spaces between their entries, which LibreOffice counts in what is signed and the signer did not. They are now written without, which changes nothing they say. Spreadsheets were not affected.
+
 ## [0.7.0b1] - 2026-11-01
 
 A beta: pip installs it only when asked (`pipx install --pip-args=--pre libera==0.7.0b1`), and the install scripts and the Homebrew tap stay on 0.6.0. The first with payload **0.7**, and the first whose editors are installed with the application rather than downloaded on first use. Its installers are not signed yet; 0.7.0 will be.

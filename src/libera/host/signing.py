@@ -20,6 +20,7 @@ import binascii
 import json
 import logging
 import pathlib
+import re
 import shutil
 import tempfile
 import zipfile
@@ -44,6 +45,13 @@ SIGNABLE = frozenset({
 # libera-sign's exit status for a key or certificate that did not load.
 NO_KEY = 3
 NO_SIGNATURES: dict = {"count": 0, "data": []}
+# Whitespace between the elements of a relationships part. x2t writes some in
+# every .docx and .pptx it saves; core's signer leaves it out of what it
+# digests, LibreOffice keeps it in, and so LibreOffice refused every such
+# signature made here (measured 2026-11-03,
+# tests/b_integration/host/test_signatures_libreoffice.py). With none there,
+# the two digest the same bytes.
+BETWEEN_ELEMENTS = re.compile(rb">\s+<")
 
 
 class SigningError(Exception):
@@ -148,7 +156,7 @@ def sign(
         _run(
             session,
             "sign",
-            str(document),
+            str(_tight_relationships(document, work)),
             str(staged),
             str(chosen.key),
             str(chosen.cert or ""),
@@ -161,6 +169,22 @@ def sign(
         shutil.rmtree(work, ignore_errors=True)
     logger.info("signed %s", document.name)
     return list_signatures(session)
+
+
+def _tight_relationships(document: pathlib.Path, work: pathlib.Path) -> pathlib.Path:
+    """A copy of `document` in `work` whose relationships parts have no
+    whitespace between their elements, which changes nothing they say. A `<`
+    is never literal inside an attribute's value, so `>`, spaces, `<` is
+    always between two tags."""
+    copy = work / f"tight{document.suffix}"
+    with zipfile.ZipFile(document) as source, zipfile.ZipFile(copy, "w") as out:
+        for part in source.infolist():
+            data = source.read(part)
+            if part.filename.endswith(".rels"):
+                data = BETWEEN_ELEMENTS.sub(b"><", data)
+            # The part's own entry, so its compression too.
+            out.writestr(part, data)
+    return copy
 
 
 def remove_signature(session: Session, guid: str) -> dict:

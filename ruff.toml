@@ -77,6 +77,22 @@ lint.extend-ignore = [
     "S404",    # subprocess import
     "S603",    # subprocess call -- argv form, no shell, binary from our own payload
 ]
+# The LibreOffice reference runs inside its --rm container, with Debian's
+# Python and LibreOffice's UNO bridge, and nothing else in there: see
+# tests/support/libreoffice.py.
+"tests/support/libreoffice-reference/reference.py" = [
+    "INP001", # no package: the container runs it by path, with its own python3
+    "S404",   # subprocess import -- soffice, certutil and pk12util are the job
+    "S603",   # subprocess call -- argv form, no shell
+    "S607",   # soffice, certutil and pk12util come from the image, by name
+    "S108",   # /tmp/nss and /tmp/profile, in a --rm container
+    "PERF203", # try in a loop -- asking again until soffice answers is the loop
+]
+# The reference's host side starts that container, with docker or podman.
+"tests/support/libreoffice.py" = [
+    "S404", # subprocess import
+    "S603", # subprocess call -- argv form, no shell, the engine libera_build chose
+]
 # The two container-side checks. Neither is shipped and neither runs on a
 # user's machine: they exist inside a build container, once, to prove that the
 # thing just built actually does something.
