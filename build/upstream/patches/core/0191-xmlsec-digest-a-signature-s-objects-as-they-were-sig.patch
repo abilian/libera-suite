@@ -1,0 +1,217 @@
+From 3ee88396e93d57d41d233d73cb2266c2ce7527c7 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Tue, 3 Nov 2026 13:54:28 +0100
+Subject: [PATCH 191/193] xmlsec: digest a signature's objects as they were
+ signed
+
+The verifier digested each object a signature references, and the
+SignedInfo it checks the signature value over, from its own
+serialization of the parsed node, which does not always give back the
+bytes that were signed. It now canonicalizes the element from the
+signature's text, as XML Signature defines a same-document reference,
+with a new XmlUtils::NSXmlCanonicalizator::ExecuteSubtree, and keeps
+the old computation as a second try, so that nothing it accepted is
+refused.
+---
+ DesktopEditor/xml/include/xmlutils.h          |  7 ++
+ DesktopEditor/xml/src/xmldom.cpp              | 66 +++++++++++++++++++
+ .../xmlsec/src/src/OOXMLVerifier.cpp          | 45 ++++++++++++-
+ DesktopEditor/xmlsec/src/src/XmlTransform.h   | 10 +++
+ 4 files changed, 127 insertions(+), 1 deletion(-)
+
+diff --git a/DesktopEditor/xml/include/xmlutils.h b/DesktopEditor/xml/include/xmlutils.h
+index 909f4aade9..aa49c6b58c 100644
+--- a/DesktopEditor/xml/include/xmlutils.h
++++ b/DesktopEditor/xml/include/xmlutils.h
+@@ -274,6 +274,13 @@ namespace XmlUtils
+ 	{
+ 		std::string KERNEL_DECL Execute(const std::string& sXml, int mode = XML_C14N_1_0, bool withComments = false);
+ 		std::string KERNEL_DECL Execute(const std::wstring& sXmlFile, int mode = XML_C14N_1_0, bool withComments = false);
++
++		// One element of a document and everything in it, canonicalized the way
++		// XML Signature digests a same-document reference: the subtree of the
++		// first element whose Id is sId or, with sId empty, whose local name is
++		// sName, with the namespaces it inherits and every text node as it is.
++		// "" when there is no such element.
++		std::string KERNEL_DECL ExecuteSubtree(const std::string& sXml, const std::string& sId, const std::string& sName, int mode = XML_C14N_1_0, bool withComments = false);
+ 	}
+ 
+ 	// UTF-8 BOM, UTF-16BE BOM, UTF-16LE BOM, UTF-32BE BOM, UTF-32LE BOM
+diff --git a/DesktopEditor/xml/src/xmldom.cpp b/DesktopEditor/xml/src/xmldom.cpp
+index d087324c51..ae68815af0 100644
+--- a/DesktopEditor/xml/src/xmldom.cpp
++++ b/DesktopEditor/xml/src/xmldom.cpp
+@@ -947,6 +947,72 @@ namespace XmlUtils
+ 		return "";
+ #endif
+ 	}
++#ifdef LIBXML_C14N_ENABLED
++	static xmlNodePtr buffer_xmlFindSubtree(xmlNodePtr node, const std::string& sId, const std::string& sName)
++	{
++		for (; node; node = node->next)
++		{
++			if (node->type != XML_ELEMENT_NODE)
++				continue;
++
++			bool bFound = false;
++			if (sId.empty())
++				bFound = (sName == (const char*)node->name);
++			else
++			{
++				xmlChar* pId = xmlGetProp(node, BAD_CAST "Id");
++				bFound = (NULL != pId && sId == (const char*)pId);
++				xmlFree(pId);
++			}
++			if (bFound)
++				return node;
++
++			xmlNodePtr pChild = buffer_xmlFindSubtree(node->children, sId, sName);
++			if (pChild)
++				return pChild;
++		}
++		return NULL;
++	}
++
++	// Visible: the apex element and everything below it. An attribute or a
++	// namespace node belongs to the element given as its parent.
++	static int buffer_xmlC14NSubtreeCallback(void* user_data, xmlNodePtr node, xmlNodePtr parent)
++	{
++		xmlNodePtr apex = (xmlNodePtr)user_data;
++		xmlNodePtr cur = (node->type == XML_NAMESPACE_DECL || node->type == XML_ATTRIBUTE_NODE) ? parent : node;
++		for (; cur; cur = cur->parent)
++		{
++			if (cur == apex)
++				return 1;
++		}
++		return 0;
++	}
++#endif
++
++	std::string NSXmlCanonicalizator::ExecuteSubtree(const std::string& sXml, const std::string& sId, const std::string& sName, int mode, bool withComments)
++	{
++#ifdef LIBXML_C14N_ENABLED
++		xmlDocPtr xmlDoc = xmlParseMemory((char*)sXml.c_str(), (int)sXml.length());
++		if (NULL == xmlDoc)
++			return "";
++
++		std::string sResult;
++		xmlNodePtr apex = buffer_xmlFindSubtree(xmlDoc->children, sId, sName);
++		if (NULL != apex)
++		{
++			CXmlBuffer bufferC14N;
++			xmlOutputBufferPtr _buffer = xmlOutputBufferCreateIO((xmlOutputWriteCallback)buffer_xmlBufferIOWrite, (xmlOutputCloseCallback)buffer_xmlBufferIOClose, &bufferC14N, NULL);
++			xmlC14NExecute(xmlDoc, buffer_xmlC14NSubtreeCallback, apex, mode, NULL, withComments ? 1 : 0, _buffer);
++			xmlOutputBufferClose(_buffer);
++			sResult = bufferC14N.builder.GetData();
++		}
++		xmlFreeDoc(xmlDoc);
++		return sResult;
++#else
++		return "";
++#endif
++	}
++
+ 	std::string NSXmlCanonicalizator::Execute(const std::wstring& sXmlFile, int mode, bool withComments)
+ 	{
+ 		std::string sXml;
+diff --git a/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp b/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp
+index 0421d26c30..168305b0ec 100644
+--- a/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp
++++ b/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp
+@@ -17,6 +17,7 @@ public:
+ 	std::string     m_sDate;
+ 
+ 	XmlUtils::CXmlNode   m_node; // signature file
++	std::string          m_sXml; // and its text, as signed
+ 
+ 	std::set<std::wstring> m_arFilesInManifest;
+ 
+@@ -204,6 +205,8 @@ public:
+ public:
+ 	void Check()
+ 	{
++		m_sXml = m_pFolder->readXml(m_sFile);
++
+ 		// 1) Certificate
+ 		XmlUtils::CXmlNode oNodeCert = m_node.ReadNode(L"KeyInfo").ReadNode(L"X509Data").ReadNode(L"X509Certificate");
+ 		if (!oNodeCert.IsValid())
+@@ -310,7 +313,20 @@ public:
+ 
+ 		std::string sSignatureValue = U_TO_UTF8((m_node.ReadValueString(L"SignatureValue")));
+ 
+-		if (!m_cert->Verify(sSignatureCalcValue, sSignatureValue, nSignatureMethod))
++		// SignedInfo as XML Signature canonicalizes it, from the signature as
++		// signed; then as this verifier always has, from its own serialization
++		// of the parsed node, so that nothing it accepted is refused now.
++		bool bVerified = false;
++		CXmlTransformC14N oSignedInfoC14N;
++		if (oSignedInfoC14N.CheckC14NTransform(sCanonicalizationMethod))
++		{
++			std::string sSignedInfo = XmlUtils::NSXmlCanonicalizator::ExecuteSubtree(m_sXml, "", "SignedInfo", oSignedInfoC14N.GetMode(), oSignedInfoC14N.GetComments());
++			bVerified = !sSignedInfo.empty() && m_cert->Verify(sSignedInfo, sSignatureValue, nSignatureMethod);
++		}
++		if (!bVerified)
++			bVerified = m_cert->Verify(sSignatureCalcValue, sSignatureValue, nSignatureMethod);
++
++		if (!bVerified)
+ 			m_valid = OOXML_SIGNATURE_INVALID;
+ 		else
+ 		{
+@@ -560,6 +576,33 @@ public:
+ 		std::string sValue = U_TO_UTF8((node.ReadNodeText(L"DigestValue")));
+ 		MakeBase64_NOCRLF(sValue);
+ 
++		XmlUtils::CXmlNode nodeDigestMethod = node.ReadNode(L"DigestMethod");
++		if (!nodeDigestMethod.IsValid())
++			return OOXML_SIGNATURE_INVALID;
++		int nDigestAlg = NSCertificate::GetOOXMLHashAlg(nodeDigestMethod.GetAttributeA("Algorithm"));
++
++		// As XML Signature digests it: the element the reference names, from
++		// the signature as signed, whitespace and inherited namespaces
++		// included, canonicalized by the reference's own transform, or C14N 1.0
++		// when it names none. Two signatures by other signers than Office, in
++		// Apache POI's test data, have object digests that the serialization
++		// below does not reproduce and this does.
++		std::string sC14NAlg = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
++		std::vector<XmlUtils::CXmlNode> nodesTransform = node.ReadNode(L"Transforms").GetNodes(L"Transform");
++		for (size_t i = 0; i < nodesTransform.size(); ++i)
++		{
++			CXmlTransformC14N oProbe;
++			if (oProbe.CheckC14NTransform(nodesTransform[i].GetAttributeA("Algorithm")))
++				sC14NAlg = nodesTransform[i].GetAttributeA("Algorithm");
++		}
++		CXmlTransformC14N oObjectC14N;
++		oObjectC14N.CheckC14NTransform(sC14NAlg);
++		std::string sObject = XmlUtils::NSXmlCanonicalizator::ExecuteSubtree(m_sXml, sURI, "", oObjectC14N.GetMode(), oObjectC14N.GetComments());
++		if (!sObject.empty() && m_cert->GetHash(sObject, nDigestAlg) == sValue)
++			return OOXML_SIGNATURE_VALID;
++
++		// Then as this verifier always has, so that nothing it accepted is
++		// refused now.
+ 		CXmlTransforms oTransforms;
+ 
+ 		CXmlTransformC14N* pTransform = new CXmlTransformC14N();
+diff --git a/DesktopEditor/xmlsec/src/src/XmlTransform.h b/DesktopEditor/xmlsec/src/src/XmlTransform.h
+index 69fa4c1f99..16d77fd47e 100644
+--- a/DesktopEditor/xmlsec/src/src/XmlTransform.h
++++ b/DesktopEditor/xmlsec/src/src/XmlTransform.h
+@@ -108,6 +108,16 @@ public:
+ 		return (-1 != m_mode) ? true : false;
+ 	}
+ 
++	int GetMode() const
++	{
++		return m_mode;
++	}
++
++	bool GetComments() const
++	{
++		return m_comments;
++	}
++
+ 	virtual std::string Transform(const std::string& xml)
+ 	{
+ 		if (-1 == m_mode)
+-- 
+2.55.0
+

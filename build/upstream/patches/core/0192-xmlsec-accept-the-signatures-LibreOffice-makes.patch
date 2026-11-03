@@ -1,0 +1,190 @@
+From f3c46df605039cb7f4d952004003dfae8aec771c Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Tue, 3 Nov 2026 13:55:30 +0100
+Subject: [PATCH 192/193] xmlsec: accept the signatures LibreOffice makes
+
+Every signature LibreOffice makes was refused, for two reasons. It
+suffixes the ids of its objects (idPackageObject_ID_...), and the
+package object was looked up by the bare id. And it signs with
+libxmlsec 1.2, whose relationships transform kept each text node of a
+.rels part as an empty <text> element, while LibreOffice writes a line
+break before </Relationships>: no standard digest of its _rels/.rels
+matches. An object is now found by its id or its id and a suffix, and a
+relationships reference that does not match is tried again that way.
+---
+ .../xmlsec/src/src/OOXMLVerifier.cpp          | 14 ++++-
+ DesktopEditor/xmlsec/src/src/XmlRels.h        | 61 ++++++++++++++++++-
+ DesktopEditor/xmlsec/src/src/XmlTransform.h   | 21 ++++++-
+ 3 files changed, 91 insertions(+), 5 deletions(-)
+
+diff --git a/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp b/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp
+index 168305b0ec..12b7bd7565 100644
+--- a/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp
++++ b/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp
+@@ -412,7 +412,9 @@ public:
+ 		for (size_t i = 0; i < nCount; i++)
+ 		{
+ 			XmlUtils::CXmlNode tmp= oNodes[i];
+-			if (sId == tmp.GetAttributeA("Id"))
++			// LibreOffice adds a suffix of its own: idPackageObject_ID_0078...
++			std::string sObjectId = tmp.GetAttributeA("Id");
++			if (sId == sObjectId || 0 == sObjectId.find(sId + "_"))
+ 				return tmp;
+ 		}
+ 		XmlUtils::CXmlNode ret;
+@@ -551,11 +553,17 @@ public:
+ 				return OOXML_SIGNATURE_NOTSUPPORTED;
+ 
+ 			std::string sXml = m_pFolder->readXml(sFile);
+-			sXml = oTransforms.Transform(sXml);
+ 
+-			sCalcValue = m_cert->GetHash(sXml, nAlg);
++			sCalcValue = m_cert->GetHash(oTransforms.Transform(sXml), nAlg);
+ 			sValue = U_TO_UTF8((node.ReadNodeText(L"DigestValue")));
+ 			MakeBase64_NOCRLF(sValue);
++
++			// A .rels LibreOffice signed: see COOXMLRelationships::GetLegacyNodes.
++			if (sCalcValue != sValue)
++			{
++				oTransforms.SetLegacy(true);
++				sCalcValue = m_cert->GetHash(oTransforms.Transform(sXml), nAlg);
++			}
+ 		}
+ 
+ 		if (sCalcValue != sValue)
+diff --git a/DesktopEditor/xmlsec/src/src/XmlRels.h b/DesktopEditor/xmlsec/src/src/XmlRels.h
+index e9813bc117..f809e09534 100644
+--- a/DesktopEditor/xmlsec/src/src/XmlRels.h
++++ b/DesktopEditor/xmlsec/src/src/XmlRels.h
+@@ -164,11 +164,70 @@ public:
+ 		}
+ 	}
+ 
+-	std::wstring GetXml()
++	// libxmlsec before 1.3, which LibreOffice signs with, wrote every child of
++	// Relationships that is not a Relationship as an empty element of its
++	// libxml2 name, text and comments included, ahead of the sorted
++	// relationships; the relationships transform removes them. LibreOffice
++	// writes a line break before </Relationships> itself, so each of its
++	// signatures over a .rels digests a <text></text> no other signer does.
++	// These are those elements, in order, for the text of a .rels part.
++	static std::wstring GetLegacyNodes(const std::string& xml)
++	{
++		std::wstring sNodes;
++		std::string::size_type pos = xml.find("<Relationships");
++		if (std::string::npos == pos)
++			return sNodes;
++		pos = xml.find('>', pos);
++		if (std::string::npos == pos || '/' == xml[pos - 1])
++			return sNodes;
++		++pos;
++
++		while (pos < xml.length())
++		{
++			if ('<' != xml[pos])
++			{
++				pos = xml.find('<', pos);
++				if (std::string::npos == pos)
++					break;
++				sNodes += L"<text></text>";
++			}
++			else if (0 == xml.compare(pos, 4, "<!--"))
++			{
++				pos = xml.find("-->", pos);
++				if (std::string::npos == pos)
++					break;
++				pos += 3;
++				sNodes += L"<comment></comment>";
++			}
++			else if (0 == xml.compare(pos, 2, "</"))
++			{
++				break; // </Relationships>
++			}
++			else
++			{
++				// A Relationship, with what it holds, which is not counted.
++				std::string::size_type end = xml.find('>', pos);
++				if (std::string::npos == end)
++					break;
++				if ('/' != xml[end - 1])
++				{
++					end = xml.find("</Relationship>", end);
++					if (std::string::npos == end)
++						break;
++					end += 14;
++				}
++				pos = end + 1;
++			}
++		}
++		return sNodes;
++	}
++
++	std::wstring GetXml(const std::wstring& sLegacyNodes = L"")
+ 	{
+ 		NSStringUtils::CStringBuilder builder;
+ 
+ 		builder.WriteString(L"<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">");
++		builder.WriteString(sLegacyNodes);
+ 
+ 		// sort by rId
+ 		std::sort(rels.begin(), rels.end(), COOXMLRelationship::Compare);
+diff --git a/DesktopEditor/xmlsec/src/src/XmlTransform.h b/DesktopEditor/xmlsec/src/src/XmlTransform.h
+index 16d77fd47e..deb0c661de 100644
+--- a/DesktopEditor/xmlsec/src/src/XmlTransform.h
++++ b/DesktopEditor/xmlsec/src/src/XmlTransform.h
+@@ -20,6 +20,12 @@ public:
+ public:
+ 	virtual std::string Transform(const std::string& sXml) = 0;
+ 	virtual void LoadFromXml(XmlUtils::CXmlNode& node) = 0;
++	// The relationships transform as libxmlsec before 1.3 had it; see
++	// COOXMLRelationships::GetLegacyNodes. No other transform has a legacy.
++	virtual void SetLegacy(const bool& bLegacy)
++	{
++		(void)bLegacy;
++	}
+ 
+ 	static IXmlTransform* GetFromType(const std::string& alg, CManifestFileInfo* pManifestFileInfo);
+ };
+@@ -29,18 +35,25 @@ class CXmlTransformRelationship : public IXmlTransform
+ protected:
+ 	CManifestFileInfo* m_pManifestFileInfo;
+ 	std::set<std::wstring> m_arIds;
++	bool m_bLegacy;
+ 
+ public:
+ 	CXmlTransformRelationship(CManifestFileInfo* pManifestFileInfo) : IXmlTransform()
+ 	{
+ 		m_pManifestFileInfo = pManifestFileInfo;
+ 		m_algorithm = "http://schemas.openxmlformats.org/package/2006/RelationshipTransform";
++		m_bLegacy = false;
++	}
++
++	virtual void SetLegacy(const bool& bLegacy)
++	{
++		m_bLegacy = bLegacy;
+ 	}
+ 
+ 	virtual std::string Transform(const std::string& xml)
+ 	{
+ 		COOXMLRelationships _rels(xml, m_pManifestFileInfo, &m_arIds);
+-		return U_TO_UTF8(_rels.GetXml());
++		return U_TO_UTF8(_rels.GetXml(m_bLegacy ? COOXMLRelationships::GetLegacyNodes(xml) : L""));
+ 	}
+ 
+ 	virtual void LoadFromXml(XmlUtils::CXmlNode& node)
+@@ -191,6 +204,12 @@ public:
+ 		return sResult;
+ 	}
+ 
++	void SetLegacy(const bool& bLegacy)
++	{
++		for (std::vector<IXmlTransform*>::iterator i = m_transforms.begin(); i != m_transforms.end(); i++)
++			(*i)->SetLegacy(bLegacy);
++	}
++
+ 	void AddTransform(IXmlTransform* transform)
+ 	{
+ 		m_transforms.push_back(transform);
+-- 
+2.55.0
+

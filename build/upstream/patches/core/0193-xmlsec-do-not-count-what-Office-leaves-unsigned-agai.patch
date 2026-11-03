@@ -1,0 +1,67 @@
+From 1ac622d097842a5b0c86b432a21ac31d860a2558 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Tue, 3 Nov 2026 13:55:54 +0100
+Subject: [PATCH 193/193] xmlsec: do not count what Office leaves unsigned
+ against a signature
+
+The verifier calls a signature invalid when a .rels part is outside it,
+and partial, which the editor shows as broken, when another part is.
+Office leaves custom XML out of its signatures (2010), and PowerPoint
+2007 its presentation and view properties, so signatures Office makes
+and accepts were shown as broken here. Those parts no longer count. The
+signer still signs them.
+---
+ DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp |  4 ++--
+ DesktopEditor/xmlsec/src/src/common.h          | 14 ++++++++++++++
+ 2 files changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp b/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp
+index 12b7bd7565..3b4011ba01 100644
+--- a/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp
++++ b/DesktopEditor/xmlsec/src/src/OOXMLVerifier.cpp
+@@ -344,7 +344,7 @@ public:
+ 			// 1) All rels must be signed - otherwise the signature isn't valid
+ 			for (std::vector<std::wstring>::const_iterator i = oFiles.m_rels.begin(); i != oFiles.m_rels.end(); i++)
+ 			{
+-				if (m_arFilesInManifest.find(*i) == m_arFilesInManifest.end())
++				if (m_arFilesInManifest.find(*i) == m_arFilesInManifest.end() && !CSignFolderFiles::OfficeLeavesUnsigned(*i))
+ 				{
+ 					// there is no point in adding empty files
+ 					std::wstring sFile = *i;
+@@ -393,7 +393,7 @@ public:
+ 							else
+ 							{
+ 								// if the file is in the list, but not signed, then the signature is partial.
+-								if (m_arFilesInManifest.find(sFullPath) == m_arFilesInManifest.end())
++								if (m_arFilesInManifest.find(sFullPath) == m_arFilesInManifest.end() && !CSignFolderFiles::OfficeLeavesUnsigned(sFullPath))
+ 								{
+ 									AddInvalidType(OOXML_SIGNATURE_PARTIALLY);
+ 								}
+diff --git a/DesktopEditor/xmlsec/src/src/common.h b/DesktopEditor/xmlsec/src/src/common.h
+index 2c6d77e98c..57f28ca27e 100644
+--- a/DesktopEditor/xmlsec/src/src/common.h
++++ b/DesktopEditor/xmlsec/src/src/common.h
+@@ -29,6 +29,20 @@ public:
+ 		return true;
+ 	}
+ 
++	// What Microsoft Office leaves out of the signatures it makes, measured on
++	// the documents it signed in Apache POI's test data: custom XML (Office
++	// 2010), and PowerPoint 2007's presentation and view properties. A part
++	// the verifier finds outside a signature makes it partial, or invalid
++	// when that part is a .rels; these make it neither, or a signature Office
++	// made and Office accepts is shown as broken. The signer still signs them.
++	static bool OfficeLeavesUnsigned(const std::wstring& sFile)
++	{
++		std::wstring sPart = (!sFile.empty() && L'/' == sFile[0]) ? sFile.substr(1) : sFile;
++		return 0 == sPart.find(L"customXml/") ||
++				sPart == L"ppt/presProps.xml" ||
++				sPart == L"ppt/viewProps.xml";
++	}
++
+ 	void Folder_Parse(IFolder* pFolder, bool bIsAddSlash = false)
+ 	{
+ 		// 1) Parse files in directory
+-- 
+2.55.0
+
