@@ -1,6 +1,6 @@
 # Línea de comandos
 
-Libera Suite se usa desde sus ventanas, pero un terminal llega a algunas cosas que ninguna ventana ofrece: convertir de una vez una carpeta entera de documentos, instalar los componentes en una máquina a la que se accede por SSH, preparar el informe que pide un error.
+Libera Suite se usa desde sus ventanas, pero un terminal llega a algunas cosas que ninguna ventana ofrece: convertir de una vez una carpeta entera de documentos y preparar el informe que pide un error.
 
 El comando es `libera`, en Linux y macOS. Instalado como Flatpak es `flatpak run eu.liberasuite.Libera`, seguido de las mismas opciones. En Windows es `libera-cli.exe`, en la carpeta donde se instaló Libera Suite; no está en el `PATH`.
 
@@ -25,9 +25,8 @@ El comando es `libera`, en Linux y macOS. Instalado como Flatpak es `flatpak run
 
 | | |
 | :--- | :--- |
-| `libera --payload-install` | descargar, comprobar e instalar los componentes. `--from CARPETA` los instala desde una carpeta. [Más](../main/alt-install.md#the-editors) |
-| `libera --payload-status` | dónde están los componentes, su versión y el [código fuente](../licence.md#corresponding-source) del que se compilaron |
-| `libera --payload-remove` | borrarlos. [Más](../main/install.md#uninstall) |
+| `libera --payload-status` | dónde están los [componentes](../main/alt-install.md#the-editors), su versión y el [código fuente](../licence.md#corresponding-source) del que se compilaron |
+| `libera --payload-remove` | borrar los componentes que descargaban las versiones anteriores a la 0.7, que esta no usa. [Más](../main/install.md#update) |
 
 ## El menú de aplicaciones y Abrir con
 

@@ -1,6 +1,6 @@
 # Installeren
 
-Libera Suite draait op **Windows 10 en 11 (x64)**, **Linux (x86_64 en arm64)** en **macOS (Apple Silicon)**. Voor de installatie heb je geen beheerderswachtwoord nodig: ze geldt alleen voor jouw account. Op Linux arm64 installeert het installatiescript versie 0.4.1, de laatste die ervoor gebouwd is, tot er weer een nieuwere wordt gebouwd.
+Libera Suite draait op **Windows 10 en 11 (x64)**, **Linux (x86_64 en arm64)** en **macOS 14 of nieuwer (Apple Silicon)**. Voor de installatie heb je geen beheerderswachtwoord nodig: ze geldt alleen voor jouw account. Op Linux arm64 installeert het installatiescript versie 0.4.1, de laatste die ervoor gebouwd is, tot er weer een nieuwere wordt gebouwd.
 
 ## Windows {#windows}
 
@@ -43,7 +43,7 @@ Met [Homebrew](https://brew.sh) open je Terminal en voer je uit:
 brew install abilian/tap/libera
 ```
 
-Homebrew bouwt Libera Suite op je Mac. De eerste keer dat je `libera` uitvoert, biedt het aan de componenten te downloaden, ongeveer 90 MB. Voer daarna één keer dit uit, om Libera Suite in je map Programma's te hebben:
+Homebrew bouwt Libera Suite op je Mac. Voer daarna één keer dit uit, om Libera Suite in je map Programma's te hebben:
 
 ```sh
 libera --launcher-install
@@ -79,7 +79,9 @@ De volgende pagina is [Werken met documenten](../guide/documents.md): openen, op
 
 Voer hetzelfde installatieprogramma of dezelfde opdracht opnieuw uit. De geïnstalleerde versie wordt vervangen door de nieuwste.
 
-Met Homebrew voer je `brew upgrade libera` uit. Heeft een nieuwe versie nieuwe componenten nodig, dan biedt Libera Suite bij de volgende start aan ze te downloaden.
+Met Homebrew voer je `brew upgrade libera` uit.
+
+Versies vóór 0.7 downloadden hun componenten apart, en 0.7 gebruikt ze niet meer. Ze nemen ongeveer 400 MB per versie in beslag. Het startvenster biedt één keer aan ze te verwijderen, en `libera --payload-remove` doet het op elk moment.
 
 Opent `Libera.app` op macOS niet meer na een update, voer dan `libera --launcher-install` opnieuw uit.
 
@@ -129,7 +131,7 @@ libera --diagnose
 De opdracht toont één scherm. Twee regels zijn het belangrijkst:
 
 - **`window`** hoort `ok` te zeggen. Op Linux betekent `NOT AVAILABLE` dat er systeempakketten ontbreken; wanneer je `libera` uitvoert, toont het de opdracht om ze te installeren.
-- **`payload`** noemt de componenten en waar ze vandaan komen. `MISSING` betekent dat ze niet zijn gedownload: voer `libera --payload-install` uit.
+- **`payload`** noemt de componenten en waar ze vandaan komen. `MISSING` betekent dat ze niet geïnstalleerd zijn, en de regel daarna zegt wat je moet installeren.
 
 [Wat er vandaag werkt](status.md) somt de problemen op die we al kennen. Voor al het andere: [laat het ons weten](../feedback.md), met de uitvoer van `libera --diagnose` erbij geplakt.
 

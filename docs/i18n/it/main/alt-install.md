@@ -15,27 +15,24 @@ curl -fsSL https://cdn.abilian.com/libera/install.sh | bash -s -- --help
 | :--- | :--- |
 | `--prefix DIR` | installare altrove (predefinito: `~/.local`) |
 | `--channel pip` | su Linux, installare il pacchetto Python anche se c'è Flatpak |
-| `--no-payload` | installare subito il comando, scaricare i componenti più tardi |
 | `--origin URL` | scaricare da un server diverso da quello pubblico |
 
 Scrive solo in `~/.local/bin` e `~/.local/share`. Apri il suo indirizzo in un browser per leggerlo prima di eseguirlo.
 
 ## pipx o uv
 
-Libera Suite è su PyPI con il nome `libera` e richiede Python 3.12 o più recente. Su macOS e Windows:
+Libera Suite è su PyPI con il nome `libera` e richiede Python 3.12 o più recente. I suoi [componenti](#the-editors) arrivano con lei. Su macOS e Windows:
 
 ```sh
 uv tool install libera      # oppure: pipx install libera
-libera --payload-install
 ```
 
-Per provarla senza installarla, `uvx libera` la avvia da una cache; al primo avvio propone di scaricare i componenti.
+Per provarla senza installarla, `uvx libera` la avvia da una cache.
 
 Su Linux la finestra è disegnata da GTK, i cui collegamenti Python vengono dalla tua distribuzione e sono compilati per il suo Python. Un ambiente isolato non li vede, quindi `pipx` ha bisogno di due opzioni:
 
 ```sh
 pipx install --python /usr/bin/python3 --system-site-packages libera
-libera --payload-install
 ```
 
 Senza di esse, Libera Suite si installa senza errori e poi non apre alcuna finestra. `uv tool` non ha un equivalente di `--system-site-packages`: su Linux usa `pipx`. Al primo avvio, `libera` indica i pacchetti GTK che mancano alla tua distribuzione; conosce apt, dnf, pacman e zypper.
@@ -61,21 +58,11 @@ flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/fl
 
 ## I componenti {#the-editors}
 
-Il programma di installazione per Windows e il Flatpak includono i componenti. Tutti gli altri canali li scaricano una volta, dopo l'applicazione. `libera` lo propone al primo avvio; questo comando avvia direttamente il download:
+Ogni canale installa i componenti insieme all'applicazione. Il programma di installazione per Windows e il Flatpak li contengono. Con pip, pipx o uv sono due pacchetti Python richiesti da `libera`: `libera-core`, il motore dei documenti, compilato per ciascuna piattaforma, e `libera-web`, i componenti di modifica e i caratteri. Insieme sono circa 90 MB da scaricare. Il primo avvio costruisce poi l'indice dei caratteri della tua macchina, il che richiede un momento.
 
-```sh
-libera --payload-install
-```
+PyPI ha `libera-core` per Windows x64, Linux x86_64 e macOS su Apple Silicon. Su qualsiasi altra macchina, pip lo compila dai sorgenti, il che richiede quasi un'ora e gli strumenti elencati in [Costruire i componenti](/en/develop/build/), in inglese.
 
-Scarica circa 90 MB da `cdn.abilian.com` e verifica ogni file con le impronte fornite con l'applicazione, fermandosi al primo che non corrisponde. Poi costruisce l'indice dei caratteri della tua macchina, il che richiede un momento.
-
-Per installare componenti che hai costruito tu, o che ti sono stati forniti, indicagli la loro cartella:
-
-```sh
-libera --payload-install --from /percorso/degli/artefatti
-```
-
-[Costruire i componenti](/en/develop/build/), in inglese, spiega come costruirli. `libera --payload-remove` li elimina; occupano circa 350 MB su disco.
+Le versioni precedenti alla 0.7 scaricavano i loro componenti a parte, nelle cartelle qui sotto. `libera --payload-remove` elimina ciò che vi hanno lasciato.
 
 ## Dove si trovano i file
 
@@ -86,7 +73,7 @@ libera --payload-install --from /percorso/degli/artefatti
 | macOS | `~/Library/Application Support/Libera Suite/` |
 | Windows | `%LOCALAPPDATA%\Libera Suite\` |
 
-I componenti si trovano lì, in `payload/<version>/`. Un aggiornamento mette la nuova versione accanto alla vecchia, e Libera Suite rimuove una versione vecchia quando nulla l'ha usata per quattro settimane: un Libera Suite installato in altro modo sullo stesso account potrebbe ancora usarla. `libera --payload-status` le elenca, con la data dell'ultimo uso. Per usare componenti che stanno altrove, per esempio una build locale, imposta `LIBERA_PAYLOAD` sulla loro cartella; prevale su tutto quanto sopra.
+Lì Libera Suite conserva ciò che le serve da un avvio all'altro, come l'elenco Recenti e le sessioni non salvate. I componenti non sono lì: sono installati con l'applicazione, e `libera --payload-status` dice dove. Per usare componenti che stanno altrove, per esempio una build locale, imposta `LIBERA_PAYLOAD` sulla loro cartella; prevale su quelli installati.
 
 ## Una voce nel menu delle applicazioni su Linux {#a-launcher-entry-on-linux}
 

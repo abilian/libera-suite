@@ -16,15 +16,15 @@ Elk programma heeft zijn eigen kleur. Verder is het venster overal hetzelfde:
 
 ## Hoe het in elkaar zit
 
-Libera Suite bestaat uit twee delen die los van elkaar binnenkomen.
+Libera Suite bestaat uit twee delen, die apart verpakt zijn.
 
 **De applicatie** is een klein Python-pakket van een paar honderd kilobyte: het venster, de opdrachtregel en de host waarmee de componenten communiceren.
 
-**De componenten** zijn al het andere: de documentengine, de bewerkingscomponenten, de lettertypen. De opdrachtregel noemt ze de *payload*. Gecomprimeerd zijn ze ongeveer 90 MB. Je downloadt of installeert ze één keer; het Python-pakket bevat ze niet.
+**De componenten** zijn al het andere: de documentengine, de bewerkingscomponenten, de lettertypen. De opdrachtregel noemt ze de *payload*. Gecomprimeerd zijn ze ongeveer 90 MB, in twee eigen Python-pakketten, `libera-core` en `libera-web`.
 
 Ze hebben elk hun eigen versienummer. De applicatie controleert of de componenten die ze vindt de verwachte zijn. Een correctie in de applicatie betekent dus niet dat je de componenten opnieuw moet downloaden.
 
-Het Windows-installatieprogramma en de Linux-Flatpak bevatten beide delen. Alle andere installatiemanieren zetten eerst de applicatie op zijn plaats en downloaden daarna één keer de componenten.
+Elke manier van installeren brengt beide mee. Het Windows-installatieprogramma en de Linux-Flatpak bevatten ze, en pip installeert de componenten samen met de applicatie, die ze vereist.
 
 ## Wat het niet is
 

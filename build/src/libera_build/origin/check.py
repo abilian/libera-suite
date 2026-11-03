@@ -110,8 +110,8 @@ def check(base: str, manifest: Manifest, *, quick: bool) -> None:
     if quick:
         say("    sizes only -- drop --quick to hash the bytes.")
     else:
-        say("\n    The last word belongs to the application: on a machine with no")
-        say("    payload, a release before 0.7's libera --payload-install")
+        say("\n    From 0.7 the application downloads none of this: it takes its")
+        say("    components from PyPI, and the verify phase checks those.")
 
 
 def wheel_manifest(source: str | Path, version: str) -> Manifest:

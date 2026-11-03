@@ -15,27 +15,24 @@ curl -fsSL https://cdn.abilian.com/libera/install.sh | bash -s -- --help
 | :--- | :--- |
 | `--prefix DIR` | ergens anders installeren (standaard: `~/.local`) |
 | `--channel pip` | op Linux het Python-pakket installeren, ook als Flatpak aanwezig is |
-| `--no-payload` | de opdracht nu installeren, de componenten later downloaden |
 | `--origin URL` | van een andere server downloaden dan de openbare |
 
 Het schrijft naar `~/.local/bin` en `~/.local/share`, en nergens anders. Open de URL in een browser om het script te lezen voordat je het uitvoert.
 
 ## pipx of uv
 
-Libera Suite staat op PyPI als `libera` en heeft Python 3.12 of nieuwer nodig. Op macOS en Windows:
+Libera Suite staat op PyPI als `libera` en heeft Python 3.12 of nieuwer nodig. De [componenten](#the-editors) worden meegeïnstalleerd. Op macOS en Windows:
 
 ```sh
 uv tool install libera      # of: pipx install libera
-libera --payload-install
 ```
 
-Om het uit te proberen zonder het te installeren, voert `uvx libera` het uit vanuit een cache; de eerste keer biedt het aan de componenten te downloaden.
+Om het uit te proberen zonder het te installeren, voert `uvx libera` het uit vanuit een cache.
 
 Op Linux tekent GTK het venster. De Python-bindings daarvan komen van je distributie en zijn gebouwd voor haar eigen Python. Een geïsoleerde omgeving ziet ze niet, dus `pipx` heeft twee opties nodig:
 
 ```sh
 pipx install --python /usr/bin/python3 --system-site-packages libera
-libera --payload-install
 ```
 
 Zonder die opties installeert Libera Suite zonder fouten en opent het daarna geen venster. `uv tool` heeft geen equivalent van `--system-site-packages`, dus gebruik op Linux `pipx`. De eerste keer dat je `libera` uitvoert, noemt het de GTK-pakketten die je distributie mist; het kent apt, dnf, pacman en zypper.
@@ -61,21 +58,11 @@ flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/fl
 
 ## De componenten {#the-editors}
 
-Het Windows-installatieprogramma en de Flatpak bevatten de componenten. Elk ander kanaal downloadt ze één keer, na de applicatie. `libera` biedt dat aan de eerste keer dat het draait; deze opdracht doet het expliciet:
+Elk kanaal installeert de componenten samen met de applicatie. Het Windows-installatieprogramma en de Flatpak bevatten ze. Met pip, pipx of uv zijn het twee Python-pakketten die `libera` vereist: `libera-core`, de documentengine, gebouwd voor elk platform, en `libera-web`, de bewerkingscomponenten en de lettertypen. Samen zijn ze ongeveer 90 MB om te downloaden. Bij de eerste start wordt daarna een lettertype-index voor je computer gebouwd, wat even duurt.
 
-```sh
-libera --payload-install
-```
+PyPI heeft `libera-core` voor Windows x64, Linux x86_64 en macOS op Apple Silicon. Op elke andere computer bouwt pip het vanuit de broncode. Dat duurt het grootste deel van een uur en vraagt de tools die [Build the components](/en/develop/build/), in het Engels, opsomt.
 
-Ze downloadt ongeveer 90 MB van `cdn.abilian.com` en controleert elk bestand aan de hand van vingerafdrukken die met de applicatie zijn meegeleverd, en stopt bij het eerste bestand dat niet klopt. Daarna bouwt ze een lettertype-index voor je computer, wat even duurt.
-
-Om componenten te installeren die je zelf hebt gebouwd of van iemand hebt gekregen, geef je de map ervan op:
-
-```sh
-libera --payload-install --from /pad/naar/artefacten
-```
-
-[Build the components](/en/develop/build/), in het Engels, legt uit hoe je ze bouwt. `libera --payload-remove` verwijdert ze weer; ze nemen ongeveer 350 MB schijfruimte in.
+Versies vóór 0.7 downloadden hun componenten apart, in de mappen hieronder. `libera --payload-remove` verwijdert wat ze daar hebben achtergelaten.
 
 ## Waar alles staat
 
@@ -86,7 +73,7 @@ libera --payload-install --from /pad/naar/artefacten
 | macOS | `~/Library/Application Support/Libera Suite/` |
 | Windows | `%LOCALAPPDATA%\Libera Suite\` |
 
-De componenten staan daar onder `payload/<version>/`. Een update zet een nieuwe versie naast de oude, en Libera Suite verwijdert een oude versie zodra niets haar vier weken lang heeft gebruikt: een Libera Suite die op een andere manier onder hetzelfde account is geïnstalleerd, kan er nog op draaien. `libera --payload-status` geeft ze weer, met wanneer elke versie voor het laatst is gebruikt. Wil je componenten van elders gebruiken, bijvoorbeeld een lokale build, zet dan `LIBERA_PAYLOAD` op hun map; dat gaat voor alles hierboven.
+Daar bewaart Libera Suite wat het tussen twee sessies nodig heeft, zoals de lijst met recente documenten en niet-opgeslagen sessies. De componenten staan daar niet: ze worden met de applicatie geïnstalleerd, en `libera --payload-status` zegt waar. Wil je componenten van elders gebruiken, bijvoorbeeld een lokale build, zet dan `LIBERA_PAYLOAD` op hun map; dat gaat voor de geïnstalleerde componenten.
 
 ## Een item in het toepassingenmenu op Linux {#a-launcher-entry-on-linux}
 

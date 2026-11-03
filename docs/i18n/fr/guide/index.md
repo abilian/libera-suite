@@ -16,15 +16,15 @@ Chaque application a sa propre couleur. Pour le reste, la fenêtre est la même 
 
 ## Comment c'est fait
 
-Libera Suite se compose de deux parties qui arrivent séparément.
+Libera Suite se compose de deux parties, empaquetées séparément.
 
 **L'application** est un petit paquet Python. Elle pèse quelques centaines de kilo-octets : la fenêtre, la ligne de commande et l'application hôte avec laquelle les composants communiquent.
 
-**Les composants** sont tout le reste : le moteur de documents, les composants d'édition, les polices. La ligne de commande les appelle le *payload*. Ils pèsent environ 90 Mo compressés. Vous les téléchargez ou les installez une fois ; le paquet Python ne les inclut pas.
+**Les composants** sont tout le reste : le moteur de documents, les composants d'édition, les polices. La ligne de commande les appelle le *payload*. Ils pèsent environ 90 Mo compressés, répartis dans deux paquets Python à eux, `libera-core` et `libera-web`.
 
 Les deux ont des numéros de version distincts. L'application vérifie que les composants qu'elle trouve sont bien ceux qu'elle attend. Une correction de l'application n'oblige donc pas à retélécharger les composants.
 
-L'installateur Windows et le Flatpak Linux contiennent les deux parties. Toutes les autres façons d'installer mettent d'abord l'application en place, puis téléchargent les composants une fois.
+Toutes les façons d'installer apportent les deux. L'installateur Windows et le Flatpak Linux les contiennent, et pip installe les composants avec l'application, qui en dépend.
 
 ## Ses limites
 

@@ -7,7 +7,7 @@
 | **La aplicación anfitriona**: el paquete `libera`, todo lo que hay en `src/libera/` | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
 | **Los componentes**: Euro-Office con nuestra serie de parches | [AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html) |
 
-Llegan por separado y siguen separados. La aplicación anfitriona son unos cientos de kilobytes de Python y JavaScript en PyPI; los componentes son una descarga de unos 90 MB, o el contenido de un paquete Flatpak. Nada de ellos está incluido en el paquete de Python.
+Se empaquetan por separado y siguen separados. La aplicación anfitriona son unos cientos de kilobytes de Python y JavaScript en PyPI, como `libera`; los componentes son allí dos paquetes propios, `libera-core` y `libera-web`, de unos 90 MB en total, o el contenido de un paquete Flatpak. Nada de ellos está incluido en el paquete de Python de la aplicación anfitriona.
 
 Ejecuta `libera --payload-status` para ver los componentes en uso y las revisiones del proyecto original a partir de las que se compilaron.
 

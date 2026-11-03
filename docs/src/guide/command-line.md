@@ -1,6 +1,6 @@
 # Command line
 
-Libera Suite is used from its windows, but a terminal reaches a few things no window offers: converting a folder of documents in one go, installing the components on a machine you reach over SSH, the report a bug needs.
+Libera Suite is used from its windows, but a terminal reaches a few things no window offers: converting a folder of documents in one go and the report a bug needs.
 
 The command is `libera`, on Linux and macOS. Installed as a Flatpak it is `flatpak run eu.liberasuite.Libera`, followed by the same options. On Windows it is `libera-cli.exe`, in the folder Libera Suite was installed in; it is not on the `PATH`.
 
@@ -25,9 +25,8 @@ The command is `libera`, on Linux and macOS. Installed as a Flatpak it is `flatp
 
 | | |
 | :--- | :--- |
-| `libera --payload-install` | download, check and install the components. `--from DIR` installs them from a folder instead. [More](../main/alt-install.md#the-editors) |
-| `libera --payload-status` | where the components are, their version, and the [source](../licence.md#corresponding-source) they were built from |
-| `libera --payload-remove` | delete them. [More](../main/install.md#uninstall) |
+| `libera --payload-status` | where the [components](../main/alt-install.md#the-editors) are, their version, and the [source](../licence.md#corresponding-source) they were built from |
+| `libera --payload-remove` | delete the components that versions before 0.7 downloaded, which this one does not use. [More](../main/install.md#update) |
 
 ## Applications menu and Open With
 

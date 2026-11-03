@@ -1,6 +1,6 @@
 # Install
 
-Libera Suite runs on **Windows 10 and 11 (x64)**, **Linux (x86_64 and arm64)** and **macOS (Apple Silicon)**. Installing it needs no administrator password: it installs for your account only. On Linux arm64 the install script installs 0.4.1, the last version built for it, until a later one is again.
+Libera Suite runs on **Windows 10 and 11 (x64)**, **Linux (x86_64 and arm64)** and **macOS 14 or later (Apple Silicon)**. Installing it needs no administrator password: it installs for your account only. On Linux arm64 the install script installs 0.4.1, the last version built for it, until a later one is again.
 
 ## Windows
 
@@ -43,7 +43,7 @@ With [Homebrew](https://brew.sh), open Terminal and run:
 brew install abilian/tap/libera
 ```
 
-Homebrew builds Libera Suite on your Mac. The first time you run `libera`, it offers to download its components, about 90 MB. Then run this once, to have Libera Suite in your Applications folder:
+Homebrew builds Libera Suite on your Mac. Then run this once, to have Libera Suite in your Applications folder:
 
 ```sh
 libera --launcher-install
@@ -79,7 +79,9 @@ On its own, `libera` opens the start window, where you can create a document, op
 
 Run the same installer or command again. It replaces the installed version with the latest one.
 
-With Homebrew, run `brew upgrade libera`. If a new version needs new components, Libera Suite offers to download them the next time it starts.
+With Homebrew, run `brew upgrade libera`.
+
+Versions before 0.7 downloaded their components separately, and 0.7 no longer uses them. They take about 400 MB per version. The start window offers once to delete them, and `libera --payload-remove` does it at any time.
 
 On macOS, if `Libera.app` stops opening after an update, run `libera --launcher-install` again.
 
@@ -129,7 +131,7 @@ libera --diagnose
 It prints one screen. Two lines matter most:
 
 - **`window`** should say `ok`. On Linux, `NOT AVAILABLE` means system packages are missing, and running `libera` prints the command to install them.
-- **`payload`** names the components and where they came from. `MISSING` means they were not downloaded: run `libera --payload-install`.
+- **`payload`** names the components and where they came from. `MISSING` means they are not installed, and the line after it says what to install.
 
 [What works today](status.md) lists the problems we already know about. For anything else, [tell us](../feedback.md), with the output of `libera --diagnose` pasted in.
 

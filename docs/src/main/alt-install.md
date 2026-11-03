@@ -15,27 +15,24 @@ curl -fsSL https://cdn.abilian.com/libera/install.sh | bash -s -- --help
 | :--- | :--- |
 | `--prefix DIR` | install somewhere else (default: `~/.local`) |
 | `--channel pip` | on Linux, install the Python package even when Flatpak is there |
-| `--no-payload` | install the command now, download the components later |
 | `--origin URL` | download from somewhere other than the public server |
 
 It writes to `~/.local/bin` and `~/.local/share` and nowhere else. Open its URL in a browser to read it before running it.
 
 ## pipx or uv
 
-Libera Suite is on PyPI as `libera`, and needs Python 3.12 or newer. On macOS and Windows:
+Libera Suite is on PyPI as `libera`, and needs Python 3.12 or newer. Its [components](#the-editors) come with it. On macOS and Windows:
 
 ```sh
 uv tool install libera      # or: pipx install libera
-libera --payload-install
 ```
 
-To try it without installing it, `uvx libera` runs it from a cache; the first run offers to download the components.
+To try it without installing it, `uvx libera` runs it from a cache.
 
 On Linux, the window is drawn by GTK, whose Python bindings come from your distribution and are built for its own Python. An isolated environment cannot see them, so `pipx` needs two flags:
 
 ```sh
 pipx install --python /usr/bin/python3 --system-site-packages libera
-libera --payload-install
 ```
 
 Without them, Libera Suite installs cleanly and then opens no window. `uv tool` has no equivalent of `--system-site-packages`, so on Linux use `pipx`. The first run of `libera` names any GTK packages your distribution is missing; it knows apt, dnf, pacman and zypper.
@@ -61,21 +58,11 @@ flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/fl
 
 ## The components {#the-editors}
 
-The Windows installer and the Flatpak include the components. Every other channel downloads them once, after the application. `libera` offers to the first time it runs; this does it explicitly:
+Every channel installs the components with the application. The Windows installer and the Flatpak contain them. With pip, pipx or uv they are two Python packages that `libera` requires: `libera-core`, the document engine, built for each platform, and `libera-web`, the editing components and the fonts. Together they are about 90 MB to download. The first run then builds a font index for your machine, which takes a moment.
 
-```sh
-libera --payload-install
-```
+PyPI has `libera-core` for Windows x64, Linux x86_64 and macOS on Apple Silicon. On any other machine, pip builds it from source, which takes most of an hour and needs the tools [Build the components](../develop/build.md) lists.
 
-It downloads about 90 MB from `cdn.abilian.com` and checks every file against fingerprints that came inside the application, stopping at the first that disagrees. It then builds a font index for your machine, which takes a moment.
-
-To install components you built yourself, or were given, point it at their directory:
-
-```sh
-libera --payload-install --from /path/to/artifacts
-```
-
-[Build the components](../develop/build.md) explains how to build them. `libera --payload-remove` deletes them again; they take about 350 MB on disk.
+Versions before 0.7 downloaded their components separately, into the folders below. `libera --payload-remove` deletes what they left there.
 
 ## Where things live
 
@@ -86,7 +73,7 @@ libera --payload-install --from /path/to/artifacts
 | macOS | `~/Library/Application Support/Libera Suite/` |
 | Windows | `%LOCALAPPDATA%\Libera Suite\` |
 
-The components sit under `payload/<version>/` there. An update puts a new version beside the old one, and Libera Suite removes an old one once nothing has used it for four weeks: Libera Suite installed another way on the same account may still be running on it. `libera --payload-status` lists them, with when each was last used. To use components from somewhere else, a local build for instance, set `LIBERA_PAYLOAD` to their directory; it overrides everything above.
+That is where Libera Suite keeps what it needs between runs, such as the Recent list and unsaved sessions. The components are not there: they are installed with the application, and `libera --payload-status` says where. To use components from somewhere else, a local build for instance, set `LIBERA_PAYLOAD` to their directory; it overrides the installed ones.
 
 ## A launcher entry on Linux
 

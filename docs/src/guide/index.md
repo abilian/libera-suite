@@ -16,15 +16,15 @@ Each application has its own colour. Everything else about the window is the sam
 
 ## The shape of it
 
-Libera Suite is two pieces that arrive separately.
+Libera Suite is two pieces, packaged separately.
 
 **The application** is a small Python package. It is a few hundred kilobytes: the window, the command line, and the host that the components talk to.
 
-**The components** are everything else: the document engine, the editing components, the fonts. The command line calls them the *payload*. It is about 90 MB compressed. You fetch or install it once; the Python package does not include it.
+**The components** are everything else: the document engine, the editing components, the fonts. The command line calls them the *payload*. It is about 90 MB compressed, in two Python packages of its own, `libera-core` and `libera-web`.
 
 They are versioned separately. The application checks that the components it finds are the ones it expects. A fix to the application therefore does not mean downloading the components again.
 
-The Windows installer and the Linux Flatpak contain both pieces. Every other way of installing puts the application in place first, then downloads the components once.
+Every way of installing brings both. The Windows installer and the Linux Flatpak contain them, and pip installs the components with the application, which requires them.
 
 ## What it is not
 

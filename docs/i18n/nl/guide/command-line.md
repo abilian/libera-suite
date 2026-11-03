@@ -1,6 +1,6 @@
 # Opdrachtregel
 
-Libera Suite gebruik je via de vensters, maar een terminal bereikt een paar dingen die geen venster biedt: een hele map documenten in één keer converteren, de componenten installeren op een computer die je via SSH bereikt, het rapport dat een bug nodig heeft.
+Libera Suite gebruik je via de vensters, maar een terminal bereikt een paar dingen die geen venster biedt: een hele map documenten in één keer converteren en het rapport dat een bug nodig heeft.
 
 De opdracht is `libera`, op Linux en macOS. Als Flatpak geïnstalleerd is het `flatpak run eu.liberasuite.Libera`, gevolgd door dezelfde opties. Op Windows is het `libera-cli.exe`, in de map waarin Libera Suite is geïnstalleerd; die staat niet in het `PATH`.
 
@@ -25,9 +25,8 @@ De opdracht is `libera`, op Linux en macOS. Als Flatpak geïnstalleerd is het `f
 
 | | |
 | :--- | :--- |
-| `libera --payload-install` | de componenten downloaden, controleren en installeren. `--from MAP` installeert ze in plaats daarvan uit een map. [Meer](../main/alt-install.md#the-editors) |
-| `libera --payload-status` | waar de componenten staan, hun versie, en de [broncode](../licence.md#corresponding-source) waaruit ze gebouwd zijn |
-| `libera --payload-remove` | ze verwijderen. [Meer](../main/install.md#uninstall) |
+| `libera --payload-status` | waar de [componenten](../main/alt-install.md#the-editors) staan, hun versie, en de [broncode](../licence.md#corresponding-source) waaruit ze gebouwd zijn |
+| `libera --payload-remove` | de componenten verwijderen die versies vóór 0.7 downloadden, en die deze versie niet gebruikt. [Meer](../main/install.md#update) |
 
 ## Het toepassingenmenu en Open met
 

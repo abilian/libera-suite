@@ -74,10 +74,10 @@ def ship(options: ShipOptions) -> int:
         ACTIONS[phase](ctx)
     step(f"done in {mmss(time.monotonic() - started)}")
     app = versions.app_version(options.root)
-    if "publish" in phases and versions.is_prerelease(app):
+    prerelease = versions.is_prerelease(app)
+    if "publish" in phases and prerelease:
         say(f"    {app} is a pre-release: pip, the install scripts and the")
-        say("    Homebrew tap stay on the last release. Testers name it:")
-        say(f"        pipx install --pip-args=--pre libera=={app}")
+        say("    Homebrew tap stay on the last release.")
     elif "publish" in phases:
         # A separate repository, so nothing here can keep it in step. Naming
         # the command is the difference between a tap that lags one release
@@ -85,9 +85,11 @@ def ship(options: ShipOptions) -> int:
         say("    the Homebrew tap is a separate repository and does not follow:")
         say("        cd ~/projects/homebrew-tap && make update FORMULA=libera")
         say("")
-    if any(p in phases for p in ("publish", "check", "verify")):
-        say("    the last word belongs to a machine that never built it:")
-        say("        pipx install libera && libera --payload-status")
+    if "publish" in phases or "verify" in phases:
+        # verify installs from PyPI and converts; nothing here opens a window.
+        pre = "--pip-args=--pre " if prerelease else ""
+        say("    the last word is a window, on a machine that never built it:")
+        say(f"        pipx install {pre}libera=={app} && libera")
     return 0
 
 

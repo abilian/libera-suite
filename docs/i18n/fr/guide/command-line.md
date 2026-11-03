@@ -1,6 +1,6 @@
 # Ligne de commande
 
-Libera Suite s'utilise depuis ses fenêtres, mais un terminal donne accès à quelques opérations qu'aucune fenêtre n'offre : convertir tout un dossier de documents d'un coup, installer les composants sur une machine jointe par SSH, rédiger le rapport qu'un bogue demande.
+Libera Suite s'utilise depuis ses fenêtres, mais un terminal donne accès à quelques opérations qu'aucune fenêtre n'offre : convertir tout un dossier de documents d'un coup et rédiger le rapport qu'un bogue demande.
 
 La commande est `libera`, sous Linux et macOS. Installée en Flatpak, elle s'écrit `flatpak run eu.liberasuite.Libera`, suivie des mêmes options. Sous Windows, c'est `libera-cli.exe`, dans le dossier d'installation de Libera Suite ; elle n'est pas dans le `PATH`.
 
@@ -25,9 +25,8 @@ La commande est `libera`, sous Linux et macOS. Installée en Flatpak, elle s'éc
 
 | | |
 | :--- | :--- |
-| `libera --payload-install` | télécharger, vérifier et installer les composants. `--from DOSSIER` les installe depuis un dossier. [Plus de détails](../main/alt-install.md#the-editors) |
-| `libera --payload-status` | l'emplacement des composants, leur version et le [code source](../licence.md#corresponding-source) dont ils sont issus |
-| `libera --payload-remove` | les supprimer. [Plus de détails](../main/install.md#uninstall) |
+| `libera --payload-status` | l'emplacement des [composants](../main/alt-install.md#the-editors), leur version et le [code source](../licence.md#corresponding-source) dont ils sont issus |
+| `libera --payload-remove` | supprimer les composants que téléchargeaient les versions antérieures à la 0.7, dont celle-ci ne se sert pas. [Plus de détails](../main/install.md#update) |
 
 ## Le menu des applications et Ouvrir avec
 

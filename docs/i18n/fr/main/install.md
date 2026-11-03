@@ -1,6 +1,6 @@
 # Installer
 
-Libera Suite fonctionne sous **Windows 10 et 11 (x64)**, **Linux (x86_64 et arm64)** et **macOS (Apple Silicon)**. L'installation ne demande aucun mot de passe administrateur : elle se fait pour votre compte seulement. Sous Linux arm64, le script d'installation installe la 0.4.1, la dernière version compilée pour cette plateforme, en attendant qu'une version plus récente le soit de nouveau.
+Libera Suite fonctionne sous **Windows 10 et 11 (x64)**, **Linux (x86_64 et arm64)** et **macOS 14 ou ultérieur (Apple Silicon)**. L'installation ne demande aucun mot de passe administrateur : elle se fait pour votre compte seulement. Sous Linux arm64, le script d'installation installe la 0.4.1, la dernière version compilée pour cette plateforme, en attendant qu'une version plus récente le soit de nouveau.
 
 ## Windows {#windows}
 
@@ -43,7 +43,7 @@ Avec [Homebrew](https://brew.sh), ouvrez le Terminal et lancez :
 brew install abilian/tap/libera
 ```
 
-Homebrew construit Libera Suite sur votre Mac. Au premier lancement de `libera`, celle-ci propose de télécharger ses composants, environ 90 Mo. Lancez ensuite ceci une fois, pour avoir Libera Suite dans votre dossier Applications :
+Homebrew construit Libera Suite sur votre Mac. Lancez ensuite ceci une fois, pour avoir Libera Suite dans votre dossier Applications :
 
 ```sh
 libera --launcher-install
@@ -79,7 +79,9 @@ La page suivante est [Travailler sur des documents](../guide/documents.md) : ouv
 
 Relancez le même installateur ou la même commande. La version installée est remplacée par la plus récente.
 
-Avec Homebrew, lancez `brew upgrade libera`. Si une nouvelle version a besoin de nouveaux composants, Libera Suite propose de les télécharger à son lancement suivant.
+Avec Homebrew, lancez `brew upgrade libera`.
+
+Les versions antérieures à la 0.7 téléchargeaient leurs composants à part, et la 0.7 ne s'en sert plus. Ils occupent environ 400 Mo par version. La fenêtre de démarrage propose une fois de les supprimer, et `libera --payload-remove` le fait à tout moment.
 
 Sous macOS, si `Libera.app` ne s'ouvre plus après une mise à jour, relancez `libera --launcher-install`.
 
@@ -129,7 +131,7 @@ libera --diagnose
 La commande affiche un écran. Deux lignes comptent surtout :
 
 - **`window`** doit indiquer `ok`. Sous Linux, `NOT AVAILABLE` signifie qu'il manque des paquets système ; lancer `libera` affiche la commande pour les installer.
-- **`payload`** désigne les composants et leur provenance. `MISSING` signifie qu'ils n'ont pas été téléchargés : lancez `libera --payload-install`.
+- **`payload`** désigne les composants et leur provenance. `MISSING` signifie qu'ils ne sont pas installés ; la ligne suivante indique quoi installer.
 
 La page [État des lieux](status.md) recense les problèmes que nous connaissons déjà. Pour tout le reste, [écrivez-nous](../feedback.md), en collant la sortie de `libera --diagnose`.
 

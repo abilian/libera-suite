@@ -1,6 +1,6 @@
 # Kommandozeile
 
-Libera Suite wird über seine Fenster bedient, doch ein Terminal erreicht einiges, das kein Fenster bietet: einen ganzen Ordner von Dokumenten auf einmal umwandeln, die Komponenten auf einem Rechner installieren, der nur per SSH erreichbar ist, den Bericht erstellen, den ein Fehler braucht.
+Libera Suite wird über seine Fenster bedient, doch ein Terminal erreicht einiges, das kein Fenster bietet: einen ganzen Ordner von Dokumenten auf einmal umwandeln und den Bericht erstellen, den ein Fehler braucht.
 
 Der Befehl heißt unter Linux und macOS `libera`. Als Flatpak installiert lautet er `flatpak run eu.liberasuite.Libera`, gefolgt von denselben Optionen. Unter Windows ist es `libera-cli.exe` im Installationsordner von Libera Suite; er liegt nicht im `PATH`.
 
@@ -25,9 +25,8 @@ Der Befehl heißt unter Linux und macOS `libera`. Als Flatpak installiert lautet
 
 | | |
 | :--- | :--- |
-| `libera --payload-install` | die Komponenten herunterladen, prüfen und installieren. `--from ORDNER` installiert sie stattdessen aus einem Ordner. [Mehr](../main/alt-install.md#the-editors) |
-| `libera --payload-status` | wo die Komponenten liegen, ihre Version und der [Quellcode](../licence.md#corresponding-source), aus dem sie gebaut wurden |
-| `libera --payload-remove` | sie löschen. [Mehr](../main/install.md#uninstall) |
+| `libera --payload-status` | wo die [Komponenten](../main/alt-install.md#the-editors) liegen, ihre Version und der [Quellcode](../licence.md#corresponding-source), aus dem sie gebaut wurden |
+| `libera --payload-remove` | die Komponenten löschen, die Versionen vor 0.7 heruntergeladen haben und die diese Version nicht verwendet. [Mehr](../main/install.md#update) |
 
 ## Das Anwendungsmenü und Öffnen mit
 

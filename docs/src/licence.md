@@ -7,7 +7,7 @@
 | **The host**: the `libera` package, everything in `src/libera/` | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
 | **The components**: Euro-Office, and our patch queue against it | [AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html) |
 
-They arrive separately and stay separate. The host is a few hundred kilobytes of Python and JavaScript on PyPI; the components are a download of about 90 MB, or the contents of a Flatpak bundle. Nothing of them is vendored into the wheel.
+They are packaged separately and stay separate. The host is a few hundred kilobytes of Python and JavaScript on PyPI, as `libera`; the components are two packages of their own there, `libera-core` and `libera-web`, about 90 MB together, or the contents of a Flatpak bundle. Nothing of them is vendored into the host's wheel.
 
 Run `libera --payload-status` to see the components in use and the upstream revisions they were built from.
 

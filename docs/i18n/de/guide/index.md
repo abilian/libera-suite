@@ -16,15 +16,15 @@ Jede Anwendung hat ihre eigene Farbe. Alles andere am Fenster ist gleich:
 
 ## Wie es aufgebaut ist
 
-Libera Suite besteht aus zwei Teilen, die getrennt ankommen.
+Libera Suite besteht aus zwei Teilen, die getrennt paketiert sind.
 
 **Die Anwendung** ist ein kleines Python-Paket von einigen hundert Kilobyte: das Fenster, die Befehlszeile und die Host-Anwendung, mit der die Komponenten sprechen.
 
-**Die Komponenten** sind alles andere: die Dokument-Engine, die Bearbeitungskomponenten, die Schriften. Die Befehlszeile nennt sie den *Payload*. Sie sind komprimiert etwa 90 MB groß. Sie laden oder installieren sie einmal; das Python-Paket enthält sie nicht.
+**Die Komponenten** sind alles andere: die Dokument-Engine, die Bearbeitungskomponenten, die Schriften. Die Befehlszeile nennt sie den *Payload*. Sie sind komprimiert etwa 90 MB groß, in zwei eigenen Python-Paketen, `libera-core` und `libera-web`.
 
 Beide haben getrennte Versionsnummern. Die Anwendung prüft, ob die Komponenten, die sie findet, die erwarteten sind. Eine Korrektur an der Anwendung bedeutet deshalb nicht, die Komponenten erneut herunterzuladen.
 
-Das Windows-Installationsprogramm und das Linux-Flatpak enthalten beide Teile. Alle anderen Installationswege richten zuerst die Anwendung ein und laden dann einmal die Komponenten herunter.
+Jeder Installationsweg bringt beide mit. Das Windows-Installationsprogramm und das Linux-Flatpak enthalten sie, und pip installiert die Komponenten mit der Anwendung, die sie voraussetzt.
 
 ## Was es nicht ist
 

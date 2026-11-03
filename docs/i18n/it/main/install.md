@@ -1,6 +1,6 @@
 # Installare
 
-Libera Suite funziona su **Windows 10 e 11 (x64)**, **Linux (x86_64 e arm64)** e **macOS (Apple Silicon)**. L'installazione non chiede la password di amministratore: vale solo per il tuo account. Su Linux arm64 lo script di installazione installa la 0.4.1, l'ultima versione compilata per questa piattaforma, finché non lo sarà di nuovo una più recente.
+Libera Suite funziona su **Windows 10 e 11 (x64)**, **Linux (x86_64 e arm64)** e **macOS 14 o successivo (Apple Silicon)**. L'installazione non chiede la password di amministratore: vale solo per il tuo account. Su Linux arm64 lo script di installazione installa la 0.4.1, l'ultima versione compilata per questa piattaforma, finché non lo sarà di nuovo una più recente.
 
 ## Windows {#windows}
 
@@ -43,7 +43,7 @@ Con [Homebrew](https://brew.sh), apri il Terminale ed esegui:
 brew install abilian/tap/libera
 ```
 
-Homebrew costruisce Libera Suite sul tuo Mac. Al primo avvio di `libera`, ti propone di scaricare i suoi componenti, circa 90 MB. Poi esegui una volta questo, per avere Libera Suite nella cartella Applicazioni:
+Homebrew costruisce Libera Suite sul tuo Mac. Poi esegui una volta questo, per avere Libera Suite nella cartella Applicazioni:
 
 ```sh
 libera --launcher-install
@@ -79,7 +79,9 @@ La pagina successiva è [Lavorare con i documenti](../guide/documents.md): aprir
 
 Esegui di nuovo lo stesso programma di installazione o lo stesso comando. La versione installata viene sostituita dalla più recente.
 
-Con Homebrew, esegui `brew upgrade libera`. Se una nuova versione ha bisogno di nuovi componenti, Libera Suite ti propone di scaricarli al suo avvio successivo.
+Con Homebrew, esegui `brew upgrade libera`.
+
+Le versioni precedenti alla 0.7 scaricavano i loro componenti a parte, e la 0.7 non li usa più. Occupano circa 400 MB per versione. La finestra iniziale propone una volta di eliminarli, e `libera --payload-remove` lo fa in qualsiasi momento.
 
 Su macOS, se `Libera.app` non si apre più dopo un aggiornamento, esegui di nuovo `libera --launcher-install`.
 
@@ -129,7 +131,7 @@ libera --diagnose
 Il comando stampa una schermata. Contano soprattutto due righe:
 
 - **`window`** dovrebbe dire `ok`. Su Linux, `NOT AVAILABLE` significa che mancano pacchetti di sistema; avviare `libera` mostra il comando per installarli.
-- **`payload`** indica i componenti e la loro provenienza. `MISSING` significa che non sono stati scaricati: esegui `libera --payload-install`.
+- **`payload`** indica i componenti e la loro provenienza. `MISSING` significa che non sono installati, e la riga successiva dice che cosa installare.
 
 [Cosa funziona oggi](status.md) elenca i problemi che conosciamo già. Per tutto il resto, [scrivici](../feedback.md) e incolla l'output di `libera --diagnose`.
 

@@ -74,7 +74,6 @@ curl -fsSL https://cdn.abilian.com/libera/install.sh | sh
 
 ```sh
 brew install abilian/tap/libera
-libera --payload-install
 ```
 
 **Linux: the Flatpak.** The bundle includes the editors, GTK and WebKit, so there is nothing else to fetch and nothing to get wrong:
@@ -87,12 +86,11 @@ flatpak install --user "./libera-$ver-$arch.flatpak"
 flatpak run eu.liberasuite.Libera
 ```
 
-**From PyPI**, where the `libera` command fetches the editors on first run:
+**From PyPI**, where the editors are two packages of their own, `libera-core` and `libera-web`, which `libera` requires:
 
 ```sh
 pipx install --system-site-packages libera        # Linux: the flag is not optional
 uv tool install libera                            # macOS
-libera --payload-install
 ```
 
 > **Linux works on both architectures.** Payload 0.2 is built on Ubuntu 22.04, so the converter needs glibc 2.34 and GLIBCXX 3.4.26: Ubuntu 22.04, Debian 12 and anything newer, measured in a clean container of each. The Flatpak needs none of that, since the editors inside it run against the GNOME runtime.

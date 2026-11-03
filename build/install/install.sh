@@ -15,15 +15,15 @@
 #     ~/.local/bin/libera                     the command
 #     ~/.local/share/libera/venv/             the virtualenv behind it
 #
-# and then asks `libera` to fetch its components, which land in the
-# platform data directory (~/Library/Application Support/Libera Suite on macOS,
-# ~/.local/share/libera on Linux, around the virtualenv). Nothing is written
-# outside $HOME and nothing asks for a password.
+# The components (the converter, the editors, the fonts) are Python packages,
+# libera-core and libera-web, which pip installs into that virtualenv with
+# libera. Nothing is written outside $HOME and nothing asks for a password.
 #
 # `--help` lists the options; they are defined once, in usage() below.
 #
-# Uninstalling is `rm -rf` on the two paths above plus the data directory,
-# which `libera --payload-remove` will do for the third. A Flatpak install is
+# Uninstalling is `rm -rf` on the two paths above. Releases before 0.7
+# downloaded their components into the platform data directory instead, and
+# `libera --payload-remove` deletes what they left there. A Flatpak install is
 # `flatpak uninstall eu.liberasuite.Libera`, and then the menu entry this
 # script copies into $XDG_DATA_HOME -- flatpak does not know about that copy,
 # and an icon left behind launching nothing is worse than no icon:
@@ -40,8 +40,6 @@ APP_ID=eu.liberasuite.Libera
 ORIGIN="${LIBERA_ORIGIN:-https://cdn.abilian.com/libera}"
 PREFIX="${LIBERA_PREFIX:-$HOME/.local}"
 CHANNEL="${LIBERA_CHANNEL:-}"
-PAYLOAD=yes
-[ "${NO_PAYLOAD:-}" = "1" ] && PAYLOAD=no
 
 say()  { printf '%s\n' "$*"; }
 step() { printf '\n==> %s\n' "$*"; }
@@ -65,20 +63,20 @@ With options:
     --prefix DIR        install somewhere else (default: ~/.local)
     --channel flatpak   on Linux, the bundle: its own GTK and WebKit (default)
     --channel pip       the Python package instead, against the system GTK
-    --no-payload        install the command and skip the 90 MB download
     --origin URL        somewhere other than the public origin
     --help
 
 The environment variables those replace still work, so an older one-liner
-keeps running: LIBERA_PREFIX, LIBERA_CHANNEL, NO_PAYLOAD, LIBERA_ORIGIN. An
-option wins over the variable.
+keeps running: LIBERA_PREFIX, LIBERA_CHANNEL, LIBERA_ORIGIN. An option wins
+over the variable.
 
 It writes to $PREFIX/bin/libera and $PREFIX/share/libera and nowhere else,
-then asks libera to fetch its components into the platform data
-directory. Nothing goes outside $HOME and nothing asks for a password.
+the components included. Nothing goes outside $HOME and nothing asks for a
+password.
 
-Uninstalling is `rm -rf` on those two paths; `libera --payload-remove` drops
-the payload. A Flatpak install is `flatpak uninstall eu.liberasuite.Libera`,
+Uninstalling is `rm -rf` on those two paths; `libera --payload-remove` first
+deletes the components a release before 0.7 downloaded, if there are any.
+A Flatpak install is `flatpak uninstall eu.liberasuite.Libera`,
 then rm -f ~/.local/share/applications/eu.liberasuite.Libera.desktop and
 ~/.local/share/icons/hicolor/*/apps/eu.liberasuite.Libera.* -- the menu entry
 this script copies there, which flatpak does not remove.
@@ -91,7 +89,9 @@ while [ $# -gt 0 ]; do
     --prefix)  PREFIX="${2:?--prefix wants a directory}"; shift ;;
     --channel) CHANNEL="${2:?--channel wants flatpak or pip}"; shift ;;
     --origin)  ORIGIN="${2:?--origin wants a URL}"; shift ;;
-    --no-payload) PAYLOAD=no ;;
+    # Nothing to skip since 0.7, whose components come with it; accepted so
+    # that an older one-liner still runs.
+    --no-payload) ;;
     -h | --help)  usage; exit 0 ;;
     # A bare `--` is what `sh -s --` leaves behind when there are no options.
     --) ;;
@@ -108,8 +108,9 @@ esac
 BIN="$PREFIX/bin"
 # A directory of its own, inside $PREFIX/share/libera and not that directory
 # itself. On Linux $XDG_DATA_HOME/libera is also where the application keeps
-# its state -- the payload, the sessions crash recovery reads, and WebKit's
-# storage, which holds the editor's settings -- and every install starts with
+# its state -- the sessions crash recovery reads, WebKit's storage, which
+# holds the editor's settings, and the components a release before 0.7
+# downloaded -- and every install starts with
 # rm -rf on the virtualenv. While the two were one directory, updating deleted
 # all of that.
 VENV="$PREFIX/share/libera/venv"
@@ -406,18 +407,10 @@ install_pip() {
     say "    $(describe "$BIN/libera")"
 }
 
-install_payload() {
-    # From 0.7 the components are packages, which came with libera, and the
-    # command that fetched them is gone. A release before it fetches its own.
-    case "$("$BIN/libera" --help 2>&1 || :)" in
-    *--payload-install*) ;;
-    *) return 0 ;;
-    esac
-    if [ "$PAYLOAD" = no ]; then
-        step "skipping the payload (--no-payload)"
-        say "    fetch it later with:  libera --payload-install"
-        return 0
-    fi
+# The release PINNED names is older than the component packages, so pip
+# brought the application alone and it fetches its components itself.
+install_old_payload() {
+    [ -n "$PINNED" ] || return 0
     step "fetching its components (about 90 MB)"
     "$BIN/libera" --payload-install || die \
         "the payload did not install.
@@ -467,7 +460,7 @@ if [ "$os" = linux ] && ! check_linux_toolkit; then
     say "    Meanwhile \`libera --serve FILE\` opens the editor in your browser."
 fi
 
-install_payload
+install_old_payload
 
 step "done"
 say "    $(describe "$BIN/libera")"

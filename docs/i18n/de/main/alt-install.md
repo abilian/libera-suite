@@ -15,27 +15,24 @@ curl -fsSL https://cdn.abilian.com/libera/install.sh | bash -s -- --help
 | :--- | :--- |
 | `--prefix DIR` | an einem anderen Ort installieren (Standard: `~/.local`) |
 | `--channel pip` | unter Linux das Python-Paket installieren, auch wenn Flatpak vorhanden ist |
-| `--no-payload` | den Befehl jetzt installieren, die Komponenten später herunterladen |
 | `--origin URL` | von einem anderen als dem öffentlichen Server herunterladen |
 
 Es schreibt nur nach `~/.local/bin` und `~/.local/share`. Öffnen Sie seine Adresse im Browser, um es vor dem Ausführen zu lesen.
 
 ## pipx oder uv
 
-Libera Suite steht auf PyPI unter dem Namen `libera` und braucht Python 3.12 oder neuer. Unter macOS und Windows:
+Libera Suite steht auf PyPI unter dem Namen `libera` und braucht Python 3.12 oder neuer. Die [Komponenten](#the-editors) werden mit ihr installiert. Unter macOS und Windows:
 
 ```sh
 uv tool install libera      # oder: pipx install libera
-libera --payload-install
 ```
 
-Zum Ausprobieren ohne Installation startet `uvx libera` sie aus einem Zwischenspeicher; beim ersten Start bietet sie an, die Komponenten herunterzuladen.
+Zum Ausprobieren ohne Installation startet `uvx libera` sie aus einem Zwischenspeicher.
 
 Unter Linux zeichnet GTK das Fenster. Dessen Python-Anbindung stammt aus Ihrer Distribution und ist für deren eigenes Python gebaut. Eine isolierte Umgebung sieht sie nicht, deshalb braucht `pipx` zwei Optionen:
 
 ```sh
 pipx install --python /usr/bin/python3 --system-site-packages libera
-libera --payload-install
 ```
 
 Ohne sie installiert sich Libera Suite fehlerfrei und öffnet dann kein Fenster. `uv tool` hat keine Entsprechung zu `--system-site-packages`; verwenden Sie unter Linux also `pipx`. Beim ersten Start nennt `libera` die GTK-Pakete, die Ihrer Distribution fehlen; es kennt apt, dnf, pacman und zypper.
@@ -61,21 +58,11 @@ flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/fl
 
 ## Die Komponenten {#the-editors}
 
-Das Windows-Installationsprogramm und das Flatpak enthalten die Komponenten. Alle anderen Kanäle laden sie einmal herunter, nach der Anwendung. `libera` bietet das beim ersten Start an; dieser Befehl stößt es direkt an:
+Jeder Kanal installiert die Komponenten mit der Anwendung. Das Windows-Installationsprogramm und das Flatpak enthalten sie. Mit pip, pipx oder uv sind sie zwei Python-Pakete, die `libera` voraussetzt: `libera-core`, die Dokument-Engine, für jede Plattform gebaut, und `libera-web`, die Bearbeitungskomponenten und die Schriften. Zusammen sind etwa 90 MB herunterzuladen. Beim ersten Start wird dann der Schriftenindex für Ihren Rechner erstellt, was einen Moment dauert.
 
-```sh
-libera --payload-install
-```
+Auf PyPI gibt es `libera-core` für Windows x64, Linux x86_64 und macOS auf Apple Silicon. Auf jedem anderen Rechner baut pip es aus dem Quellcode. Das dauert fast eine Stunde und braucht die Werkzeuge, die [Build the payload](/en/develop/build/) (auf Englisch) aufführt.
 
-Er lädt etwa 90 MB von `cdn.abilian.com` herunter und prüft jede Datei anhand der Prüfsummen, die mit der Anwendung geliefert wurden. Bei der ersten Abweichung bricht er ab. Danach erstellt er den Schriftenindex für Ihren Rechner, was einen Moment dauert.
-
-Um Komponenten zu installieren, die Sie selbst gebaut oder bekommen haben, geben Sie ihm deren Ordner an:
-
-```sh
-libera --payload-install --from /pfad/zu/den/artefakten
-```
-
-Wie man sie baut, erklärt [Build the payload](/en/develop/build/), auf Englisch. `libera --payload-remove` entfernt sie wieder; sie belegen etwa 350 MB auf der Festplatte.
+Versionen vor 0.7 haben ihre Komponenten getrennt heruntergeladen, in die unten genannten Ordner. `libera --payload-remove` löscht, was sie dort hinterlassen haben.
 
 ## Wo die Dateien liegen
 
@@ -86,7 +73,7 @@ Wie man sie baut, erklärt [Build the payload](/en/develop/build/), auf Englisch
 | macOS | `~/Library/Application Support/Libera Suite/` |
 | Windows | `%LOCALAPPDATA%\Libera Suite\` |
 
-Die Komponenten liegen dort unter `payload/<version>/`. Ein Update legt die neue Version neben die alte, und Libera Suite entfernt eine alte Version, sobald sie vier Wochen lang nicht mehr verwendet wurde: Ein auf anderem Weg installiertes Libera Suite desselben Kontos kann sie noch benutzen. `libera --payload-status` listet sie auf, jeweils mit der letzten Verwendung. Um Komponenten von woanders zu verwenden, etwa einen lokalen Build, setzen Sie `LIBERA_PAYLOAD` auf deren Ordner; das hat Vorrang vor allem oben Genannten.
+Dort bewahrt Libera Suite auf, was sie zwischen zwei Starts braucht, etwa die Liste der zuletzt verwendeten Dokumente und nicht gespeicherte Sitzungen. Die Komponenten liegen nicht dort: Sie werden mit der Anwendung installiert, und `libera --payload-status` zeigt, wo. Um Komponenten von woanders zu verwenden, etwa einen lokalen Build, setzen Sie `LIBERA_PAYLOAD` auf deren Ordner; das hat Vorrang vor den installierten.
 
 ## Ein Eintrag im Anwendungsmenü unter Linux {#a-launcher-entry-on-linux}
 
