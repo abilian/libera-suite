@@ -166,7 +166,7 @@ uv venv -q -p 3.12 v || exit
 bin=v/bin; [ -d "$bin" ] || bin=v/Scripts
 installed=0
 for try in $(seq 10); do
-    if uv pip install -q --python "$bin/python" --refresh --no-cache \\
+    if uv pip install -q --python v --refresh --no-cache \\
         --prerelease allow --index-url {PYPI_SIMPLE} "libera=={app}" > pip.log 2>&1
     then installed=1; break
     fi
