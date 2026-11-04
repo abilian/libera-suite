@@ -68,17 +68,28 @@ sed -i 's/^include-system-site-packages = false/include-system-site-packages = t
     /venv/pyvenv.cfg
 uv run --no-sync python -c 'import gi' \\
     || { echo 'FATAL: the venv still cannot import gi' >&2; exit 1; }"""
+
+
 # The wheels each time: a rebuild keeps the version, and uv would keep the
 # first install. Into /venv by name: uv pip reads no UV_PROJECT_ENVIRONMENT,
 # and would find the mounted checkout's .venv. With a payload mounted
 # instead, LIBERA_PAYLOAD names it, which resolve() takes first.
-PREPARE = f"""{SYNC}
+def prepare(arch: str) -> str:
+    return f"""{SYNC}
 if [ -d /wheels ]; then
     uv pip install --python /venv/bin/python --quiet --no-deps --reinstall \\
-        /wheels/libera_core-*.whl /wheels/libera_web-*.whl
+        /wheels/{core_wheels(arch)} /wheels/libera_web-*.whl
 fi
 uv run --no-sync playwright install chromium >/dev/null 2>&1 \\
     || {{ echo 'FATAL: playwright could not install a browser' >&2; exit 1; }}"""
+
+
+def core_wheels(arch: str) -> str:
+    """This platform's libera-core wheels, as a glob. The folder can hold others,
+    which uv refuses to install beside it: a Mac's, or one under an older tag,
+    since `uv build --out-dir` only ever adds."""
+    return f"libera_core-*-{components.TAGS[linux_platform(arch)]}.whl"
+
 
 # The type checkers, on Linux. `sys.platform` is a fact at check time, so a
 # checker on a Mac prunes every non-macOS branch before looking at it. Two real
@@ -153,8 +164,7 @@ def choose_payload(options: LinuxOptions, arch: str) -> tuple[Path | None, Path 
         return None, options.payload
     version = versions.payload_version(REPO)
     wheels = options.wheels or build_root() / "out" / "wheels" / version
-    tag = components.TAGS[linux_platform(arch)]
-    if list(wheels.glob(f"libera_core-*-{tag}.whl")):
+    if list(wheels.glob(core_wheels(arch))):
         return wheels, None
     msg = (
         f"no libera-core wheel for {linux_platform(arch)} in {wheels}\n"
@@ -209,14 +219,15 @@ def script_for(options: LinuxOptions) -> str:
         *("uv", "run", "--no-sync", "pytest", "-p", "no:cacheprovider"),
         *options.pytest_args,
     ])
+    ready = prepare(options.arch or host_arch())
     return {
         "versions": "cat /etc/libera-test-image.txt",
         "shell": "exec /bin/bash",
         "lint": f"{SYNC}\n{LINT}",
-        "test": f"{PREPARE}\n{test}",
-        "dialog": f"{PREPARE}\n{DIALOG}",
-        "gui": f"{PREPARE}\n{GUI}",
-        "gui-test": f"{PREPARE}\n{GUI_TEST}",
+        "test": f"{ready}\n{test}",
+        "dialog": f"{ready}\n{DIALOG}",
+        "gui": f"{ready}\n{GUI}",
+        "gui-test": f"{ready}\n{GUI_TEST}",
     }[options.action]
 
 

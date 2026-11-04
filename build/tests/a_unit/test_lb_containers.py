@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 import zipfile
 
@@ -109,6 +110,21 @@ def test_the_suite_takes_the_wheels_of_its_architecture_only(tmp_path):
     assert linux.choose_payload(options, "amd64") == (tmp_path, None)
 
 
+def test_the_suite_installs_the_core_of_its_architecture_only(tmp_path):
+    """A folder of wheels keeps what earlier builds left, and uv refuses to
+    install two wheels of one package: `lb linux test` stopped on a core built
+    before the Linux tag changed."""
+    kept = "libera_core-0.7-py3-none-manylinux_2_34_x86_64.whl"
+    (tmp_path / kept).touch()
+    (tmp_path / "libera_core-0.7-py3-none-manylinux_2_35_x86_64.whl").touch()
+    (tmp_path / "libera_core-0.7-py3-none-macosx_14_0_arm64.whl").touch()
+
+    script = linux.script_for(linux.LinuxOptions("test", arch="amd64"))
+    pattern = re.search(r"/wheels/(libera_core-\S+)", script)[1]
+
+    assert [path.name for path in tmp_path.glob(pattern)] == [kept]
+
+
 def test_the_container_speaks_the_language_asked_for_and_no_other():
     assert linux.env_for(None, "fr_FR.UTF-8")["LANG"] == "fr_FR.UTF-8"
     assert "LANG" not in linux.env_for(None)
@@ -116,8 +132,8 @@ def test_the_container_speaks_the_language_asked_for_and_no_other():
 
 def test_every_action_that_runs_the_suite_prepares_first():
     for action in ("test", "gui", "gui-test", "dialog"):
-        script = linux.script_for(linux.LinuxOptions(action))
-        assert script.startswith(linux.PREPARE), action
+        script = linux.script_for(linux.LinuxOptions(action, arch="amd64"))
+        assert script.startswith(linux.prepare("amd64")), action
     lint = linux.script_for(linux.LinuxOptions("lint"))
     assert lint.startswith(linux.SYNC)
     assert "components unpack" not in lint
