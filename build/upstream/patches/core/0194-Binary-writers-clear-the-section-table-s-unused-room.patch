@@ -1,0 +1,66 @@
+From 27dc33212417ae11ed28cab9d436e2ed558cebf2 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Wed, 4 Nov 2026 18:30:04 +0100
+Subject: [PATCH 194/194] Binary writers: clear the section table's unused room
+
+Each writer reserves 128 entries for its table of sections, fills those
+it needs, and writes the room as it is. The spreadsheet and diagram
+writers never cleared it, nor did the text writer for a glossary's own
+table, so up to 600 bytes of the process's memory went out in Editor.bin:
+text of our own, heap addresses, and the raw XML of the document being
+converted. The same document also gave different files from one run to
+the next. All three now clear the room before they write the table.
+---
+ OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp | 4 ++++
+ OOXML/Binary/Draw/BinaryWriterV.cpp               | 4 ++++
+ OOXML/Binary/Sheets/Reader/BinaryWriterS.cpp      | 4 ++++
+ 3 files changed, 12 insertions(+)
+
+diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
+index 3b3621474e..4bbdac7a2d 100644
+--- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
++++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
+@@ -9798,6 +9798,10 @@ void BinaryFileWriter::WriteMainTableStart(bool bSigTable)
+ 	m_nLastFilePos = m_nMainTableStart + nTableCount * nmtItemSize;
+ 	//Write mtLen
+ 	m_oBcw.m_oStream.WriteBYTE(0);
++	//Clear the rest of the table, or what it does not fill goes out as this process's memory
++	int nTableEntries = m_oBcw.m_oStream.GetPosition();
++	m_oBcw.m_oStream.WriteReserved(nTableCount * nmtItemSize - 1);
++	m_oBcw.m_oStream.SetPosition(nTableEntries);
+ 
+ 	if (bSigTable)
+ 	{
+diff --git a/OOXML/Binary/Draw/BinaryWriterV.cpp b/OOXML/Binary/Draw/BinaryWriterV.cpp
+index aa4af696d3..b7b09a45f0 100644
+--- a/OOXML/Binary/Draw/BinaryWriterV.cpp
++++ b/OOXML/Binary/Draw/BinaryWriterV.cpp
+@@ -217,6 +217,10 @@ void BinaryFileWriter::WriteMainTableStart(NSBinPptxRW::CBinaryFileWriter &oBuff
+ 	m_nLastFilePos = m_nMainTableStart + GetMainTableSize();
+ 	//Write mtLen
+ 	m_oBcw->m_oStream.WriteBYTE(0);
++	//Clear the rest of the table, or what it does not fill goes out as this process's memory
++	int nCurPos = m_oBcw->m_oStream.GetPosition();
++	m_oBcw->m_oStream.WriteReserved(GetMainTableSize() - 1);
++	m_oBcw->m_oStream.SetPosition(nCurPos);
+ }
+ int BinaryFileWriter::GetMainTableSize()
+ {
+diff --git a/OOXML/Binary/Sheets/Reader/BinaryWriterS.cpp b/OOXML/Binary/Sheets/Reader/BinaryWriterS.cpp
+index b81b38ae95..8a24b94529 100644
+--- a/OOXML/Binary/Sheets/Reader/BinaryWriterS.cpp
++++ b/OOXML/Binary/Sheets/Reader/BinaryWriterS.cpp
+@@ -9404,6 +9404,10 @@ void BinaryFileWriter::WriteMainTableStart(NSBinPptxRW::CBinaryFileWriter &oBuff
+ 	m_nLastFilePos = m_nMainTableStart + GetMainTableSize();
+ 	//Write mtLen
+ 	m_oBcw->m_oStream.WriteBYTE(0);
++	//Clear the rest of the table, or what it does not fill goes out as this process's memory
++	int nCurPos = m_oBcw->m_oStream.GetPosition();
++	m_oBcw->m_oStream.WriteReserved(GetMainTableSize() - 1);
++	m_oBcw->m_oStream.SetPosition(nCurPos);
+ }
+ int BinaryFileWriter::GetMainTableSize()
+ {
+-- 
+2.55.0
+

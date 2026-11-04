@@ -1,0 +1,34 @@
+From 52fbe4319eb5c89fe0c725f69a5c3df5969e9846 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Wed, 4 Nov 2026 19:13:37 +0100
+Subject: [PATCH 195/195] Spreadsheets: a colour of any length is set in full
+
+A colour's parser sets the alpha only from eight digits and nothing at
+all from a length it does not know, while reporting success, and the
+constructors taking a string set nothing first. So a three or six digit
+colour went out with a byte of memory for its alpha, and one of five
+digits with four, different on every run. A colour now starts as opaque
+black, as the default constructor and a failed parse already leave it.
+---
+ OOXML/Common/SimpleTypes_Spreadsheet.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/OOXML/Common/SimpleTypes_Spreadsheet.cpp b/OOXML/Common/SimpleTypes_Spreadsheet.cpp
+index 1e771da674..6aece17ffe 100644
+--- a/OOXML/Common/SimpleTypes_Spreadsheet.cpp
++++ b/OOXML/Common/SimpleTypes_Spreadsheet.cpp
+@@ -393,6 +393,11 @@ namespace SimpleTypes
+ 
+ 		void CHexColor::FromString(const std::wstring &sValue)
+ 		{
++			//Parse sets the alpha only from eight digits, and nothing from a length it does not know
++			m_unA = 255;
++			m_unR = 0;
++			m_unG = 0;
++			m_unB = 0;
+ 			if (false == Parse(sValue))
+ 			{
+ 				m_unA = 255;
+-- 
+2.55.0
+
