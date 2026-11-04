@@ -50,6 +50,7 @@
   "Key file": "Arquivo de chave",
   "Leave It": "Deixar como está",
   "Libera Help": "Ajuda do Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "O Libera Suite não consegue acessar a pasta onde ele está. Mova-o para sua pasta pessoal e solte-o novamente.",
   "Libera Suite could not create the document.": "O Libera Suite não conseguiu criar o documento.",
   "Libera Suite could not open “{name}”": "O Libera Suite não conseguiu abrir “{name}”",
   "Libera Suite could not print this document.": "O Libera Suite não conseguiu imprimir este documento.",

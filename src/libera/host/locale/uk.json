@@ -50,6 +50,7 @@
   "Key file": "Файл ключа",
   "Leave It": "Залишити як є",
   "Libera Help": "Допомога Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite не має доступу до теки, у якій він розташований. Перемістіть його до домашньої теки й перетягніть ще раз.",
   "Libera Suite could not create the document.": "Libera Suite не вдалося створити документ.",
   "Libera Suite could not open “{name}”": "Libera Suite не вдалося відкрити «{name}»",
   "Libera Suite could not print this document.": "Libera Suite не вдалося надрукувати цей документ.",

@@ -50,6 +50,7 @@
   "Key file": "Fail kunci",
   "Leave It": "Biarkan",
   "Libera Help": "Bantuan Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite tidak dapat mencapai folder tempat fail ini berada. Alihkan fail ke folder rumah anda, kemudian lepaskan sekali lagi.",
   "Libera Suite could not create the document.": "Libera Suite tidak dapat mencipta dokumen.",
   "Libera Suite could not open “{name}”": "Libera Suite tidak dapat membuka “{name}”",
   "Libera Suite could not print this document.": "Libera Suite tidak dapat mencetak dokumen ini.",

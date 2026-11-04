@@ -50,6 +50,7 @@
   "Key file": "Файл ключа",
   "Leave It": "Оставить как есть",
   "Libera Help": "Справка Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite не может получить доступ к папке, в которой он находится. Переместите его в домашнюю папку и перетащите ещё раз.",
   "Libera Suite could not create the document.": "Libera Suite не удалось создать документ.",
   "Libera Suite could not open “{name}”": "Libera Suite не удалось открыть «{name}»",
   "Libera Suite could not print this document.": "Libera Suite не удалось напечатать этот документ.",

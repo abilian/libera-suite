@@ -50,6 +50,7 @@
   "Key file": "קובץ מפתח",
   "Leave It": "השאר כך",
   "Libera Help": "עזרה של Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "ל-Libera Suite אין גישה לתיקייה שבה הוא נמצא. העבירו אותו לתיקיית הבית ושחררו אותו שוב.",
   "Libera Suite could not create the document.": "Libera Suite לא הצליח ליצור את המסמך.",
   "Libera Suite could not open “{name}”": "Libera Suite לא הצליח לפתוח את “{name}”",
   "Libera Suite could not print this document.": "Libera Suite לא הצליח להדפיס את המסמך הזה.",

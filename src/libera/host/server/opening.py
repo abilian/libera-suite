@@ -13,7 +13,7 @@ import shutil
 import threading
 from typing import TypeGuard
 
-from libera.host import apps, hooks, opening as host_opening
+from libera.host import apps, hooks, language, opening as host_opening
 from libera.host.convert import ConversionError, convert_to_editor_bin
 from libera.host.recents import read_recents, read_recents_for_editor
 from libera.host.server import diagnostics
@@ -108,11 +108,20 @@ def take_drop(r: Request) -> Response:
     Documents open in windows of their own, as File > Open puts them, on a
     thread, so that the page is not held for a conversion. The rest come back as paths,
     which GetDropFiles hands to sdkjs, and sdkjs inserts the images among them.
+
+    A file that is not there is reported instead. A Flatpak's drag names files
+    outside what its sandbox sees: opened, one read as a damaged document, and
+    inserted, nothing happened at all.
     """
     names = r.read_json().get("names")
     if names is not None and not _is_list_of_str(names):
         raise Refused(400, "names is not a list of file names")
-    paths = hooks.shell.take_dropped(names)
+    dropped = hooks.shell.take_dropped(names)
+    paths = [path for path in dropped if path.exists()]
+    if out_of_reach := [path.name for path in dropped if path not in paths]:
+        threading.Thread(
+            target=_say_out_of_reach, args=(out_of_reach,), daemon=True
+        ).start()
     documents = [path for path in paths if apps.is_document(path)]
     for document in documents:
         threading.Thread(
@@ -121,15 +130,28 @@ def take_drop(r: Request) -> Response:
     # Names against paths found tells a drag the native layer did not record
     # from one it did: the first thing to know when a drop does nothing.
     logger.info(
-        "drop: %d named, %d found: %d documents, %d other files",
+        "drop: %d named, %d found, %d out of reach: %d documents, %d other files",
         len(names or []),
-        len(paths),
+        len(dropped),
+        len(out_of_reach),
         len(documents),
         len(paths) - len(documents),
     )
     others = [p for p in paths if p not in documents]
     r.session.offered.update(others)
     return answer_json({"paths": [str(p) for p in others]})
+
+
+def _say_out_of_reach(names: list[str]) -> None:
+    hooks.shell.tell(
+        language.translate(
+            "Libera Suite could not open “{name}”", name=", ".join(names)
+        ),
+        language.translate(
+            "Libera Suite cannot reach the folder it is in. Move it to your home "
+            "folder, then drop it again."
+        ),
+    )
 
 
 @endpoint("POST", "new")

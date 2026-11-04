@@ -50,6 +50,7 @@
   "Key file": "Fișier cheie",
   "Leave It": "Lasă așa",
   "Libera Help": "Asistență Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite nu poate accesa dosarul în care se află. Mutați-l în dosarul personal, apoi plasați-l din nou.",
   "Libera Suite could not create the document.": "Libera Suite nu a putut crea documentul.",
   "Libera Suite could not open “{name}”": "Libera Suite nu a putut deschide „{name}”",
   "Libera Suite could not print this document.": "Libera Suite nu a putut imprima acest document.",

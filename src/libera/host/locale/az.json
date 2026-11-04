@@ -50,6 +50,7 @@
   "Key file": "Açar faylı",
   "Leave It": "Olduğu kimi saxla",
   "Libera Help": "Libera yardımı",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite onun olduğu qovluğa çata bilmir. Onu ev qovluğunuza köçürün, sonra yenidən buraxın.",
   "Libera Suite could not create the document.": "Libera Suite sənədi yarada bilmədi.",
   "Libera Suite could not open “{name}”": "Libera Suite “{name}” faylını aça bilmədi",
   "Libera Suite could not print this document.": "Libera Suite bu sənədi çap edə bilmədi.",

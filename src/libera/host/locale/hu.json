@@ -50,6 +50,7 @@
   "Key file": "Kulcsfájl",
   "Leave It": "Hagyja így",
   "Libera Help": "Libera súgó",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "A Libera Suite nem fér hozzá ahhoz a mappához, amelyben található. Helyezze át a saját mappájába, majd húzza ide újra.",
   "Libera Suite could not create the document.": "A Libera Suite nem tudta létrehozni a dokumentumot.",
   "Libera Suite could not open “{name}”": "A Libera Suite nem tudta megnyitni ezt: „{name}”",
   "Libera Suite could not print this document.": "A Libera Suite nem tudta kinyomtatni ezt a dokumentumot.",

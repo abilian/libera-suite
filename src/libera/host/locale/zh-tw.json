@@ -50,6 +50,7 @@
   "Key file": "金鑰檔案",
   "Leave It": "保持原狀",
   "Libera Help": "Libera 說明",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite 無法存取此檔案所在的資料夾。請將檔案移到您的家目錄，然後再次拖放。",
   "Libera Suite could not create the document.": "Libera Suite 無法建立該文件。",
   "Libera Suite could not open “{name}”": "Libera Suite 無法開啟「{name}」",
   "Libera Suite could not print this document.": "Libera Suite 無法列印此文件。",

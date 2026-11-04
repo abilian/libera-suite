@@ -50,6 +50,7 @@
   "Key file": "ໄຟລ໌ກະແຈ",
   "Leave It": "ປະໄວ້ຄືເກົ່າ",
   "Libera Help": "ຊ່ວຍເຫຼືອ Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite ບໍ່ສາມາດເຂົ້າເຖິງໂຟນເດີທີ່ໄຟລ໌ນີ້ຢູ່ໄດ້. ຍ້າຍມັນໄປທີ່ໂຟນເດີຫຼັກຂອງທ່ານ ແລ້ວວາງອີກຄັ້ງ.",
   "Libera Suite could not create the document.": "Libera Suite ບໍ່ສາມາດສ້າງເອກະສານໄດ້.",
   "Libera Suite could not open “{name}”": "Libera Suite ບໍ່ສາມາດເປີດ “{name}” ໄດ້",
   "Libera Suite could not print this document.": "Libera Suite ບໍ່ສາມາດພິມເອກະສານນີ້ໄດ້.",

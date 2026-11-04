@@ -50,6 +50,7 @@
   "Key file": "Fitxer de la clau",
   "Leave It": "Deixa-ho així",
   "Libera Help": "Ajuda del Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "El Libera Suite no pot accedir a la carpeta on es troba. Moveu-lo a la carpeta personal i torneu-lo a deixar anar.",
   "Libera Suite could not create the document.": "El Libera Suite no ha pogut crear el document.",
   "Libera Suite could not open “{name}”": "El Libera Suite no ha pogut obrir «{name}»",
   "Libera Suite could not print this document.": "El Libera Suite no ha pogut imprimir aquest document.",

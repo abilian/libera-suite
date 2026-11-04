@@ -50,6 +50,7 @@
   "Key file": "Nyckelfil",
   "Leave It": "Låt vara",
   "Libera Help": "Libera-hjälp",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite kommer inte åt mappen den ligger i. Flytta den till din hemmapp och släpp den igen.",
   "Libera Suite could not create the document.": "Libera Suite kunde inte skapa dokumentet.",
   "Libera Suite could not open “{name}”": "Libera Suite kunde inte öppna ”{name}”",
   "Libera Suite could not print this document.": "Libera Suite kunde inte skriva ut det här dokumentet.",

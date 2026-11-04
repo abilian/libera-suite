@@ -50,6 +50,7 @@
   "Key file": "Schlüsseldatei",
   "Leave It": "So lassen",
   "Libera Help": "Libera-Hilfe",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite hat keinen Zugriff auf den Ordner dieser Datei. Verschieben Sie sie in Ihren persönlichen Ordner und ziehen Sie sie erneut hierher.",
   "Libera Suite could not create the document.": "Libera Suite konnte das Dokument nicht erstellen.",
   "Libera Suite could not open “{name}”": "Libera Suite konnte „{name}“ nicht öffnen",
   "Libera Suite could not print this document.": "Libera Suite konnte dieses Dokument nicht drucken.",

@@ -109,15 +109,59 @@ def drop(tmp_path, monkeypatch, found: list[Path], body: object):
     return json.loads(answer.body), opened
 
 
+def dropped_files(tmp_path) -> list[Path]:
+    found = [tmp_path / "report.docx", tmp_path / "photo.png"]
+    for path in found:
+        path.touch()
+    return found
+
+
 def test_documents_open_in_windows_and_the_rest_go_back(tmp_path, monkeypatch):
-    found = [Path("/a/report.docx"), Path("/a/photo.png")]
+    report, photo = found = dropped_files(tmp_path)
 
     answer, opened = drop(
         tmp_path, monkeypatch, found, {"names": ["report.docx", "photo.png"]}
     )
 
-    assert opened == [Path("/a/report.docx")]
-    assert answer == {"paths": [str(Path("/a/photo.png"))]}
+    assert opened == [report]
+    assert answer == {"paths": [str(photo)]}
+
+
+def test_a_dropped_file_out_of_reach_is_said_and_not_opened(tmp_path, monkeypatch):
+    """A Flatpak's drag names files outside what its sandbox sees. Opened, the
+    document read as damaged; inserted, the picture did nothing at all."""
+    here = tmp_path / "here.png"
+    here.touch()
+    told: list[tuple[str, str]] = []
+    said = threading.Event()
+    opened: list[Path] = []
+
+    def tell(heading: str, detail: str) -> None:
+        told.append((heading, detail))
+        said.set()
+
+    monkeypatch.setattr(
+        hooks,
+        "shell",
+        ScriptedShell(
+            take_dropped=lambda _names: [
+                tmp_path / "gone.docx",
+                tmp_path / "gone.png",
+                here,
+            ],
+            open_window=lambda document, _app=None: opened.append(document),
+            tell=tell,
+        ),
+    )
+    asking = Session(payload=tmp_path / "payload", work=tmp_path / "1")
+
+    answer = opening.take_drop(Request(asking, body=b'{"names": null}'))
+
+    assert said.wait(5)
+    assert "gone.docx, gone.png" in told[0][0]
+    assert opened == []
+    assert json.loads(answer.body) == {"paths": [str(here)]}
+    assert asking.offered == {here}
 
 
 def test_a_body_that_is_not_a_list_of_names_is_refused(tmp_path, monkeypatch):
@@ -160,12 +204,12 @@ def test_a_page_told_no_names_takes_all_that_was_recorded(record):
 
 
 def test_a_drop_with_no_names_opens_what_the_drag_carried(tmp_path, monkeypatch):
-    found = [Path("/a/report.docx"), Path("/a/photo.png")]
+    report, photo = found = dropped_files(tmp_path)
 
     answer, opened = drop(tmp_path, monkeypatch, found, {"names": None})
 
-    assert opened == [Path("/a/report.docx")]
-    assert answer == {"paths": [str(Path("/a/photo.png"))]}
+    assert opened == [report]
+    assert answer == {"paths": [str(photo)]}
 
 
 def test_pywebview_still_has_the_handler_gtk_replaces():

@@ -50,6 +50,7 @@
   "Key file": "Datoteka s ključem",
   "Leave It": "Pusti tako",
   "Libera Help": "Pomoč za Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite ne more dostopati do mape, v kateri je. Premaknite ga v svojo domačo mapo in ga znova spustite.",
   "Libera Suite could not create the document.": "Libera Suite ni mogla ustvariti dokumenta.",
   "Libera Suite could not open “{name}”": "Libera Suite ni mogla odpreti „{name}“",
   "Libera Suite could not print this document.": "Libera Suite ni mogla natisniti tega dokumenta.",

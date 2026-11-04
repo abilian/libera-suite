@@ -50,6 +50,7 @@
   "Key file": "キーファイル",
   "Leave It": "そのままにする",
   "Libera Help": "Libera ヘルプ",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite はこのファイルがあるフォルダーにアクセスできません。ホームフォルダーに移動してから、もう一度ドロップしてください。",
   "Libera Suite could not create the document.": "Libera Suite はドキュメントを作成できませんでした。",
   "Libera Suite could not open “{name}”": "Libera Suite は「{name}」を開けませんでした",
   "Libera Suite could not print this document.": "Libera Suite はこのドキュメントを印刷できませんでした。",

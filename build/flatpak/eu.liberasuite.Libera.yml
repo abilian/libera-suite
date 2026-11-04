@@ -49,6 +49,13 @@ finish-args:
   # from the command line and the start window's recent list, and both are
   # real paths that have to resolve.
   - --filesystem=home
+  # Where a USB stick or a network drive is mounted. A drag hands the path of
+  # the file wherever it is, and without these a document dropped from one read
+  # as damaged and a picture did nothing. server/opening.py says when a file is
+  # out of reach anyway: /tmp, /opt.
+  - --filesystem=/media
+  - --filesystem=/run/media
+  - --filesystem=/mnt
 
 modules:
   - name: libera

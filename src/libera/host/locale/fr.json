@@ -50,6 +50,7 @@
   "Key file": "Fichier de clé",
   "Leave It": "Laisser tel quel",
   "Libera Help": "Aide de Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite n'a pas accès au dossier où il se trouve. Déplacez-le dans votre dossier personnel, puis déposez-le de nouveau.",
   "Libera Suite could not create the document.": "Libera Suite n'a pas pu créer le document.",
   "Libera Suite could not open “{name}”": "Libera Suite n'a pas pu ouvrir « {name} »",
   "Libera Suite could not print this document.": "Libera Suite n'a pas pu imprimer ce document.",

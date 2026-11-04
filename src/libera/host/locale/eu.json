@@ -50,6 +50,7 @@
   "Key file": "Gako-fitxategia",
   "Leave It": "Utzi dagoen bezala",
   "Libera Help": "Libera laguntza",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite-k ezin du dagoen karpetara iritsi. Eraman zure karpeta pertsonalera, eta jaregin berriro.",
   "Libera Suite could not create the document.": "Libera Suite-k ezin izan du dokumentua sortu.",
   "Libera Suite could not open “{name}”": "Libera Suite-k ezin izan du «{name}» ireki",
   "Libera Suite could not print this document.": "Libera Suite-k ezin izan du dokumentu hau inprimatu.",

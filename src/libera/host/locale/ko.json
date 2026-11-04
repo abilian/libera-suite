@@ -50,6 +50,7 @@
   "Key file": "키 파일",
   "Leave It": "그대로 두기",
   "Libera Help": "Libera 도움말",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite에서 이 파일이 있는 폴더에 접근할 수 없습니다. 홈 폴더로 옮긴 다음 다시 끌어다 놓으십시오.",
   "Libera Suite could not create the document.": "Libera Suite에서 문서를 만들 수 없습니다.",
   "Libera Suite could not open “{name}”": "Libera Suite에서 “{name}” 파일을 열 수 없습니다",
   "Libera Suite could not print this document.": "Libera Suite에서 이 문서를 인쇄할 수 없습니다.",

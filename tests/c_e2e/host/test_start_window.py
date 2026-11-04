@@ -222,6 +222,7 @@ def test_a_document_dropped_on_it_opens(start_window, monkeypatch, tmp_path):
     from libera.host import hooks
 
     report = tmp_path / "report.docx"
+    report.touch()
     opened: list = []
     monkeypatch.setattr(
         hooks,

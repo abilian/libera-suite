@@ -50,6 +50,7 @@
   "Key file": "Sleutelbestand",
   "Leave It": "Zo laten",
   "Libera Help": "Libera Help",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite kan de map waarin het staat niet bereiken. Verplaats het naar je thuismap en sleep het opnieuw hierheen.",
   "Libera Suite could not create the document.": "Libera Suite kon het document niet maken.",
   "Libera Suite could not open “{name}”": "Libera Suite kon ‘{name}’ niet openen",
   "Libera Suite could not print this document.": "Libera Suite kon dit document niet afdrukken.",

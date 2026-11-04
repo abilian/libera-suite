@@ -50,6 +50,7 @@
   "Key file": "Tệp khóa",
   "Leave It": "Để nguyên",
   "Libera Help": "Trợ giúp Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite không thể truy cập thư mục chứa tệp này. Hãy chuyển tệp vào thư mục chính của bạn rồi thả lại.",
   "Libera Suite could not create the document.": "Libera Suite không thể tạo tài liệu.",
   "Libera Suite could not open “{name}”": "Libera Suite không thể mở “{name}”",
   "Libera Suite could not print this document.": "Libera Suite không thể in tài liệu này.",

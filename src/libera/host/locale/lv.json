@@ -50,6 +50,7 @@
   "Key file": "Atslēgas fails",
   "Leave It": "Atstāt",
   "Libera Help": "Libera palīdzība",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite nevar piekļūt mapei, kurā tas atrodas. Pārvietojiet to uz savu mājas mapi un nometiet vēlreiz.",
   "Libera Suite could not create the document.": "Libera Suite neizdevās izveidot dokumentu.",
   "Libera Suite could not open “{name}”": "Libera Suite neizdevās atvērt „{name}”",
   "Libera Suite could not print this document.": "Libera Suite neizdevās izdrukāt šo dokumentu.",

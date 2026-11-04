@@ -50,6 +50,7 @@
   "Key file": "Файл с ключ",
   "Leave It": "Остави така",
   "Libera Help": "Помощ за Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite няма достъп до папката, в която се намира. Преместете го в домашната си папка и го пуснете отново.",
   "Libera Suite could not create the document.": "Libera Suite не успя да създаде документа.",
   "Libera Suite could not open “{name}”": "Libera Suite не успя да отвори „{name}“",
   "Libera Suite could not print this document.": "Libera Suite не успя да отпечата този документ.",

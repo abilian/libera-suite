@@ -50,6 +50,7 @@
   "Key file": "ملف المفتاح",
   "Leave It": "اتركه كما هو",
   "Libera Help": "مساعدة Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "لا يستطيع Libera Suite الوصول إلى المجلد الذي يوجد فيه. انقله إلى مجلد المنزل، ثم أفلته مرة أخرى.",
   "Libera Suite could not create the document.": "تعذّر على Libera Suite إنشاء المستند.",
   "Libera Suite could not open “{name}”": "تعذّر على Libera Suite فتح «{name}»",
   "Libera Suite could not print this document.": "تعذّر على Libera Suite طباعة هذا المستند.",

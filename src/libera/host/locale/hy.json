@@ -50,6 +50,7 @@
   "Key file": "Բանալու ֆայլ",
   "Leave It": "Թողնել այդպես",
   "Libera Help": "Libera օգնություն",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite-ը չի կարող մուտք գործել այն թղթապանակ, որտեղ այն գտնվում է։ Տեղափոխեք այն ձեր անձնական թղթապանակ, ապա նորից գցեք։",
   "Libera Suite could not create the document.": "Libera Suite-ը չկարողացավ ստեղծել փաստաթուղթը։",
   "Libera Suite could not open “{name}”": "Libera Suite-ը չկարողացավ բացել «{name}»-ը",
   "Libera Suite could not print this document.": "Libera Suite-ը չկարողացավ տպել այս փաստաթուղթը։",

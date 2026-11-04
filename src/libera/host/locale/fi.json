@@ -50,6 +50,7 @@
   "Key file": "Avaintiedosto",
   "Leave It": "Jätä ennalleen",
   "Libera Help": "Libera-tuki",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite ei pääse kansioon, jossa se on. Siirrä se kotikansioosi ja pudota se uudelleen.",
   "Libera Suite could not create the document.": "Libera Suite ei voinut luoda asiakirjaa.",
   "Libera Suite could not open “{name}”": "Libera Suite ei voinut avata kohdetta ”{name}”",
   "Libera Suite could not print this document.": "Libera Suite ei voinut tulostaa tätä asiakirjaa.",

@@ -50,6 +50,7 @@
   "Key file": "Фајл кључа",
   "Leave It": "Остави тако",
   "Libera Help": "Libera помоћ",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite не може да приступи фасцикли у којој се налази. Преместите га у своју личну фасциклу, па га поново превуците.",
   "Libera Suite could not create the document.": "Libera Suite није могао да креира документ.",
   "Libera Suite could not open “{name}”": "Libera Suite није могао да отвори „{name}“",
   "Libera Suite could not print this document.": "Libera Suite није могао да одштампа овај документ.",

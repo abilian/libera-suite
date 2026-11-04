@@ -50,6 +50,7 @@
   "Key file": "යතුරු ගොනුව",
   "Leave It": "එලෙසම තබන්න",
   "Libera Help": "Libera උදව්",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite හට මෙම ගොනුව ඇති ෆෝල්ඩරයට ප්‍රවේශ විය නොහැක. එය ඔබගේ මුල් ෆෝල්ඩරයට ගෙන ගොස් නැවත අතහරින්න.",
   "Libera Suite could not create the document.": "Libera Suite හට ලේඛනය සෑදිය නොහැකි විය.",
   "Libera Suite could not open “{name}”": "Libera Suite හට “{name}” විවෘත කළ නොහැකි විය",
   "Libera Suite could not print this document.": "Libera Suite හට මෙම ලේඛනය මුද්‍රණය කළ නොහැකි විය.",

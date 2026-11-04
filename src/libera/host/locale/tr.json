@@ -50,6 +50,7 @@
   "Key file": "Anahtar dosyası",
   "Leave It": "Böyle Kalsın",
   "Libera Help": "Libera Yardımı",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite dosyanın bulunduğu klasöre erişemiyor. Dosyayı ev klasörünüze taşıyın, ardından yeniden bırakın.",
   "Libera Suite could not create the document.": "Libera Suite belgeyi oluşturamadı.",
   "Libera Suite could not open “{name}”": "Libera Suite “{name}” dosyasını açamadı",
   "Libera Suite could not print this document.": "Libera Suite bu belgeyi yazdıramadı.",

@@ -50,6 +50,7 @@
   "Key file": "Soubor klíče",
   "Leave It": "Ponechat",
   "Libera Help": "Nápověda Libera",
+  "Libera Suite cannot reach the folder it is in. Move it to your home folder, then drop it again.": "Libera Suite nemá přístup ke složce, ve které se nachází. Přesuňte jej do své domovské složky a přetáhněte jej znovu.",
   "Libera Suite could not create the document.": "Libera Suite nemohla vytvořit dokument.",
   "Libera Suite could not open “{name}”": "Libera Suite nemohla otevřít „{name}“",
   "Libera Suite could not print this document.": "Libera Suite nemohla vytisknout tento dokument.",
