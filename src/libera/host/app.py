@@ -372,7 +372,7 @@ class WindowedShell:
     def show_document(self, session: Session, document: Path) -> None:
         show_session_document(session, document)
 
-    def take_dropped(self, names: list[str]) -> list[Path]:
+    def take_dropped(self, names: list[str] | None) -> list[Path]:
         return take_dropped(names)
 
 

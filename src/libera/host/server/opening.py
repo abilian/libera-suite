@@ -100,7 +100,8 @@ def _is_list_of_str(found: object) -> TypeGuard[list[str]]:
 
 @endpoint("POST", "drop")
 def take_drop(r: Request) -> Response:
-    """Files dropped on a window, which the page knows by name only.
+    """Files dropped on a window, which the page knows by name only, or, with
+    `names` null, not at all: WebKitGTK tells it neither files nor names.
 
     The shell has their paths from the drag itself, so the page cannot name a
     file of its choosing: a name that was never dropped resolves to nothing.
@@ -109,7 +110,7 @@ def take_drop(r: Request) -> Response:
     which GetDropFiles hands to sdkjs, and sdkjs inserts the images among them.
     """
     names = r.read_json().get("names")
-    if not _is_list_of_str(names):
+    if names is not None and not _is_list_of_str(names):
         raise Refused(400, "names is not a list of file names")
     paths = hooks.shell.take_dropped(names)
     documents = [path for path in paths if apps.is_document(path)]
@@ -121,7 +122,7 @@ def take_drop(r: Request) -> Response:
     # from one it did: the first thing to know when a drop does nothing.
     logger.info(
         "drop: %d named, %d found: %d documents, %d other files",
-        len(names),
+        len(names or []),
         len(paths),
         len(documents),
         len(paths) - len(documents),

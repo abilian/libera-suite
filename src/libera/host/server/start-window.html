@@ -321,24 +321,36 @@
       // pointer. dragleave fires on every element crossed, so only one with
       // nowhere to go next means the drag left the window.
       const dropping = (on) => document.body.classList.toggle("dropping", on);
-      document.addEventListener("dragover", (e) => {
+      const acceptDrag = (e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "copy";
         dropping(true);
-      });
+      };
+      // Both: a move onto a new element fires only dragenter, and WebKit
+      // answers that position from it (bridge-desktop.js).
+      document.addEventListener("dragenter", acceptDrag);
+      document.addEventListener("dragover", acceptDrag);
       document.addEventListener("dragleave", (e) => {
         if (!e.relatedTarget) dropping(false);
       });
       document.addEventListener("drop", (e) => {
         e.preventDefault();
         dropping(false);
-        const files = e.dataTransfer ? e.dataTransfer.files : [];
-        if (!files.length) return;
+        const data = e.dataTransfer;
+        if (!data) return;
+        const files = data.files;
+        // WebKitGTK tells a page no files, and a list of URIs that reads back
+        // empty; a list that reads back is a link. See bridge-desktop.js.
+        const unnamed =
+          !files.length &&
+          Array.from(data.types).includes("text/uri-list") &&
+          !data.getData("text/uri-list");
+        if (!files.length && !unnamed) return;
         const webview2 = window.chrome && window.chrome.webview;
         if (webview2 && webview2.postMessageWithAdditionalObjects) {
           webview2.postMessageWithAdditionalObjects("FilesDropped", files);
         }
-        const names = Array.from(files, (file) => file.name);
+        const names = unnamed ? null : Array.from(files, (file) => file.name);
         host("drop", JSON.stringify({ names })).catch((err) =>
           problem(tr("That did not work: {reason}", { reason: err.message || err })),
         );

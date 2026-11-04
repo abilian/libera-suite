@@ -4,11 +4,13 @@ pywebview's native layer records each dropped file as (name, path) in
 `webview.dom._dnd_state`, a private dict. The host reads it directly
 (`window.take_dropped`), so its shape is checked here against the installed
 pywebview: an upgrade that changes it fails this file instead of every drop.
+On GTK pywebview's handler records nothing, so `window.gtk` replaces it.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 from pathlib import Path
@@ -21,6 +23,7 @@ from libera.host import apps, hooks, window
 from libera.host.server import document, opening
 from libera.host.server.api import Refused, Request
 from libera.host.session import Session
+from libera.host.window import gtk
 
 
 def test_pywebview_still_keeps_the_record_this_reads():
@@ -146,3 +149,88 @@ def test_only_a_dropped_file_can_be_copied_in(tmp_path, monkeypatch):
         document.import_media(ask(secret))
     assert refused.value.status == 403
     assert sorted(f.name for f in asking.media.iterdir()) == [copied]
+
+
+def test_a_page_told_no_names_takes_all_that_was_recorded(record):
+    """WebKitGTK tells a page neither files nor names."""
+    record["paths"] += [("a.png", "/x/a.png"), ("b.docx", "/x/b.docx")]
+
+    assert window.take_dropped(None) == [Path("/x/a.png"), Path("/x/b.docx")]
+    assert record["paths"] == []
+
+
+def test_a_drop_with_no_names_opens_what_the_drag_carried(tmp_path, monkeypatch):
+    found = [Path("/a/report.docx"), Path("/a/photo.png")]
+
+    answer, opened = drop(tmp_path, monkeypatch, found, {"names": None})
+
+    assert opened == [Path("/a/report.docx")]
+    assert answer == {"paths": [str(Path("/a/photo.png"))]}
+
+
+def test_pywebview_still_has_the_handler_gtk_replaces():
+    """Replacing a method it no longer has would do nothing, silently."""
+    backend = pytest.importorskip("webview.platforms.gtk", exc_type=ImportError)
+
+    assert callable(backend.BrowserView.on_drag_data)
+
+
+class Dragged:
+    """What GTK hands a drag's handler, for one target."""
+
+    def __init__(self, target: str, uris: list[str] | None) -> None:
+        self.target, self.uris = target, uris
+
+    def get_target(self) -> Dragged:
+        return self
+
+    def name(self) -> str:
+        return self.target
+
+    def get_uris(self) -> list[str] | None:
+        return self.uris
+
+
+def record_drag(data: Dragged) -> None:
+    gtk._record_drag(None, None, None, 0, 0, data, 0, 0)
+
+
+def test_gtk_records_a_uri_list_with_its_escapes_undone(record):
+    record_drag(Dragged("text/uri-list", ["file:///x/a%20b%20%C3%A9.png"]))
+
+    assert record["paths"] == [("a b é.png", "/x/a b é.png")]
+
+
+def test_gtk_keeps_only_local_files():
+    uris = ["file:///x/a.png", "https://example.org/b.png", "sftp://host/c.png"]
+
+    assert gtk.files_in_uri_list(uris) == [("a.png", "/x/a.png")]
+
+
+def test_gtk_keeps_a_file_name_that_is_not_text():
+    ((name, path),) = gtk.files_in_uri_list(["file:///x/caf%E9.png"])
+
+    assert os.fsencode(name) == b"caf\xe9.png"
+    assert os.fsencode(path) == b"/x/caf\xe9.png"
+
+
+def test_each_drag_replaces_the_last(record):
+    """One that crossed a window and went on must not open with the next."""
+    record_drag(Dragged("text/uri-list", ["file:///x/crossed.docx"]))
+    record_drag(Dragged("text/uri-list", ["file:///x/dropped.docx"]))
+
+    assert record["paths"] == [("dropped.docx", "/x/dropped.docx")]
+
+
+def test_another_form_of_a_drag_leaves_its_files_recorded(record):
+    record_drag(Dragged("text/uri-list", ["file:///x/a.png"]))
+    record_drag(Dragged("text/plain", None))
+
+    assert record["paths"] == [("a.png", "/x/a.png")]
+
+
+def test_a_link_clears_the_drag_before_it(record):
+    record_drag(Dragged("text/uri-list", ["file:///x/crossed.docx"]))
+    record_drag(Dragged("text/uri-list", ["https://example.org/"]))
+
+    assert record["paths"] == []

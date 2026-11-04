@@ -48,7 +48,7 @@ RUN apt-get update \
         chromium \
         python3 python3-pip python3-venv python3-pil \
         python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
-        xvfb xauth x11-utils scrot \
+        xvfb xauth x11-utils scrot xdotool \
         desktop-file-utils \
         poppler-utils \
         locales \

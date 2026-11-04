@@ -237,13 +237,13 @@ lint.extend-ignore = [
 # both halves: this module is read on every platform and they exist on one.
 "src/libera/host/window/windows.py" = [
     "TC003",   # pathlib is used at runtime, not only in annotations
-    "SLF001",  # webview.dom._dnd_state: the only place pywebview keeps dropped files' paths; test_drops checks its shape
 ]
 # The three toolkit modules answer the same calls, and some have no use for an
 # argument another needs: an AppKit alert is application-modal and has no
 # parent, pywebview has no fullscreen state to set and no format list to show.
 "src/libera/host/window/portable.py" = [
     "ARG001",  # see above
+    "SLF001",  # webview.dom._dnd_state: the only place pywebview keeps dropped files' paths; test_drops checks its shape
 ]
 "src/libera/host/window/macos.py" = [
     "ARG001",  # see above
@@ -258,7 +258,7 @@ lint.extend-ignore = [
 # merely imported -- the test tier, `--serve` on a headless box -- and only a
 # question on screen needs it.
 "src/libera/host/window/gtk.py" = [
-    "PLC0415", # gi, where a dialog is built
+    "PLC0415", # gi, where a dialog is built, and pywebview's GTK backend, which imports it
     "BLE001",  # a dialog that fails on the GTK thread is raised again on the
                # thread that asked, as macos.py's run_on_gui_thread does
 ]
@@ -391,6 +391,7 @@ lint.extend-ignore = [
 "tests/d_gui/**/*.py" = [
     "S404", # subprocess import
     "S603", # subprocess call
+    "S607", # xdotool and xwininfo, on the PATH of the image the tier runs in
 ]
 # test_gui_prereq.py runs this interpreter against a script gui.py generated,
 # to check that the probe and the in-process check ask the same question. That

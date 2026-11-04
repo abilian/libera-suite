@@ -11,8 +11,11 @@ it can be missing wherever this module is merely imported (the test tier,
 
 from __future__ import annotations
 
+import os
+import pathlib
 import threading
 from typing import TYPE_CHECKING, Any
+from urllib.parse import unquote_to_bytes, urlsplit
 
 from libera.host import language
 from libera.host.window.portable import (
@@ -22,7 +25,7 @@ from libera.host.window.portable import (
     complete_startup,
     make_window,
     on_quit,
-    prepare,
+    read_drop_record,
     run_on_gui_thread,
     run_save_panel,
     set_fullscreen,
@@ -86,6 +89,48 @@ def tell(title: str, message: str, parent: Window | None) -> None:
         parent,
         asking=False,
     )
+
+
+def files_in_uri_list(uris: Sequence[str]) -> list[tuple[str, str]]:
+    """(name, path) of each local file among `uris`, and nothing for the rest.
+    Bytes, because a Linux file name is bytes: a URI may hold any of them."""
+    paths = [
+        os.fsdecode(unquote_to_bytes(parts.path))
+        for parts in map(urlsplit, uris)
+        if parts.scheme == "file"
+    ]
+    return [(pathlib.PurePath(path).name, path) for path in paths]
+
+
+def _record_drag(
+    _view: object,
+    _widget: object,
+    _context: object,
+    _x: int,
+    _y: int,
+    data: Any,
+    _info: int,
+    _time: int,
+) -> bool:
+    """What a drag carries, as soon as it enters a window: WebKit asks for it
+    then, before any drop. Each drag replaces the last, so one that crossed a
+    window and went on cannot answer for the next. Other targets of the same
+    drag are other forms of it, and say nothing about its files."""
+    if data.get_target().name() == "text/uri-list":
+        read_drop_record()["paths"][:] = files_in_uri_list(data.get_uris() or [])
+    return False
+
+
+def prepare() -> None:
+    """Have the drag recorded, in place of pywebview's handler, which records
+    nothing here: it reads the drag with `get_text()`, and GTK has no text for
+    a URI list, which is what a file manager's drag is (WebKitGTK 2.54 and
+    Thunar, measured on 2026-11-04). It also left the URI's escapes in the
+    path. Before any window, since each connects the handler as it is made."""
+    from webview.platforms import gtk as backend
+
+    view: Any = backend.BrowserView
+    view.on_drag_data = _record_drag
 
 
 def _import_gtk() -> Any:

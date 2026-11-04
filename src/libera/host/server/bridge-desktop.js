@@ -104,30 +104,47 @@
   //
   // Every file drop is cancelled whatever the page does with it: left to the
   // webview, it opens the file in place of the editor.
+  //
+  // WebKitGTK tells a page neither files nor names. A drag from a file manager
+  // is a "text/uri-list" with no files, whose getData answers "" because the
+  // URIs are file paths, so the host is asked for whatever the drag carried. A
+  // link is the same type with a list that does read back, and sdkjs pastes it.
   const IMAGE_FILE = /\.(png|jpe?g|gif|bmp|tiff?|svg|webp|emf|wmf)$/i;
   let dropped = [];
-  const carriesFiles = (e) =>
-    !!e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
+  const carriesFiles = (e) => {
+    const types = Array.from((e.dataTransfer && e.dataTransfer.types) || []);
+    return types.includes("Files") || types.includes("text/uri-list");
+  };
   w.addEventListener(
     "drop",
     (e) => {
       if (!carriesFiles(e)) return;
       e.preventDefault();
+      const data = e.dataTransfer;
+      const unnamed = !data.files.length;
+      if (unnamed && data.getData("text/uri-list")) return;
       // WebView2 hands the paths over only in this message, which pywebview
       // posts from a drop handler of its own; there is none, so it is posted
       // here, before the host is asked for them.
       const webview2 = w.top.chrome && w.top.chrome.webview;
       if (webview2 && webview2.postMessageWithAdditionalObjects) {
-        webview2.postMessageWithAdditionalObjects("FilesDropped", e.dataTransfer.files);
+        webview2.postMessageWithAdditionalObjects("FilesDropped", data.files);
       }
-      const names = Array.from(e.dataTransfer.files, (file) => file.name);
+      const names = unnamed ? null : Array.from(data.files, (file) => file.name);
       dropped =
         answer(postToHostSync("/__host__/drop", JSON.stringify({ names }))).paths || [];
+      // With no image to insert, sdkjs pastes the drop's text/html, and for
+      // these WebKit makes that a link to the file. Its handler still has to
+      // run, because it ends the drop target it showed, so it finds nothing.
+      if (unnamed) Object.defineProperty(data, "getData", { value: () => "" });
     },
     true,
   );
-  // Every file drag is accepted, and it has to be said here, first, and made
-  // to stick. Over the canvas, sdkjs answers "none" on dragover for any file
+  // Every file drag is accepted, on dragenter as on dragover: a move onto a
+  // new element fires only dragenter, and WebKit answers that position from
+  // it. A release after one, so anywhere with many small elements under the
+  // pointer, was no drop at all on GTK. And it has to be said here, first, and
+  // made to stick. Over the canvas, sdkjs answers "none" on dragover for any file
   // whose type is not an image's (CanDropFiles, isValidImageDragItem), and
   // with "none" there is no drop at all: a document dropped on the page never
   // arrived. A listener after it cannot undo that, because a handler on the
@@ -135,20 +152,18 @@
   // rest of this event, which sdkjs then reads as "copy" too and shows where
   // an image would go. "copy" is also the cue: the pointer shows the drop
   // will be taken.
-  w.addEventListener(
-    "dragover",
-    (e) => {
-      if (!carriesFiles(e)) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-      Object.defineProperty(e.dataTransfer, "dropEffect", {
-        configurable: true,
-        get: () => "copy",
-        set: () => {},
-      });
-    },
-    true,
-  );
+  const acceptFiles = (e) => {
+    if (!carriesFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    Object.defineProperty(e.dataTransfer, "dropEffect", {
+      configurable: true,
+      get: () => "copy",
+      set: () => {},
+    });
+  };
+  w.addEventListener("dragenter", acceptFiles, true);
+  w.addEventListener("dragover", acceptFiles, true);
 
   function chooseNewKind(own) {
     const doc = w.top.document;

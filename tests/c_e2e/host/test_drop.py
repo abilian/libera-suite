@@ -101,6 +101,68 @@ def test_a_file_nobody_can_use_is_still_cancelled(editor_with, monkeypatch, tmp_
     assert opened == []
 
 
+# As WebKitGTK tells a drag from a file manager: a URI list that reads back
+# empty, no files, and a text/html naming the file. tests/d_gui has the real one.
+DROP_UNNAMED = """([selector, list]) => {
+  const target = document.querySelector(selector);
+  const data = new DataTransfer();
+  data.setData('text/uri-list', list);
+  data.setData('text/html', '<a href="file:///a/report.docx">report</a>');
+  const drop = new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: data});
+  target.dispatchEvent(drop);
+  return [drop.defaultPrevented, data.getData('text/html')];
+}"""
+
+
+def asked_for_names(monkeypatch, found: list) -> tuple[list, list]:
+    """What the host was asked for, and what it was asked to open."""
+    asked: list = []
+    opened: list = []
+
+    def take_dropped(names):
+        asked.append(names)
+        return found
+
+    monkeypatch.setattr(
+        hooks,
+        "shell",
+        ScriptedShell(
+            take_dropped=take_dropped,
+            open_window=lambda document, _app=None: opened.append(document) or True,
+        ),
+    )
+    return asked, opened
+
+
+def test_a_drop_with_no_names_takes_what_the_drag_carried(
+    editor_with, monkeypatch, tmp_path
+):
+    report = tmp_path / "report.docx"
+    report.write_bytes(b"a document")
+    asked, opened = asked_for_names(monkeypatch, [report])
+    editor = editor_with([])
+
+    prevented, html = editor.frame.evaluate(DROP_UNNAMED, ["#toolbar", ""])
+
+    assert prevented, "the webview would open the file in place of the editor"
+    assert asked == [None]
+    assert opened == [report]
+    assert not html, "sdkjs would paste a link to the file into the document"
+
+
+def test_a_link_is_left_to_the_page(editor_with, monkeypatch):
+    asked, _opened = asked_for_names(monkeypatch, [])
+    editor = editor_with([])
+
+    prevented, html = editor.frame.evaluate(
+        DROP_UNNAMED, ["#toolbar", "https://example.org/"]
+    )
+
+    assert prevented, "the webview would go to the link in place of the editor"
+    assert asked == []
+    assert html, "sdkjs pastes it"
+
+
 DRAG_OVER = """([selector, name, type]) => {
   const target = document.querySelector(selector);
   const box = target.getBoundingClientRect();
@@ -111,6 +173,23 @@ DRAG_OVER = """([selector, name, type]) => {
     clientX: box.x + box.width / 2, clientY: box.y + box.height / 2}));
   return data.dropEffect;
 }"""
+
+
+def test_a_file_drag_is_accepted_as_it_enters_an_element(editor_with):
+    """A move onto a new element fires only dragenter, and WebKit answers that
+    position from it: a release after one was no drop at all on GTK."""
+    editor = editor_with([])
+
+    assert editor.frame.evaluate(
+        """() => {
+          const data = new DataTransfer();
+          data.items.add(new File(['x'], 'report.docx'));
+          const enter = new DragEvent('dragenter',
+              {bubbles: true, cancelable: true, dataTransfer: data});
+          document.querySelector('#toolbar').dispatchEvent(enter);
+          return enter.defaultPrevented;
+        }"""
+    )
 
 
 @pytest.mark.parametrize("selector", ["#id_main_view", "#toolbar"])

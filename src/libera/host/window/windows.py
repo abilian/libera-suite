@@ -17,13 +17,13 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict, cast
+from typing import TYPE_CHECKING
 
 import webview
-import webview.dom
 
 from libera.host import apps, convert, language, server
 from libera.host.session import SESSIONS, NotReadyError, lookup
+from libera.host.window.portable import read_drop_record
 
 if sys.platform == "darwin":
     from libera.host.window import macos as _toolkit
@@ -278,17 +278,6 @@ DROP_WAIT = 1.0
 DROP_POLL = 0.02
 
 
-class _DropRecord(TypedDict):
-    """`webview.dom._dnd_state`, which pywebview leaves untyped."""
-
-    num_listeners: int
-    paths: list[tuple[str, str]]  # (name, full path), oldest first
-
-
-def _read_drop_record() -> _DropRecord:
-    return cast("_DropRecord", webview.dom._dnd_state)
-
-
 def listen_for_drops() -> None:
     """Have pywebview record the full path of every file dropped on a window.
 
@@ -301,17 +290,24 @@ def listen_for_drops() -> None:
     `tests/a_unit/host/test_drops.py` checks its shape against the installed
     pywebview.
     """
-    _read_drop_record()["num_listeners"] += 1
+    read_drop_record()["num_listeners"] += 1
 
 
-def take_dropped(names: list[str]) -> list[Path]:
+def take_dropped(names: list[str] | None) -> list[Path]:
     """The full paths of the files just dropped, by the names the page saw.
 
     The newest record of a name wins and every record of it goes: a drop the
     page never asked about (one that missed every frame) must not answer for
     the next file of the same name.
+
+    None is a page that was told no names, which is WebKitGTK's: all that is
+    recorded, which there is one drag's and is there before the page asks.
     """
-    record = _read_drop_record()["paths"]
+    record = read_drop_record()["paths"]
+    if names is None:
+        everything = [Path(path) for _, path in record]
+        record.clear()
+        return everything
     deadline = time.monotonic() + DROP_WAIT
     while not set(names) <= {name for name, _ in record}:
         if time.monotonic() > deadline:

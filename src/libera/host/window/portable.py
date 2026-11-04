@@ -14,9 +14,10 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol, TypeVar
+from typing import TYPE_CHECKING, Protocol, TypedDict, TypeVar, cast
 
 import webview
+import webview.dom
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -118,6 +119,19 @@ class Toolkit(Protocol):
     def stay_open(self) -> None:
         """Once start() has returned: keep the application running, where that
         is the platform's way, until it quits."""
+
+
+class DropRecord(TypedDict):
+    """`webview.dom._dnd_state`, which pywebview leaves untyped."""
+
+    num_listeners: int
+    paths: list[tuple[str, str]]  # (name, full path), oldest first
+
+
+def read_drop_record() -> DropRecord:
+    """The only place pywebview keeps dropped files' paths; `test_drops.py`
+    checks its shape."""
+    return cast("DropRecord", webview.dom._dnd_state)
 
 
 def run_on_gui_thread(work: Callable[[], T]) -> T:
