@@ -171,7 +171,9 @@ def test_every_encrypted_odf_part_ends_in_its_padding_block(tmp_path):
     them back all the same (core 0184, from ElixirOffice). Which parts fill
     their last block depends on the text, so the text varies until one does."""
     full_blocks = []
-    for n in range(32):
+    # How many do changes from run to run: 32 tries found 2 to 10 such parts
+    # over three runs, and none in a fourth.
+    for n in range(256):
         made = tmp_path / str(n)
         made.mkdir()
         (made / "source.txt").write_text(SENTENCE + " x" * n + "\n", encoding="utf-8")
@@ -183,4 +185,6 @@ def test_every_encrypted_odf_part_ends_in_its_padding_block(tmp_path):
         parts = read_odf_parts(protected, SECRET)
         assert SENTENCE.encode() in parts["content.xml"][0]
         full_blocks += [name for name, (_, pad) in parts.items() if pad == 16]
+        if full_blocks:
+            break
     assert full_blocks, "no part filled its last block: vary the text more"
