@@ -330,7 +330,7 @@ Publish in this order, because the parts refer to each other:
 
 6. **Push the tag.**
 
-The last word belongs to the application, on a machine that never built it: `pipx install libera`, then a document opened.
+The last word belongs to the application, on a machine that never built it: `verify` installs it from PyPI and converts, and nothing opens a window, so `pipx install libera==<version>` (with `--pip-args=--pre` for a pre-release), then a document opened. `make ship` prints that line at the end.
 
 ## When a step fails
 
