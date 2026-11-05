@@ -18,7 +18,7 @@ irm https://cdn.abilian.com/libera/install.ps1 | iex
 
 La première fois, Windows vous demandera deux choses :
 
-- **« Windows a protégé votre ordinateur »**, à l'ouverture de l'installateur téléchargé. Cet avertissement vise les programmes sans signature : l'installateur n'a pas encore de certificat. Choisissez *Informations complémentaires*, puis *Exécuter quand même*. La ligne PowerShell ne le déclenche pas.
+- **« Windows a protégé votre ordinateur »**, à l'ouverture de l'installateur téléchargé. L'installateur n'est pas encore signé avec un certificat : Windows ne peut donc pas savoir de qui il vient. Choisissez *Informations complémentaires*, puis *Exécuter quand même*. La ligne PowerShell ne le déclenche pas.
 - **« Comment voulez-vous ouvrir ce fichier ? »**, la première fois que vous double-cliquez sur un document qu'un autre programme, Word par exemple, sait aussi ouvrir. Choisissez Libera Suite et cochez *Toujours*. Vous pourrez changer ce choix dans *Paramètres › Applications › Applications par défaut*.
 
 ## Linux

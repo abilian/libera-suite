@@ -1,6 +1,6 @@
 # Install
 
-Libera Suite runs on **Windows 10 and 11 (x64)**, **Linux (x86_64 and arm64)** and **macOS 14 or later (Apple Silicon)**. Installing it needs no administrator password: it installs for your account only. On Linux arm64 the install script installs 0.4.1, the last version built for it, until a later one is again.
+Libera Suite runs on **Windows 10 and 11 (x64)**, **Linux (x86_64 and arm64)** and **macOS 14 or later (Apple Silicon)**. Installing it needs no administrator password: it installs for your account only. On Linux arm64 the install script installs 0.4.1, the last version built for it, until a newer one is built.
 
 ## Windows
 
@@ -18,7 +18,7 @@ irm https://cdn.abilian.com/libera/install.ps1 | iex
 
 Windows will ask two things the first time:
 
-- **"Windows protected your PC"**, when you open the downloaded installer. The installer is not yet signed with a certificate, which is what this warning looks for. Choose *More info*, then *Run anyway*. The PowerShell line does not trigger it.
+- **"Windows protected your PC"**, when you open the downloaded installer. The installer is not yet signed with a certificate, so Windows cannot tell who it comes from. Choose *More info*, then *Run anyway*. The PowerShell line does not trigger it.
 - **"How do you want to open this file?"**, the first time you double-click a document that another program, such as Word, can also open. Pick Libera Suite and tick *Always*. You can change it later in *Settings › Apps › Default apps*.
 
 ## Linux

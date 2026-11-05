@@ -18,7 +18,7 @@ irm https://cdn.abilian.com/libera/install.ps1 | iex
 
 La prima volta Windows ti chiederà due cose:
 
-- **«PC protetto da Windows»**, quando apri il programma di installazione scaricato. Non è ancora firmato con un certificato, ed è proprio questo che l'avviso controlla. Scegli *Ulteriori informazioni*, poi *Esegui comunque*. La riga PowerShell non lo attiva.
+- **«PC protetto da Windows»**, quando apri il programma di installazione scaricato. Non è ancora firmato con un certificato, quindi Windows non può sapere da chi proviene. Scegli *Ulteriori informazioni*, poi *Esegui comunque*. La riga PowerShell non lo attiva.
 - **«Come vuoi aprire questo file?»**, la prima volta che fai doppio clic su un documento che anche un altro programma, come Word, sa aprire. Scegli Libera Suite, poi *Sempre*. Potrai cambiarlo in seguito in *Impostazioni › App › App predefinite*.
 
 ## Linux

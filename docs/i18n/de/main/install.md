@@ -18,7 +18,7 @@ irm https://cdn.abilian.com/libera/install.ps1 | iex
 
 Beim ersten Mal fragt Windows zweierlei:
 
-- **„Der Computer wurde durch Windows geschützt“**, wenn Sie das heruntergeladene Installationsprogramm öffnen. Es ist noch nicht mit einem Zertifikat signiert, und genau darauf achtet diese Warnung. Wählen Sie *Weitere Informationen*, dann *Trotzdem ausführen*. Die PowerShell-Zeile löst sie nicht aus.
+- **„Der Computer wurde durch Windows geschützt“**, wenn Sie das heruntergeladene Installationsprogramm öffnen. Es ist noch nicht mit einem Zertifikat signiert, daher kann Windows nicht erkennen, von wem es stammt. Wählen Sie *Weitere Informationen*, dann *Trotzdem ausführen*. Die PowerShell-Zeile löst sie nicht aus.
 - **„Wie möchten Sie diese Datei öffnen?“**, wenn Sie zum ersten Mal ein Dokument doppelklicken, das auch ein anderes Programm öffnen kann, etwa Word. Wählen Sie Libera Suite und dann *Immer*. Ändern können Sie das später unter *Einstellungen › Apps › Standard-Apps*.
 
 ## Linux

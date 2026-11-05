@@ -18,7 +18,7 @@ irm https://cdn.abilian.com/libera/install.ps1 | iex
 
 La primera vez, Windows te preguntará dos cosas:
 
-- **«Windows protegió su PC»**, al abrir el instalador descargado. Todavía no está firmado con un certificado, y eso es justo lo que comprueba este aviso. Elige *Más información* y luego *Ejecutar de todas formas*. La línea de PowerShell no lo provoca.
+- **«Windows protegió su PC»**, al abrir el instalador descargado. Todavía no está firmado con un certificado, así que Windows no puede saber de quién procede. Elige *Más información* y luego *Ejecutar de todas formas*. La línea de PowerShell no lo provoca.
 - **«¿Cómo quieres abrir este archivo?»**, la primera vez que haces doble clic en un documento que también puede abrir otro programa, como Word. Elige Libera Suite y luego *Siempre*. Puedes cambiarlo más adelante en *Configuración › Aplicaciones › Aplicaciones predeterminadas*.
 
 ## Linux

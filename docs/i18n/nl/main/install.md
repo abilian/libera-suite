@@ -18,7 +18,7 @@ irm https://cdn.abilian.com/libera/install.ps1 | iex
 
 De eerste keer vraagt Windows twee dingen:
 
-- **"Uw pc is beschermd door Windows"**, wanneer je het gedownloade installatieprogramma opent. Het installatieprogramma is nog niet ondertekend met een certificaat, en daar kijkt deze waarschuwing naar. Kies *Meer info* en daarna *Toch uitvoeren*. De PowerShell-regel roept deze waarschuwing niet op.
+- **"Uw pc is beschermd door Windows"**, wanneer je het gedownloade installatieprogramma opent. Het installatieprogramma is nog niet ondertekend met een certificaat, dus Windows kan niet weten van wie het komt. Kies *Meer info* en daarna *Toch uitvoeren*. De PowerShell-regel roept deze waarschuwing niet op.
 - **"Hoe wilt u dit bestand openen?"**, de eerste keer dat je dubbelklikt op een document dat ook een ander programma, zoals Word, kan openen. Kies Libera Suite en vink *Altijd* aan. Je kunt dit later wijzigen via *Instellingen › Apps › Standaard-apps*.
 
 ## Linux
