@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import threading
 import time
 from pathlib import Path
@@ -251,6 +252,7 @@ def test_gtk_keeps_only_local_files():
     assert gtk.files_in_uri_list(uris) == [("a.png", "/x/a.png")]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows file names are text")
 def test_gtk_keeps_a_file_name_that_is_not_text():
     ((name, path),) = gtk.files_in_uri_list(["file:///x/caf%E9.png"])
 

@@ -29,6 +29,7 @@ def read_plist() -> dict:
         return plistlib.load(f)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="no executable bit on Windows")
 def test_it_writes_a_bundle_in_the_users_applications(home):
     assert macos.install() == [home / "Applications" / "Libera.app"]
     contents = home / "Applications" / "Libera.app" / "Contents"
