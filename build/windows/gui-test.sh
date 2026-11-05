@@ -44,11 +44,15 @@ query user 2>/dev/null | grep -qi "^ *>\{0,1\}$USERNAME  *[^ ]*  *[0-9]*  *activ
 # The task's own shell is cmd, in the desktop session, with none of ours. The
 # redirection goes first: `echo exit=0>> log` is handle 0 redirected, and the
 # line never reached the log.
+#
+# No fault handler: finding a file in Explorer through UI Automation raises a COM
+# error it handles itself (0x8001010D), printed as a fatal one, with a whole stack,
+# for each search. The application, which could really crash, is another process.
 cat > "$CMD" <<EOF
 @echo off
 cd /d $(cygpath -w "$REPO")
 set LIBERA_PAYLOAD=$(cygpath -m "$PAYLOAD_DIR")
-uv run --no-sync pytest -p no:cacheprovider -m gui tests/d_gui -q -rs > "$(cygpath -w "$LOG")" 2>&1
+uv run --no-sync pytest -p no:cacheprovider -p no:faulthandler -m gui tests/d_gui -q -rs > "$(cygpath -w "$LOG")" 2>&1
 >> "$(cygpath -w "$LOG")" echo exit=%ERRORLEVEL%
 EOF
 
