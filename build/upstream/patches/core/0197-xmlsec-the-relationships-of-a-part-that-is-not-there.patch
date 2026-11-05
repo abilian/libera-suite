@@ -1,0 +1,53 @@
+From 9485a2f8e743d07fc2027b4c430b53c6c161820e Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 5 Nov 2026 14:56:45 +0100
+Subject: [PATCH 197/197] xmlsec: the relationships of a part that is not there
+ go unsigned
+
+They belong to nothing, and Microsoft's System.IO.Packaging calls a
+signature over them invalid. Files the converter saved before it stopped
+writing a handout master's relationships have some, and a signature on one
+has to verify, here too: so they leave the list signer and verifier share.
+---
+ DesktopEditor/xmlsec/src/src/common.h | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/DesktopEditor/xmlsec/src/src/common.h b/DesktopEditor/xmlsec/src/src/common.h
+index 57f28ca27e..0e9c31f633 100644
+--- a/DesktopEditor/xmlsec/src/src/common.h
++++ b/DesktopEditor/xmlsec/src/src/common.h
+@@ -43,6 +43,21 @@ public:
+ 				sPart == L"ppt/viewProps.xml";
+ 	}
+ 
++	// The relationships of a part that is not there belong to nothing, and
++	// Microsoft's System.IO.Packaging refuses a signature over them. Files the
++	// converter saved before it stopped writing a handout master's have some.
++	// Here, so that what is signed and what must be signed stay one list.
++	static bool IsOfNoPart(IFolder* pFolder, const std::wstring& sRels)
++	{
++		std::wstring::size_type nFolder = sRels.rfind(L"_rels/");
++		if (std::wstring::npos == nFolder || sRels == L"_rels/.rels")
++			return false;
++		std::wstring sOwner = sRels;
++		sOwner.erase(nFolder, 6);
++		sOwner.erase(sOwner.size() - 5);
++		return !pFolder->exists(sOwner);
++	}
++
+ 	void Folder_Parse(IFolder* pFolder, bool bIsAddSlash = false)
+ 	{
+ 		// 1) Parse files in directory
+@@ -68,6 +83,9 @@ public:
+ 
+ 			std::wstring sExt = sCheckFile.substr(posExt + 1);
+ 
++			if (sExt == L"rels" && IsOfNoPart(pFolder, sCheckFile))
++				continue;
++
+ 			if (bIsAddSlash)
+ 				sCheckFile = L"/" + sCheckFile;
+ 
+-- 
+2.55.0
+

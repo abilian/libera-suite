@@ -1,0 +1,83 @@
+From 2afe704fbc12da1101af0cecb7f7b28691e22335 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 5 Nov 2026 14:52:27 +0100
+Subject: [PATCH 196/197] PPTX: a presentation with no handout master gets none
+
+With an empty table of handout masters the writer made a default one, and
+gave its writer the folder where the file should go, so the master itself
+was never written, and nor was the relationship from the presentation that
+would have led to it. What it did write stayed: the master's relationships,
+which a part that is not there cannot have, and theme0.xml, which nothing
+refers to. Microsoft's System.IO.Packaging refuses a signature over such a
+relationships part. Nothing is made now.
+---
+ OOXML/Binary/Presentation/PPTXWriter.cpp | 33 ------------------------
+ OOXML/Binary/Presentation/PPTXWriter.h   |  1 -
+ 2 files changed, 34 deletions(-)
+
+diff --git a/OOXML/Binary/Presentation/PPTXWriter.cpp b/OOXML/Binary/Presentation/PPTXWriter.cpp
+index 739d877371..f674beaf6c 100644
+--- a/OOXML/Binary/Presentation/PPTXWriter.cpp
++++ b/OOXML/Binary/Presentation/PPTXWriter.cpp
+@@ -674,11 +674,6 @@ namespace NSBinPptxRW
+ 						m_oReader.m_pRels->SaveRels(pathFileRels.GetPath());
+ 					}
+ 				}
+-				else
+-				{
+-					m_arHandoutMasters_Theme.emplace_back();
+-					CreateDefaultHandoutMasters(m_arHandoutMasters_Theme[0]);
+-				}
+ 			}
+ 	// slides
+ 			int nComment = 1;
+@@ -1336,34 +1331,6 @@ namespace NSBinPptxRW
+ 			oFileRels.WriteStringUTF8(strVal);
+ 			oFileRels.CloseFile();
+ 		}
+-		void CPPTXWriter::CreateDefaultHandoutMasters(int nIndexTheme)
+-		{
+-			std::wstring strThemeNotes = L"theme" + std::to_wstring(nIndexTheme) + L".xml";
+-
+-			OOX::CPath pathNotesTheme = m_oReader.m_strFolderThemes + FILE_SEPARATOR_STR + strThemeNotes;
+-			Writers::DefaultNotesThemeWriter notesTheme;
+-			notesTheme.Write(pathNotesTheme.GetPath());
+-			/////////////////////
+-			OOX::CPath pathHandoutMasters = m_strDstFolder + FILE_SEPARATOR_STR + L"ppt" + FILE_SEPARATOR_STR + L"handoutMasters";
+-			NSDirectory::CreateDirectory(pathHandoutMasters.GetPath());
+-
+-			OOX::CPath pathNotesMaster1 = pathHandoutMasters / L"handoutMaster1.xml";
+-			Writers::DefaultHandoutMasterWriter handoutMaster;
+-			handoutMaster.Write(pathHandoutMasters.GetPath());
+-
+-			OOX::CPath pathHandoutMasterRels = pathHandoutMasters / L"_rels";
+-			NSDirectory::CreateDirectory(pathHandoutMasterRels.GetPath());
+-
+-			std::wstring strThemeHandoutNum = std::to_wstring(nIndexTheme);
+-
+-			std::wstring strVal = L"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\
+-								<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\
+-								<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"../theme/theme" + strThemeHandoutNum + L".xml\"/></Relationships>";
+-			NSFile::CFileBinary oFileRels;
+-			oFileRels.CreateFile(pathHandoutMasterRels.GetPath() + FILE_SEPARATOR_STR + L"handoutMaster1.xml.rels");
+-			oFileRels.WriteStringUTF8(strVal);
+-			oFileRels.CloseFile();
+-		}		
+ 		void CPPTXWriter::CreateDefaultNote()
+ 		{
+ 			PPTX::Logic::NvGrpSpPr& nvGrpSpPr = m_oDefaultNote.cSld.spTree.nvGrpSpPr;
+diff --git a/OOXML/Binary/Presentation/PPTXWriter.h b/OOXML/Binary/Presentation/PPTXWriter.h
+index 506d06b8e2..59e47f620e 100644
+--- a/OOXML/Binary/Presentation/PPTXWriter.h
++++ b/OOXML/Binary/Presentation/PPTXWriter.h
+@@ -98,7 +98,6 @@ namespace NSBinPptxRW
+ 		void CreateDefaultTableStyles();
+ 		void CreateDefaultPresProps();
+ 		void CreateDefaultNotesMasters(int nIndexTheme);
+-		void CreateDefaultHandoutMasters(int nIndexTheme);
+ 		void CreateDefaultNote();
+ 	};
+ }
+-- 
+2.55.0
+

@@ -397,6 +397,15 @@ lint.extend-ignore = [
     "S603", # subprocess call
     "S607", # xdotool and xwininfo, on the PATH of the image the tier runs in
 ]
+# Run by hand, `make check-mac`: osascript and pkill by name, on a Mac's own PATH,
+# and the host's one way of saying everything has been let go.
+"tests/support/mac_checks.py" = [
+    "S404",   # subprocess import
+    "S603",   # subprocess call
+    "S607",   # osascript, pgrep and pkill
+    "SLF001", # app._let_go_of_everything: what the quit path calls
+    "T201",   # it reports by printing
+]
 "tests/d_gui/desktop.py" = [
     "S404",    # as above
     "S603",    # as above
@@ -414,6 +423,12 @@ lint.extend-ignore = [
 ]
 # test_convert.py reads a PDF's text layer with pdftotext, since nothing in
 # the payload or the standard library reads one.
+# What Microsoft makes of a signature is asked of powershell, on Windows's own PATH.
+"tests/b_integration/host/test_signatures_microsoft.py" = [
+    "S404", # subprocess import
+    "S603", # subprocess call
+    "S607", # powershell
+]
 "tests/b_integration/host/test_convert.py" = [
     "S404", # subprocess import
     "S603", # pdftotext found by shutil.which, argv form, no shell

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import struct
+import zipfile
 import zlib
 
 import pytest
@@ -49,6 +50,19 @@ def unpadded(b64: str) -> bytes:
 
 def data_url(picture: bytes) -> str:
     return "data:image/png;base64," + base64.b64encode(picture).decode()
+
+
+def with_relationships_of_no_part(document) -> None:
+    """As every presentation saved here before core 0196 was: see test_convert."""
+    with zipfile.ZipFile(document, "a") as package:
+        package.writestr(
+            "word/_rels/gone.xml.rels",
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/'
+            'relationships"><Relationship Id="rId1" Type="http://schemas.openxml'
+            'formats.org/officeDocument/2006/relationships/theme"'
+            ' Target="theme/theme1.xml"/></Relationships>',
+        )
 
 
 @pytest.fixture
@@ -204,3 +218,19 @@ def test_edits_not_in_the_file_are_saved_before_it_is_signed(
             signing.sign(session, chosen.id, "", ("", ""))
         assert not saving.is_signed(document)
     assert asked == [document]
+
+
+def test_relationships_of_no_part_are_not_signed(session, tmp_path):
+    """A signature over them is one Microsoft's code refuses, so one that goes on
+    a file from before core 0196 has to leave them out (core 0197)."""
+    document = session.read_current_document()
+    with_relationships_of_no_part(document)
+    chosen = signing.choose_certificate(
+        session, make_pkcs12(tmp_path / "keys"), None, PASSPHRASE
+    )
+
+    signing.sign(session, chosen.id, "", ("", ""))
+
+    signature = zipfile.ZipFile(document).read("_xmlsignatures/sig1.xml")
+    assert b"gone.xml" not in signature
+    assert [s["valid"] for s in signing.list_signatures(session)["data"]] == [0]

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from support import ScriptedShell, repo_root
+from support.protected import make_protected
 
 from libera import payload as payload_mod
 from libera.host import apps, hooks, opening, session as sessions
@@ -755,3 +756,20 @@ def test_x2t_reads_every_row_of_a_large_csv(tmp_path, case):
     document.write_text(CUTS[case], encoding="utf-8")
 
     assert rows_x2t_changes(document, tmp_path / "s") == []
+
+
+def test_a_saved_presentation_has_nothing_for_a_handout_master_it_lacks(tmp_path):
+    """x2t wrote one's relationships and its theme, and not the master itself, in
+    every presentation without one: Microsoft's code then refused a signature over
+    them (core 0196), and LibreOffice's never minded."""
+    saved = make_protected(apps.SLIDES, "pptx", tmp_path, password="")
+
+    names = zipfile.ZipFile(saved).namelist()
+
+    owners = {
+        name: name.replace("_rels/", "").removesuffix(".rels")
+        for name in names
+        if name.endswith(".rels") and name != "_rels/.rels"
+    }
+    assert [rels for rels, owner in owners.items() if owner not in names] == []
+    assert "ppt/theme/theme0.xml" not in names
