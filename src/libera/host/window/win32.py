@@ -17,16 +17,16 @@ from __future__ import annotations
 
 import ctypes
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from libera.host import language
+from libera.host.window import portable
 from libera.host.window.portable import (
     Answer,
     Question,
     close_window,
     complete_startup,
     find_key_window,
-    make_window,
     on_quit,
     prepare,
     run_on_gui_thread,
@@ -65,6 +65,52 @@ MB_SETFOREGROUND = 0x10000
 IDOK, IDCANCEL, IDYES, IDNO = 1, 2, 6, 7
 
 GUI: GUIType = "edgechromium"
+
+
+def make_window(
+    title: str, url: str, width: int, height: int, *, tabs: bool
+) -> Window | None:
+    """pywebview's, kept on the screen: it scales the size it is given by the
+    display's and places the window where Windows would next, and neither looks
+    at what fits. At 150% on 1920x1080 the close button was off the screen."""
+    window = portable.make_window(title, url, width, height, tabs=tabs)
+    if window is not None:
+        # On the form's own thread, before it is shown.
+        window.events.before_show += lambda: _keep_on_screen(window.native)
+    return window
+
+
+def _keep_on_screen(form: Any) -> None:
+    if sys.platform == "win32":
+        # Here, because this module is imported on every platform for `make
+        # lint` and the tests, and pywebview has loaded the assembly by now.
+        from System.Windows.Forms import FormStartPosition, Screen
+
+        area = Screen.FromControl(form).WorkingArea
+        bounds = form.Bounds
+        x, y, width, height = fit_on_screen(
+            (bounds.X, bounds.Y, bounds.Width, bounds.Height),
+            (area.X, area.Y, area.Width, area.Height),
+        )
+        # Or showing the form places it again.
+        form.StartPosition = FormStartPosition.Manual
+        form.SetBounds(x, y, width, height)
+
+
+def fit_on_screen(
+    bounds: tuple[int, int, int, int], area: tuple[int, int, int, int]
+) -> tuple[int, int, int, int]:
+    """A window's x, y, width and height, shrunk and then moved only as far as
+    it takes to lie inside the area, which is given the same way."""
+    x, y, width, height = bounds
+    left, top, area_width, area_height = area
+    width, height = min(width, area_width), min(height, area_height)
+    return (
+        max(left, min(x, left + area_width - width)),
+        max(top, min(y, top + area_height - height)),
+        width,
+        height,
+    )
 
 
 def ask(question: Question, parent: Window | None) -> Answer:

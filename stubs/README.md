@@ -22,4 +22,6 @@ to exist as well as `gi/__init__.pyi`: `gi.repository` has no modules on disk,
 and an import of Gtk or GLib runs a finder that builds the namespace from a
 typelib.
 
+`System/` is the same again for Windows: pythonnet's import hook builds .NET's namespaces from the loaded assemblies, so no platform has a file to read.
+
 Not a substitute for real stubs. If pyobjc ever ships them, delete this.

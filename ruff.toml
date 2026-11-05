@@ -262,6 +262,10 @@ lint.extend-ignore = [
     "BLE001",  # a dialog that fails on the GTK thread is raised again on the
                # thread that asked, as macos.py's run_on_gui_thread does
 ]
+# This module is imported on every platform, and .NET's forms exist on one.
+"src/libera/host/window/win32.py" = [
+    "PLC0415", # System.Windows.Forms, where a window is placed
+]
 # The menu package picks its platform's bar in __init__, once, so nothing that
 # uses the package tests the platform again.
 "src/libera/host/menu/__init__.py" = [
