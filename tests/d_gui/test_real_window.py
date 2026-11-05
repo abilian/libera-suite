@@ -14,14 +14,13 @@ the engine any user has.
 
 from __future__ import annotations
 
-import ctypes
 import sys
-from ctypes import wintypes
 from typing import TYPE_CHECKING
 
 import pytest
 
 from .conftest import complaints
+from .desktop import desktop
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -49,42 +48,24 @@ def test_every_document_gets_a_window_of_its_own(
     assert painted[0].read_bytes() != painted[1].read_bytes()
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="the other toolkits place their windows themselves"
+)
 def test_a_window_on_windows_stays_on_the_screen(
     launch: Callable[..., Launch], sample_document: Path
 ) -> None:
-    """Measured on the primary monitor, where this tier's windows open. Means
+    """Measured on the main monitor, where this tier's windows open. Means
     something on a small or scaled display: 1920x1080 at 150% was off it."""
-    if sys.platform == "win32":
-        app = launch(sample_document)
-        app.windows_that_painted(1)
-        user32 = ctypes.windll.user32
-        # As the application is, so that both of these are in physical pixels.
-        user32.SetProcessDPIAware()
-        area = wintypes.RECT()
-        spi_getworkarea = 0x30
-        user32.SystemParametersInfoW(spi_getworkarea, 0, ctypes.byref(area), 0)
-        found: dict[str, wintypes.RECT] = {}
+    app = launch(sample_document)
+    app.windows_that_painted(1)
 
-        def visit(handle: int, _param: int) -> bool:
-            size = user32.GetWindowTextLengthW(handle)
-            text = ctypes.create_unicode_buffer(size + 1)
-            user32.GetWindowTextW(handle, text, size + 1)
-            if user32.IsWindowVisible(handle) and sample_document.name in text.value:
-                rect = wintypes.RECT()
-                user32.GetWindowRect(handle, ctypes.byref(rect))
-                found[text.value] = rect
-            return True
+    area = desktop.work_area()
+    rect = desktop.rect(sample_document.name)
 
-        user32.EnumWindows(
-            ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(visit), 0
-        )
-        (rect,) = found.values()
-        assert area.left <= rect.left
-        assert area.top <= rect.top
-        assert rect.right <= area.right
-        assert rect.bottom <= area.bottom
-    else:
-        pytest.skip("the other toolkits place their windows themselves")
+    assert area.left <= rect.left
+    assert area.top <= rect.top
+    assert rect.right <= area.right
+    assert rect.bottom <= area.bottom
 
 
 def test_the_window_survives_the_documents_it_opened(

@@ -1,5 +1,6 @@
 """A window in the top left corner that offers files to a drag, as a file manager
-does: `text/uri-list`, which is all Thunar offered, measured on 2026-11-04.
+does. On X `text/uri-list`, which is all Thunar offered, measured on 2026-11-04;
+on Windows a file drop, from a WinForms window and not from Explorer.
 
     drag_source.py FILE...
 """
@@ -9,10 +10,10 @@ from __future__ import annotations
 import pathlib
 import sys
 
-import gi
 
+def offer_on_x(names: list[str]) -> None:
+    import gi
 
-def main(names: list[str]) -> None:
     gi.require_version("Gdk", "3.0")
     gi.require_version("Gtk", "3.0")
     from gi.repository import Gdk, Gtk
@@ -37,4 +38,47 @@ def main(names: list[str]) -> None:
     Gtk.main()
 
 
-main(sys.argv[1:])
+def offer_on_windows(names: list[str]) -> None:
+    import clr
+
+    clr.AddReference("System.Windows.Forms")
+    clr.AddReference("System.Drawing")
+    from System import Array, String
+    from System.Drawing import Point, Size
+    from System.Threading import ApartmentState, Thread, ThreadStart
+    from System.Windows.Forms import (
+        Application,
+        DataFormats,
+        DataObject,
+        DragDropEffects,
+        Form,
+        FormBorderStyle,
+        FormStartPosition,
+    )
+
+    paths = Array[String](names)
+
+    def run() -> None:
+        form = Form()
+        form.Text = "drag-source"
+        form.FormBorderStyle = getattr(FormBorderStyle, "None")
+        form.StartPosition = FormStartPosition.Manual
+        form.Location = Point(0, 0)
+        form.Size = Size(150, 150)
+        form.TopMost = True
+        form.MouseDown += lambda _sender, _event: form.DoDragDrop(
+            DataObject(DataFormats.FileDrop, paths), DragDropEffects.Copy
+        )
+        Application.Run(form)
+
+    # DoDragDrop needs a single-threaded apartment, which Python's main thread is not.
+    thread = Thread(ThreadStart(run))
+    thread.SetApartmentState(ApartmentState.STA)
+    thread.Start()
+    thread.Join()
+
+
+if sys.platform == "win32":
+    offer_on_windows(sys.argv[1:])
+else:
+    offer_on_x(sys.argv[1:])

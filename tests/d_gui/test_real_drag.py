@@ -1,4 +1,4 @@
-"""A file dragged from another application onto a real window, on Linux.
+"""A file dragged from another application onto a real window.
 
 `tests/c_e2e/host/test_drop.py` dispatches a drop in the page, because a browser
 cannot drag a file from the desktop, and what it dispatches is what the page
@@ -6,12 +6,16 @@ would have been told. WebKitGTK tells it something else. The first real drag, on
 2026-11-04, typed `file:///...` into the document, whichever the file, and
 opened and inserted nothing; the suite had passed throughout.
 
-So this has one: a window offering the files as a file manager does, and X
-events for the mouse, in steps too big to land twice on one toolbar button. The
-toolbar and the start window need that: a move onto a new element fires only
-dragenter, WebKit answers that position from it, and a release after a "no" is
-no drop at all. A page that accepted on dragover alone passed on the canvas,
-which is one element, and failed there.
+So this has one: a window offering the files as a file manager does, and a real
+mouse, in steps too big to land twice on one toolbar button. The toolbar and the
+start window need that: a move onto a new element fires only dragenter, WebKit
+answers that position from it, and a release after a "no" is no drop at all. A
+page that accepted on dragover alone passed on the canvas, which is one element,
+and failed there.
+
+On Linux under Xvfb, by `lb linux gui-test`, and on Windows in the desktop session,
+by `lb app windows-gui-test`, where the screen has to be unlocked. macOS has
+neither.
 """
 
 from __future__ import annotations
@@ -26,46 +30,29 @@ from typing import TYPE_CHECKING
 import pytest
 from support.make_sample_docx import solid_png
 
+from .desktop import desktop
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
     from .conftest import Launch
 
-pytestmark = pytest.mark.skipif(
-    not (sys.platform.startswith("linux") and shutil.which("xdotool")),
-    reason="a real drag needs X and xdotool: `lb linux gui-test`",
-)
+WHY_NOT = desktop.why_no_drag()
+pytestmark = pytest.mark.skipif(WHY_NOT is not None, reason=WHY_NOT or "")
 
 SOURCE = pathlib.Path(__file__).parent / "drag_source.py"
 # The middle of the source window, which is at the top left of the screen.
 GRAB = (75, 75)
-# Above the middle of the screen by this much is the editor's toolbar: the
-# window is 900 tall and centred, measured on 1000 and 1100 tall screens.
-TOOLBAR_ABOVE_MIDDLE = 320
-
-
-def xdotool(*args: object) -> str:
-    return subprocess.run(
-        ["xdotool", *map(str, args)], capture_output=True, text=True, check=True
-    ).stdout
-
-
-def middle_of_screen() -> tuple[int, int]:
-    width, height = xdotool("getdisplaygeometry").split()
-    return int(width) // 2, int(height) // 2
-
-
-def window_names() -> list[str]:
-    tree = subprocess.run(
-        ["xwininfo", "-root", "-tree"], capture_output=True, text=True, check=True
-    ).stdout
-    return [line.split('"')[1] for line in tree.splitlines() if line.count('"') >= 2]
+# What every window of the application has in its title.
+APPLICATION = "Libera"
 
 
 def wait_for_window(name: str) -> None:
     deadline = time.monotonic() + 30
-    while not any(name in found for found in window_names()):
-        assert time.monotonic() < deadline, f"no window {name}: {window_names()}"
+    while not any(name in found for found in desktop.window_names()):
+        assert time.monotonic() < deadline, (
+            f"no window {name}: {desktop.window_names()}"
+        )
         time.sleep(0.2)
 
 
@@ -79,20 +66,20 @@ def drag() -> Iterator[Callable[..., None]]:
             subprocess.Popen([sys.executable, str(SOURCE), *map(str, files)])
         )
         wait_for_window("drag-source")
-        time.sleep(1)  # Mapped is not yet ready to be grabbed.
-        xdotool("mousemove", *GRAB)
+        time.sleep(1.5)  # Mapped is not yet ready to be grabbed.
+        desktop.move(*GRAB)
         time.sleep(0.3)
-        xdotool("mousedown", 1)
+        desktop.press()
         time.sleep(0.3)
         x, y = to
         for step in range(1, 21):
-            xdotool(
-                "mousemove",
+            desktop.move(
                 GRAB[0] + (x - GRAB[0]) * step // 20,
                 GRAB[1] + (y - GRAB[1]) * step // 20,
             )
             time.sleep(0.1)
-        xdotool("mouseup", 1)
+        time.sleep(0.5)  # The target answers the last position before the release.
+        desktop.release()
 
     yield run
 
@@ -111,7 +98,11 @@ def document_to_drop(tmp_path: pathlib.Path, sample_document: pathlib.Path):
 
 
 def edited_windows() -> list[str]:
-    return [name for name in window_names() if name.startswith("*")]
+    return [
+        name
+        for name in desktop.window_names()
+        if name.startswith("*") and APPLICATION in name
+    ]
 
 
 def test_a_picture_dropped_on_the_page_is_inserted(
@@ -126,7 +117,7 @@ def test_a_picture_dropped_on_the_page_is_inserted(
     app = launch(sample_document)
     app.windows_that_painted(1)
 
-    drag(middle_of_screen(), picture)
+    drag(desktop.page_middle(sample_document.name), picture)
 
     deadline = time.monotonic() + 20
     media = tmp_path / "home"
@@ -145,11 +136,11 @@ def test_a_document_dropped_on_the_page_opens_and_leaves_this_one_alone(
     app = launch(sample_document)
     app.windows_that_painted(1)
 
-    drag(middle_of_screen(), document_to_drop)
+    drag(desktop.page_middle(sample_document.name), document_to_drop)
 
     app.windows_that_painted(2)
-    assert any(document_to_drop.name in name for name in window_names()), (
-        f"{window_names()}\n{app.said()}"
+    assert any(document_to_drop.name in name for name in desktop.window_names()), (
+        f"{desktop.window_names()}\n{app.said()}"
     )
     assert edited_windows() == [], "the drop went into the document"
 
@@ -163,8 +154,7 @@ def test_a_document_dropped_on_the_toolbar_opens(
     app = launch(sample_document)
     app.windows_that_painted(1)
 
-    x, y = middle_of_screen()
-    drag((x, y - TOOLBAR_ABOVE_MIDDLE), document_to_drop)
+    drag(desktop.toolbar(sample_document.name), document_to_drop)
 
     app.windows_that_painted(2)
     assert edited_windows() == [], "the drop went into the document"
@@ -176,12 +166,12 @@ def test_a_document_dropped_on_the_start_window_opens(
     drag: Callable[..., None],
 ) -> None:
     app = launch()
-    wait_for_window("Libera")
+    wait_for_window(APPLICATION)
     time.sleep(3)  # The window is mapped; its page has to have loaded.
 
-    drag(middle_of_screen(), document_to_drop)
+    drag(desktop.page_middle(APPLICATION), document_to_drop)
 
     app.windows_that_painted(1)
-    assert any(document_to_drop.name in name for name in window_names()), (
-        f"{window_names()}\n{app.said()}"
+    assert any(document_to_drop.name in name for name in desktop.window_names()), (
+        f"{desktop.window_names()}\n{app.said()}"
     )

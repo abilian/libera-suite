@@ -397,6 +397,12 @@ lint.extend-ignore = [
     "S603", # subprocess call
     "S607", # xdotool and xwininfo, on the PATH of the image the tier runs in
 ]
+"tests/d_gui/desktop.py" = [
+    "S404",    # as above
+    "S603",    # as above
+    "S607",    # as above
+    "PLR6301", # the two desktops answer the same calls, and X keeps no state
+]
 # test_gui_prereq.py runs this interpreter against a script gui.py generated,
 # to check that the probe and the in-process check ask the same question. That
 # is the comparison that was missing when the two disagreed, and it can only be

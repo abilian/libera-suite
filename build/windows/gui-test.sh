@@ -9,8 +9,9 @@
 # and the tier skips itself. A scheduled task with /it runs in the session
 # this user is logged on to instead, at the console or over Remote Desktop,
 # which therefore has to be there and active. This writes the task, runs it,
-# waits for it, and hands back pytest's output and status.
-# Measured on the Windows builder on 2026-10-19: 3 passed in 28 s.
+# waits for it, and hands back pytest's output and status. The real drags also
+# need the screen unlocked, and skip, saying so, while it is locked.
+# Measured on the Windows builder on 2026-11-05: 8 passed in 114 s.
 set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -22,7 +23,7 @@ REPO="$(cd "$BUILD/.." && pwd)"
 
 PAYLOAD_DIR="${LIBERA_PAYLOAD:-$OUT/payload}"
 [ -d "$PAYLOAD_DIR" ] || { echo "FATAL: no payload at $PAYLOAD_DIR -- lb payload all" >&2; exit 1; }
-# Fifteen minutes: three tests take half a minute, a cold payload two.
+# Fifteen minutes: the tier takes two, a cold payload two more.
 BUDGET="${GUI_TEST_BUDGET:-900}"
 TASK="libera-gui-test"
 WORK="$OUT/gui-test"
