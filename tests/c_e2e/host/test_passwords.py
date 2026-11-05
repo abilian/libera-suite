@@ -76,6 +76,21 @@ def test_a_document_word_encrypted_opens_and_saves_protected(editor_with, tmp_pa
     assert MARK[1:].encode("utf-16-le") in text
 
 
+def test_declining_the_password_closes_the_window(editor_with, tmp_path, monkeypatch):
+    closed = []
+    monkeypatch.setattr(hooks.shell, "close_window", closed.append)
+    protected = make_protected(apps.WORDS, "docx", tmp_path / "made")
+
+    editor = editor_with([], document=protected, ready=False)
+    frame = editor.page.frame_locator("iframe")
+    frame.locator("input[type=password]").wait_for(timeout=180_000)
+    with editor.answered("close"):
+        frame.locator("button[result=cancel]:visible").click()
+
+    assert len(closed) == 1
+    assert editor.report()["errors"] == []
+
+
 NEW = "zqx-New-Pass-9"
 
 

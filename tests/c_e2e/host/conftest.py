@@ -246,6 +246,7 @@ def editor_with(tmp_path, sample_document, monkeypatch):
         fonts: Path | None = None,
         init_script: str | None = None,
         password: str | tuple[str, ...] | None = None,
+        ready: bool = True,
     ) -> Editor:
         document = document or sample_document
         httpd, port, opened = _open(owned, document, locked_by, fonts)
@@ -277,7 +278,8 @@ def editor_with(tmp_path, sample_document, monkeypatch):
             editor.give_password(
                 *((password,) if isinstance(password, str) else password)
             )
-        editor.wait_until_ready()
+        if ready:
+            editor.wait_until_ready()
         return editor
 
     yield open_editor

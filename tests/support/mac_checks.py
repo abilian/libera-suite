@@ -1,7 +1,7 @@
 """The Mac's hand checks: real windows, in the engine that ships here, and Word.
 
     make check-mac                 all of it, about five minutes
-    make check-mac ONLY=word       one of: document, pdf, signature, word
+    make check-mac ONLY=word       one of: document, declined, pdf, signature, word
 
 Not in any test tier, because it takes over the screen: each step opens a real
 window, and the Word steps start Word, which the first run has macOS ask leave for.
@@ -123,6 +123,17 @@ class Page:
             )
         )
         self.wait(inner(f"!{PASSWORD_FIELD}"), "answer to the password")
+
+    def decline_password(self) -> None:
+        """The dialog's "Close file": the window goes, with nothing to answer."""
+        self.wait(inner(f"!!{PASSWORD_FIELD}"), "password dialog")
+        self.js(
+            inner(
+                "(() => { [...d.querySelectorAll('button[result=cancel]')]"
+                ".find((b) => b.offsetParent).click(); return true; })()"
+            )
+        )
+        assert self.window.events.closed.wait(20), "the window stayed open"
 
     def open_with(self, passwords: list[str]) -> None:
         """Until the document is ready, answering each password it must ask for:
@@ -327,6 +338,9 @@ def run_window(plan: dict) -> None:
             assert time.monotonic() < deadline, "no window"
             time.sleep(0.1)
         page = Page(webview.windows[0])
+        if plan["decline"]:
+            page.decline_password()
+            return
         page.open_with(plan["passwords"])
         if document.suffix == ".pdf" and plan["passwords"]:
             session = next(iter(sessions.SESSIONS.values()))
@@ -369,6 +383,7 @@ class Run:
         passwords: tuple[str, ...] = (),
         steps: tuple[tuple[str, str], ...] = (),
         key: pathlib.Path | None = None,
+        decline: bool = False,
     ) -> None:
         """Open a real window on `document`, answer its passwords, do the steps."""
         self.windows += 1
@@ -383,6 +398,7 @@ class Run:
             "result": str(result),
             "home": str(home),
             "key": str(key) if key else "",
+            "decline": decline,
         }
         log = here / "libera.log"
         with log.open("wb") as output:
@@ -419,6 +435,14 @@ def check_document(run: Run) -> None:
     run.window(plain, passwords=(CHANGED,), steps=(("unprotect", ""),))
     assert not is_encrypted(plain), "the password stayed"
     run.window(plain)
+
+
+def check_declined(run: Run) -> None:
+    from libera.host import apps
+    from support.protected import make_protected
+
+    protected = make_protected(apps.WORDS, "docx", run.work / "document")
+    run.window(protected, decline=True)
 
 
 def check_pdf(run: Run) -> None:
@@ -609,6 +633,7 @@ class NotHereError(Exception):
 
 CHECKS: dict[str, tuple[str, Callable[[Run], None]]] = {
     "document": ("File > Protect on a .docx: add, change, remove", check_document),
+    "declined": ("Close file on a password dialog closes the window", check_declined),
     "pdf": ("File > Protect on a PDF: change, remove, add", check_pdf),
     "signature": ("Sign a .docx, see the signature, remove it", check_signature),
     "word": ("Word and Libera read each other's protected files", check_word),
