@@ -17,7 +17,8 @@ window, the engine, the bridge and the host are the real ones. Three things are 
   the file answered for it (`choose_open_path`): a script cannot pick a file in one.
 - Text is entered through the editor's API, not typed, and a Save or File > Protect
   called as the menu item calls it.
-- Whether Word calls a signature valid. Word's scripting has no signatures at all.
+- Whether Word calls a signature valid: its scripting on a Mac has no signatures.
+  Office on Windows answers, in tests/d_gui/test_office_signatures.py.
 """
 
 from __future__ import annotations
@@ -616,8 +617,6 @@ CHECKS: dict[str, tuple[str, Callable[[Run], None]]] = {
 BY_HAND = """
 Still by hand:
   - picking a file in the signature panel's dialog, which this only opens and cancels;
-  - whether Word calls a signature valid: Word's scripting has no signatures.
-    Microsoft's own code checks them on Windows (test_signatures_microsoft.py).
 """
 
 

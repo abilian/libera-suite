@@ -423,6 +423,12 @@ lint.extend-ignore = [
 ]
 # test_convert.py reads a PDF's text layer with pdftotext, since nothing in
 # the payload or the standard library reads one.
+# What Office makes of a signature is asked of powershell, on Windows's own PATH.
+"tests/d_gui/test_office_signatures.py" = [
+    "S404", # subprocess import
+    "S603", # subprocess call
+    "S607", # powershell, tasklist and taskkill
+]
 # What Microsoft makes of a signature is asked of powershell, on Windows's own PATH.
 "tests/b_integration/host/test_signatures_microsoft.py" = [
     "S404", # subprocess import
