@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from libera.manifest import Manifest
 from libera_build import repo, versions
 from libera_build.hosts import facts_from, remote_path
+from libera_build.origin import publish
 from libera_build.release import plan
 from libera_build.report import problems, say, step
 
@@ -28,6 +29,7 @@ def run(ctx: Context) -> None:
     found += plan.token_problems(
         ctx.phases, have_token=bool(os.environ.get("CDN_TOKEN"))
     )
+    found += plan.signing_problems(ctx.phases, have_key=publish.signing_key_here())
 
     head = repo.head(ctx.root)
     say(

@@ -56,6 +56,16 @@ flatpak run eu.liberasuite.Libera
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 ```
 
+À partir de la version 0.7.0, chaque paquet a sa signature à côté de lui : vous pouvez vérifier, avant de l'installer, qu'il s'agit bien du nôtre. Dans le même dossier, avec `ver` et `arch` définis comme ci-dessus :
+
+```sh
+curl -fLO "https://cdn.abilian.com/libera/bundles/libera-$ver-$arch.flatpak.asc"
+curl -fsSL https://keys.openpgp.org/vks/v1/by-fingerprint/E1B31B9935BEDA0C53D21A1DD35A9ACA9BE0C732 | gpg --import
+gpg --verify "libera-$ver-$arch.flatpak.asc" "libera-$ver-$arch.flatpak"
+```
+
+GnuPG doit afficher `Bonne signature de « Libera Suite release signing <releases@liberasuite.eu> »` (`Good signature from` en anglais), et l'empreinte de la clé principale doit être `E1B3 1B99 35BE DA0C 53D2 1A1D D35A 9ACA 9BE0 C732`. Son avertissement sur une clé non certifiée signifie seulement que vous n'avez pas déclaré à GnuPG votre confiance en cette clé. Le script d'installation ne fait pas cette vérification.
+
 ## Les composants {#the-editors}
 
 Tous les canaux installent les composants avec l'application. L'installateur Windows et le Flatpak les contiennent. Avec pip, pipx ou uv, ce sont deux paquets Python dont `libera` a besoin : `libera-core`, le moteur de documents, compilé pour chaque plateforme, et `libera-web`, les composants d'édition et les polices. Ils représentent ensemble environ 90 Mo à télécharger. Le premier lancement construit ensuite, en quelques instants, l'index des polices de votre machine.

@@ -6,6 +6,10 @@ Two versions move here and they move independently. The **application** is this 
 
 ## [Unreleased]
 
+### Added
+
+- **The Flatpak bundles are signed.** Each has an OpenPGP signature beside it, and the page on other ways to install says how to check one before installing it.
+
 ### Fixed
 
 - **The converter no longer writes pieces of its own memory into the files it makes.** Opening a spreadsheet or a diagram, or a document with an embedded workbook, could leave up to 600 bytes of whatever the converter held in memory in the working file, sometimes raw XML from the document itself, and the same document gave different bytes from one conversion to the next. That space is now cleared. A spreadsheet colour written with other than eight digits could also carry memory; it is now opaque, or black when its length makes no sense.

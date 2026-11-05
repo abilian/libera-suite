@@ -30,6 +30,7 @@ CONTENT_TYPES = (
     (".sh", "text/plain; charset=utf-8"),
     (".ps1", "text/plain; charset=utf-8"),
     (".sha256", "text/plain; charset=utf-8"),
+    (".asc", "text/plain; charset=utf-8"),
     (".flatpak", "application/vnd.flatpak"),
     (".exe", "application/vnd.microsoft.portable-executable"),
 )

@@ -56,6 +56,16 @@ flatpak run eu.liberasuite.Libera
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 ```
 
+From version 0.7.0 each bundle has a signature beside it, so you can check that it is ours before you install it. In the same folder, with `ver` and `arch` set as above:
+
+```sh
+curl -fLO "https://cdn.abilian.com/libera/bundles/libera-$ver-$arch.flatpak.asc"
+curl -fsSL https://keys.openpgp.org/vks/v1/by-fingerprint/E1B31B9935BEDA0C53D21A1DD35A9ACA9BE0C732 | gpg --import
+gpg --verify "libera-$ver-$arch.flatpak.asc" "libera-$ver-$arch.flatpak"
+```
+
+GnuPG must say `Good signature from "Libera Suite release signing <releases@liberasuite.eu>"`, and the primary key fingerprint it prints must be `E1B3 1B99 35BE DA0C 53D2 1A1D D35A 9ACA 9BE0 C732`. Its warning that the key is not certified only means that you have not told GnuPG to trust this key yourself. The install script does not make this check.
+
 ## The components {#the-editors}
 
 Every channel installs the components with the application. The Windows installer and the Flatpak contain them. With pip, pipx or uv they are two Python packages that `libera` requires: `libera-core`, the document engine, built for each platform, and `libera-web`, the editing components and the fonts. Together they are about 90 MB to download. The first run then builds a font index for your machine, which takes a moment.

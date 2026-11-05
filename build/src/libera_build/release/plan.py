@@ -80,6 +80,14 @@ def token_problems(phases: Sequence[str], *, have_token: bool) -> list[str]:
     return []
 
 
+def signing_problems(phases: Sequence[str], *, have_key: bool) -> list[str]:
+    """`publish` signs the bundles after PyPI has taken the packages, which has
+    no undo: a key missing here is found before any of that."""
+    if "publish" in phases and not have_key:
+        return ["publish signs the bundles, and gpg has no release key here"]
+    return []
+
+
 def dirty_problems(
     phases: Sequence[str], *, dirty: int, allow_dirty: bool
 ) -> list[str]:

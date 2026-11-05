@@ -44,6 +44,12 @@ def test_uploading_wants_a_token():
     assert not plan.token_problems(["build"], have_token=False)
 
 
+def test_publishing_wants_the_signing_key():
+    assert plan.signing_problems(["publish"], have_key=False)
+    assert not plan.signing_problems(["publish"], have_key=True)
+    assert not plan.signing_problems(["push"], have_key=False)
+
+
 def test_a_dirty_tree_stops_only_what_stamps_the_manifest():
     assert not plan.dirty_problems(["build"], dirty=3, allow_dirty=False)
     assert plan.dirty_problems(["collect"], dirty=3, allow_dirty=False)

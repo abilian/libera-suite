@@ -43,6 +43,7 @@ def test_the_zone_root_has_no_empty_directory():
         ("core-linux-arm64.tar.gz", "application/gzip"),
         ("manifest.json", "application/json"),
         ("install.sh", "text/plain; charset=utf-8"),
+        ("libera-0.3.3-amd64.flatpak.asc", "text/plain; charset=utf-8"),
         ("latest-windows", "text/plain; charset=utf-8"),
         ("libera-0.3.3-amd64.flatpak", "application/vnd.flatpak"),
         ("Libera-Suite-Setup.exe", "application/vnd.microsoft.portable-executable"),

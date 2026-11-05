@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import http.server
 import json
+import shutil
 import subprocess
+import sys
+import tempfile
 import threading
 from dataclasses import replace
 from typing import TYPE_CHECKING
@@ -106,6 +109,110 @@ def release(tmp_path) -> Path:
 
 def dist_of(root: Path) -> Path:
     return root.parent / "dist"
+
+
+def gpg(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            "gpg",
+            "--batch",
+            "--yes",
+            "--passphrase",
+            "",
+            "--pinentry-mode",
+            "loopback",
+            *args,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+@pytest.fixture
+def signing_key(monkeypatch):
+    """A key of its own, in a keyring of its own, the shape of the real one: a
+    primary that only certifies and a subkey that signs. Not under tmp_path,
+    whose length on a Mac is past what gpg-agent's socket can take."""
+    if shutil.which("gpg") is None or sys.platform == "win32":
+        pytest.skip("the machine that publishes has gpg, and is not Windows")
+    with tempfile.TemporaryDirectory(prefix="lb-gpg-") as home:
+        monkeypatch.setenv("GNUPGHOME", home)
+        gpg("--quick-generate-key", "Test <t@example.org>", "ed25519", "cert", "never")
+        rows = gpg("--list-keys", "--with-colons").stdout.splitlines()
+        primary = next(r.split(":")[9] for r in rows if r.startswith("fpr:"))
+        gpg("--quick-add-key", primary, "ed25519", "sign", "never")
+        monkeypatch.setattr(publish, "SIGNING_KEY", primary)
+        yield primary
+        subprocess.run(["gpgconf", "--kill", "gpg-agent"], check=False)
+
+
+@pytest.fixture
+def checkout(tmp_path) -> Path:
+    """A checkout at 0.4.0 with an amd64 bundle and the two install scripts."""
+    root = tmp_path / "root"
+    (root / "build" / "install").mkdir(parents=True)
+    for script in ("install.sh", "install.ps1"):
+        (root / "build" / "install" / script).write_text("# installs\n")
+    (root / "pyproject.toml").write_text('[project]\nversion = "0.4.0"\n')
+    bundles = root / "build" / "out" / "bundles"
+    bundles.mkdir(parents=True)
+    setup = bundles / "Libera-Suite-Setup-0.4.0.exe"
+    setup.write_bytes(b"MZ" * 100)
+    (bundles / f"{setup.name}.sha256").write_text(
+        f"{manifest.hash_file(setup)}  {setup.name}\n"
+    )
+    (bundles / "libera-0.4.0-amd64.flatpak").write_bytes(b"flatpak" * 100)
+    return root
+
+
+def test_a_bundle_goes_up_with_a_signature_only_of_it(
+    cdn, checkout, signing_key, monkeypatch
+):
+    origin, _, store = cdn
+    monkeypatch.setenv("CDN_TOKEN", "t")
+    publish.extras(checkout, origin, dry=False)
+    up = store / "bundles" / "libera-0.4.0-amd64.flatpak"
+    signature = f"{up}.asc"
+    done = gpg("--status-fd", "1", "--verify", signature, str(up))
+    assert f" {signing_key}\n" in done.stdout, done.stderr
+    up.write_bytes(b"flatpak" * 99 + b"flatpaK")
+    assert gpg("--verify", signature, str(up)).returncode != 0
+
+
+def test_no_key_here_sends_nothing(cdn, checkout, signing_key, monkeypatch):
+    origin, _, store = cdn
+    monkeypatch.setenv("CDN_TOKEN", "t")
+    monkeypatch.setattr(publish, "SIGNING_KEY", "0" * 40)
+    with pytest.raises(RefusedError, match="no secret key"):
+        publish.extras(checkout, origin, dry=False)
+    assert not list(store.iterdir())
+
+
+def test_a_signature_that_is_not_made_sends_nothing(
+    cdn, checkout, signing_key, monkeypatch
+):
+    """The primary is here and the subkey that signs is not, so gpg lists the
+    key and then cannot sign."""
+    origin, _, store = cdn
+    monkeypatch.setenv("CDN_TOKEN", "t")
+    rows = gpg("--list-secret-keys", "--with-colons").stdout.splitlines()
+    subkey = [r.split(":")[9] for r in rows if r.startswith("fpr:")][1]
+    assert gpg("--delete-secret-keys", f"{subkey}!").returncode == 0
+    with pytest.raises(RefusedError, match="no good signature"):
+        publish.extras(checkout, origin, dry=False)
+    assert not list(store.iterdir())
+
+
+def test_a_dry_run_signs_nothing(cdn, checkout, monkeypatch, capsys):
+    """No passphrase asked for a run that sends nothing."""
+    origin, _, store = cdn
+    monkeypatch.delenv("CDN_TOKEN", raising=False)
+    publish.extras(checkout, origin, dry=True)
+    assert "would PUT bundles/libera-0.4.0-amd64.flatpak" in capsys.readouterr().out
+    bundles = checkout / "build" / "out" / "bundles"
+    assert not list(bundles.glob("*.asc"))
+    assert not list(store.iterdir())
 
 
 def test_what_push_uploads_check_reads_back(cdn, release, monkeypatch, capsys):
@@ -228,6 +335,9 @@ def test_a_pre_release_goes_up_under_its_own_names_and_moves_nothing(
     pre-release that moved one would stop every curl | sh."""
     origin, _, store = cdn
     monkeypatch.setenv("CDN_TOKEN", "t")
+    monkeypatch.setattr(
+        publish, "sign", lambda b: publish.signature_of(b).write_text("signed")
+    )
     root = tmp_path / "root"
     (root / "build" / "install").mkdir(parents=True)
     (root / "pyproject.toml").write_text('[project]\nversion = "0.4.0rc1"\n')
@@ -245,6 +355,7 @@ def test_a_pre_release_goes_up_under_its_own_names_and_moves_nothing(
         "Libera-Suite-Setup-0.4.0rc1.exe",
         "Libera-Suite-Setup-0.4.0rc1.exe.sha256",
         "libera-0.4.0rc1-amd64.flatpak",
+        "libera-0.4.0rc1-amd64.flatpak.asc",
     ]
     assert not (store / "install.sh").exists()
     assert not (store / "install.ps1").exists()

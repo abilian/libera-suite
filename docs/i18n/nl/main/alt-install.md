@@ -56,6 +56,16 @@ flatpak run eu.liberasuite.Libera
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 ```
 
+Vanaf versie 0.7.0 staat naast elke bundel zijn handtekening, zodat je vóór het installeren kunt controleren dat het echt de onze is. In dezelfde map, met `ver` en `arch` ingesteld zoals hierboven:
+
+```sh
+curl -fLO "https://cdn.abilian.com/libera/bundles/libera-$ver-$arch.flatpak.asc"
+curl -fsSL https://keys.openpgp.org/vks/v1/by-fingerprint/E1B31B9935BEDA0C53D21A1DD35A9ACA9BE0C732 | gpg --import
+gpg --verify "libera-$ver-$arch.flatpak.asc" "libera-$ver-$arch.flatpak"
+```
+
+GnuPG moet `Goede handtekening van "Libera Suite release signing <releases@liberasuite.eu>"` melden (in het Engels `Good signature from`), en de vingerafdruk van de hoofdsleutel die het toont moet `E1B3 1B99 35BE DA0C 53D2 1A1D D35A 9ACA 9BE0 C732` zijn. De waarschuwing dat de sleutel niet gecertificeerd is, betekent alleen dat je GnuPG niet zelf hebt gezegd deze sleutel te vertrouwen. Het installatiescript doet deze controle niet.
+
 ## De componenten {#the-editors}
 
 Elk kanaal installeert de componenten samen met de applicatie. Het Windows-installatieprogramma en de Flatpak bevatten ze. Met pip, pipx of uv zijn het twee Python-pakketten die `libera` vereist: `libera-core`, de documentengine, gebouwd voor elk platform, en `libera-web`, de bewerkingscomponenten en de lettertypen. Samen zijn ze ongeveer 90 MB om te downloaden. Bij de eerste start wordt daarna een lettertype-index voor je computer gebouwd, wat even duurt.

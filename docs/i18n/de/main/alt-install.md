@@ -56,6 +56,16 @@ flatpak run eu.liberasuite.Libera
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 ```
 
+Ab Version 0.7.0 liegt neben jedem Paket seine Signatur, sodass Sie vor der Installation prüfen können, dass es von uns stammt. Im selben Ordner, mit `ver` und `arch` wie oben gesetzt:
+
+```sh
+curl -fLO "https://cdn.abilian.com/libera/bundles/libera-$ver-$arch.flatpak.asc"
+curl -fsSL https://keys.openpgp.org/vks/v1/by-fingerprint/E1B31B9935BEDA0C53D21A1DD35A9ACA9BE0C732 | gpg --import
+gpg --verify "libera-$ver-$arch.flatpak.asc" "libera-$ver-$arch.flatpak"
+```
+
+GnuPG muss `Korrekte Signatur von "Libera Suite release signing <releases@liberasuite.eu>"` melden (auf Englisch `Good signature from`), und der angezeigte Fingerabdruck des Hauptschlüssels muss `E1B3 1B99 35BE DA0C 53D2 1A1D D35A 9ACA 9BE0 C732` sein. Die Warnung, der Schlüssel sei nicht zertifiziert, bedeutet nur, dass Sie GnuPG nicht selbst gesagt haben, diesem Schlüssel zu vertrauen. Das Installationsskript führt diese Prüfung nicht durch.
+
 ## Die Komponenten {#the-editors}
 
 Jeder Kanal installiert die Komponenten mit der Anwendung. Das Windows-Installationsprogramm und das Flatpak enthalten sie. Mit pip, pipx oder uv sind sie zwei Python-Pakete, die `libera` voraussetzt: `libera-core`, die Dokument-Engine, für jede Plattform gebaut, und `libera-web`, die Bearbeitungskomponenten und die Schriften. Zusammen sind etwa 90 MB herunterzuladen. Beim ersten Start wird dann der Schriftenindex für Ihren Rechner erstellt, was einen Moment dauert.

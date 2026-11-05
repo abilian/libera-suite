@@ -11,6 +11,9 @@ move every release.
 from __future__ import annotations
 
 import os
+import re
+import shutil
+import subprocess
 import tempfile
 import urllib.error
 import urllib.request
@@ -27,6 +30,9 @@ if TYPE_CHECKING:
     from libera_build.origin.place import Origin
 
 ARCHES = ("amd64", "arm64")
+# The release key, as the install pages print it. Its primary key only certifies,
+# so gpg signs with the signing subkey, and a signature still names this one.
+SIGNING_KEY = "E1B31B9935BEDA0C53D21A1DD35A9ACA9BE0C732"
 
 
 def upload_order(manifest: Manifest) -> list[str]:
@@ -176,6 +182,84 @@ def windows_ready(origin: Origin) -> str | None:
         )
 
 
+def signing_key_here() -> bool:
+    gpg = shutil.which("gpg")
+    return (
+        gpg is not None
+        and subprocess.run(
+            [gpg, "--list-secret-keys", SIGNING_KEY], capture_output=True, check=False
+        ).returncode
+        == 0
+    )
+
+
+def signature_of(bundle: Path) -> Path:
+    return bundle.with_name(f"{bundle.name}.asc")
+
+
+def sign(bundle: Path) -> None:
+    """A detached signature beside `bundle`, made on the machine that publishes:
+    that is where the key is, and where someone can answer its passphrase. A
+    builder's job is detached, with nobody to ask."""
+    if not signing_key_here():
+        msg = f"gpg has no secret key {SIGNING_KEY} here, and a bundle goes up signed"
+        raise RefusedError(msg)
+    signature = signature_of(bundle)
+    subprocess.run(
+        [
+            "gpg",
+            "--yes",
+            "--armor",
+            "--local-user",
+            SIGNING_KEY,
+            "--output",
+            str(signature),
+            "--detach-sign",
+            str(bundle),
+        ],
+        check=False,
+    )
+    checked = subprocess.run(
+        ["gpg", "--status-fd", "1", "--verify", str(signature), str(bundle)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if not re.search(
+        rf"^\[GNUPG:\] VALIDSIG .* {SIGNING_KEY}$", checked.stdout, re.MULTILINE
+    ):
+        msg = f"gpg made no good signature of {bundle.name}\n{checked.stderr}"
+        raise RefusedError(msg)
+
+
+def put_bundles(
+    origin: Origin, bundles: Path, app: str, *, token: str | None, dry: bool
+) -> None:
+    """The Flatpak bundles and their signatures. Optional: an arm64 builder short
+    of disk is a normal state of the world, and should not stop install.sh going
+    out."""
+    made = {arch: bundles / bundle_name(app, arch) for arch in ARCHES}
+    here = [bundle for bundle in made.values() if bundle.is_file()]
+    # All signed first: a passphrase not given then leaves the origin as it was.
+    if not dry:
+        for bundle in here:
+            sign(bundle)
+    for arch, bundle in made.items():
+        if bundle not in here:
+            say(f"    no bundle for {arch} ({bundle})")
+            continue
+        put(origin, bundle, key_for("bundles", bundle.name), token=token, dry=dry)
+        if not dry:
+            signature = signature_of(bundle)
+            put(
+                origin,
+                signature,
+                key_for("bundles", signature.name),
+                token=token,
+                dry=dry,
+            )
+
+
 def extras(root: Path, origin: Origin, *, dry: bool) -> None:
     """The bundles, the Windows installer if it is here, install.sh and
     install.ps1, then `latest`, which moves both install scripts."""
@@ -190,14 +274,7 @@ def extras(root: Path, origin: Origin, *, dry: bool) -> None:
     # a pre-release puts up no install script, so it needs neither.
     if not pre and setup is None and (problem := windows_ready(origin)):
         raise RefusedError(problem)
-    # The bundles are optional: an arm64 builder short of disk is a normal
-    # state of the world, and should not stop install.sh going out.
-    for arch in ARCHES:
-        bundle = bundles / bundle_name(app, arch)
-        if bundle.is_file():
-            put(origin, bundle, key_for("bundles", bundle.name), token=token, dry=dry)
-        else:
-            say(f"    no bundle for {arch} ({bundle})")
+    put_bundles(origin, bundles, app, token=token, dry=dry)
     if setup:
         put_windows(origin, setup, app, token=token, dry=dry)
     else:
