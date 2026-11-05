@@ -5,6 +5,7 @@ Everything except the native window is automated, and one checkout drives all of
 ```sh
 make verify                        # locally: lint, 1027 tests, docs, patch queue, converter
 make test-gui                      # the application in a real window, here
+make check-mac                     # the Mac's hand checks, in real windows and Word; takes over the screen
 lb linux test                      # the same suite, in the Linux test container
 lb linux gui-test                  # the real window too, under Xvfb
 lb on linux-x86_64 linux gui-test  # the real window, on the x86_64 builder
@@ -22,6 +23,8 @@ lb on windows-x86_64 app windows-gui-test   # and in WebView2, on the Windows bu
 **Linux** has the most automation, because all of it fits in a container. `lb linux test` mounts a payload, installs Chromium and runs `pytest` inside the image, so the integration and end-to-end tiers run there exactly as they do natively. `lb linux gui` goes further and opens a real GTK window under Xvfb, screenshots it and counts the colours in the image: under two dozen means the window came up empty, which is how a WebKit that refuses to paint presents itself. `lb linux dialog` answers the GTK question the host asks before overwriting a file. Both arches are real machines (`build/builders.toml`), and `lb on PLATFORM COMMAND…` runs any of this on either one, against the commit the calling checkout sits at.
 
 **macOS** runs the whole suite natively, under `make verify`. Its window layer is AppKit through pywebview, which nothing headless drives, so the menu bar, the file dialogs and printing are checked by opening the application.
+
+`make check-mac` (`tests/support/mac_checks.py`, `ONLY=document`, `pdf`, `signature` or `word` for one group) is in no test tier, because it takes over the screen for about five minutes. It runs the application in real windows, in WKWebView, which Playwright cannot drive on macOS 14, and drives each page from inside the application's process through pywebview's `evaluate_js`: File ▸ Protect on a document and on a PDF, signing, and, with Word on the Mac, each reading the other's protected files. Word closes no document for a script and quits only with none open, so the script stops it, and its error reporter too. It refuses to run the Word group while Word is open. It cannot pick a file in a file dialog, and Word's scripting has no signatures.
 
 **Windows** is the thinnest. On every push that touches `build/`, `.github/workflows/windows.yml` verifies that the patch queue still applies with `core.autocrlf` off, which is a corruption a Mac cannot reproduce. A version tag builds the payload and the installer on a hosted runner. The Windows builder does the same for a release. The `gui` tier runs there too, with `lb on windows-x86_64 app windows-gui-test`: an ssh session has no desktop, so `build/windows/gui-test.sh` runs the tier as a scheduled task in the desktop session of the user it connects as, at the console or over Remote Desktop, which must be active, and hands back pytest's output. The rest of the suite does not run on Windows yet.
 

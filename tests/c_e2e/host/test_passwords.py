@@ -6,12 +6,16 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 
+from support import repo_root
 from support.protected import SECRET, SENTENCE, is_encrypted, make_protected, open_in
 
 from libera.host import apps, convert, hooks, saving, session as sessions
 
 MARK = "zqx-typed-4471"
+WORD_PASSWORD = "zqx-Word-Pass-7"
+WORD_SENTENCE = "Word wrote this sentence, zqx-word-sentence."
 
 
 def test_a_protected_document_asks_opens_and_saves_protected(
@@ -43,6 +47,33 @@ def test_a_protected_document_asks_opens_and_saves_protected(
     assert any("SetAdvancedOptions" in line for line in editor.console)
     assert not [line for line in editor.console if SECRET in line]
     assert SECRET not in caplog.text
+
+
+def test_a_document_word_encrypted_opens_and_saves_protected(editor_with, tmp_path):
+    """Encrypted by Word 16.95 for Mac, by its own Save As, on 2026-11-05: the
+    others here are files x2t wrote, which says little of what x2t reads."""
+    protected = tmp_path / "word-protected.docx"
+    shutil.copyfile(repo_root() / "tests/support/word-protected.docx", protected)
+
+    editor = editor_with([], document=protected, password=("not it", WORD_PASSWORD))
+
+    assert editor.report()["errors"] == []
+    editor.press("End")
+    editor.page.keyboard.type(" " + MARK)
+    with editor.answered("save") as saved:
+        editor.press("ControlOrMeta+s")
+    assert saved.value.json()["error"] == 0
+
+    assert is_encrypted(protected)
+    sessions.SESSIONS.clear()
+    again = open_in(apps.WORDS, protected, tmp_path / "again")
+    asked = again.password_asked
+    assert asked is not None
+    asked.answer(WORD_PASSWORD)
+    text = again.editor_bin.read_bytes()
+    assert WORD_SENTENCE.encode("utf-16-le") in text
+    # Less its first letter: after a full stop the editor capitalises it.
+    assert MARK[1:].encode("utf-16-le") in text
 
 
 NEW = "zqx-New-Pass-9"

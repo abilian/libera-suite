@@ -5,8 +5,8 @@ its password, which x2t encrypts with (OLE for OOXML, AES-CBC for
 OpenDocument). Files saved by LibreOffice, and OOXML files encrypted the way
 Word does by msoffcrypto-tool, were measured on 2026-10-30
 (notes/plans/release-0.7-protection.md): they behave as these do, but for LibreOffice
-26's own ODF encryption, which is refused before x2t. No file saved by Word
-itself has been tried.
+26's own ODF encryption, which is refused before x2t. A file saved by Word
+itself is in tests/c_e2e/host/test_passwords.py.
 """
 
 from __future__ import annotations
