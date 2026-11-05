@@ -499,6 +499,10 @@
   let signable = false;
   // The PDF editor, which reads the file itself and asks for its password.
   let readsItself = false;
+  // Someone else has the file open: their lock file says so.
+  let locked = false;
+  // The harness asked for a picture of what this window drew.
+  let photographs = false;
 
   const currentBody = getFromHostSync("/__host__/current");
   if (currentBody) {
@@ -507,6 +511,8 @@
     protectable = !!current.protectable;
     readsItself = !!current.readsItself;
     signable = !!current.signable;
+    locked = !!current.locked;
+    photographs = !!current.shot;
   }
 
   // The password the PDF editor opened the PDF with: the host opens it with
@@ -570,13 +576,12 @@
         return;
       }
       const payload = JSON.parse(opened);
-      // Someone else has the file open (their lock file says so). The editor's
-      // locked mode has to be on before the document is ready: it then marks
-      // the document read-only, says "locked for editing", and lets edits go
-      // to a copy -- the host sends a plain Save to Save As (plan_save).
+      // The editor's locked mode has to be on before the document is ready: it
+      // then marks the document read-only, says "locked for editing", and lets
+      // edits go to a copy -- the host sends a plain Save to Save As (plan_save).
       // `true`: the host set it, so the editor does not report it back.
       const api = editorApi();
-      if (w.LIBERA_LOCKED_BY && api && api.asc_setLocalRestrictions) {
+      if (locked && api && api.asc_setLocalRestrictions) {
         api.asc_setLocalRestrictions(w.Asc.c_oAscLocalRestrictionType.Locked, true);
       }
       handOver(payload);
@@ -595,7 +600,7 @@
       // At once, not on the next one-second tick: it is the moment the
       // document is on screen, and build/src/libera_build/bench.py times it.
       sendReport();
-      captureLater();
+      if (photographs) captureLater();
     },
     // The editor's own dirty flag, and the only reliable one: the change log
     // stays non-empty after a save, because it is the delta from the document

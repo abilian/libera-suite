@@ -288,3 +288,32 @@ def editor_with(tmp_path, sample_document, monkeypatch):
                 getattr(thing, close)()
                 break
     sessions.SESSIONS.clear()
+
+
+@pytest.fixture
+def second_window(tmp_path, sample_document):
+    """Another window beside an open editor: a session and a page of its own,
+    on the same server and in the same browser, as windows are."""
+
+    def _open(first: Editor, locked_by: str | None = None) -> Editor:
+        document = tmp_path / f"second{sample_document.suffix}"
+        document.write_bytes(sample_document.read_bytes())
+        window = Session(
+            payload=payload_mod.resolve().root,
+            work=tmp_path / "1",
+            document=document,
+        )
+        sessions.configure(window)
+        opening.open_document(window, document)
+        window.locked_by = locked_by
+        port = urlparse(first.page.url).port
+        assert port is not None
+        browser = first.page.context.browser
+        assert browser is not None
+        page = browser.new_page()
+        editor = Editor(page, port)
+        page.goto(server.make_editor_url(port, window, document.name))
+        editor.wait_until_ready()
+        return editor
+
+    return _open

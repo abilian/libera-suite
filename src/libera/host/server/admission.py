@@ -109,11 +109,10 @@ def admit(
 
     **Sec-Fetch-Site, when there is one, must say so too.** A GET has no
     Origin, so another site could load `<script src>` from one of our
-    addresses and read what it declares: the bridge's prelude says who has the
-    open document locked. The browser marks every request it sends with where
-    it came from: "same-origin" from our own pages, "none" from no page at all,
-    a navigation the user or the application started. "same-site" is not ours:
-    another port on 127.0.0.1 is the same site, and another origin.
+    addresses and read what it declares. The browser marks every request it
+    sends with where it came from: "same-origin" from our own pages, "none" from
+    no page at all, a navigation the user or the application started. "same-site"
+    is not ours: another port on 127.0.0.1 is the same site, and another origin.
 
     **The key must be this instance's**, in the query string or in its cookie.
     The three checks above stop a browser, and nothing else: any process on

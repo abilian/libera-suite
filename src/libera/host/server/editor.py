@@ -38,16 +38,19 @@ JAVASCRIPT = "application/javascript"
 
 @endpoint("GET", *BRIDGE_PARTS)
 def serve_bridge(r: Request) -> Response:
-    """One part of the bridge, the first with the page's flags before it."""
+    """One part of the bridge, the first with the page's flags before it.
+
+    Nothing here may depend on the session: the page's script tags name none, so
+    `r.session` is the first window's, whichever window asked. What differs by
+    window comes from `/__host__/current`, which names its own.
+    """
     part = r.name
     source = pathlib.Path(__file__).with_name(part).read_bytes()
     if part != BRIDGE_PARTS[0]:
         return Response(body=source, content_type=JAVASCRIPT)
-    session = r.session
 
     # The flags ride on the first part, which is the one the others depend on:
     #
-    #   LIBERA_SHOT        the harness wants the page to photograph itself
     #   LIBERA_OWNED_KEYS  key equivalents a macOS menu bar already fires, so
     #                       the page must not act on them too. The page reads
     #                       them here from shortcuts.PAGE_YIELDS, the one
@@ -55,16 +58,11 @@ def serve_bridge(r: Request) -> Response:
     #                       the harness have none and nothing to yield to.
     #   LIBERA_PAGE_KEYS   the keys the page runs itself, on Windows, where no
     #                       menu bar has them -- shortcuts.PAGE_RUNS.
-    #   LIBERA_LOCKED_BY   who else has the document open, from their lock
-    #                       file, or null: the editor opens it in its locked
-    #                       mode (locking.hold, bridge-desktop LocalStartOpen).
     #   LIBERA_STRINGS     our strings in the interface language, English to
     #                       it, for the few the bridge shows (bridge-desktop tr).
     prelude = (
-        f"var LIBERA_SHOT = {str(session.shot is not None).lower()};\n"
         f"var LIBERA_OWNED_KEYS = {json.dumps(list_owned_keys())};\n"
         f"var LIBERA_PAGE_KEYS = {json.dumps(list_page_keys())};\n"
-        f"var LIBERA_LOCKED_BY = {json.dumps(session.locked_by)};\n"
         f"var LIBERA_STRINGS = {json.dumps(language.get_catalogue())};\n"
     )
     return Response(body=prelude.encode() + source, content_type=JAVASCRIPT)

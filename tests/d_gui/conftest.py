@@ -9,7 +9,7 @@ and never in Chromium.
 
 So this tier launches the shipped CLI, lets it open real windows, and reads
 what each window's own page photographed of its canvas (`libera --shot`, armed
-per session in `editor.serve_bridge`). Measuring the picture that way needs no
+per session in `document.serve_current`). Measuring the picture that way needs no
 screenshot utility and no screen-recording permission: the page posts it to
 the host, which writes it where `--shot` said.
 

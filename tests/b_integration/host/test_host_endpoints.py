@@ -89,12 +89,10 @@ def test_the_owned_keys_are_the_menu_bar_own_definition(live: LiveHost, monkeypa
 def test_only_the_first_part_carries_the_flags(live: LiveHost):
     """They ride on the first part, which is the one the others depend on."""
     first = live.get(BRIDGE_PARTS[0])
-    assert b"var LIBERA_SHOT = " in first
     assert b"var LIBERA_OWNED_KEYS = " in first
     # The names appear in the later parts, which read the flags. Only the
     # declarations are spliced, and only once.
     for part in BRIDGE_PARTS[1:]:
-        assert b"var LIBERA_SHOT = " not in live.get(part)
         assert b"var LIBERA_OWNED_KEYS = " not in live.get(part)
 
 
@@ -377,6 +375,25 @@ def test_each_session_answers_for_its_own_document(live: LiveHost, tmp_path):
 
     assert live.json("current", session="0")["path"] == str(live.document)
     assert live.json("current", session="1")["path"] == str(second)
+
+
+def test_each_session_says_what_its_own_page_is_to_do(live: LiveHost, tmp_path):
+    """Named requests, because the bridge's scripts name no session: what they
+    said about one window, every other window believed."""
+    live.host.locked_by = "Ada Lovelace, since 03.10.2026 20:20"
+    second = sessions.Session(
+        payload=live.host.payload,
+        work=tmp_path / "sessions" / "1",
+        document=live.document,
+        shot=tmp_path / "window.png",
+    )
+    sessions.configure(second)
+
+    first_says = live.json("current", session="0")
+    second_says = live.json("current", session="1")
+
+    assert (first_says["locked"], first_says["shot"]) == (True, False)
+    assert (second_says["locked"], second_says["shot"]) == (False, True)
 
 
 def test_a_request_naming_no_session_still_gets_answered(live: LiveHost):

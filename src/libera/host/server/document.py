@@ -89,6 +89,11 @@ def serve_current(r: Request) -> Response:
         "protectable": protectable,
         "readsItself": reads_itself,
         "signable": signing.is_signable(r.session),
+        # Someone else's lock file says they have it open: the editor opens it
+        # in its locked mode (locking.hold, bridge-desktop LocalStartOpen).
+        "locked": r.session.locked_by is not None,
+        # The harness wants the page to photograph itself.
+        "shot": r.session.shot is not None,
     })
 
 

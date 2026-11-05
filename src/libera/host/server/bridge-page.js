@@ -83,10 +83,9 @@
   };
 
   function captureLater() {
-    // Armed by the host (see editor.serve_bridge) only when a shot was asked
-    // for; a real window has no reason to photograph itself.
-    if (!w.LIBERA_SHOT) return;
-    // onDocumentContentReady fires before the first paint settles.
+    // Only when a shot was asked for (document.serve_current); a real window
+    // has no reason to photograph itself. onDocumentContentReady fires before
+    // the first paint settles.
     w.setTimeout(captureCanvas, 1500);
   }
 
