@@ -129,8 +129,11 @@ class Page:
         self.wait(inner(f"!!{PASSWORD_FIELD}"), "password dialog")
         self.js(
             inner(
-                "(() => { [...d.querySelectorAll('button[result=cancel]')]"
-                ".find((b) => b.offsetParent).click(); return true; })()"
+                # Later, not now: GTK's evaluate_js never answers once the window
+                # is gone, and the click closes it.
+                "(() => { w.setTimeout(() => [...d.querySelectorAll("
+                "'button[result=cancel]')].find((b) => b.offsetParent).click(), 200);"
+                " return true; })()"
             )
         )
         assert self.window.events.closed.wait(20), "the window stayed open"
@@ -360,12 +363,15 @@ def run_window(plan: dict) -> None:
         app._let_go_of_everything()
         os._exit(0)
 
-    threading.Thread(target=steps, daemon=True).start()
+    driver = threading.Thread(target=steps, daemon=True)
+    driver.start()
     app.run(
         locate.resolve().root,
         pathlib.Path(plan["home"]) / "sessions",
         [document],
     )
+    # Off a Mac the last window's closing ends `run`, before `steps` has said so.
+    driver.join()
 
 
 # --- the checks, from outside -------------------------------------------------

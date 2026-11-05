@@ -18,8 +18,12 @@ import sys
 from typing import TYPE_CHECKING
 
 import pytest
+from support.mac_checks import Run
+from support.protected import make_protected
 
-from .conftest import complaints
+from libera.host import apps
+
+from .conftest import SOFTWARE_RENDERING, complaints
 from .desktop import desktop
 
 if TYPE_CHECKING:
@@ -69,6 +73,18 @@ def test_a_window_on_windows_stays_on_the_screen(
         assert area.top <= rect.top, document.name
         assert rect.right <= area.right, document.name
         assert rect.bottom <= area.bottom, document.name
+
+
+def test_close_file_on_a_password_dialog_closes_the_window(
+    tmp_path: Path, payload_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The dialog's own button, in the engine that ships: headless Chromium only
+    shows that the host is asked to."""
+    for name, value in SOFTWARE_RENDERING.items():
+        monkeypatch.setenv(name, value)
+    protected = make_protected(apps.WORDS, "docx", tmp_path / "made")
+
+    Run(tmp_path, payload_root).window(protected, decline=True)
 
 
 def test_the_window_survives_the_documents_it_opened(
