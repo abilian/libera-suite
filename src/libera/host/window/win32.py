@@ -74,10 +74,23 @@ def make_window(
     display's and places the window where Windows would next, and neither looks
     at what fits. At 150% on 1920x1080 the close button was off the screen."""
     window = portable.make_window(title, url, width, height, tabs=tabs)
-    if window is not None:
-        # On the form's own thread, before it is shown.
+    if window is None:
+        return None
+    if window.native is None:
+        # The first: listed for start() to make. On the form's own thread, before
+        # it is shown.
         window.events.before_show += lambda: _keep_on_screen(window.native)
+    else:
+        # Any later one: create_window has made and shown it already.
+        _keep_shown_form_on_screen(window.native)
     return window
+
+
+def _keep_shown_form_on_screen(form: Any) -> None:
+    if sys.platform == "win32":
+        from System import Action
+
+        form.Invoke(Action(lambda: _keep_on_screen(form)))
 
 
 def _keep_on_screen(form: Any) -> None:

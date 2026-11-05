@@ -52,20 +52,23 @@ def test_every_document_gets_a_window_of_its_own(
     sys.platform != "win32", reason="the other toolkits place their windows themselves"
 )
 def test_a_window_on_windows_stays_on_the_screen(
-    launch: Callable[..., Launch], sample_document: Path
+    launch: Callable[..., Launch], sample_document: Path, blank_presentation: Path
 ) -> None:
     """Measured on the main monitor, where this tier's windows open. Means
-    something on a small or scaled display: 1920x1080 at 150% was off it."""
-    app = launch(sample_document)
-    app.windows_that_painted(1)
+    something on a small or scaled display: 1920x1080 at 150% was off it.
+
+    Two, because they are made differently: the first is listed for start() to
+    make, and any later one is made and shown before `create_window` returns."""
+    app = launch(sample_document, blank_presentation)
+    app.windows_that_painted(2)
 
     area = desktop.work_area()
-    rect = desktop.rect(sample_document.name)
-
-    assert area.left <= rect.left
-    assert area.top <= rect.top
-    assert rect.right <= area.right
-    assert rect.bottom <= area.bottom
+    for document in (sample_document, blank_presentation):
+        rect = desktop.rect(document.name)
+        assert area.left <= rect.left, document.name
+        assert area.top <= rect.top, document.name
+        assert rect.right <= area.right, document.name
+        assert rect.bottom <= area.bottom, document.name
 
 
 def test_the_window_survives_the_documents_it_opened(
