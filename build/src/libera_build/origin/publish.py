@@ -68,6 +68,14 @@ def push(root: Path, origin: Origin, dist: Path, *, dry: bool) -> None:
         msg = f"no {stamped}\n  Run: lb release collect"
         raise RefusedError(msg)
     manifest = Manifest.read(stamped)
+    # What `publish` asks too. Alone, `push` would put an earlier collect's
+    # manifest under this version, naming files this version does not have.
+    if manifest.payload_version != origin.version:
+        msg = (
+            f"the manifest is for payload {manifest.payload_version}, this tree "
+            f"for {origin.version}\n  Run: lb release collect"
+        )
+        raise RefusedError(msg)
     # The dirty check before the token check, because it is the one that costs
     # something to fix: commit, collect again, and only then come back. The
     # manifest is the provenance a user reads out of `libera --payload-status`

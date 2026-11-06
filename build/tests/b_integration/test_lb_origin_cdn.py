@@ -270,6 +270,19 @@ def test_check_finds_what_changed_and_what_is_gone(cdn, release, monkeypatch, ca
     )
 
 
+def test_a_manifest_of_another_payload_is_not_pushed(cdn, release, monkeypatch):
+    origin, _, store = cdn
+    path = release / "src" / "libera" / "manifest.json"
+    doc = json.loads(path.read_text())
+    doc["payload_version"] = "0.3"
+    path.write_text(json.dumps(doc))
+    monkeypatch.setenv("CDN_TOKEN", "t")
+    for dry in (True, False):
+        with pytest.raises(RefusedError, match=r"for payload 0\.3, this tree for 0\.4"):
+            publish.push(release, origin, dist_of(release), dry=dry)
+    assert not list(store.iterdir())
+
+
 def test_a_dirty_manifest_is_not_pushed_without_saying_so(cdn, release, monkeypatch):
     origin, _, store = cdn
     path = release / "src" / "libera" / "manifest.json"
