@@ -4,8 +4,7 @@ Everything except the native window is automated, and one checkout drives all of
 
 ```sh
 make verify                        # locally: lint, 1027 tests, docs, patch queue, converter
-make test-gui                      # the application in a real window, here
-make check-mac                     # the Mac's hand checks, in real windows and Word; takes over the screen
+make test-gui                      # the application in real windows, here, and in Word on a Mac; takes over the screen
 lb linux test                      # the same suite, in the Linux test container
 lb linux gui-test                  # the real window too, under Xvfb
 lb on linux-x86_64 linux gui-test  # the real window, on the x86_64 builder
@@ -24,7 +23,7 @@ lb on windows-x86_64 app windows-gui-test   # and in WebView2, on the Windows bu
 
 **macOS** runs the whole suite natively, under `make verify`. Its window layer is AppKit through pywebview, which nothing headless drives, so the menu bar, the file dialogs and printing are checked by opening the application.
 
-`make check-mac` (`tests/support/mac_checks.py`, `ONLY=document`, `declined`, `pdf`, `signature` or `word` for one group) is in no test tier, because it takes over the screen for about five minutes. It runs the application in real windows, in WKWebView, which Playwright cannot drive on macOS 14, and drives each page from inside the application's process through pywebview's `evaluate_js`: File ▸ Protect on a document and on a PDF, signing, and, with Word on the Mac, each reading the other's protected files. Word closes no document for a script and quits only with none open, so the script stops it, and its error reporter too. It refuses to run the Word group while Word is open. It cannot pick a file in a file dialog, and scripting Word on a Mac has no signatures. Office on the Windows builder does: `tests/d_gui/test_office_signatures.py` asks Word, Excel and PowerPoint about signatures made here, through COM, and skips where Office is not installed.
+The `gui` tier also does things in the window, on every platform, through `tests/d_gui/driver.py`: Playwright cannot drive WKWebView, and on macOS 14 its own WebKit hangs. The driver works from inside the application's process through pywebview's `evaluate_js`, for File ▸ Protect on a document and on a PDF, and for signing. It cannot pick a file in a file dialog: on a Mac it checks the dialog comes up and cancels it, and it answers for the file everywhere. With Word on a Mac, `test_word_on_a_mac.py` has each read the other's protected files. Word closes no document for a script and quits only with none open, so the test stops it, and its error reporter too, and it skips while Word is open. Scripting Word on a Mac has no signatures. Office on the Windows builder does: `tests/d_gui/test_office_signatures.py` asks Word, Excel and PowerPoint about signatures made here, through COM, and skips where Office is not installed.
 
 **Windows** is the thinnest. On every push that touches `build/`, `.github/workflows/windows.yml` verifies that the patch queue still applies with `core.autocrlf` off, which is a corruption a Mac cannot reproduce. A version tag builds the payload and the installer on a hosted runner. The Windows builder does the same for a release. The `gui` tier runs there too, with `lb on windows-x86_64 app windows-gui-test`: an ssh session has no desktop, so `build/windows/gui-test.sh` runs the tier as a scheduled task in the desktop session of the user it connects as, at the console or over Remote Desktop, which must be active, and hands back pytest's output. The rest of the suite does not run on Windows yet.
 

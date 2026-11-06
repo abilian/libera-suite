@@ -1,36 +1,27 @@
-"""The Mac's hand checks: real windows, in the engine that ships here, and Word.
+"""A real window, driven from inside the application's process.
 
-    make check-mac                 all of it, about five minutes
-    make check-mac ONLY=word       one of: document, declined, pdf, signature, word
-
-Not in any test tier, because it takes over the screen: each step opens a real
-window, and the Word steps start Word, which the first run has macOS ask leave for.
 Playwright cannot do this: its WebKit hangs on macOS 14 (tests/c_e2e/host/conftest.py),
-and it is not WKWebView in any case.
+and it is not any engine that ships in any case.
 
-The page is driven from inside the application's process: each window is a process
-of this script, with a home of its own, that runs `app.run` on its main thread as
-the CLI does and the steps on another, through pywebview's `evaluate_js`. So the
-window, the engine, the bridge and the host are the real ones. Three things are not:
+Each window is a process of this script, with a home of its own, that runs `app.run`
+on its main thread as the CLI does and the steps on another, through pywebview's
+`evaluate_js`. So the window, the engine, the bridge and the host are the real ones.
+Two things are not:
 
-- The file dialog of the signature panel is checked to come up, then cancelled, and
-  the file answered for it (`choose_open_path`): a script cannot pick a file in one.
+- The file dialog of the signature panel is answered for (`choose_open_path`), since a
+  script cannot pick a file in one. On a Mac it is first checked to come up, then
+  cancelled.
 - Text is entered through the editor's API, not typed, and a Save or File > Protect
   called as the menu item calls it.
-- Whether Word calls a signature valid: its scripting on a Mac has no signatures.
-  Office on Windows answers, in tests/d_gui/test_office_signatures.py.
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import pathlib
-import shutil
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from dataclasses import dataclass
@@ -41,21 +32,34 @@ if TYPE_CHECKING:
 
     from libera.host.session import Session
 
-# Run as a script, this is not the package it is in.
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+# Xvfb has no GPU. Without these WebKit takes an accelerated path and the
+# window maps without ever painting -- which is the failure this tier exists
+# to catch, so it would report a bug that is not one. On a real desktop they
+# cost some compositing and change nothing else.
+SOFTWARE_RENDERING = {
+    "WEBKIT_DISABLE_COMPOSITING_MODE": "1",
+    "LIBGL_ALWAYS_SOFTWARE": "1",
+}
 
 WINDOW_BUDGET = 180
 READY = 120
 SAVED = 60
-NEW = "zqx-New-Pass-9"
-CHANGED = "zqx-Changed-Pass-3"
-WORD_PASSWORD = "zqx-Word-Pass-7"
-WORD_SENTENCE = "Word wrote this sentence, zqx-word-sentence."
-MARK = "zqx-typed-4471"
-REAL_HOME = pathlib.Path.home()
-WORD = pathlib.Path("/Applications/Microsoft Word.app")
-# Word is sandboxed: anywhere else, opening a file puts up a dialog asking for access.
-WORD_FOLDER = REAL_HOME / "Library/Containers/com.microsoft.Word/Data/libera-check"
+
+
+def window_env(home: pathlib.Path, payload: pathlib.Path) -> dict[str, str]:
+    """What a process needs set to keep to `home`. Every platform's state directory
+    sits under one of these, so it neither finds the user's instance nor writes
+    anything of theirs: see payload/locate.py, get_state_dir. And the payload, which
+    an installed one would have it look for under the real home."""
+    return {
+        "HOME": str(home),
+        "USERPROFILE": str(home),
+        "XDG_DATA_HOME": str(home / ".local" / "share"),
+        "XDG_CONFIG_HOME": str(home / ".config"),
+        "LOCALAPPDATA": str(home / "AppData" / "Local"),
+        "LIBERA_PAYLOAD": str(payload),
+        **SOFTWARE_RENDERING,
+    }
 
 
 # --- the page ---------------------------------------------------------------
@@ -274,7 +278,9 @@ def do_sign(page: Page, document: pathlib.Path, passphrase: str, key: str) -> No
     from libera.host import hooks
 
     page.open_signature_panel()
-    see_the_real_file_dialog_and_cancel_it(page)
+    # Only AppKit's can be found and cancelled from inside the process.
+    if sys.platform == "darwin":
+        see_the_real_file_dialog_and_cancel_it(page)
     hooks.shell.choose_open_path = lambda _kind: key
     page.click_choose_key()
     time.sleep(1)  # choose-file answers, and the panel fills in the name.
@@ -374,7 +380,7 @@ def run_window(plan: dict) -> None:
     driver.join()
 
 
-# --- the checks, from outside -------------------------------------------------
+# --- from outside ------------------------------------------------------------
 
 
 @dataclass
@@ -409,16 +415,12 @@ class Run:
         log = here / "libera.log"
         with log.open("wb") as output:
             process = subprocess.run(
-                [sys.executable, __file__, "--window", json.dumps(plan)],
+                [sys.executable, __file__, json.dumps(plan)],
                 check=False,
                 stdout=output,
                 stderr=subprocess.STDOUT,
                 timeout=WINDOW_BUDGET,
-                env={
-                    **os.environ,
-                    "HOME": str(home),
-                    "LIBERA_PAYLOAD": str(self.payload),
-                },
+                env={**os.environ, **window_env(home, self.payload)},
             )
         if not result.is_file():
             tail = log.read_text(encoding="utf-8", errors="replace")[-600:]
@@ -428,278 +430,5 @@ class Run:
         assert said["ok"], f"{document.name}: {said['said']}"
 
 
-def check_document(run: Run) -> None:
-    from libera.host import apps
-    from support.protected import is_encrypted, make_protected
-
-    plain = make_protected(apps.WORDS, "docx", run.work / "document", password="")
-    run.window(plain, steps=(("protect", NEW),))
-    assert is_encrypted(plain), "File > Protect left it in the clear"
-    run.window(plain, passwords=("not it", NEW))
-    run.window(plain, passwords=(NEW,), steps=(("protect", CHANGED),))
-    run.window(plain, passwords=(NEW, CHANGED))
-    run.window(plain, passwords=(CHANGED,), steps=(("unprotect", ""),))
-    assert not is_encrypted(plain), "the password stayed"
-    run.window(plain)
-
-
-def check_declined(run: Run) -> None:
-    from libera.host import apps
-    from support.protected import make_protected
-
-    protected = make_protected(apps.WORDS, "docx", run.work / "document")
-    run.window(protected, decline=True)
-
-
-def check_pdf(run: Run) -> None:
-    from support.paths import repo_root
-    from support.protected import pdf_opens_with
-
-    pdf = run.work / "Protected.pdf"
-    shutil.copyfile(repo_root() / "build/engine/smoke-pdf/protected.pdf", pdf)
-    run.window(pdf, passwords=("not it", "secret"), steps=(("protect", NEW),))
-    assert pdf_opens_with(pdf, NEW), "the new password does not open it"
-    assert not pdf_opens_with(pdf, "secret"), "the old one still does"
-    run.window(pdf, passwords=("secret", NEW))
-    run.window(pdf, passwords=(NEW,), steps=(("unprotect", ""),))
-    assert b"/Encrypt" not in pdf.read_bytes(), "the password stayed"
-    run.window(pdf)
-    run.window(pdf, steps=(("protect", NEW),))
-    assert pdf_opens_with(pdf, NEW), "a password added does not open it"
-
-
-def signed_document(run: Run, folder: str) -> pathlib.Path:
-    from libera.host import apps, saving
-    from support.keys import PASSPHRASE, make_pkcs12
-    from support.protected import make_protected
-
-    plain = make_protected(apps.WORDS, "docx", run.work / folder, password="")
-    key = make_pkcs12(run.work / folder / "keys")
-    run.window(plain, steps=(("sign", PASSPHRASE),), key=key)
-    assert saving.is_signed(plain), "the file has no signature"
-    return plain
-
-
-def check_signature(run: Run) -> None:
-    from libera.host import saving
-    from support.keys import SIGNER
-
-    signed = signed_document(run, "signature")
-    run.window(signed, steps=(("shows-signature", SIGNER),))
-    run.window(signed, steps=(("remove-signature", ""),))
-    assert not saving.is_signed(signed), "the signature stayed in the file"
-
-
-def stop_word() -> None:
-    """Word 16.95 closes no document for a script, however asked (-1708), and quits
-    only with none open ("User cancelled", -128), measured on 2026-11-05. So it is
-    stopped, with nothing unsaved in it, read only or saved. Its error reporter then
-    says so in a dialog, "A Force Quit was performed", whose OK starts Word again;
-    stopping that too takes the dialog away and leaves Word gone."""
-    subprocess.run(["pkill", "-TERM", "-x", "Microsoft Word"], check=False)
-    deadline = time.monotonic() + 20
-    # The reporter comes about three seconds after, and Word waits for it.
-    settled = 0
-    while settled < 12 and time.monotonic() < deadline:
-        # By its path: `-x` reads a name cut to 16 characters, and this has 25.
-        reporter = subprocess.run(
-            ["pkill", "-TERM", "-f", "Microsoft Error Reporting.app"],
-            check=False,
-            capture_output=True,
-        )
-        settled = 0 if reporter.returncode == 0 or word_is_running() else settled + 1
-        time.sleep(0.25)
-    if word_is_running():
-        # Stuck on a dialog, a Word does not hear the first: nothing of anyone's is in
-        # it, since these only start when it is not running.
-        subprocess.run(["pkill", "-KILL", "-x", "Microsoft Word"], check=False)
-        time.sleep(2)
-        subprocess.run(
-            ["pkill", "-TERM", "-f", "Microsoft Error Reporting.app"],
-            check=False,
-            capture_output=True,
-        )
-    # What a Word that was stopped leaves beside each file, and which holds up the
-    # next Word's opening it: it never answered a script again, on 2026-11-05.
-    for lock in WORD_FOLDER.glob("~$*"):
-        lock.unlink()
-
-
-def word_script(script: str, *argv: str) -> subprocess.CompletedProcess[str]:
-    """AppleScript for a Word that was not running, then stopped."""
-    try:
-        return subprocess.run(
-            ["osascript", "-e", script, *argv],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=90,
-        )
-    finally:
-        stop_word()
-
-
-def word_is_running() -> bool:
-    found = subprocess.run(
-        ["pgrep", "-x", "Microsoft Word"], check=False, capture_output=True
-    )
-    return found.returncode == 0
-
-
-WORD_ENCRYPTS = """
-on run argv
-    with timeout of 75 seconds
-        tell application "Microsoft Word"
-            set d to make new document
-            insert text (item 3 of argv) at text object of d
-            save as d file name (item 1 of argv) file format format document ¬
-                password (item 2 of argv) add to recent files false
-        end tell
-    end timeout
-end run
-"""
-
-WORD_READS = """
-on run argv
-    with timeout of 75 seconds
-        tell application "Microsoft Word"
-            if (count of argv) > 1 then
-                open file name (item 1 of argv) password document (item 2 of argv) ¬
-                    read only true add to recent files false
-            else
-                open file name (item 1 of argv) read only true add to recent files false
-            end if
-            return content of text object of active document
-        end tell
-    end timeout
-end run
-"""
-
-
-def word_reads(path: pathlib.Path, *password: str) -> str:
-    """What Word shows in a file, which has to be in its folder. It refusing is a
-    failure here: `word_refuses` is for when it should."""
-    done = word_script(WORD_READS, str(path), *password)
-    assert done.returncode == 0, f"Word on {path.name}: {done.stderr.strip()}"
-    return done.stdout
-
-
-def word_refuses(path: pathlib.Path, password: str) -> bool:
-    return word_script(WORD_READS, str(path), password).returncode != 0
-
-
-def check_word(run: Run) -> None:
-    from libera.host import apps
-    from support.protected import SECRET, SENTENCE, is_encrypted, make_protected
-
-    if not WORD.is_dir():
-        msg = "Word is not installed"
-        raise NotHereError(msg)
-    if word_is_running():
-        msg = "Word is running, and these stop it: close it and run this again"
-        raise NotHereError(msg)
-    WORD_FOLDER.mkdir(parents=True, exist_ok=True)
-    try:
-        made = WORD_FOLDER / "encrypted-by-word.docx"
-        done = word_script(WORD_ENCRYPTS, str(made), WORD_PASSWORD, WORD_SENTENCE)
-        assert made.is_file(), f"Word did not save: {done.stderr}"
-        assert is_encrypted(made), "Word's file is not encrypted"
-        run.window(
-            made,
-            passwords=("not it", WORD_PASSWORD),
-            steps=(("type-and-save", MARK),),
-        )
-        assert is_encrypted(made), "the save took the password off"
-        shown = word_reads(made, WORD_PASSWORD)
-        assert WORD_SENTENCE in shown, f"Word read: {shown!r}"
-        # Less its first letter: after a full stop the editor capitalises it.
-        assert MARK[1:] in shown, f"Word read: {shown!r}"
-        assert word_refuses(made, "not it"), "Word opened it with a wrong password"
-
-        ours = make_protected(apps.WORDS, "docx", run.work / "for-word")
-        copy = WORD_FOLDER / "encrypted-by-libera.docx"
-        shutil.copyfile(ours, copy)
-        shown = word_reads(copy, SECRET)
-        assert SENTENCE in shown, f"Word read: {shown!r}"
-        assert word_refuses(copy, "not it"), "Word opened it with a wrong password"
-
-        signed = signed_document(run, "signed-for-word")
-        copy = WORD_FOLDER / "signed-by-libera.docx"
-        shutil.copyfile(signed, copy)
-        shown = word_reads(copy)
-        assert SENTENCE in shown, f"Word read: {shown!r}"
-    finally:
-        if not word_is_running():
-            shutil.rmtree(WORD_FOLDER, ignore_errors=True)
-
-
-class NotHereError(Exception):
-    pass
-
-
-CHECKS: dict[str, tuple[str, Callable[[Run], None]]] = {
-    "document": ("File > Protect on a .docx: add, change, remove", check_document),
-    "declined": ("Close file on a password dialog closes the window", check_declined),
-    "pdf": ("File > Protect on a PDF: change, remove, add", check_pdf),
-    "signature": ("Sign a .docx, see the signature, remove it", check_signature),
-    "word": ("Word and Libera read each other's protected files", check_word),
-}
-
-BY_HAND = """
-Still by hand:
-  - picking a file in the signature panel's dialog, which this only opens and cancels;
-"""
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--window", help=argparse.SUPPRESS)
-    parser.add_argument("--only", choices=[*CHECKS, ""], default="")
-    args = parser.parse_args()
-    if args.window:
-        run_window(json.loads(args.window))
-        return 0
-    if sys.platform != "darwin":
-        print("These are the Mac's: `make test-gui` is the other platforms' tier.")
-        return 2
-
-    from libera.payload import locate
-
-    # Before the home moves: an installed payload lives under the real one.
-    payload = locate.resolve().root
-    failed = 0
-    print("This takes over the screen for a few minutes: windows open and close.\n")
-    with tempfile.TemporaryDirectory(prefix="libera-mac-checks-") as work:
-        root = pathlib.Path(work)
-        # What this process opens, to make its documents, stays out of your Recent
-        # list and your settings.
-        os.environ["HOME"] = str(root / "home")
-        (root / "home").mkdir()
-        os.environ["LIBERA_PAYLOAD"] = str(payload)
-        for name, (title, check) in CHECKS.items():
-            if args.only and name != args.only:
-                continue
-            folder = root / name
-            folder.mkdir()
-            started = time.monotonic()
-            run = Run(folder, payload)
-            try:
-                check(run)
-            except NotHereError as e:
-                print(f"SKIP  {title}: {e}")
-            except (AssertionError, subprocess.TimeoutExpired) as e:
-                failed += 1
-                print(f"FAIL  {title}\n      {e}")
-            else:
-                took = time.monotonic() - started
-                print(f"pass  {title} ({run.windows} windows, {took:.0f} s)")
-            finally:
-                from libera.host import session as sessions
-
-                sessions.SESSIONS.clear()
-    print(BY_HAND)
-    return 1 if failed else 0
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    run_window(json.loads(sys.argv[1]))

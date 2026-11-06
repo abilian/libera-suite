@@ -8,7 +8,7 @@
 # examples, which a make target with an environment variable cannot.
 
 .PHONY: help all verify lint lint-py lint-js lint-linux format \
-	test test-unit test-integration test-e2e test-gui check-mac \
+	test test-unit test-integration test-e2e test-gui \
 	docs docs-serve docs-publish clean build publish payload ship
 
 LB := uv run lb
@@ -121,16 +121,11 @@ test-integration: ## the host over HTTP; needs an installed payload
 test-e2e: ## the editor in headless Chromium; needs a payload and a browser
 	uv run pytest -m e2e
 
-# Real windows, on this platform: skipped by every other run, because they
-# take the focus while they are up. On Linux they need a display --
+# Real windows, on this platform, and Word on a Mac: skipped by every other run,
+# because they take over the screen for minutes. On Linux they need a display --
 # `lb linux gui-test` brings an Xvfb one.
-test-gui: ## the application in a real window, in the engine that ships
+test-gui: ## the application in real windows, in the engine that ships; takes over the screen
 	uv run pytest -m gui
-
-# The Mac's hand checks, in real windows and in Word. In no test tier: they take
-# over the screen for minutes. ONLY=document, pdf, signature or word for one.
-check-mac: ## the Mac's hand checks, in real windows and Word; takes over the screen
-	uv run python tests/support/mac_checks.py $(if $(ONLY),--only $(ONLY))
 
 # --- docs --------------------------------------------------------------------
 #

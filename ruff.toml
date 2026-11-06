@@ -395,16 +395,13 @@ lint.extend-ignore = [
 "tests/d_gui/**/*.py" = [
     "S404", # subprocess import
     "S603", # subprocess call
-    "S607", # xdotool and xwininfo, on the PATH of the image the tier runs in
+    "S607", # xdotool and xwininfo on the PATH of the image the tier runs in; osascript, pgrep and pkill on a Mac's
 ]
-# Run by hand, `make check-mac`: osascript and pkill by name, on a Mac's own PATH,
-# and the host's one way of saying everything has been let go.
-"tests/support/mac_checks.py" = [
-    "S404",   # subprocess import
-    "S603",   # subprocess call
-    "S607",   # osascript, pgrep and pkill
+"tests/d_gui/driver.py" = [
+    "S404",   # as above
+    "S603",   # as above
+    "S607",   # as above
     "SLF001", # app._let_go_of_everything: what the quit path calls
-    "T201",   # it reports by printing
 ]
 "tests/d_gui/desktop.py" = [
     "S404",    # as above

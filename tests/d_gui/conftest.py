@@ -22,6 +22,9 @@ Two things make this safe to run on a machine somebody is using:
   and unless this platform can put a window on screen.
 
 It takes the focus while it runs, which is the one cost of testing a window.
+
+Where a test has to do something in the window, not just look at it, `driver.py`
+runs the application with the steps inside its process.
 """
 
 from __future__ import annotations
@@ -37,8 +40,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 from support import render
+from support.keys import PASSPHRASE, make_pkcs12
+from support.protected import make_protected
 
+from libera.host import apps, saving
 from libera.payload import locate
+
+from .driver import Run, window_env
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -49,15 +57,6 @@ if TYPE_CHECKING:
 # a cold payload has been seen to take twenty seconds over the load alone.
 FIRST_WINDOW = 120
 PER_WINDOW = 45
-
-# Xvfb has no GPU. Without these WebKit takes an accelerated path and the
-# window maps without ever painting -- which is the failure this tier exists
-# to catch, so it would report a bug that is not one. On a real desktop they
-# cost some compositing and change nothing else.
-SOFTWARE_RENDERING = {
-    "WEBKIT_DISABLE_COMPOSITING_MODE": "1",
-    "LIBGL_ALWAYS_SOFTWARE": "1",
-}
 
 
 def can_open_a_window() -> str | None:
@@ -162,19 +161,7 @@ def launch(tmp_path: Path, payload_root: Path) -> Iterator[Callable[..., Launch]
     shot.parent.mkdir(parents=True)
     output = tmp_path / "libera.log"
 
-    # A home of its own. Every platform's state directory sits under one of
-    # these, so this launch neither finds the user's instance nor writes
-    # anything of theirs: see payload/locate.py, get_state_dir.
-    env = {
-        **os.environ,
-        "HOME": str(home),
-        "USERPROFILE": str(home),
-        "XDG_DATA_HOME": str(home / ".local" / "share"),
-        "XDG_CONFIG_HOME": str(home / ".config"),
-        "LOCALAPPDATA": str(home / "AppData" / "Local"),
-        "LIBERA_PAYLOAD": str(payload_root),
-        **SOFTWARE_RENDERING,
-    }
+    env = {**os.environ, **window_env(home, payload_root)}
 
     started: list[Launch] = []
 
@@ -220,3 +207,23 @@ def blank_presentation(
     target = tmp_path_factory.mktemp("doc") / "blank.pptx"
     shutil.copyfile(payload_root / "empty" / "new.pptx", target)
     return target
+
+
+@pytest.fixture
+def run(tmp_path: Path, payload_root: Path, monkeypatch: pytest.MonkeyPatch) -> Run:
+    """Real windows to drive. This process keeps to a home of its own too: making a
+    test's documents goes through the host, which would add them to the Recent list."""
+    home = tmp_path / "home"
+    home.mkdir()
+    for name, value in window_env(home, payload_root).items():
+        monkeypatch.setenv(name, value)
+    return Run(tmp_path, payload_root)
+
+
+def signed_document(run: Run, folder: str) -> Path:
+    """A .docx signed in a real window."""
+    plain = make_protected(apps.WORDS, "docx", run.work / folder, password="")
+    key = make_pkcs12(run.work / folder / "keys")
+    run.window(plain, steps=(("sign", PASSPHRASE),), key=key)
+    assert saving.is_signed(plain), "the file has no signature"
+    return plain
