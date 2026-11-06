@@ -9,21 +9,23 @@ headless one started beside theirs is not ours to start.
 The image is Debian's LibreOffice, built the first time a test asks for it
 and named by the hash of its Dockerfile, so a change to it builds a new one.
 Both files are in `libreoffice-reference/`. With no container engine
-running, the tests that need it skip: on the Mac that is OrbStack or Docker
-stopped, and fedora.zt runs them with podman.
+running here, the tests that need it skip: on the Mac that is OrbStack or Docker
+stopped, or a docker context on another machine, and fedora.zt runs them with
+podman.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import pathlib
 import shutil
 import subprocess
 from dataclasses import dataclass
 
 import pytest
-from libera_build.containers import Engine, Mount, Run, host_arch
+from libera_build.containers import Engine, Mount, Run, host_arch, remote_host
 
 HERE = pathlib.Path(__file__).parent / "libreoffice-reference"
 # Debian's packages, the first time: a couple of minutes.
@@ -136,12 +138,16 @@ def reference(work: pathlib.Path) -> LibreOffice:
     engine = Engine.here()
     if not shutil.which(engine.name):
         pytest.skip(f"no {engine.name}: the LibreOffice reference runs in a container")
+    if host := remote_host(engine.name, os.environ):
+        pytest.skip(
+            f"{engine.name} runs on {host}, and the LibreOffice reference mounts a"
+            " folder from here: DOCKER_CONTEXT=orbstack runs it"
+        )
     answer = subprocess.run(
         [engine.name, "info"], capture_output=True, timeout=60, check=False
     )
     if answer.returncode:
         pytest.skip(f"{engine.name} is not running: the LibreOffice reference needs it")
-    engine.refuse_remote()
     tag = hashlib.sha256((HERE / "Dockerfile").read_bytes()).hexdigest()[:12]
     image = engine.image(f"libera-libreoffice-reference:{tag}")
     if not engine.has_image(image):
