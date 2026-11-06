@@ -19,6 +19,8 @@ import pytest
 from libera_build import cli, repo, versions
 from libera_build.containers import Engine, host_arch
 
+from libera.manifest import Manifest
+
 
 def find_lb() -> str:
     """The console script uv installed, beside this interpreter's."""
@@ -144,7 +146,10 @@ def test_push_dry_lists_every_upload_and_needs_no_token(monkeypatch):
     stamped = cli.REPO / "src" / "libera" / "manifest.json"
     if not stamped.is_file():
         pytest.skip("no manifest stamped in this checkout")
-    collected = repo.dist(versions.payload_version(cli.REPO))
+    version = versions.payload_version(cli.REPO)
+    if Manifest.read(stamped).payload_version != version:
+        pytest.skip(f"payload {version} is not collected yet")
+    collected = repo.dist(version)
     if not (collected / "manifest.json").is_file():
         pytest.skip(f"nothing collected to push in {collected}")
     monkeypatch.delenv("CDN_TOKEN", raising=False)
