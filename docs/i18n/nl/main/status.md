@@ -28,7 +28,7 @@ De menubalk, het startvenster en de dialoogvensters van Libera Suite zijn in het
 | **Een menubalk** | Bestand, Bewerken, Weergave en Help op elk platform. macOS voegt Venster toe, en de gebruikelijke sneltoetsen. |
 | **Over** | Wie de componenten geschreven heeft, en onder welke licentie: `Bestand ▸ Over` in het documentvenster, en `Help ▸ Over Libera Suite` op Linux en Windows. macOS zet het in het programmamenu. |
 | **Instellingen blijven bewaard** | Thema, maateenheden, taal van de spellingcontrole en dergelijke staan na een herstart nog steeds goed. |
-| **Installatie van de componenten** | Van de server, of uit een lokale map met gebouwde artefacten. In beide gevallen wordt elk artefact gecontroleerd aan de hand van hashes die in de toepassing zelf zitten. |
+| **Installatie van de componenten** | Samen met de toepassing: bij de eerste start wordt niets gedownload. Past er geen kant-en-klaar pakket bij de machine, dan bouwt pip ze uit de broncode. |
 
 ## Bekende problemen
 
@@ -66,7 +66,7 @@ Loop je tegen iets aan dat *niet* op deze lijst staat, [laat het ons weten](../f
 
 - **Tabbladen op Linux en Windows.** Daar één venster per document, die de taakbalk groepeert.
 - **Een toepassing voor macOS die je kunt doorgeven.** `Libera.app` gebruikt de Python van je eigen installatie en bevat geen interpreter en geen componenten. Windows heeft er wel een: het installatieprogramma brengt alles mee.
-- **Automatische updates** en **code-ondertekening**. macOS behandelt een `Libera.app` die vanuit een kopie van de broncode is gebouwd als software van een onbekende ontwikkelaar. Windows waarschuwt voor het gedownloade installatieprogramma.
+- **Automatische updates** en **code-ondertekening op macOS en Windows**. macOS behandelt een `Libera.app` die vanuit een kopie van de broncode is gebouwd als software van een onbekende ontwikkelaar. Windows waarschuwt voor het gedownloade installatieprogramma. De Flatpak-bundels zijn ondertekend: [Andere manieren om te installeren](alt-install.md) zegt hoe je dat controleert.
 - **Offline help**, leesbaar zonder browser of netwerk. Het menu Help opent deze site; About werkt offline. Zie hieronder.
 
 ### Elders

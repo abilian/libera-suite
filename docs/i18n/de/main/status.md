@@ -28,7 +28,7 @@ Die Oberfläche von Libera Suite ist englisch: Menüs und Schaltflächen werden 
 | **Eine Menüleiste** | File, Edit, View und Help auf allen Plattformen. macOS ergänzt Window sowie die üblichen Tastenkürzel. |
 | **Über** | Wer die Komponenten geschrieben hat und unter welcher Lizenz: `Datei ▸ Über das Produkt` im Dokumentfenster, `Hilfe ▸ Über Libera Suite` unter Linux und Windows. macOS legt es in das Anwendungsmenü. |
 | **Einstellungen bleiben erhalten** | Design, Maßeinheiten, Sprache der Rechtschreibprüfung und Ähnliches sind nach einem Neustart noch gesetzt. |
-| **Installation der Komponenten** | Vom Server oder aus einem lokalen Ordner mit gebauten Artefakten. In beiden Fällen wird jedes Artefakt anhand der Prüfsummen geprüft, die mit der Anwendung geliefert werden. |
+| **Installation der Komponenten** | Zusammen mit der Anwendung, beim ersten Start wird nichts heruntergeladen. Passt kein fertiges Paket zum Rechner, baut pip sie aus den Quellen. |
 
 ## Bekannte Probleme
 
@@ -66,7 +66,7 @@ Wenn Sie auf etwas stoßen, das *nicht* auf dieser Liste steht, [melden Sie es u
 
 - **Tabs unter Linux und Windows.** Dort ein Fenster pro Dokument, die die Taskleiste gruppiert.
 - **Eine weitergebbare Anwendung unter macOS.** `Libera.app` verwendet das Python Ihrer eigenen Installation und bettet weder Interpreter noch Komponenten ein. Windows hat eine: Sein Installationsprogramm bringt alles mit.
-- **Automatische Aktualisierungen** und **Code-Signatur**. macOS behandelt eine aus einer Kopie des Quellcodes gebaute `Libera.app` als Software eines nicht verifizierten Entwicklers. Windows warnt vor dem heruntergeladenen Installationsprogramm.
+- **Automatische Aktualisierungen** und **Code-Signatur auf macOS und Windows**. macOS behandelt eine aus einer Kopie des Quellcodes gebaute `Libera.app` als Software eines nicht verifizierten Entwicklers. Windows warnt vor dem heruntergeladenen Installationsprogramm. Die Flatpak-Pakete sind signiert: [Weitere Installationswege](alt-install.md) erklärt, wie Sie das prüfen.
 - **Eine Offline-Hilfe**, lesbar ohne Browser und ohne Netz. Das Menü Help öffnet diese Website; About funktioniert offline. Siehe unten.
 
 ### Anderswo

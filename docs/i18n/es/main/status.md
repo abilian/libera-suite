@@ -28,7 +28,7 @@ La interfaz de Libera Suite está en inglés: los menús y botones se citan aqu�
 | **Una barra de menús** | File, Edit, View y Help en todas las plataformas. macOS añade Window junto con los atajos habituales. |
 | **Acerca de** | Quién escribió los componentes y con qué licencia: `Archivo ▸ Acerca de` en la ventana del documento, `Ayuda ▸ Acerca de Libera Suite` en Linux y Windows. macOS lo pone en el menú de la aplicación. |
 | **Los ajustes se conservan** | El tema, las unidades, el idioma de la corrección y ajustes similares siguen ahí tras reiniciar. |
-| **Instalación de los componentes** | Desde el servidor, o desde una carpeta local de artefactos compilados. En ambos casos, cada artefacto se comprueba con las huellas incluidas en la aplicación. |
+| **Instalación de los componentes** | Con la aplicación: en el primer inicio no se descarga nada. Si ningún paquete ya hecho sirve para la máquina, pip los compila desde el código fuente. |
 
 ## Problemas conocidos
 
@@ -66,7 +66,7 @@ Si te encuentras con algo que *no* está en esta lista, [cuéntanoslo](../feedba
 
 - **Pestañas en Linux y Windows.** Allí, una ventana por documento, que la barra de tareas agrupa.
 - **Una aplicación redistribuible en macOS.** `Libera.app` usa el Python de tu propia instalación y no incluye ni intérprete ni componentes. Windows tiene una: su instalador lo trae todo.
-- **Actualizaciones automáticas** y **firma de código**. macOS trata una `Libera.app` compilada desde una copia del código fuente como software de un desarrollador no identificado. Windows avisa sobre el instalador descargado.
+- **Actualizaciones automáticas** y **firma de código en macOS y Windows**. macOS trata una `Libera.app` compilada desde una copia del código fuente como software de un desarrollador no identificado. Windows avisa sobre el instalador descargado. Los paquetes Flatpak están firmados: [Otras formas de instalar](alt-install.md) explica cómo comprobarlo.
 - **Una ayuda sin conexión**, legible sin navegador ni red. El menú Help abre este sitio; About funciona sin conexión. Más abajo, los detalles.
 
 ### En otros ámbitos

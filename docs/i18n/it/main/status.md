@@ -28,7 +28,7 @@ L'interfaccia di Libera Suite è in inglese: menu e pulsanti sono citati qui com
 | **Una barra dei menu** | File, Edit, View e Help su tutte le piattaforme. macOS aggiunge Window insieme alle solite scorciatoie. |
 | **Informazioni** | Chi ha scritto i componenti e con quale licenza: `File ▸ Informazioni su` nella finestra del documento, `Aiuto ▸ Informazioni su Libera Suite` su Linux e Windows. macOS lo mette nel menu dell'applicazione. |
 | **Le impostazioni restano** | Tema, unità di misura, lingua del controllo ortografico e simili sono ancora impostati dopo un riavvio. |
-| **Installazione dei componenti** | Dal server, oppure da una cartella locale di artefatti costruiti. In entrambi i casi ogni artefatto viene verificato con le impronte fornite nell'applicazione. |
+| **Installazione dei componenti** | Insieme all'applicazione: al primo avvio non viene scaricato nulla. Se nessun pacchetto pronto è adatto alla macchina, pip li costruisce dai sorgenti. |
 
 ## Problemi noti
 
@@ -66,7 +66,7 @@ Se incontri qualcosa che *non* è in questo elenco, [segnalacelo](../feedback.md
 
 - **Schede su Linux e Windows.** Lì una finestra per documento, che la barra delle applicazioni raggruppa.
 - **Un'applicazione ridistribuibile su macOS.** `Libera.app` usa il Python della tua installazione e non incorpora né interprete né componenti. Windows ne ha una: il suo programma di installazione porta tutto con sé.
-- **Aggiornamenti automatici** e **firma del codice**. macOS tratta una `Libera.app` costruita da una copia del codice sorgente come software di uno sviluppatore non identificato. Windows avverte sul programma di installazione scaricato.
+- **Aggiornamenti automatici** e **firma del codice su macOS e Windows**. macOS tratta una `Libera.app` costruita da una copia del codice sorgente come software di uno sviluppatore non identificato. Windows avverte sul programma di installazione scaricato. I pacchetti Flatpak sono firmati: [Altri modi di installare](alt-install.md) spiega come verificarli.
 - **Una guida offline**, leggibile senza browser né rete. Il menu Help apre questo sito; About funziona offline. Vedi sotto.
 
 ### Altrove

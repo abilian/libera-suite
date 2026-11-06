@@ -14,19 +14,19 @@ Libera Suite is meant to replace Microsoft Office. We read that as one test: **a
 4. Something done daily is missing: tabs, a password-protected file, a signature, a PDF to fill in, a Visio diagram to edit.
 5. It is not clear who maintains it, or for how long.
 
-## Now: 0.7, PDF, passwords and signatures
+## Shipped: 0.7, PDF, passwords and signatures
 
-0.7 is two steps towards parity with Euro-Office Desktop in one release, because both change the editors' components and are cheaper rebuilt and published once.
+0.7 shipped in November 2026, two steps towards parity with Euro-Office Desktop in one release, because both change the editors' components and are cheaper rebuilt and published once.
 
 **PDF, edited and filled in.** A PDF opens in the PDF editor: comments, highlights, drawings, text edits and pages moved, added or removed, saved as an incremental update after the original's bytes, which are left as they were. Forms fill and save, a French Cerfa and the US IRS forms among those tried. A PDF that asks for a password opens and saves, still protected. Creating a form comes in 0.8.
 
 **Password-protected documents.** A document protected by Word, LibreOffice or Libera Suite asks for its password, opens and saves protected. File ▸ Protect gives one, changes or removes it, for Word, Excel, PowerPoint, OpenDocument and PDF files. A save to a format that cannot keep a password asks first.
 
-**Digital signatures.** Under way: listing a document's signatures and whether each is valid, signing with a key file, and removing a signature, for Word, Excel and PowerPoint files.
+**Digital signatures.** Listing a document's signatures and whether each is valid, signing with a key file, and removing a signature, for Word, Excel and PowerPoint files.
 
 **The components install like any Python package.** `pip install libera` installs the editors and the converter as two more packages, built from the pinned sources where no wheel exists, and nothing is downloaded on first start.
 
-**Installs without a warning.** Three things still wait on accounts and keys, and each ships as soon as it is ready: signing and notarisation on macOS, where Gatekeeper's prompt is a poor first five minutes; a `.flatpakref`, then Flathub; and code signing on Windows, so SmartScreen stops warning about the installer.
+**Signed Flatpak bundles.** Each has an OpenPGP signature beside it. Signing on macOS and Windows moved to a later release, below.
 
 ## Shipped: 0.5 and 0.6
 
@@ -37,17 +37,17 @@ Libera Suite is meant to replace Microsoft Office. We read that as one test: **a
 - **The interface in every language the editors speak**, more than 40, with a test that loads Words, Tables and Slides in each. Our own part (the menus, the start window, the dialogs) follows language by language, each once someone who speaks it has read it. A spelling dictionary comes with each language.
 - **A fidelity harness**: a corpus of 30 Word documents, printed twice by the same build, gives the same pixels on macOS and on Linux. References from Word and a score come in 0.8.
 
-## Next: parity with Euro-Office Desktop
+## Now: parity with Euro-Office Desktop
 
 Euro-Office publishes a desktop application of its own, built on the same editors as Libera Suite. Someone comparing the two should find nothing in it that is missing here, macros apart (see below). Every feature on this list exists upstream already, in the editors we ship or beside them, so the work is wiring each one to the host and testing it, not writing it. This is the order we do them in.
 
-**Tabs, every language, PDF and passwords** are done or under way, above.
+**Tabs, every language, PDF and passwords** are done, above.
 
 **Plugins, including the AI assistant, and creating forms**, in 0.8. Upstream's plugin system, and the plugins it carries, AI assistant included, and its form creator, which makes the fillable PDF forms 0.7 fills in. The AI assistant is off until it is configured, and it talks only to a provider the user chooses, which may run on their own machine. [What leaves your machine](../index.md#what-leaves-your-machine) will say so beside everything else.
 
 **Documents on a Nextcloud, ownCloud or Seafile server**, in 0.9, with the check that lets us say parity. As in Euro-Office Desktop, a window on the server's own editors: the documents stay on that server, and editing with other people is that server's work. It is off until the user adds a server, and a local document's window never reaches the network either way.
 
-**Signed installers**, on macOS and Windows, are above: each ships as soon as its account or key exists.
+**Installs without a warning.** Three things still wait on accounts and keys, and each ships as soon as it is ready: signing and notarisation on macOS, where Gatekeeper's prompt is a poor first five minutes; a `.flatpakref`, then Flathub; and code signing on Windows, so SmartScreen stops warning about the installer.
 
 ## Alongside
 

@@ -26,7 +26,7 @@ Libera Suite is early. This page is a status list: it says what is built, what i
 | **A menu bar** | File, Edit, View and Help on every platform. macOS adds Window, and the usual shortcuts. |
 | **About** | Who wrote the components, and under what licence: `File ▸ About` inside the document window, and `Help ▸ About Libera Suite` on Linux and Windows. macOS puts it in the application menu. |
 | **Settings persist** | Theme, units, spellcheck language and the like are still set after a restart. |
-| **Component install** | From the origin, or from a local directory of built artifacts. Either way every artifact is verified against hashes shipped in the application. |
+| **Component install** | With the application, so nothing is downloaded on first start. Where no ready-made package fits the machine, pip builds them from source. |
 
 ## Known issues
 
@@ -64,7 +64,7 @@ If you hit something that is *not* on this list, [tell us about it](../feedback.
 
 - **Tabs on Linux and Windows.** One window per document there, which the taskbar groups.
 - **A redistributable application on macOS.** `Libera.app` runs the Python of your own install and embeds no interpreter and no components. Windows has one: its installer brings everything.
-- **Automatic updates**, and **code signing**. macOS treats a `Libera.app` built from a source checkout as software from an unidentified developer. Windows warns about the downloaded installer.
+- **Automatic updates**, and **code signing on macOS and Windows**. macOS treats a `Libera.app` built from a source checkout as software from an unidentified developer. Windows warns about the downloaded installer. The Flatpak bundles are signed: [Other ways to install](alt-install.md) says how to check one.
 - **Offline help**, readable without a browser or a network. The Help menu opens this site; About works offline. See below.
 
 ### Elsewhere

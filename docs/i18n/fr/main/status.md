@@ -28,7 +28,7 @@ L'interface de Libera Suite est en anglais : les noms des menus et des boutons s
 | **Une barre de menus** | File, Edit, View et Help sur toutes les plateformes. macOS y ajoute Window ainsi que les raccourcis habituels. |
 | **À propos** | Qui a écrit les composants et sous quelle licence : `Fichier ▸ À propos` dans la fenêtre du document, `Aide ▸ À propos de Libera Suite` sous Linux et Windows. macOS le place dans le menu de l'application. |
 | **Les réglages sont conservés** | Le thème, les unités, la langue de correction et les réglages de ce genre sont toujours là après un redémarrage. |
-| **Installation des composants** | Depuis le serveur, ou depuis un dossier local d'artefacts construits. Dans les deux cas, chaque artefact est vérifié par rapport aux empreintes livrées dans l'application. |
+| **Installation des composants** | Avec l'application : rien n'est téléchargé au premier démarrage. Si aucun paquet prêt à l'emploi ne convient à la machine, pip les construit à partir des sources. |
 
 ## Problèmes connus
 
@@ -66,7 +66,7 @@ Si vous rencontrez un problème qui ne figure *pas* dans cette liste, [signalez-
 
 - **Les onglets sous Linux et Windows.** Une fenêtre par document, que la barre des tâches regroupe.
 - **Une application redistribuable sous macOS.** `Libera.app` utilise le Python de votre propre installation et n'embarque ni interpréteur ni composants. Windows en a une : son installateur apporte tout.
-- **Les mises à jour automatiques** et **la signature du code**. macOS traite un `Libera.app` construit depuis une copie du code source comme un logiciel d'un développeur non identifié. Windows avertit au sujet de l'installateur téléchargé.
+- **Les mises à jour automatiques** et **la signature du code sur macOS et Windows**. macOS traite un `Libera.app` construit depuis une copie du code source comme un logiciel d'un développeur non identifié. Windows avertit au sujet de l'installateur téléchargé. Les paquets Flatpak sont signés : [Autres façons d'installer](alt-install.md) explique comment le vérifier.
 - **Une aide hors ligne**, lisible sans navigateur ni réseau. Le menu Help ouvre ce site ; About fonctionne hors ligne. Voir plus bas.
 
 ### Ailleurs

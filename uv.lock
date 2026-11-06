@@ -783,7 +783,7 @@ wheels = [
 
 [[package]]
 name = "libera"
-version = "0.7.0b1"
+version = "0.7.0"
 source = { editable = "." }
 default-groups = ["dev", "e2e"]
 dependencies = [

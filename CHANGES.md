@@ -2,9 +2,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Two versions move here and they move independently. The **application** is this package, `libera`. The **editor payload** is the Euro-Office build it fetches on first use, versioned separately so that a fix to the host does not force a 120 MB re-download. `libera --version` prints both.
+Two versions move here and they move independently. The **application** is this package, `libera`. The **editor payload** is the Euro-Office build, from 0.7 two packages of its own (`libera-core` and `libera-web`), versioned separately so that a fix to the host does not rebuild them. `libera --version` prints both.
 
-## [Unreleased]
+## [0.7.0] - 2026-11-06
+
+PDFs, passwords and signatures, with payload **0.7.1**. What 0.7.0b1 lists below is part of this release too, and this adds what has been fixed since. The Flatpak bundles are signed. The macOS application and the Windows installer are not, although 0.7.0b1 said they would be: those accounts move to a later release.
+
+**Size.** `libera-web` is 55 MB and `libera-core` 37 to 54 MB depending on the platform, about 100 MB together, where 0.6 downloaded about 90 MB. The PDF editor is the main growth: measured on 2026-10-29, the editors went from 40.7 MB to 50.7 MB compressed, and from 187.0 MB to 220.6 MB unpacked.
+
+**Source.** The sdist of `libera-core` on PyPI is the corresponding source of its wheels: the pinned upstream commits, the patch queue and the build scripts. The manifest still names a commit of our private repository, which nobody else can fetch; the public mirror's tag `0.7.0` is this release, and a later release will name the mirror's commit in the manifest.
 
 ### Added
 
