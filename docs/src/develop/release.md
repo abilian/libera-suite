@@ -224,6 +224,8 @@ Then `lb release plan`, and `lb release status` after any pause: a release runs 
 
 **The payload is never skippable.** A release once shipped an `editors.tar.gz` eighteen hours older than the licence text inside it, because the core tarball was present, the whole native half was skipped, and `dist.sh` (which repackages the theme, the branding and the attribution) never ran. `native` runs `lb payload dist` for that reason, every time.
 
+**The build it packs has to be newer than its sources.** `lb payload dist` packs what is under `out/`, and building that is `make payload`, by hand, beforehand. `native` refuses when a pinned tree moved after that build finished, or when none did: the Mac supplies the shared `editors.tar.gz`, so a stale build there reaches every platform with every other check green. Refused, run `make payload`.
+
 ## Any command, on a builder
 
 ```sh

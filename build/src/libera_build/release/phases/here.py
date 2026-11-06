@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import time
 from typing import TYPE_CHECKING
 
 import tomllib
@@ -18,15 +19,20 @@ if TYPE_CHECKING:
 
     from libera_build.release.context import Context
 
+# Under what payload.sh deletes as it starts, and written near its end, so it is
+# there only after a build that got that far.
+PAYLOAD_FINISHED = "out/payload/sdkjs/slide/themes/themes.js"
+
 
 def native(ctx: Context) -> None:
     """The macOS core, on this machine, because there is nowhere else for it.
 
     `lb payload dist` re-tars the core already built under $BUILD_ROOT and
     takes a minute. It does not build one: that is `make payload`, an
-    afternoon, run by hand beforehand. It runs every time all the same,
-    because the payload half is never skippable: a release once shipped an
-    editors.tar.gz older than the licence text inside it.
+    afternoon, run by hand beforehand, and one older than its trees is
+    refused. It runs every time all the same, because the payload half is
+    never skippable: a release once shipped an editors.tar.gz older than the
+    licence text inside it.
     """
     if not [b for b in ctx.builders if not b.remote]:
         say("    no local builder selected; nothing to do here")
@@ -41,7 +47,16 @@ def native(ctx: Context) -> None:
         "the manifest would name the pins and these trees are not at them.\n"
         "  make payload: it fetches, which applies the queue, and rebuilds.",
     )
+    problems(
+        stale_problems(ctx.root, repo.build_root()),
+        "the tarballs would hold a build older than the trees it comes from.\n"
+        "  make payload: it rebuilds.",
+    )
     run_here(["uv", "run", "lb", "payload", "dist"], "native", cwd=ctx.root)
+
+
+def pinned(root: Path) -> dict[str, str]:
+    return tomllib.loads((root / repo.PINS).read_text(encoding="utf-8"))["repos"]
 
 
 def source_problems(
@@ -58,9 +73,8 @@ def source_problems(
     order: a tree fetched before a patch was renumbered holds the same changes
     in another order, as this Mac's core did when this was written.
     """
-    pins = tomllib.loads((root / repo.PINS).read_text(encoding="utf-8"))["repos"]
     found = []
-    for name, pin in pins.items():
+    for name, pin in pinned(root).items():
         if only is not None and name not in only:
             continue
         tree = src / name
@@ -84,6 +98,30 @@ def source_problems(
                 f"they are not the {len(want)} patch(es) in the queue"
             )
     return found
+
+
+def stale_problems(root: Path, build: Path) -> list[str]:
+    """Which trees under `build` moved after its payload was built, one sentence
+    a tree. Trees at their pins say nothing about what out/ was made from: every
+    check passed on a Mac whose editors were a week older than its trees.
+
+    The reflog says when a tree last moved, and a commit's date does not: a pin
+    can be bumped to a commit older than the build.
+    """
+    finished = build / PAYLOAD_FINISHED
+    if not finished.is_file():
+        return [f"no finished payload build: {finished} is not there"]
+    built = finished.stat().st_mtime
+    found = []
+    for name in pinned(root):
+        moved = (build / "src" / name / ".git" / "logs" / "HEAD").stat().st_mtime
+        if moved > built:
+            found.append(f"{name}: moved {when(moved)}, payload built {when(built)}")
+    return found
+
+
+def when(seconds: float) -> str:
+    return time.strftime("%Y-%m-%d %H:%M", time.localtime(seconds))
 
 
 def patch_ids(patches: bytes, tree: Path) -> list[str]:

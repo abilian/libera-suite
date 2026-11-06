@@ -10,6 +10,7 @@ libera_build` there, as on a builder.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from dataclasses import replace
@@ -394,6 +395,69 @@ def test_native_refuses_before_it_re_tars_anything(tmp_path, monkeypatch):
     ctx = Context(root=root, builders=[mac], phases=["native"])
     with pytest.raises(RefusedError, match="these trees are not at them"):
         here.native(ctx)
+
+
+def built_payload(tmp_path: Path, *, age: int) -> None:
+    """A finished payload under $BUILD_ROOT, `age` seconds older than the tree."""
+    finished = tmp_path / here.PAYLOAD_FINISHED
+    finished.parent.mkdir(parents=True)
+    finished.touch()
+    moved = (tmp_path / "src" / "core" / ".git" / "logs" / "HEAD").stat().st_mtime
+    os.utime(finished, (moved - age, moved - age))
+
+
+def test_native_takes_a_build_finished_after_its_trees_moved(tmp_path):
+    root, _, _ = sources(tmp_path, 0)
+    built_payload(tmp_path, age=-60)
+    assert here.stale_problems(root, tmp_path) == []
+
+
+def test_native_refuses_a_build_older_than_a_tree_at_its_pin(tmp_path):
+    """The trees pass source_problems, patch and all, and the editors are from
+    before the patch: nothing else looks at what out/ was made from."""
+    root, src, queue = sources(tmp_path, 1)
+    built_payload(tmp_path, age=60)
+    git(src / "core", "am", "-q", *queue)
+    assert here.source_problems(root, src) == []
+    (problem,) = here.stale_problems(root, tmp_path)
+    assert problem.startswith("core: moved ")
+
+
+def test_native_goes_by_when_a_tree_moved_not_its_commits_date(tmp_path, monkeypatch):
+    """A pin bumped to an old commit is news to a newer build all the same."""
+    root, src, _ = sources(tmp_path, 0)
+    built_payload(tmp_path, age=60)
+    monkeypatch.setenv("GIT_COMMITTER_DATE", "2001-01-01T00:00:00")
+    git(src / "core", "commit", "-q", "--allow-empty", "-m", "old")
+    os.utime(tmp_path / here.PAYLOAD_FINISHED, (1_000_000_000, 1_000_000_000))
+    (problem,) = here.stale_problems(root, tmp_path)
+    assert problem.startswith("core: moved ")
+
+
+def test_native_refuses_when_no_payload_build_finished(tmp_path):
+    root, _, _ = sources(tmp_path, 0)
+    (problem,) = here.stale_problems(root, tmp_path)
+    assert "no finished payload build" in problem
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="native makes the macOS core")
+@pytest.mark.parametrize(("age", "packs"), [(60, False), (-60, True)])
+def test_native_packs_only_a_build_newer_than_its_trees(
+    tmp_path, monkeypatch, age, packs
+):
+    root, _, _ = sources(tmp_path, 0)
+    built_payload(tmp_path, age=age)
+    monkeypatch.setenv("BUILD_ROOT", str(tmp_path))
+    packed: list[list[str]] = []
+    monkeypatch.setattr(here, "run_here", lambda argv, *_, **__: packed.append(argv))
+    mac = Builder("macos-arm64", "local", None, True, "~/r")
+    ctx = Context(root=root, builders=[mac], phases=["native"])
+    if packs:
+        here.native(ctx)
+    else:
+        with pytest.raises(RefusedError, match="older than the trees"):
+            here.native(ctx)
+    assert packed == ([["uv", "run", "lb", "payload", "dist"]] if packs else [])
 
 
 class Flaky:
