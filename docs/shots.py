@@ -9,9 +9,10 @@ which is the same path `tests/c_e2e/` drives. Nothing here reaches into the
 package: a screenshot that came from a fixture would be a picture of the
 fixture, and the whole point of these is to show what a user sees.
 
-The wait is the report, never a timer. A page "loads" well before the document
-has been laid out, and a screenshot taken then is of an empty canvas -- which
-looks like a rendering bug rather than an impatient script.
+The wait is the editor's own ready call, never a timer. A page "loads" well
+before the document has been laid out, and a screenshot taken then is of an
+empty canvas -- which looks like a rendering bug rather than an impatient
+script.
 
 Regenerate after anything that changes the chrome: the theme, the payload, the
 start window. `make check` in docs/ does not look at images, so a stale one
@@ -20,15 +21,11 @@ will sit there indefinitely.
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import socket
 import subprocess
 import sys
-import time
-import urllib.error
-import urllib.request
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
@@ -109,21 +106,6 @@ def find_free_port() -> int:
         return int(s.getsockname()[1])
 
 
-def wait_until_laid_out(calls: str) -> None:
-    """Poll the host's own report until the editor says the document is drawn."""
-    deadline = time.monotonic() + READY
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(calls, timeout=10) as r:
-                if "onDocumentContentReady" in json.load(r)["calls"]:
-                    return
-        except (urllib.error.URLError, TimeoutError, ValueError):
-            pass
-        time.sleep(1)
-    msg = f"the editor never finished loading within {READY}s"
-    raise SystemExit(msg)
-
-
 def shoot(document: Path, out: Path, *, work: Path, shot: Shot) -> None:
     """Serve one document, photograph the window, write `out`."""
     page_path, clip, viewport = shot.page_path, shot.clip, shot.viewport
@@ -165,7 +147,19 @@ def shoot(document: Path, out: Path, *, work: Path, shot: Shot) -> None:
             # page, so waiting for the report first waits forever -- which is
             # exactly what the first version of this script did.
             if not page_path:
-                wait_until_laid_out(f"http://127.0.0.1:{port}/__host__/calls")
+                # The page's own record of the editor's calls, as the e2e
+                # tests read it: the host's report goes the moment it is read,
+                # and the PDF editor's ready call was gone before this looked.
+                page.wait_for_function(
+                    "() => { const f = document.querySelector('iframe');"
+                    " const d = f && f.contentDocument;"
+                    " return !!window.__libera_seen"
+                    " && window.__libera_seen.has('onDocumentContentReady')"
+                    " && !!d && !d.querySelector('.asc-loadmask'); }",
+                    timeout=READY * 1000,
+                )
+            if shot.prepare:
+                page.frame_locator("iframe").locator("body").evaluate(shot.prepare)
             # The editor paints its rulers and status bar after the document,
             # and the start window fades its tiles in.
             page.wait_for_timeout(4000)
@@ -187,7 +181,7 @@ def blank(kind: str, work: Path) -> Path:
     return document
 
 
-def sample(work: Path) -> Path:
+def sample(work: Path, source: str = SAMPLE, title: str = "Libera Suite") -> Path:
     """The document Words is shown holding.
 
     Built on the payload's own blank, the way tests/support/make_sample_docx.py
@@ -199,7 +193,7 @@ def sample(work: Path) -> Path:
         f"<w:p><w:pPr>{SPACING[style]}<w:rPr>{RUNS[style]}</w:rPr></w:pPr>"
         f"<w:r><w:rPr>{RUNS[style]}</w:rPr>"
         f'<w:t xml:space="preserve">{text}</w:t></w:r></w:p>'
-        for style, text in paragraphs(SAMPLE)
+        for style, text in paragraphs(source)
     )
 
     parts = {}
@@ -214,11 +208,64 @@ def sample(work: Path) -> Path:
     tail = rest[rest.index("<w:sectPr") :] if "<w:sectPr" in rest else "</w:body>"
     parts["word/document.xml"] = f"{head}<w:body>{body}{tail}".encode()
 
-    document = work / "Libera Suite.docx"
+    document = work / f"{title}.docx"
     with zipfile.ZipFile(document, "w", zipfile.ZIP_DEFLATED) as z:
         for name, data in parts.items():
             z.writestr(name, data)
     return document
+
+
+PDF_SAMPLE = """\
+# Libera PDF
+
+Comment on, fill in and rearrange PDFs.
+
+## Comments
+
+Highlight a passage, add a note or a text box, and draw on the page. Saving
+adds your changes after the original.
+
+## Forms
+
+Click a field and type, tick a box, choose from a list.
+
+## Pages
+
+Add, delete, rotate and move pages from the thumbnails.
+"""
+
+
+# A comment on the page, and the Comment tab open: what Libera PDF adds over a
+# viewer, which a page alone would not show.
+PDF_PREPARE = """() => {
+    const d = new Asc.asc_CCommentDataWord(null);
+    d.asc_putText("Can we add the signature page before Friday?");
+    d.asc_putUserName("Libera Suite");
+    Asc.editor.asc_addComment(d);
+    document.querySelector('a[data-tab="comment"]').click();
+    document.querySelector('#left-btn-comments').click();
+}"""
+
+
+def pdf_sample(work: Path) -> Path:
+    """A PDF for Libera PDF to hold, made by the shipped converter."""
+    document = sample(work, PDF_SAMPLE, "Libera PDF")
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "libera",
+            "--convert",
+            str(document),
+            "-t",
+            "pdf",
+            "--outdir",
+            str(work),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    return document.with_suffix(".pdf")
 
 
 def seed_recents(work: Path) -> None:
@@ -252,6 +299,7 @@ class Shot(NamedTuple):
     page_path: str = ""
     clip: FloatRect | None = None
     viewport: ViewportSize | None = None
+    prepare: str = ""  # JavaScript run in the editor once it is ready
 
 
 # The start window has no max-width: its layout is whatever width the window
@@ -275,6 +323,7 @@ SHOTS = {
     "words": Shot("Words, holding a document", sample),
     "tables": Shot("Tables", lambda w: blank("cell", w)),
     "slides": Shot("Slides", lambda w: blank("slide", w)),
+    "pdf": Shot("Libera PDF", pdf_sample, prepare=PDF_PREPARE),
     "start": Shot(
         "The start window",
         sample,
