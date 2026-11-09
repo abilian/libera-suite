@@ -68,7 +68,7 @@ GnuPG debe decir `Firma correcta de "Libera Suite release signing <releases@libe
 
 ## Los componentes {#the-editors}
 
-Todos los canales instalan los componentes con la aplicación. El instalador de Windows y el Flatpak los contienen. Con pip, pipx o uv son dos paquetes de Python que `libera` requiere: `libera-core`, el motor de documentos, compilado para cada plataforma, y `libera-web`, los componentes de edición y las fuentes. Juntos suponen unos 90 MB de descarga. Después, la primera ejecución crea el índice de fuentes de tu máquina, lo que tarda un momento.
+Todos los canales instalan los componentes con la aplicación. El instalador de Windows y el Flatpak los contienen. Con pip, pipx o uv son dos paquetes de Python que `libera` requiere: `libera-core`, el motor de documentos, compilado para cada plataforma, y `libera-web`, los componentes de edición y las fuentes. Juntos suponen unos 100 MB de descarga. Después, la primera ejecución crea el índice de fuentes de tu máquina, lo que tarda un momento.
 
 PyPI tiene `libera-core` para Windows x64, Linux x86_64 y macOS en Apple Silicon. En cualquier otra máquina, pip lo compila desde el código fuente, lo que lleva casi una hora y necesita las herramientas que enumera [Compilar los componentes](/en/develop/build/), en inglés.
 

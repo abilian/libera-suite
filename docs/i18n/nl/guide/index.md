@@ -20,7 +20,7 @@ Libera Suite bestaat uit twee delen, die apart verpakt zijn.
 
 **De applicatie** is een klein Python-pakket van een paar honderd kilobyte: het venster, de opdrachtregel en de host waarmee de componenten communiceren.
 
-**De componenten** zijn al het andere: de documentengine, de bewerkingscomponenten, de lettertypen. De opdrachtregel noemt ze de *payload*. Gecomprimeerd zijn ze ongeveer 90 MB, in twee eigen Python-pakketten, `libera-core` en `libera-web`.
+**De componenten** zijn al het andere: de documentengine, de bewerkingscomponenten, de lettertypen. De opdrachtregel noemt ze de *payload*. Gecomprimeerd zijn ze ongeveer 100 MB, in twee eigen Python-pakketten, `libera-core` en `libera-web`.
 
 Ze hebben elk hun eigen versienummer. De applicatie controleert of de componenten die ze vindt de verwachte zijn. Een correctie in de applicatie betekent dus niet dat je de componenten opnieuw moet downloaden.
 

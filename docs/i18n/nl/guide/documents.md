@@ -121,7 +121,7 @@ Een `.pdf` opent in **Libera PDF**. Libera Suite wordt voor een pdf aangeboden o
 - **De pagina's wijzigen.** Een rechtsklik op een pagina geeft *Lege pagina erna invoegen*, *Verwijder pagina* en *Pagina draaien*. Sleep de miniatuur van een pagina om hem te verplaatsen.
 - **Een regel tekst wijzigen**, met *PDF bewerken* en dan *Tekst bewerken*. Dat is bedoeld voor kleine correcties. De nieuwe woorden worden gezet in een van onze lettertypen als dat van de pdf niet te gebruiken is, en een regel die langer wordt loopt niet opnieuw door: wat niet meer past, komt op een eigen regel.
 
-**Opslaan voegt toe aan het bestand.** Je wijzigingen worden achter de oorspronkelijke inhoud van de pdf geschreven, die precies blijft zoals hij was. Een handtekening die opmerkingen toestaat, blijft dus geldig voor wat ze ondertekende. Een pdf wordt alleen als pdf opgeslagen.
+**Opslaan voegt toe aan het bestand.** Je wijzigingen worden achter de oorspronkelijke inhoud van de pdf geschreven, die precies blijft zoals hij was. Een pagina die je verwijdert of tekst die je corrigeert, is dus nog uit het opgeslagen bestand terug te halen: reken op geen van beide om iets vertrouwelijks te verwijderen uit een pdf die je verstuurt. Een handtekening die opmerkingen toestaat, blijft dus geldig voor wat ze ondertekende. Een pdf wordt alleen als pdf opgeslagen.
 
 **Een pdf die om een wachtwoord vraagt** opent zodra je het wachtwoord geeft, en wordt met je wijzigingen opgeslagen, nog steeds met hetzelfde wachtwoord. **Een pdf die tegen elke wijziging is gecertificeerd, kan niet worden opgeslagen**: het opslaan mislukt en dat wordt gezegd, het bestand blijft zoals het was, en je wijzigingen blijven in het venster.
 

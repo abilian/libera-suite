@@ -20,7 +20,7 @@ Libera Suite is two pieces, packaged separately.
 
 **The application** is a small Python package. It is a few hundred kilobytes: the window, the command line, and the host that the components talk to.
 
-**The components** are everything else: the document engine, the editing components, the fonts. The command line calls them the *payload*. It is about 90 MB compressed, in two Python packages of its own, `libera-core` and `libera-web`.
+**The components** are everything else: the document engine, the editing components, the fonts. The command line calls them the *payload*. It is about 100 MB compressed, in two Python packages of its own, `libera-core` and `libera-web`.
 
 They are versioned separately. The application checks that the components it finds are the ones it expects. A fix to the application therefore does not mean downloading the components again.
 

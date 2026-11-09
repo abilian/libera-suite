@@ -68,7 +68,7 @@ GnuPG doit afficher `Bonne signature de « Libera Suite release signing <release
 
 ## Les composants {#the-editors}
 
-Tous les canaux installent les composants avec l'application. L'installateur Windows et le Flatpak les contiennent. Avec pip, pipx ou uv, ce sont deux paquets Python dont `libera` a besoin : `libera-core`, le moteur de documents, compilé pour chaque plateforme, et `libera-web`, les composants d'édition et les polices. Ils représentent ensemble environ 90 Mo à télécharger. Le premier lancement construit ensuite, en quelques instants, l'index des polices de votre machine.
+Tous les canaux installent les composants avec l'application. L'installateur Windows et le Flatpak les contiennent. Avec pip, pipx ou uv, ce sont deux paquets Python dont `libera` a besoin : `libera-core`, le moteur de documents, compilé pour chaque plateforme, et `libera-web`, les composants d'édition et les polices. Ils représentent ensemble environ 100 Mo à télécharger. Le premier lancement construit ensuite, en quelques instants, l'index des polices de votre machine.
 
 PyPI propose `libera-core` pour Windows x64, Linux x86_64 et macOS sur Apple Silicon. Sur toute autre machine, pip le construit depuis les sources : la construction prend près d'une heure et demande les outils listés dans [Build the components](/en/develop/build/), en anglais.
 

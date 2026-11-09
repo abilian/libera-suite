@@ -20,7 +20,7 @@ Libera Suite è composta da due parti, distribuite separatamente.
 
 **L'applicazione** è un piccolo pacchetto Python di poche centinaia di kilobyte: la finestra, la riga di comando e l'applicazione host con cui i componenti comunicano.
 
-**I componenti** sono tutto il resto: il motore dei documenti, i componenti di modifica, i caratteri. La riga di comando li chiama il *payload*. Pesano circa 90 MB compressi, in due pacchetti Python a parte, `libera-core` e `libera-web`.
+**I componenti** sono tutto il resto: il motore dei documenti, i componenti di modifica, i caratteri. La riga di comando li chiama il *payload*. Pesano circa 100 MB compressi, in due pacchetti Python a parte, `libera-core` e `libera-web`.
 
 Le due parti hanno numeri di versione distinti. L'applicazione verifica che i componenti che trova siano quelli che si aspetta. Una correzione dell'applicazione non obbliga quindi a scaricare di nuovo i componenti.
 

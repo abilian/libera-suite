@@ -7,7 +7,7 @@
 | **L'application hôte** : le paquet `libera`, tout le contenu de `src/libera/` | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
 | **Les composants** : Euro-Office avec notre série de correctifs | [AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html) |
 
-Ils sont empaquetés séparément et restent séparés. L'application hôte est un paquet de quelques centaines de kilo-octets de Python et de JavaScript sur PyPI, sous le nom `libera` ; les composants y forment deux paquets à part, `libera-core` et `libera-web`, d'environ 90 Mo à eux deux, ou le contenu d'un paquet Flatpak. Rien des composants n'est intégré au paquet Python de l'application hôte.
+Ils sont empaquetés séparément et restent séparés. L'application hôte est un paquet de quelques centaines de kilo-octets de Python et de JavaScript sur PyPI, sous le nom `libera` ; les composants y forment deux paquets à part, `libera-core` et `libera-web`, d'environ 100 Mo à eux deux, ou le contenu d'un paquet Flatpak. Rien des composants n'est intégré au paquet Python de l'application hôte.
 
 Lancez `libera --payload-status` pour voir les composants utilisés et les révisions de l'amont dont ils sont issus.
 

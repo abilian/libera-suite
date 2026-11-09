@@ -121,7 +121,7 @@ Un `.pdf` se abre en **Libera PDF**. Libera Suite se ofrece en *Abrir con* para 
 - **Cambiar las páginas.** Un clic derecho en una página ofrece *Insertar página en blanco después*, *Eliminar página* y *Girar página*. Arrastra la miniatura de una página para moverla.
 - **Cambiar una línea de texto**, con *Editar PDF* y luego *Editar texto*. Sirve para correcciones pequeñas. Las palabras nuevas se componen en una de nuestras fuentes cuando no se puede usar la del PDF, y una línea que crece no se recompone: lo que ya no cabe pasa a una línea propia.
 
-**Guardar añade al archivo.** Tus cambios se escriben después del contenido original del PDF, que queda exactamente como estaba. Por eso una firma que permite comentarios sigue siendo válida para lo que firmó. Un PDF solo se guarda como PDF.
+**Guardar añade al archivo.** Tus cambios se escriben después del contenido original del PDF, que queda exactamente como estaba. Por eso una página que eliminas o un texto que corriges todavía se pueden recuperar del archivo guardado: no cuentes con ninguno de los dos para quitar algo confidencial de un PDF que envías. Por eso una firma que permite comentarios sigue siendo válida para lo que firmó. Un PDF solo se guarda como PDF.
 
 **Un PDF que pide una contraseña** se abre cuando das la contraseña, y se guarda con tus cambios, con la misma contraseña. **Un PDF certificado contra cualquier cambio no se puede guardar**: el guardado falla y lo dice, el archivo queda como estaba y tus cambios siguen en la ventana.
 

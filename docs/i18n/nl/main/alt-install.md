@@ -68,7 +68,7 @@ GnuPG moet `Goede handtekening van "Libera Suite release signing <releases@liber
 
 ## De componenten {#the-editors}
 
-Elk kanaal installeert de componenten samen met de applicatie. Het Windows-installatieprogramma en de Flatpak bevatten ze. Met pip, pipx of uv zijn het twee Python-pakketten die `libera` vereist: `libera-core`, de documentengine, gebouwd voor elk platform, en `libera-web`, de bewerkingscomponenten en de lettertypen. Samen zijn ze ongeveer 90 MB om te downloaden. Bij de eerste start wordt daarna een lettertype-index voor je computer gebouwd, wat even duurt.
+Elk kanaal installeert de componenten samen met de applicatie. Het Windows-installatieprogramma en de Flatpak bevatten ze. Met pip, pipx of uv zijn het twee Python-pakketten die `libera` vereist: `libera-core`, de documentengine, gebouwd voor elk platform, en `libera-web`, de bewerkingscomponenten en de lettertypen. Samen zijn ze ongeveer 100 MB om te downloaden. Bij de eerste start wordt daarna een lettertype-index voor je computer gebouwd, wat even duurt.
 
 PyPI heeft `libera-core` voor Windows x64, Linux x86_64 en macOS op Apple Silicon. Op elke andere computer bouwt pip het vanuit de broncode. Dat duurt het grootste deel van een uur en vraagt de tools die [Build the components](/en/develop/build/), in het Engels, opsomt.
 

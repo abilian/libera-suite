@@ -10,7 +10,7 @@ Libera Suite y Euro-Office Desktop Editors usan los mismos componentes. `sdkjs`,
 
 Esa elección tiene varias consecuencias.
 
-- **Tamaño.** En la versión 9.3.5-2, el `.dmg` de Euro-Office para macOS ocupa 926 MB y su instalador autónomo para Windows 616 MB. Libera Suite descarga unos 90 MB de componentes, más una aplicación de pocos megabytes.
+- **Tamaño.** En la versión 9.3.5-2, el `.dmg` de Euro-Office para macOS ocupa 926 MB y su instalador autónomo para Windows 616 MB. Libera Suite descarga unos 100 MB de componentes, más una aplicación de pocos megabytes.
 - **Instalación.** `pip` o `pipx`, Homebrew (macOS y Linux), Flatpak, un instalador para Windows o una línea `curl | sh`.
 - **Línea de comandos.** `libera --convert *.docx -t pdf` convierte documentos sin abrir ninguna ventana.
 - **Correcciones.** Compilamos todo a partir de las fuentes de Euro-Office, con una [serie de parches publicada](/en/develop/patches/). Se centra en el conversor, para los archivos OpenDocument y CSV. Las versiones de Euro-Office no incluyen hoy esas correcciones.

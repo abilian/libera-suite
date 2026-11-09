@@ -7,7 +7,7 @@
 | **L'applicazione host**: il pacchetto `libera`, tutto ciò che si trova in `src/libera/` | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
 | **I componenti**: Euro-Office con la nostra serie di patch | [AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html) |
 
-Sono distribuiti separatamente e restano separati. L'applicazione host è un pacchetto di poche centinaia di kilobyte di Python e JavaScript su PyPI, con il nome `libera`; i componenti sono due pacchetti a parte sullo stesso indice, `libera-core` e `libera-web`, circa 90 MB in tutto, o il contenuto di un pacchetto Flatpak. Nulla dei componenti è incorporato nel pacchetto dell'applicazione host.
+Sono distribuiti separatamente e restano separati. L'applicazione host è un pacchetto di poche centinaia di kilobyte di Python e JavaScript su PyPI, con il nome `libera`; i componenti sono due pacchetti a parte sullo stesso indice, `libera-core` e `libera-web`, circa 100 MB in tutto, o il contenuto di un pacchetto Flatpak. Nulla dei componenti è incorporato nel pacchetto dell'applicazione host.
 
 Esegui `libera --payload-status` per vedere i componenti in uso e le revisioni del progetto originale da cui sono stati costruiti.
 

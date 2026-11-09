@@ -68,7 +68,7 @@ GnuPG must say `Good signature from "Libera Suite release signing <releases@libe
 
 ## The components {#the-editors}
 
-Every channel installs the components with the application. The Windows installer and the Flatpak contain them. With pip, pipx or uv they are two Python packages that `libera` requires: `libera-core`, the document engine, built for each platform, and `libera-web`, the editing components and the fonts. Together they are about 90 MB to download. The first run then builds a font index for your machine, which takes a moment.
+Every channel installs the components with the application. The Windows installer and the Flatpak contain them. With pip, pipx or uv they are two Python packages that `libera` requires: `libera-core`, the document engine, built for each platform, and `libera-web`, the editing components and the fonts. Together they are about 100 MB to download. The first run then builds a font index for your machine, which takes a moment.
 
 PyPI has `libera-core` for Windows x64, Linux x86_64 and macOS on Apple Silicon. On any other machine, pip builds it from source, which takes most of an hour and needs the tools [Build the components](../develop/build.md) lists.
 

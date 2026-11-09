@@ -7,7 +7,7 @@
 | **De hosttoepassing**: het pakket `libera`, alles in `src/libera/` | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
 | **De componenten**: Euro-Office en onze patchreeks daarop | [AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html) |
 
-Ze zijn apart verpakt en blijven apart. De hosttoepassing is een paar honderd kilobyte Python en JavaScript op PyPI, als `libera`; de componenten zijn daar twee eigen pakketten, `libera-core` en `libera-web`, samen ongeveer 90 MB, of de inhoud van een Flatpak-bundel. Niets van de componenten zit in het pakket van de hosttoepassing.
+Ze zijn apart verpakt en blijven apart. De hosttoepassing is een paar honderd kilobyte Python en JavaScript op PyPI, als `libera`; de componenten zijn daar twee eigen pakketten, `libera-core` en `libera-web`, samen ongeveer 100 MB, of de inhoud van een Flatpak-bundel. Niets van de componenten zit in het pakket van de hosttoepassing.
 
 Voer `libera --payload-status` uit om te zien welke componenten in gebruik zijn en uit welke upstream-revisies ze gebouwd zijn.
 

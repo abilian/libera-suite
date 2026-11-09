@@ -7,7 +7,7 @@
 | **Die Host-Anwendung**: das Paket `libera`, alles in `src/libera/` | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
 | **Die Komponenten**: Euro-Office mit unserer Patch-Reihe | [AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html) |
 
-Sie sind getrennt paketiert und bleiben getrennt. Die Host-Anwendung besteht aus einigen hundert Kilobyte Python und JavaScript auf PyPI, als `libera`; die Komponenten sind dort zwei eigene Pakete, `libera-core` und `libera-web`, zusammen etwa 90 MB, oder der Inhalt eines Flatpak-Pakets. Nichts davon ist in das Wheel der Host-Anwendung eingebaut.
+Sie sind getrennt paketiert und bleiben getrennt. Die Host-Anwendung besteht aus einigen hundert Kilobyte Python und JavaScript auf PyPI, als `libera`; die Komponenten sind dort zwei eigene Pakete, `libera-core` und `libera-web`, zusammen etwa 100 MB, oder der Inhalt eines Flatpak-Pakets. Nichts davon ist in das Wheel der Host-Anwendung eingebaut.
 
 Führen Sie `libera --payload-status` aus, um die verwendeten Komponenten und die Upstream-Revisionen zu sehen, aus denen sie gebaut wurden.
 

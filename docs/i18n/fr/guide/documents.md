@@ -121,7 +121,7 @@ Un `.pdf` s'ouvre dans **Libera PDF**. Libera Suite est proposé dans *Ouvrir av
 - **Modifier les pages.** Un clic droit sur une page donne *Insérer une page vide après*, *Supprimer la page* et *Faire pivoter la page*. Faites glisser la miniature d'une page pour la déplacer.
 - **Corriger une ligne de texte**, avec *Modifier PDF*, puis *Modifier le texte*. C'est fait pour de petites corrections. Les nouveaux mots sont composés dans une de nos polices quand celle du PDF ne peut pas servir, et une ligne qui s'allonge ne se recompose pas : la partie qui ne tient plus passe sur une ligne à part.
 
-**L'enregistrement s'ajoute au fichier.** Vos modifications sont écrites après le contenu d'origine du PDF, qui reste exactement tel qu'il était. Une signature qui autorise les commentaires reste donc valable pour la partie signée. Un PDF ne s'enregistre qu'en PDF.
+**L'enregistrement s'ajoute au fichier.** Vos modifications sont écrites après le contenu d'origine du PDF, qui reste exactement tel qu'il était. Une page supprimée ou un texte corrigé peut donc encore être retrouvé dans le fichier enregistré : ne comptez ni sur l'un ni sur l'autre pour retirer une information confidentielle d'un PDF que vous envoyez. Une signature qui autorise les commentaires reste donc valable pour la partie signée. Un PDF ne s'enregistre qu'en PDF.
 
 **Un PDF qui demande un mot de passe** s'ouvre une fois le mot de passe donné, et s'enregistre avec vos modifications, toujours sous le même mot de passe. **Un PDF certifié contre toute modification ne s'enregistre pas** : l'enregistrement échoue en le disant, le fichier reste tel quel, et vos modifications restent dans la fenêtre.
 

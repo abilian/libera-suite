@@ -68,7 +68,7 @@ GnuPG muss `Korrekte Signatur von "Libera Suite release signing <releases@libera
 
 ## Die Komponenten {#the-editors}
 
-Jeder Kanal installiert die Komponenten mit der Anwendung. Das Windows-Installationsprogramm und das Flatpak enthalten sie. Mit pip, pipx oder uv sind sie zwei Python-Pakete, die `libera` voraussetzt: `libera-core`, die Dokument-Engine, für jede Plattform gebaut, und `libera-web`, die Bearbeitungskomponenten und die Schriften. Zusammen sind etwa 90 MB herunterzuladen. Beim ersten Start wird dann der Schriftenindex für Ihren Rechner erstellt, was einen Moment dauert.
+Jeder Kanal installiert die Komponenten mit der Anwendung. Das Windows-Installationsprogramm und das Flatpak enthalten sie. Mit pip, pipx oder uv sind sie zwei Python-Pakete, die `libera` voraussetzt: `libera-core`, die Dokument-Engine, für jede Plattform gebaut, und `libera-web`, die Bearbeitungskomponenten und die Schriften. Zusammen sind etwa 100 MB herunterzuladen. Beim ersten Start wird dann der Schriftenindex für Ihren Rechner erstellt, was einen Moment dauert.
 
 Auf PyPI gibt es `libera-core` für Windows x64, Linux x86_64 und macOS auf Apple Silicon. Auf jedem anderen Rechner baut pip es aus dem Quellcode. Das dauert fast eine Stunde und braucht die Werkzeuge, die [Build the payload](/en/develop/build/) (auf Englisch) aufführt.
 

@@ -20,7 +20,7 @@ Libera Suite se compose de deux parties, empaquetées séparément.
 
 **L'application** est un petit paquet Python. Elle pèse quelques centaines de kilo-octets : la fenêtre, la ligne de commande et l'application hôte avec laquelle les composants communiquent.
 
-**Les composants** sont tout le reste : le moteur de documents, les composants d'édition, les polices. La ligne de commande les appelle le *payload*. Ils pèsent environ 90 Mo compressés, répartis dans deux paquets Python à eux, `libera-core` et `libera-web`.
+**Les composants** sont tout le reste : le moteur de documents, les composants d'édition, les polices. La ligne de commande les appelle le *payload*. Ils pèsent environ 100 Mo compressés, répartis dans deux paquets Python à eux, `libera-core` et `libera-web`.
 
 Les deux ont des numéros de version distincts. L'application vérifie que les composants qu'elle trouve sont bien ceux qu'elle attend. Une correction de l'application n'oblige donc pas à retélécharger les composants.
 

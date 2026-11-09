@@ -1,5 +1,5 @@
 ---
-date: 2026-11-07
+date: 2026-11-09
 description: Con Libera Suite 0.7 puedes comentar, rellenar y reordenar los PDF, mantener los documentos bajo su contraseña, y leer y crear firmas digitales. Sus componentes se instalan ahora con ella.
 ---
 

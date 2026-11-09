@@ -121,7 +121,7 @@ Un `.pdf` si apre in **Libera PDF**. Libera Suite è proposto in *Apri con* per 
 - **Modificare le pagine.** Un clic destro su una pagina offre *Inserisci pagina vuota dopo*, *Elimina pagina* e *Ruota la pagina*. Trascina la miniatura di una pagina per spostarla.
 - **Correggere una riga di testo**, con *Modifica PDF*, poi *Modifica Testo*. Serve per piccole correzioni. Le parole nuove sono composte in uno dei nostri caratteri quando quello del PDF non si può usare, e una riga che si allunga non si ricompone: la parte che non ci sta più va su una riga a sé.
 
-**Il salvataggio si aggiunge al file.** Le tue modifiche sono scritte dopo il contenuto originale del PDF, che resta esattamente com'era. Una firma che consente i commenti resta quindi valida per la parte firmata. Un PDF si salva solo come PDF.
+**Il salvataggio si aggiunge al file.** Le tue modifiche sono scritte dopo il contenuto originale del PDF, che resta esattamente com'era. Una pagina che elimini o un testo che correggi si può quindi ancora recuperare dal file salvato: non contare su nessuno dei due per togliere qualcosa di riservato da un PDF che invii. Una firma che consente i commenti resta quindi valida per la parte firmata. Un PDF si salva solo come PDF.
 
 **Un PDF che chiede una password** si apre quando dai la password, e si salva con le tue modifiche, sempre sotto la stessa password. **Un PDF certificato contro ogni modifica non si può salvare**: il salvataggio non riesce e lo dice, il file resta com'era, e le tue modifiche restano nella finestra.
 

@@ -1,5 +1,5 @@
 ---
-date: 2026-11-07
+date: 2026-11-09
 description: Met Libera Suite 0.7 kun je pdf's van opmerkingen voorzien, invullen en herschikken, documenten onder hun wachtwoord houden en digitale handtekeningen lezen en maken. Haar componenten worden nu met haar geïnstalleerd.
 ---
 

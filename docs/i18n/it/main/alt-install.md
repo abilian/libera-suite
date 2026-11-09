@@ -68,7 +68,7 @@ GnuPG deve dire `Firma valida da "Libera Suite release signing <releases@liberas
 
 ## I componenti {#the-editors}
 
-Ogni canale installa i componenti insieme all'applicazione. Il programma di installazione per Windows e il Flatpak li contengono. Con pip, pipx o uv sono due pacchetti Python richiesti da `libera`: `libera-core`, il motore dei documenti, compilato per ciascuna piattaforma, e `libera-web`, i componenti di modifica e i caratteri. Insieme sono circa 90 MB da scaricare. Il primo avvio costruisce poi l'indice dei caratteri della tua macchina, il che richiede un momento.
+Ogni canale installa i componenti insieme all'applicazione. Il programma di installazione per Windows e il Flatpak li contengono. Con pip, pipx o uv sono due pacchetti Python richiesti da `libera`: `libera-core`, il motore dei documenti, compilato per ciascuna piattaforma, e `libera-web`, i componenti di modifica e i caratteri. Insieme sono circa 100 MB da scaricare. Il primo avvio costruisce poi l'indice dei caratteri della tua macchina, il che richiede un momento.
 
 PyPI ha `libera-core` per Windows x64, Linux x86_64 e macOS su Apple Silicon. Su qualsiasi altra macchina, pip lo compila dai sorgenti, il che richiede quasi un'ora e gli strumenti elencati in [Costruire i componenti](/en/develop/build/), in inglese.
 

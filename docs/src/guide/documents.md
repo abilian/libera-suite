@@ -119,7 +119,7 @@ A `.pdf` opens in **Libera PDF**. Libera Suite is offered in *Open With* for a P
 - **Change the pages.** Right-click a page for *Insert blank page after*, *Delete page* and *Rotate page*. Drag a page's thumbnail to move it.
 - **Change a line of text**, with *Edit PDF*, then *Edit Text*. Use it for small corrections. The new words are set in one of our fonts when the PDF's own cannot be used, and a line that grows does not reflow: what no longer fits goes to a line of its own.
 
-**Saving adds to the file.** Your changes are written after the PDF's original content, which stays exactly as it was. A signature that permits comments therefore stays valid for what it signed. A PDF saves only as a PDF.
+**Saving adds to the file.** Your changes are written after the PDF's original content, which stays exactly as it was. A page you delete or text you correct can still be recovered from the saved file, so don't rely on either to remove something confidential from a PDF you send. A signature that permits comments therefore stays valid for what it signed. A PDF saves only as a PDF.
 
 **A PDF that asks for a password** opens once you give it, and saves with your changes, still under the same password. **A PDF certified against any change cannot be saved**: the save fails and says so, the file is left as it was, and your changes stay in the window.
 
