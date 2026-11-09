@@ -60,19 +60,20 @@ A desktop office suite you can own.
 
 ## What it is
 
-Four editors share one application: Words for documents, Tables for
-spreadsheets, Slides for presentations, and Diagrams for reading Visio files.
-The document picks the editor, so there is nothing to choose.
+Five editors share one application: Words for documents, Tables for
+spreadsheets, Slides for presentations, PDF for PDFs, and Diagrams for
+reading Visio files. The document picks the editor, so there is nothing to
+choose.
 
 The editors are Euro-Office, an AGPL fork of ONLYOFFICE by Ascensio System
-SIA, running locally and unmodified. The host around them is a few thousand
-lines of Python.
+SIA, running locally, with a short series of published fixes. The host around
+them is written in Python.
 
 ## What leaves your machine
 
-Nothing, except when you ask. There is no telemetry, no account and nowhere
-for the application to phone. Your documents are read and written on your own
-disk, by a converter on your own disk.
+Your documents never do. There is no telemetry and no account: your documents
+are read and written on your own disk, by a converter on your own disk. Once a
+day at most, the application asks whether a newer version exists.
 """
 RUNS = {  # w:sz is half-points
     "title": f'<w:b/><w:sz w:val="56"/><w:color w:val="{SUITE}"/>',

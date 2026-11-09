@@ -2,18 +2,19 @@
 
 **A desktop office suite you can own.** Libera Suite opens the documents other people send you (`.docx`, `.xlsx`, `.pptx`, ODF), edits them on your machine and saves them back. It runs on your own computer, with no account to create and nothing in it that phones home.
 
-Four editors share one application. The file picks the editor, so there is nothing to choose.
+Five editors share one application. The file picks the editor, so there is nothing to choose.
 
 | | |
 | :--- | :--- |
 | **Libera Words** | `.docx` `.odt` `.rtf` `.txt` `.md` |
 | **Libera Tables** | `.xlsx` `.ods` `.csv` |
 | **Libera Slides** | `.pptx` `.odp` |
+| **Libera PDF** | `.pdf`: comment, fill in, rearrange |
 | **Libera Diagrams** | opens `.vsdx` to read |
 
 ![Libera Words, with a document open: the editor's toolbar in the Libera Words purple, and a laid-out page below it.](https://docs.liberasuite.eu/en/assets/words.png)
 
-Abilian builds the host as free software under the Apache License 2.0. The editors inside it come from [Euro-Office](https://github.com/Euro-Office) (itself an AGPL fork of ONLYOFFICE by Ascensio System SIA), running locally, with the document engine unmodified: our patch queue against them makes them build on every platform, brands them, sets a few of the editor's options, and fixes the converter.
+Abilian builds the host as free software under the Apache License 2.0. The editors inside it come from [Euro-Office](https://github.com/Euro-Office) (itself an AGPL fork of ONLYOFFICE by Ascensio System SIA), running locally, with a short patch queue of our own: it makes them build on every platform, brands them, sets a few of the editor's options, and fixes bugs, most of them in the converter.
 
 ## Using it
 
@@ -26,7 +27,7 @@ libera                    # the start window: new, open, recent
 
 ![The start window, with a New tile for each of Document, Spreadsheet and Presentation, an Open button, and a Recent list of three documents.](https://docs.liberasuite.eu/en/assets/start.png)
 
-[What works today](https://docs.liberasuite.eu/en/main/status/) sets out the full list with its gaps. It covers editing, saving and exporting, with PDF in the Save As popup. It also covers blank documents of all four kinds, images, printing, spell check in six languages, crash recovery and a Recent list.
+[What works today](https://docs.liberasuite.eu/en/main/status/) sets out the full list with its gaps. It covers editing, saving and exporting, with PDF in the Save As popup. It also covers blank documents, images, printing, spell check in six languages, crash recovery and a Recent list.
 
 ```sh
 libera -v FILE            # what it is doing; -vv how; -vvv every request
@@ -42,21 +43,19 @@ We implement it in Python, behind the webview your system already ships. The hos
 
 | | |
 | :--- | :--- |
-| **The payload** | The editors: `sdkjs`, `web-apps`, the `x2t` converter, fonts, dictionaries. Built from upstream sources pinned by SHA, plus our patch queue. ~120 MB, installed out of tree or shipped inside the bundle. |
-| **The host** | `src/libera/`: the loopback HTTP server, the webview, the file dialogs, the menu bar and the converter calls, in about 4,700 lines of Python across 32 modules. All of the desktop application is here. |
+| **The payload** | The editors: `sdkjs`, `web-apps`, the `x2t` converter, fonts, dictionaries. Built from upstream sources pinned by SHA, plus our patch queue. Two Python packages, `libera-core` and `libera-web`, about 100 MB to download, or inside the bundle. |
+| **The host** | `src/libera/`: the loopback HTTP server, the webview, the file dialogs, the menu bar and the converter calls, in about 12,000 lines of Python across 60 modules. All of the desktop application is here. |
 | **The bridge** | Three small JavaScript files, spliced into the `<head>` of every page the host serves. Our code and theirs never share a file. |
 
-Five thousand lines is a codebase a small team can read in an afternoon and still be maintaining in ten years.
-
-**We do not fork the engine.** The patch queue makes upstream build on macOS and Windows, brands it, sets a few of the editor's options (no upstream helpdesk, no macros), and fixes the converter, mostly for OpenDocument files. **None of it touches the editing engine**, so following upstream means rebasing build configuration, settings and converter fixes. Every release records the exact revisions it was built from, so the corresponding source is a commit plus a series that provably reapplies to it, and `lb payload patches` checks that it still does.
+**We do not fork the engine.** The patch queue makes upstream build on macOS and Windows, brands it, sets a few of the editor's options (no upstream helpdesk, no macros), and fixes bugs: in the converter, mostly for OpenDocument files, and a handful in the editors, among them font substitution and three cross-site scripting holes. Each patch is small and explained, so following upstream means rebasing a short series. Every release records the exact revisions it was built from, so the corresponding source is a commit plus a series that provably reapplies to it, and `lb payload patches` checks that it still does.
 
 Everything we ship, we build. [`build/`](build/README.md) compiles the editors and the native converter from pinned upstream sources, on all three systems, with our patch queue applied.
 
 ## Where it stands
 
-**Early, and running.** All four editors work today on **Windows** 10 and 11 (x64), **Linux** (x86_64 and arm64) and **macOS** (Apple Silicon).
+**Early, and running.** All five editors work today on **Windows** 10 and 11 (x64), **Linux** (x86_64; arm64 stays on 0.4.1) and **macOS** (Apple Silicon).
 
-Tabs, and signing and notarisation on macOS, are still to come. Linux has a menu bar and a launcher entry; neither has keyboard shortcuts, because pywebview's GTK menu has no way to attach them. [What works today](https://docs.liberasuite.eu/en/main/status/) lists the known issues, so an evening spent reporting one is an evening wasted. [The roadmap](https://docs.liberasuite.eu/en/develop/roadmap/) says what comes next and what we have decided against.
+Tabs on Linux and Windows, and signing on macOS and Windows, are still to come. Linux and Windows have a menu bar drawn in the window, which shows few keyboard shortcuts on Linux and none on Windows. [What works today](https://docs.liberasuite.eu/en/main/status/) lists the known issues, so an evening spent reporting one is an evening wasted. [The roadmap](https://docs.liberasuite.eu/en/develop/roadmap/) says what comes next and what we have decided against.
 
 The most useful thing you can send us is a document that renders wrongly, attached. The layout engine is upstream's and mature, so where output is wrong it is far more likely to be our packaging (a font we did not ship, a resource we failed to serve) than the engine.
 
@@ -93,7 +92,7 @@ pipx install --system-site-packages libera        # Linux: the flag is not optio
 uv tool install libera                            # macOS
 ```
 
-> **Linux is x86_64**; arm64 stays on 0.4.1 for now. The converter is built on Ubuntu 22.04 and needs glibc 2.34 and GLIBCXX 3.4.29: Ubuntu 22.04, Debian 12, Fedora 36, RHEL 9 and anything newer, measured in a clean container of each. The Flatpak needs none of that, since the editors inside it run against the GNOME runtime.
+> **Linux is x86_64**; arm64 stays on 0.4.1 for now. The converter is built on Ubuntu 22.04 and needs glibc 2.35: Ubuntu 22.04, Debian 12, Fedora 36 and anything newer, measured in a clean container of each. The Flatpak needs none of that, since the editors inside it run against the GNOME runtime.
 >
 > **macOS is Apple Silicon**, on macOS 14 or later. There is no Intel build.
 
@@ -137,6 +136,6 @@ Libera Suite ships as two artifacts under different licences.
 
 **The host is [Apache-2.0](LICENSE)**: everything in `src/libera/`, which is the whole of this package.
 
-**The editor payload is AGPL-3.0**: Euro-Office plus our patch queue against it (GUI assets are CC-BY-SA-4.0). It arrives as a separate download or inside a Flatpak, never vendored into the wheel.
+**The editor payload is AGPL-3.0**: Euro-Office plus our patch queue against it (GUI assets are CC-BY-SA-4.0). It arrives as two packages of its own, `libera-core` and `libera-web`, or inside a bundle, never vendored into the host's wheel.
 
 [Licence and attribution](https://docs.liberasuite.eu/en/licence/) has the corresponding-source detail: what each release records, and where to fetch it.
