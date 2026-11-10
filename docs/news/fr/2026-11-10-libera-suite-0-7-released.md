@@ -1,5 +1,5 @@
 ---
-date: 2026-11-09
+date: 2026-11-10
 description: Avec Libera Suite 0.7, vous pouvez annoter, remplir et réorganiser les PDF, garder les documents sous leur mot de passe, lire et créer des signatures numériques. Ses composants s'installent désormais avec elle.
 ---
 

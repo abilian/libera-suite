@@ -4,7 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 Two versions move here and they move independently. The **application** is this package, `libera`. The **editor payload** is the Euro-Office build, from 0.7 two packages of its own (`libera-core` and `libera-web`), versioned separately so that a fix to the host does not rebuild them. `libera --version` prints both.
 
-## [0.7.0] - 2026-11-09
+## [0.7.0] - 2026-11-10
 
 PDFs, passwords and signatures, with payload **0.7.1**. What 0.7.0b1 lists below is part of this release too, and this adds what has been fixed since. The Flatpak bundles are signed. The macOS application and the Windows installer are not, although 0.7.0b1 said they would be: those accounts move to a later release.
 
