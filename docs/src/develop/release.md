@@ -56,7 +56,7 @@ lb release status                   # after any pause: where the release has got
 **5. Check what users get.**
 
 ```sh
-lb release released-gui             # the published Flatpak, screenshotted on each Linux builder
+lb release released-gui             # the published Flatpak and Windows installer, screenshotted on the builders
 ```
 
 On a machine that has never had Libera Suite: `curl -fsSL https://cdn.abilian.com/libera/install.sh | sh` on Linux and macOS, `irm https://cdn.abilian.com/libera/install.ps1 | iex` on Windows, then open a document. `libera --payload-status` names the new payload.
@@ -257,13 +257,17 @@ On a small machine the build is tight on memory before it is slow. `build/engine
 Everything above tests what a machine built. Once the bundles are on the origin, one command asks the build machines whether **what a user downloads** opens a window:
 
 ```sh
-lb release released-gui                           # every Linux builder in builders.toml
+lb release released-gui                           # every Linux and Windows builder in builders.toml
 lb release released-gui --on fedora.zt            # one of them
 ```
 
-It copies `build/install/released-gui.sh` to each machine over ssh, and the script installs nothing. It runs the published Flatpak under Xvfb against a blank taken out of the bundle's own payload, screenshots the result, then counts unique colours. Below two dozen the window opened empty, from a WebKit that never painted or an editor that failed to load. That is the failure which otherwise looks exactly like success. Its verdict is the line it prints, `__LIBERA__=ok` or the reason, never ssh's exit status. The screenshots come back to `build/out/released-gui-<platform>.png`, so the last check is a human looking at one.
+It copies a script to each machine over ssh, and the script installs what the CDN serves now, the way a user would get it. **It never tests what happens to be installed there**: 0.7.0 was once declared to draw a window by a 0.5.0 left on the builder.
 
-On the builder it needs `xvfb-run`, `xwininfo` and ImageMagick. It also needs `flatpak` on the host itself, since the copy inside the build container is out of reach. A machine without them names which are missing, prints the line that installs them, and counts as a failure.
+**On Linux**, `build/install/released-gui.sh` downloads the bundle `bundles/latest` names into a Flatpak installation of its own, under `~/.cache/libera-released-gui/`, so the machine's own Libera Suite stays as it is, and refuses a `--version` that is not that release. It runs the bundle under Xvfb against a blank taken out of its own payload, screenshots the result, then counts unique colours. Below two dozen the window opened empty, from a WebKit that never painted or an editor that failed to load. That is the failure which otherwise looks exactly like success. Its verdict is the line it prints, `__LIBERA__=ok` or the reason, never ssh's exit status. The screenshots come back to `build/out/released-gui-<platform>.png`, so the last check is a human looking at one.
+
+**On Windows**, `build/install/released-gui.ps1` runs `install.ps1` from the CDN, which replaces that account's Libera Suite, and refuses a `--version` that is not the one `bundles/latest-windows` names. It converts a document from Markdown to docx and back to text and looks for its words. Then it opens the document in the desktop session, through a scheduled task, since ssh's session has no desktop, and screenshots it DPI-aware. It counts the colours the same way, and fails a window that does not fit the screen. A locked screen draws nothing: it says so, and counts as a failure.
+
+A Linux builder needs `xvfb-run`, `xwininfo` and ImageMagick. It also needs `flatpak` on the host itself, since the copy inside the build container is out of reach. A machine without them names which are missing, prints the line that installs them, and counts as a failure.
 
 This is the one check that exercises the GNOME runtime's WebKit, which is a different library from the distribution's and is the one users get.
 

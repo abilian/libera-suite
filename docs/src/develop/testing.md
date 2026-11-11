@@ -70,7 +70,7 @@ The suite tests this checkout. These read what a user downloads:
 
 - `lb release check` fetches the published payload as a stranger would and verifies every hash.
 - `lb release matrix` converts a document with the Linux cores about to be published, in a clean container of each distribution the install page names, and looks for the text in the output. Its first run found the page claiming Fedora 35 and RHEL 9, where glibc 2.34 cannot load a core that needs 2.35.
-- `lb release released-gui` runs the *published* Flatpak on each Linux builder under Xvfb and screenshots it. It is the only check that exercises the GNOME runtime's WebKit, which is not the distribution's.
+- `lb release released-gui` installs the *published* Flatpak on each Linux builder and runs it under Xvfb, and installs the published Windows installer on the Windows builder and opens a window in its desktop session, and screenshots both. It is the only check that exercises the GNOME runtime's WebKit, which is not the distribution's.
 
 Each release phase verifies its own artifact too, after the bundle phase once found a core tarball an earlier build had left behind and reported a pass for a bundle it never produced.
 

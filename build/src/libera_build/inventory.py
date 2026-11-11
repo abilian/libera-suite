@@ -106,9 +106,14 @@ def parse(text: str, source: str) -> list[Builder]:
     return out
 
 
-def linux_remotes(builders: list[Builder]) -> list[Builder]:
-    """The remote Linux builders: the ones `released-gui` opens a window on."""
-    return [b for b in builders if b.remote and b.platform.startswith("linux-")]
+def gui_remotes(builders: list[Builder]) -> list[Builder]:
+    """The remote Linux and Windows builders: the ones `released-gui` opens a
+    window on. A Mac has nothing published to open: Homebrew and pip build it."""
+    return [
+        b
+        for b in builders
+        if b.remote and b.platform.startswith(("linux-", "windows-"))
+    ]
 
 
 def narrow(builders: list[Builder], only: list[str]) -> list[Builder]:

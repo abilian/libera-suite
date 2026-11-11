@@ -1,10 +1,15 @@
 #!/bin/sh
 # Open a real window from a *released* Libera Suite, and prove something was drawn.
 #
-#   sh released-gui.sh                    the installed Flatpak
+#   sh released-gui.sh                    the Flatpak the CDN serves now
+#   sh released-gui.sh --installed        the Flatpak installed here
 #   sh released-gui.sh --pypi libera      a libera on $PATH
 #
-# Run on the machine that has the release installed. From a Mac, which can run
+# By default it downloads the bundle bundles/latest names, as install.sh does,
+# into a Flatpak installation of its own under ~/.cache, so the machine's own
+# Libera Suite stays as it is, and refuses one whose --version is not that
+# release. Testing whatever was installed is how 0.7.0 was declared to draw a
+# window by a 0.5.0 that happened to be on the builder. From a Mac, which can run
 # none of this itself, `lb release released-gui` copies it to every Linux
 # builder (or --on one), runs it, and fetches the screenshots into build/out/.
 # A builder missing the tools says so, with the line that installs them, and
@@ -16,8 +21,7 @@
 # GNOME runtime rather than from the distribution. That is a different WebKit,
 # and it is the one users get.
 #
-# Run it on the machine that has the release installed. It needs no checkout
-# and no payload of its own -- the bundle carries its editors, and the blank it
+# It needs no checkout and no payload of its own -- the bundle carries its editors, and the blank it
 # opens is taken out of whatever the application says its payload is.
 #
 # **Two failures look identical from outside and both are checked**: a window
@@ -43,8 +47,10 @@ SETTLE=10
 # figure as gui-smoke.py, arrived at the same way.
 MIN_COLOURS=24
 
-MODE=flatpak
+ORIGIN="${LIBERA_ORIGIN:-https://cdn.abilian.com/libera}"
+MODE=release
 LAUNCH=
+WANT=
 DOC=
 OUT=
 
@@ -61,11 +67,11 @@ die()  {
 
 while [ $# -gt 0 ]; do
     case "$1" in
-    --flatpak) MODE=flatpak ;;
+    --installed) MODE=flatpak ;;
     --pypi)    MODE=pypi; LAUNCH="${2:?--pypi wants the libera to run}"; shift ;;
     --doc)     DOC="${2:?--doc wants a file}"; shift ;;
     --out)     OUT="${2:?--out wants a path}"; shift ;;
-    -h | --help) sed -n '2,14p' "$0" | sed 's/^#\{1,\} \{0,1\}//'; exit 0 ;;
+    -h | --help) sed -n '2,16p' "$0" | sed 's/^#\{1,\} \{0,1\}//'; exit 0 ;;
     *) die "unknown option: $1" ;;
     esac
     shift
@@ -86,6 +92,30 @@ done
 # --- what to run, and on what document ----------------------------------------
 
 case "$MODE" in
+release)
+    command -v flatpak >/dev/null 2>&1 || die "this machine has no flatpak"
+    WANT=$(curl -fsSL "$ORIGIN/bundles/latest" | tr -d ' \n\r') \
+        || die "could not read $ORIGIN/bundles/latest"
+    case "$(uname -m)" in
+    x86_64) arch=amd64 ;;
+    aarch64 | arm64) arch=arm64 ;;
+    *) die "no Flatpak bundle is built for $(uname -m)" ;;
+    esac
+    # Its own installation: the runtime downloads once into it, and stays.
+    export FLATPAK_USER_DIR="$HOME/.cache/libera-released-gui/flatpak"
+    mkdir -p "$FLATPAK_USER_DIR"
+    bundle="$FLATPAK_USER_DIR/../libera-$WANT-$arch.flatpak"
+    step "installing the published $WANT, apart from this machine's own"
+    curl -fsSL -o "$bundle" "$ORIGIN/bundles/libera-$WANT-$arch.flatpak" \
+        || die "$ORIGIN serves no libera-$WANT-$arch.flatpak"
+    flatpak remote-add --user --if-not-exists flathub \
+        https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null \
+        || die "could not add Flathub, where the runtime comes from"
+    flatpak install --user -y --noninteractive --reinstall "$bundle" >/dev/null 2>&1 \
+        || die "flatpak could not install $bundle"
+    set -- flatpak run --user "$APP_ID"
+    ask="flatpak run --user --command=sh $APP_ID -c"
+    ;;
 flatpak)
     flatpak info "$APP_ID" >/dev/null 2>&1 || die \
         "$APP_ID is not installed.
@@ -103,7 +133,14 @@ esac
 LAUNCHER="$*"
 
 step "what is installed here"
-"$@" --version || die "$LAUNCHER --version said nothing"
+version=$("$@" --version) || die "$LAUNCHER --version said nothing"
+say "$version"
+if [ -n "$WANT" ]; then
+    case "$version" in
+    "libera $WANT "*) ;;
+    *) die "this is not the published $WANT: $version" ;;
+    esac
+fi
 
 # The blank comes out of the payload the application reports, never a path
 # written here: in a bundle it is inside /app, and a `find` over a guessed

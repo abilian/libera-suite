@@ -90,14 +90,24 @@ def test_diagnose_must_say_a_window_and_a_bundled_payload():
     )
 
 
-def test_the_window_is_checked_on_remote_linux_builders_only():
+def test_the_window_is_checked_on_remote_linux_and_windows_builders():
     builders = [
         Builder("macos-arm64", "local", None, True, "~/r"),
         Builder("linux-x86_64", "fedora.zt", None, False, "~/r"),
         Builder("linux-arm64", "local", None, False, "~/r"),
         Builder("windows-x86_64", "builder-windows", "C:/b/out/dist", False, "~/r"),
     ]
-    assert [b.target for b in inventory.linux_remotes(builders)] == ["fedora.zt"]
+    assert [b.target for b in inventory.gui_remotes(builders)] == [
+        "fedora.zt",
+        "builder-windows",
+    ]
+
+
+def test_a_windows_builder_is_known_by_its_git_bash():
+    assert released_gui.is_windows("MINGW64_NT-10.0-26100")
+    assert released_gui.is_windows("reachable\nMINGW64_NT-10.0\n** WARNING: ssh")
+    assert not released_gui.is_windows("Linux")
+    assert not released_gui.is_windows("Darwin")
 
 
 def test_a_window_passes_on_the_verdict_line_and_nothing_else():

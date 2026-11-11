@@ -841,11 +841,13 @@ def add_release(groups: Groups) -> None:
     )
     p = g.command(
         "released-gui",
-        "a window from the *published* Flatpak, on the builders, screenshotted",
+        "a window from the *published* Flatpak and Windows installer, screenshotted",
         release_released_gui,
     )
     p.add_argument(
-        "--on", metavar="HOST", help="one machine; default: every Linux builder"
+        "--on",
+        metavar="HOST",
+        help="one machine; default: every Linux and Windows builder",
     )
     p.add_argument("--doc", metavar="FILE", help="the document to open")
 

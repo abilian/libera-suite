@@ -6,10 +6,11 @@ which on Linux is a Flatpak whose GTK and WebKit come from the GNOME runtime
 rather than the distribution. A different WebKit, and the one users get.
 
 This Mac has no flatpak, no Xvfb and no X server, so it asks machines that can.
-build/install/released-gui.sh is what runs there, and it stays shell: it is copied to
-a builder and run with no checkout and no payload of its own, like install.sh
-on a user's machine. This is the half that drives it: which machines, the copy,
-the verdict, the screenshot back.
+build/install/released-gui.sh is what runs on a Linux one, and released-gui.ps1
+on a Windows one: each installs what the CDN serves now, the way a user would,
+and is copied there and run with no checkout and no payload of its own. This is
+the half that drives them: which machines, the copy, the verdict, the
+screenshot back.
 """
 
 from __future__ import annotations
@@ -30,6 +31,14 @@ if TYPE_CHECKING:
 
 SCRIPT = "~/released-gui.sh"
 SHOT = "~/released-gui.png"
+# scp's relative paths are the home directory on both systems, and Windows'
+# own programs are handed theirs in its own spelling.
+WINDOWS_SCRIPT = "released-gui.ps1"
+WINDOWS_SHOT = "released-gui.png"
+WINDOWS_RUN = (
+    'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w '
+    '"$HOME/released-gui.ps1")" -Out "$(cygpath -w "$HOME/released-gui.png")"'
+)
 
 
 @dataclass(frozen=True)
@@ -47,24 +56,41 @@ def passed(out: str) -> bool:
     return facts_from(out).get(MARK) == "ok"
 
 
+def is_windows(out: str) -> bool:
+    """Git Bash, which is what a Windows builder's ssh logs into, says MINGW64_NT.
+    Any line: ssh's own warnings come back in the same stream, after it."""
+    return any(
+        line.startswith(("MINGW", "MSYS", "CYGWIN")) for line in out.splitlines()
+    )
+
+
 def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
     """Copy the script there, run it, bring the screenshot back."""
     step(f"{name} on {host.name}")
-    if "reachable" not in host.capture("echo reachable"):
+    uname = host.capture("echo reachable; uname -s")
+    if "reachable" not in uname:
         say("    unreachable")
         return False
-    if host.send(options.root / "build" / "install" / "released-gui.sh", SCRIPT)[0]:
+    install = options.root / "build" / "install"
+    if is_windows(uname):
+        script, shot_there = WINDOWS_SCRIPT, WINDOWS_SHOT
+        doc = f' -Doc "{options.doc}"' if options.doc else ""
+        command = WINDOWS_RUN + doc
+    else:
+        script, shot_there = SCRIPT, SHOT
+        doc = f" --doc {options.doc}" if options.doc else ""
+        command = f"sh {SCRIPT} --out {SHOT}{doc}"
+    if host.send(install / script.removeprefix("~/"), script)[0]:
         say("    could not copy the script there")
         return False
-    doc = f" --doc {options.doc}" if options.doc else ""
-    out = host.capture(f"sh {SCRIPT} --out {SHOT}{doc}")
+    out = host.capture(command)
     for line in out.splitlines():
         say(f"    {line}")
     if not passed(out):
         return False
     shot = options.root / "build" / "out" / f"released-gui-{name}.png"
     shot.parent.mkdir(parents=True, exist_ok=True)
-    if host.fetch(SHOT, shot)[0] or not shot.is_file():
+    if host.fetch(shot_there, shot)[0] or not shot.is_file():
         say("    it passed and the screenshot did not come back")
         return False
     say(f"    {shot}")
@@ -76,9 +102,9 @@ def run(options: ReleasedGuiOptions) -> int:
         targets = [(options.on, options.on)]
     else:
         builders = inventory.read(options.root / repo.BUILDERS)
-        targets = [(b.platform, b.target) for b in inventory.linux_remotes(builders)]
+        targets = [(b.platform, b.target) for b in inventory.gui_remotes(builders)]
         if not targets:
-            msg = "no remote Linux builders in build/builders.toml"
+            msg = "no remote Linux or Windows builders in build/builders.toml"
             raise RefusedError(msg)
     passes = sum(
         on_host(options.host_for(target), name, options) for name, target in targets
