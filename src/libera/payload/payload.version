@@ -1,7 +1,6 @@
-# The payload version the wheel expects, bumped deliberately.
-#
-# Not the package version: a host-only fix should not force a re-download, and
-# a payload rebuilt from new upstream pins should not need a host release. The
-# host requires an exact match -- every format mismatch this project has hit
-# was two halves disagreeing, and a range would invite more.
-version = "0.7.1"
+# The components' version the wheel expects: the release's, the same as
+# libera's own, written here by `lb release bump` for the host and the build
+# scripts to read. The host requires an exact match -- every format mismatch
+# this project has hit was two halves disagreeing, and a range would invite
+# more.
+version = "0.7.2"

@@ -105,6 +105,7 @@ def test_an_unknown_phase_is_refused():
 # Commands that need arguments, and a line for each to plan with.
 NEEDS_ARGUMENTS = {
     "on": ["linux-arm64", "app", "flatpak-smoke"],
+    "release bump": ["0.7.2"],
 }
 
 

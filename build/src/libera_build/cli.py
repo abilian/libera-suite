@@ -37,6 +37,7 @@ from libera_build import (
     matrix,
     released_gui,
     tidy,
+    versions,
 )
 from libera_build.buildbox import BoxOptions
 from libera_build.containers import host_arch
@@ -418,6 +419,10 @@ def release_ship(args: argparse.Namespace) -> Steps:
         dry_run=args.dry_run,
     )
     return [Call(ship, (options,))]
+
+
+def release_bump(args: argparse.Namespace) -> Steps:
+    return [Call(versions.bump, (REPO, args.version)), Step(("uv", "lock"))]
 
 
 def release_plan(args: argparse.Namespace) -> Steps:
@@ -815,6 +820,14 @@ def add_release(groups: Groups) -> None:
                 "--yes", action="store_true", help="do not stop to confirm PyPI"
             )
             p.add_argument("--dry-run", action="store_true", help="the same as `plan`")
+
+    p = g.command(
+        "bump",
+        "the release's version, for libera, libera-core and libera-web alike",
+        release_bump,
+        epilog=examples("release bump 0.7.2", "release bump 0.8.0rc1"),
+    )
+    p.add_argument("version", help="the new version, digits and dots, or a pre-release")
 
     for action, summary in (
         ("status", "where this release has got to, and the next command (read-only)"),

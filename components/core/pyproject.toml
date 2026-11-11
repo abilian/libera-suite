@@ -4,7 +4,7 @@
 [project]
 name = "libera-core"
 # The payload version, which libera pins exactly; a test holds the three equal.
-version = "0.7.1"
+version = "0.7.2"
 description = "Libera Suite's document converter, built from Euro-Office sources"
 readme = "README.md"
 license = "AGPL-3.0-only"

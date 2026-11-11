@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import tarfile
 from typing import TYPE_CHECKING
 
@@ -17,11 +18,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def test_the_components_are_the_payload_version_and_libera_pins_it():
-    """One version, in five places: a component that is not the payload
-    version is refused at start, and a pin that is not it cannot install."""
+def test_the_release_has_one_version_and_libera_pins_it():
+    """One version, in six places: libera's own, the payload's, each
+    component's, and the pins. 0.7.0 went out pinning components 0.7.1."""
     repo = REPO
     want = versions.payload_version(repo)
+    assert versions.app_version(repo) == want
     for project in (components.CORE, components.WEB):
         doc = tomllib.loads((repo / project / "pyproject.toml").read_text())
         assert doc["project"]["version"] == want, project
@@ -31,6 +33,35 @@ def test_the_components_are_the_payload_version_and_libera_pins_it():
     # libera-web's build runs the core's x2t, so it pins the core too.
     web = tomllib.loads((repo / components.WEB / "pyproject.toml").read_text())
     assert f"libera-core=={want}" in web["build-system"]["requires"]
+
+
+def test_bump_writes_the_version_everywhere_or_nowhere(tmp_path):
+    for path, _ in versions.PLACES:
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+    for path in {path for path, _ in versions.PLACES} | {"pyproject.toml"}:
+        (tmp_path / path).write_text((REPO / path).read_text())
+    before = versions.payload_version(REPO)
+
+    versions.bump(tmp_path, "9.9.9")
+
+    assert versions.app_version(tmp_path) == "9.9.9"
+    assert versions.payload_version(tmp_path) == "9.9.9"
+    for path, pattern in versions.PLACES:
+        text = (tmp_path / path).read_text()
+        assert pattern.format("9.9.9") in text, path
+        assert pattern.format(before) not in text, path
+
+    # A place that no longer says the old version stops it before any write.
+    web = tmp_path / "components/web/pyproject.toml"
+    web.write_text(web.read_text().replace('"libera-core==9.9.9"', '"libera-core"'))
+    with pytest.raises(RefusedError, match=re.escape("libera-core==9.9.9")):
+        versions.bump(tmp_path, "9.9.10")
+    assert versions.app_version(tmp_path) == "9.9.9"
+
+
+def test_bump_refuses_what_is_not_a_version(tmp_path):
+    with pytest.raises(RefusedError, match="not a version"):
+        versions.bump(tmp_path, "latest")
 
 
 def make_tarball(path: Path, files: dict[str, bytes], links: dict[str, str]) -> None:

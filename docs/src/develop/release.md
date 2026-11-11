@@ -13,7 +13,7 @@ The whole of a release, in order. Each step says what to run and what has to be 
 **1. Decide what ships.**
 
 - The release plan (`notes/plans/release-X.Y.md`) has a *What X.Y needs before it ships* list. It is empty, or what is left is moved to the next plan, in writing.
-- The two versions are settled. `pyproject.toml` is the application's (`0.5.0`). `src/libera/payload/payload.version` is the payload's (`0.5`), and it moves only when the payload changed. A payload version already published is never rebuilt: a new payload takes a new number.
+- The version is set: `lb release bump X.Y.Z` writes it for `libera`, `libera-core` and `libera-web` alike, in the six places it lives, and runs `uv lock`. A version already on PyPI is never used again, since PyPI refuses it even after a yank.
 - Every platform that shipped last time has a builder, and `build/builders.toml` lists it. A platform missing from a release is not just absent: once `bundles/latest` moves, `curl | sh` on that platform asks for a bundle that does not exist, and a pip install there finds no core in the manifest. If a builder is gone, build that platform elsewhere (an Apple Silicon Mac builds the arm64 Linux core and the arm64 Flatpak, see the table below), or decide in writing to drop it, and say so on the install page.
 
 **2. Make the tree release-ready.**
@@ -117,11 +117,7 @@ else can. Everything below it runs wherever you are sitting, so long as that
 machine has `build/builders.toml` and ssh to the builders. The Mac is one of
 three builders.
 
-**Settle the two versions first.** `pyproject.toml` moves every release.
-`src/libera/payload/payload.version` moves only when the payload itself changed.
-The host and the build both read it, so there is no second copy to keep in
-step. Rebuilding a payload under a version that is already published overwrites artifacts a published wheel verifies against:
-that is how 0.1.0 broke.
+**Set the version first**, with `lb release bump X.Y.Z`. The three packages share it, and every release rebuilds and uploads the components, even unchanged: one number is worth that. Two numbers that moved apart are how 0.7.0 went out pinning components 0.7.1. A deliberate exception is made by hand, and `test_the_release_has_one_version_and_libera_pins_it` then says where the numbers differ.
 
 **`lb release status`** measures where a release has got to, against the
 tree, the artifacts on this disk, the origin and PyPI, then prints the next
@@ -169,7 +165,7 @@ lb release ship bundles --only linux-arm64
 | `libera-X.Y.Z-amd64.flatpak` | a download | an x86_64 Linux machine, **payload included** |
 | `libera-X.Y.Z-arm64.flatpak` | a download | an arm64 machine, **payload included** |
 
-The tarballs go to `$BUILD_ROOT/out/dist/$PAYLOAD_VERSION`, which is `0.2` today and **not** the application version, `0.2.0`. The two reading 0.2 at the same time is a coincidence of counting. `src/libera/payload/payload.version` and `pyproject.toml` move independently on purpose: a host fix should not force everyone to re-download 120 MB; a payload rebuilt from new upstream pins should not need a host release.
+The tarballs go to `$BUILD_ROOT/out/dist/$PAYLOAD_VERSION`, the release's version, which `src/libera/payload/payload.version` holds for the build scripts.
 
 ## Which machine can make what, and why
 

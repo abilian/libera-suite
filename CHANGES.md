@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Two versions move here and they move independently. The **application** is this package, `libera`. The **editor payload** is the Euro-Office build, from 0.7 two packages of its own (`libera-core` and `libera-web`), versioned separately so that a fix to the host does not rebuild them. `libera --version` prints both.
+The **application** is this package, `libera`. The **editor payload** is the Euro-Office build, from 0.7 two packages of its own (`libera-core` and `libera-web`). Up to 0.7.0 the two were versioned separately; from 0.7.2 the three packages share one version. `libera --version` prints both.
 
 ## [Unreleased]
 

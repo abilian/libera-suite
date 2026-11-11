@@ -1,9 +1,12 @@
-"""The two versions, which move independently on purpose.
+"""The release's version, the same for `libera`, `libera-core` and `libera-web`.
 
-The application is the `libera` package; the payload is the editor build it
-fetches. A host fix should not force a 120 MB re-download, so the wheel and the
-Flatpak bundles are named for the first and the origin's directory for the
-second.
+They moved independently while the application downloaded its components, so
+that a fix to the host did not cost a download. Since 0.7 pip installs them
+together, and two numbers only made two ways to get a release wrong: 0.7.0
+went out pinning components 0.7.1. So one number, written in six places by
+`bump`, and a test holds them equal. `payload_version` and `app_version` both
+stay, each read where it lives, for that test and for a deliberate exception
+made by hand.
 """
 
 from __future__ import annotations
@@ -15,7 +18,7 @@ import tomllib
 
 from libera.manifest import Manifest
 from libera_build.repo import PAYLOAD_VERSION
-from libera_build.report import RefusedError
+from libera_build.report import RefusedError, say
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,6 +41,43 @@ def payload_version(root: Path) -> str:
 def app_version(root: Path) -> str:
     doc = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     return str(doc["project"]["version"])
+
+
+# Where the version is written, and how, besides `version` in the root
+# pyproject.toml: each pattern must match exactly once, or nothing is written.
+PLACES = (
+    ("src/libera/payload/payload.version", 'version = "{}"'),
+    ("components/core/pyproject.toml", 'version = "{}"'),
+    ("components/web/pyproject.toml", 'version = "{}"'),
+    ("components/web/pyproject.toml", '"libera-core=={}"'),
+    ("pyproject.toml", '"libera-core=={}"'),
+    ("pyproject.toml", '"libera-web=={}"'),
+)
+
+
+def bump(root: Path, version: str) -> int:
+    """Write `version` everywhere the release's version is, checking every
+    place first: a bump that stopped half way would be a tree no test passes."""
+    if not re.fullmatch(r"\d+(\.\d+)*([a-z]+\d+)?", version):
+        msg = f"not a version: {version}"
+        raise RefusedError(msg)
+    old_app, old_payload = app_version(root), payload_version(root)
+    places = [("pyproject.toml", 'version = "{}"', old_app)]
+    places += [(path, pattern, old_payload) for path, pattern in PLACES]
+    texts = {path: (root / path).read_text(encoding="utf-8") for path, _, _ in places}
+    for path, pattern, old in places:
+        found = texts[path].count(pattern.format(old))
+        # The root pyproject's `version = ` is the project's, the first line
+        # that says it; nothing else there is written that way.
+        if found != 1:
+            msg = f"{path}: {pattern.format(old)} is there {found} times, not once"
+            raise RefusedError(msg)
+    for path, pattern, old in places:
+        texts[path] = texts[path].replace(pattern.format(old), pattern.format(version))
+    for path, text in texts.items():
+        (root / path).write_text(text, encoding="utf-8")
+    say(f"    {old_app} (payload {old_payload}) -> {version}, in {len(texts)} files")
+    return 0
 
 
 def is_prerelease(version: str) -> bool:
