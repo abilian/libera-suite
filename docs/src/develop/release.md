@@ -2,7 +2,7 @@
 
 A release is one set of artifacts that agree with each other. No single machine can produce all of them.
 
-**`make ship` is how a release is cut now.** One command drives eleven phases: the Linux and Windows cores, both Flatpak bundles and the Windows installer are built on their builders in parallel, the macOS core and the wheel here, then the origin and PyPI. `lb release plan` prints the plan and runs nothing. See [`make ship`](#make-ship) below.
+**`make ship` is how a release is cut now.** One command drives nine phases: the Linux and Windows cores, both Flatpak bundles and the Windows installer are built on their builders in parallel, the macOS core and the wheel here; then every file of the release is staged and installed on every platform, and only then published, to PyPI and the CDN. `lb release plan` prints the plan and runs nothing. See [`make ship`](#make-ship) below.
 
 Read [Build the payload](build.md) first if you have never built one. This page assumes you have.
 
@@ -14,7 +14,7 @@ The whole of a release, in order. Each step says what to run and what has to be 
 
 - The release plan (`notes/plans/release-X.Y.md`) has a *What X.Y needs before it ships* list. It is empty, or what is left is moved to the next plan, in writing.
 - The version is set: `lb release bump X.Y.Z` writes it for `libera`, `libera-core` and `libera-web` alike, in the six places it lives, and runs `uv lock`. A version already on PyPI is never used again, since PyPI refuses it even after a yank.
-- Every platform that shipped last time has a builder, and `build/builders.toml` lists it. A platform missing from a release is not just absent: once `bundles/latest` moves, `curl | sh` on that platform asks for a bundle that does not exist, and a pip install there finds no core in the manifest. If a builder is gone, build that platform elsewhere (an Apple Silicon Mac builds the arm64 Linux core and the arm64 Flatpak, see the table below), or decide in writing to drop it, and say so on the install page.
+- Every platform that shipped last time has a builder, and `build/builders.toml` lists it. A platform missing from a release is not just absent: once `bundles/latest` moves, `curl | sh` on that platform asks for a bundle that does not exist, and a pip install there finds no `libera-core` wheel for it. If a builder is gone, build that platform elsewhere (an Apple Silicon Mac builds the arm64 Linux core and the arm64 Flatpak, see the table below), or decide in writing to drop it, and say so on the install page.
 
 **2. Make the tree release-ready.**
 
@@ -28,30 +28,26 @@ lb payload patches                  # the queue still applies to the pinned SHAs
 - A news post in `docs/news/<lang>/YYYY-MM-DD-libera-suite-X-Y.md`, the same file name in the five languages.
 - The user pages say what is true of this version: `main/status.md` and `develop/roadmap.md` above all, in every edition where they are translated.
 
-**3. Test the real application on every platform, from artifacts.** The automated tiers cover a lot, not a person opening documents. Build the installers without publishing anything:
+**3. Build and stage it, publishing nothing.**
 
 ```sh
-lb on linux-x86_64 --update payload container
-lb on linux-x86_64 app flatpak --arch amd64                  # → ~/muchado/build/out/libera-X.Y.Z-amd64.flatpak
-lb on windows-x86_64 --update payload all
-lb on windows-x86_64 app windows                            # → C:\b\out\windows\Libera-Suite-Setup-X.Y.Z.exe
+lb release ship update native build components bundles wheel stage
 lb on linux-x86_64 linux gui-test                           # the gui tier, WebKitGTK
 lb on windows-x86_64 app windows-gui-test                   # the gui tier, WebView2
 make test-gui                                               # the gui tier, here
 ```
 
-Then by hand, on each platform: open a `.docx`, a `.xlsx` and a `.pptx`; type, save, Save As in another format; close with unsaved changes; open a document LibreOffice has open; drop a file on a window; print; Help. Once with `ui_language` set to each translated language. On Linux the desktop is the VNC session described in `notes/15-builders.md`; on Windows, Windows App to the builder. For testers outside, a pre-release (below) does the same through the real channels without moving any of them.
+`stage` gathers every file the release publishes into `build/out/release/X.Y.Z/` and installs it on every platform, as users will (see [Stage](#stage)). Nothing leaves the machines. The staged files are the ones to test by hand: on each platform, on each platform: open a `.docx`, a `.xlsx` and a `.pptx`; type, save, Save As in another format; close with unsaved changes; open a document LibreOffice has open; drop a file on a window; print; Help. Once with `ui_language` set to each translated language. On Linux the desktop is the VNC session described in `notes/15-builders.md`; on Windows, Windows App to the builder. For testers outside, a pre-release (below) does the same through the real channels without moving any of them.
 
-**4. Tag, then ship.**
+**4. Tag, then publish what was staged.**
 
 ```sh
 git tag -a X.Y.Z -m 'Libera Suite X.Y.Z' && git push sourcehut X.Y.Z    # no "v"
-lb release plan                     # what will run
-make ship                           # update … publish (asks on the terminal) … verify
+lb release ship publish verify      # the staged files, as they are (asks on the terminal)
 lb release status                   # after any pause: where the release has got to
 ```
 
-`publish` is the step with no undo. If a phase fails, fix it and run that phase again (`lb release ship collect push check`); the table in *The runbook, by hand* says what each one does.
+`publish` is the step with no undo, and it uploads the staged directory and nothing else: it refuses a stage from another commit, or one a file was added to, removed from or changed in since. Tag before staging if the tag is to be the commit the stage names. `make ship` runs all nine phases in one go; the table in *The runbook, by hand* says what each one does.
 
 **5. Check what users get.**
 
@@ -72,19 +68,20 @@ On a machine that has never had Libera Suite: `curl -fsSL https://cdn.abilian.co
 ## make ship
 
 ```sh
+lb release bump X.Y.Z                                  # the version, for the three packages
 lb release plan                                        # the plan, running nothing
-make ship                                              # all eleven phases
-lb release ship collect push check                     # some of them
+make ship                                              # all nine phases
+lb release ship stage                                  # some of them
 lb release ship --only linux-arm64                     # one builder: update, native, build, bundles
 ```
 
 `make ship` is `lb release ship`; `lb release --help` lists the rest.
 
 ```
-update  native  build  components  collect  push  check  bundles  wheel  publish  verify
+update  native  build  components  bundles  wheel  stage  publish  verify
 ```
 
-The order is forced. `wheel` follows `collect`, because the wheel embeds the manifest `collect` stamps over every core; `verify` follows `publish`, because what it checks is the *published* wheel against the *published* payload. The phases run in that order whatever order they are typed in, so there is no way to get it wrong from the command line.
+The order is forced. `wheel` follows `native`, because the wheel embeds the manifest `native`'s dist stamps; `stage` follows everything that makes a file; `publish` uploads what `stage` stamped; `verify` follows `publish`, because what it checks is what PyPI serves. The phases run in that order whatever order they are typed in, so there is no way to get it wrong from the command line.
 
 `publish` is the one phase with no undo, since PyPI refuses a version it has already seen even after a yank. It stops and asks on `/dev/tty` unless `--yes` is given. Asking on the terminal matters here: this is usually run under tmux with its output redirected, where a prompt on stdin is a prompt no one can answer.
 
@@ -99,13 +96,11 @@ Every phase checks what the machine printed, because over ssh an exit status des
 A version that is not plain digits and dots, such as `0.4.0rc1`, ships as a pre-release with the same `make ship`. Everything is built, checked and uploaded, and nothing a user reaches without asking moves:
 
 - PyPI takes the wheel, and pip leaves it alone unless asked: `pipx install --pip-args=--pre libera==0.4.0rc1`, or `uv tool install --prerelease allow libera==0.4.0rc1`.
-- The origin takes the payload under its version, the Flatpak bundles and the Windows installer under their own names, at `bundles/libera-0.4.0rc1-amd64.flatpak` and `bundles/Libera-Suite-Setup-0.4.0rc1.exe`. `bundles/latest`, `bundles/latest-windows`, the unversioned installer name and both install scripts stay as they were. `install.sh` refuses a pointer that is not digits and dots, so a pre-release that moved one would stop every `curl | sh`.
+- The CDN takes the Flatpak bundles and the Windows installer under their own names, at `bundles/libera-0.4.0rc1-amd64.flatpak` and `bundles/Libera-Suite-Setup-0.4.0rc1.exe`. `bundles/latest`, `bundles/latest-windows`, the unversioned installer name and both install scripts stay as they were. `install.sh` refuses a pointer that is not digits and dots, so a pre-release that moved one would stop every `curl | sh`.
 - The Homebrew tap is not updated.
 - `verify` reads this version's wheel from PyPI, not PyPI's newest, which is its newest *release*.
 
 A tester on a pre-release is told when the release comes out: the update check sorts `0.4.0rc1` below `0.4.0`.
-
-**The payload a pre-release pushes is the release's.** Its wheel names those files' hashes, and `push` overwrites what is there, so a rebuilt payload pushed under the same version would fail every later install of the pre-release (a tarball stores the time it was made, so a rebuild never hashes the same). The release that follows ships the same payload files, with `collect` and `check` and no `build` or `push`; a payload that has to change takes a new payload version.
 
 ## The runbook, by hand
 
@@ -120,33 +115,30 @@ three builders.
 **Set the version first**, with `lb release bump X.Y.Z`. The three packages share it, and every release rebuilds and uploads the components, even unchanged: one number is worth that. Two numbers that moved apart are how 0.7.0 went out pinning components 0.7.1. A deliberate exception is made by hand, and `test_the_release_has_one_version_and_libera_pins_it` then says where the numbers differ.
 
 **`lb release status`** measures where a release has got to, against the
-tree, the artifacts on this disk, the origin and PyPI, then prints the next
-command. A release runs over days and several machines, so it measures which
+tree, the release's files on this disk and PyPI. A release runs over days and several machines, so it measures which
 step you are on and does not ask you to remember.
 
 | phase | what it does | where it runs |
 | :--- | :--- | :--- |
 | | `git tag -a X.Y.Z && git push --tags` (no `v`: the tags are `0.3.0`, `0.3.3`), before building, so the manifest records a revision other people can fetch. `ship` does not do this. | anywhere |
-| `update` | Send the commit you are at to each builder over ssh and check it out there, detached; refuse a dirty builder. Any branch, pushed or not: only `push` and `publish` want the commit on a remote, because the manifest names it. | the driving machine |
+| `update` | Send the commit you are at to each builder over ssh and check it out there, detached; refuse a dirty builder. Any branch, pushed or not: only `publish` wants the commit on a remote, because the manifest names it. | the driving machine |
 | `native` | The macOS core and its tarballs. | **a Mac, and only this** |
 | `build` | The Linux and Windows cores, on their own machines, in parallel. Hours. | the Linux and Windows builders |
-| `components` | `lb components wheels` on each builder: its platform's `libera-core` wheel, built from the core's sdist on the tree `build` has just brought to the pin, and, here, that sdist and `libera-web`'s wheel. All of them land in `build/out/pypi/<payload version>/`. | each builder, and the Mac |
-| `collect` | Fetch every core to the driving machine, then stamp `src/libera/manifest.json` over the whole set. | the driving machine |
-| `push` | Upload the payload to the origin. Needs `CDN_TOKEN`. | anywhere |
-| `check` | Fetch it all back with no token and verify every hash. | anywhere |
+| `components` | `lb components wheels` on each builder: its platform's `libera-core` wheel, built from the core's sdist on the tree `build` has just brought to the pin, and, here, that sdist and `libera-web`'s wheel. All of them land in `build/out/pypi/<version>/`. | each builder, and the Mac |
 | `bundles` | The two `.flatpak` bundles (neither can be cross-built) and the Windows installer, each brought to the driving machine. | a machine of each platform |
-| `wheel` | `make verify`, then the wheel. After `collect`, always. | anywhere |
+| `wheel` | `make verify`, then the wheel. | anywhere |
+| `stage` | Every file `publish` uploads, copied to `build/out/release/<version>/`; installed on every platform from there, and a window opened from each bundle; then stamped with the commit and each file's hash. See [Stage](#stage). | the driving machine and each builder |
 | | A Windows build later than the rest, on its own: `lb release ship bundles --only windows-x86_64`, then `lb release windows`, which moves only its own pointer. | the driving machine |
-| `publish` | `libera-core` and `libera-web`, then `libera`, to PyPI, refusing before anything goes up unless every platform's core wheel is there and `libera` pins the components' version; a file PyPI already has is skipped, so a publish that broke part way is run again. Then the bundles, `install.sh` and `install.ps1` to the origin; then `bundles/latest`, which moves both install scripts to the new version. | anywhere with the credentials |
-| `verify` | Read the *published* wheel back and check it against the origin, the check 0.1.0 needed; then, on every platform, `libera` installed from PyPI alone into a new environment and a document converted, the check 0.7.0b1 needed: it went up without its components and nothing could install it. | the driving machine and each builder |
+| `publish` | The staged files, refused if the stamp no longer holds: `libera-core` and `libera-web`, then `libera`, to PyPI; a file PyPI already has is skipped, so a publish that broke part way is run again. Then the bundles, signed, `install.sh` and `install.ps1` to the CDN; then `bundles/latest`, which moves both install scripts to the new version. | anywhere with the credentials |
+| `verify` | On every platform, `libera` installed from PyPI alone into a new environment and a document converted: what `stage` checked, now against what PyPI serves. | the driving machine and each builder |
 
 Two things are left that no command covers. The mirrors go up, and somebody
 installs the release on a machine that has never built it and opens a document.
 
-Any one phase runs on its own, which is what makes a partial redo cheap. `--only` narrows the phases that run per builder, and refuses the rest: collect, push, check, wheel, publish and verify work on every builder at once. `publish` also wants `check` in the same run, and a manifest collected from this commit for this payload version:
+Any one phase runs on its own, which is what makes a partial redo cheap. `--only` narrows the phases that run per builder, and refuses the rest: wheel, stage, publish and verify work on every builder at once. `publish` without `stage` in the same run checks the last stage's stamp before anything long starts:
 
 ```sh
-lb release ship collect push check
+lb release ship stage
 lb release ship bundles --only linux-arm64
 ```
 
@@ -154,18 +146,15 @@ lb release ship bundles --only linux-arm64
 
 | Artifact | Where it goes | Built by |
 | :--- | :--- | :--- |
-| `core-linux-x86_64.tar.gz` | the origin | a container |
-| `core-linux-arm64.tar.gz` | the origin | a container |
-| `core-macos-arm64.tar.gz` | the origin | a Mac, natively |
-| `editors.tar.gz` | the origin | any payload build: **exactly one** |
-| `fonts-core.tar.gz` | the origin | the same one |
-| `manifest.json` | the origin | last, over the directory |
-| `libera-X.Y.Z-py3-none-any.whl` | PyPI | after the manifest, with a copy of it inside |
-| `Libera.app` | a download | a Mac |
-| `libera-X.Y.Z-amd64.flatpak` | a download | an x86_64 Linux machine, **payload included** |
-| `libera-X.Y.Z-arm64.flatpak` | a download | an arm64 machine, **payload included** |
+| `libera_core-X.Y.Z-py3-none-<platform>.whl` | PyPI | each platform's builder, from the core's sdist |
+| `libera_core-X.Y.Z.tar.gz` | PyPI | the Mac |
+| `libera_web-X.Y.Z-py3-none-any.whl` | PyPI | the Mac |
+| `libera-X.Y.Z-py3-none-any.whl` and its sdist | PyPI | the Mac, with the manifest inside |
+| `libera-X.Y.Z-amd64.flatpak` and its `.asc` | the CDN | an x86_64 Linux machine, **payload included** |
+| `Libera-Suite-Setup-X.Y.Z.exe` and its `.sha256` | the CDN | the Windows machine, **payload included** |
+| `install.sh`, `install.ps1`, `bundles/latest*` | the CDN | this repository |
 
-The tarballs go to `$BUILD_ROOT/out/dist/$PAYLOAD_VERSION`, the release's version, which `src/libera/payload/payload.version` holds for the build scripts.
+The CDN is for what does not come from PyPI: the bundles and the install scripts. Since 0.7 nothing downloads a payload from it. The core tarballs go to `$BUILD_ROOT/out/dist/<version>` on each machine, and the components and the bundles are made from them there; `src/libera/payload/payload.version` holds the version for the build scripts.
 
 ## Which machine can make what, and why
 
@@ -182,7 +171,7 @@ bwrap: Unable to set up system call filtering as requested:
 prctl(PR_SET_SECCOMP) reported EINVAL.
 ```
 
-Rosetta translates instructions; it leaves the kernel's idea of what architecture a BPF program is for alone. So each bundle is built on a machine of its own architecture, then collected.
+Rosetta translates instructions; it leaves the kernel's idea of what architecture a BPF program is for alone. So each bundle is built on a machine of its own architecture, then brought here.
 
 Which leaves the division of labour:
 
@@ -201,7 +190,7 @@ That table is what each machine *can* do. It is not how a release is built.
 Mac emulating amd64 and is the only way to get the amd64 bundle at all, and the
 Windows core and installer to the Windows machine. The Mac
 then does one thing nothing else can, `core-macos-arm64`, and the machine you
-type the command on does the collecting and the publishing.
+type the command on stages and publishes.
 
 An arm64 Linux box has a second job: it is the only place the suite runs on
 real arm64 hardware outside a container. Run it there before you ship.
@@ -250,7 +239,7 @@ On a small machine the build is tight on memory before it is slow. `build/engine
 
 ## After it is published: released-gui
 
-Everything above tests what a machine built. Once the bundles are on the origin, one command asks the build machines whether **what a user downloads** opens a window:
+`stage` tests what is about to be published. Once the bundles are on the CDN, one command asks the build machines whether **what a user downloads** opens a window:
 
 ```sh
 lb release released-gui                           # every Linux and Windows builder in builders.toml
@@ -267,13 +256,19 @@ A Linux builder needs `xvfb-run`, `xwininfo` and ImageMagick. It also needs `fla
 
 This is the one check that exercises the GNOME runtime's WebKit, which is a different library from the distribution's and is the one users get.
 
-## Why the manifest comes last
+## Stage
 
-The manifest describes a directory, so it is written **after** every artifact has arrived, and the wheel **after** the manifest, because the wheel embeds a copy and verifies every download against it. Across machines that order is what `lb release collect` is for: it fetches each builder's core over ssh and stamps the manifest over the result, and `ship` builds the wheel after it.
+0.7.0b1 and 0.7.0 both went to PyPI before anything had installed them, and both were broken there: the first without its components, the second before them, so `uvx libera` quietly installed 0.6.0. `stage` is where a release is installed before it is published.
 
-The Flatpak bundles are not in the manifest, because each has its own payload, so an amd64 bundle arriving late costs nothing.
+It copies every file `publish` will upload into `build/out/release/<version>/`: the components, `libera`'s wheel and sdist, the Flatpak bundle and the Windows installer. Then, from that directory:
 
-If the wheel's manifest and the artifacts disagree, an install would reject its own payload: a hash mismatch on a tester's machine, which is a bad place to find out. `verify` reads the published wheel back to catch exactly that.
+- **On every builder and on this Mac**, `libera` installs into a new environment the way pip installs it, its third-party requirements from PyPI first, then `libera`, `libera-core` and `libera-web` with no index at all, so that nothing but the staged files can satisfy them. It converts a document and reads the text back. On the Mac a window opens too, under a home of its own, and its page photographs its canvas (`libera --shot`), which needs no screen-recording permission.
+- **On each Linux builder**, `released-gui.sh --bundle` installs the staged Flatpak in an installation of its own and opens a document under Xvfb.
+- **On the Windows builder**, `released-gui.ps1 -Installer` checks the staged installer against its `.sha256`, runs it as `install.ps1` would, converts a document and opens a window in the desktop session (see [released-gui](#after-it-is-published-released-gui)).
+
+Only when all of it passed is the directory stamped: `STAGED.json`, with the commit and each file's SHA-256. `publish` uploads that directory and refuses one whose stamp no longer holds. `stage` can be run as often as needed; nothing leaves the machines.
+
+The manifest in `libera`'s wheel is what `native`'s `lb payload dist` stamped: the upstream pins and the commit, which is the release's provenance.
 
 ## Verify before publishing
 
@@ -282,46 +277,16 @@ make verify                    # lint, the whole suite, docs links, the patch qu
 lb payload patches                            # the queue still applies to the pinned SHAs
 ```
 
-Two things remain that no automated check covers:
-
-- **Read the attribution out loud.** It is a licence obligation. It lives in `build/payload/theme/libera/meta/config.json` and shows in Help ▸ About.
-- **Install the payload the way a user will**, from the artifacts, and open a document with it.
-
-## Collect
-
-A release is built on several machines: a Mac, a Linux box per architecture, and a Windows machine (see [Build](build.md#windows)). The origin is one directory that has to hold every platform's core at once, so the cores are gathered before anything is published.
-
-List the machines once, in `build/builders.toml`, from the committed example:
-
-```sh
-cp build/builders.toml.example build/builders.toml
-lb release collect --dry-run            # to see what it would fetch, then without
-```
-
-Each machine gives up the core named for its own platform. The shared pair, `editors.tar.gz` and `fonts-core.tar.gz`, comes from exactly one of them. There is a trap in that. Every builder produces the pair; no two machines produce it byte-for-byte, because tar records modes and order while gzip records a time. The manifest names one hash for each. A second copy arriving over the first is a hash mismatch on a tester's machine, hours later, reported there as a corrupt download.
-
-`collect` ends by re-hashing everything it gathered and stamping `src/libera/manifest.json`. An unreachable builder leaves the other transfers alone. It does stop the manifest: one missing a core publishes cleanly and tells that platform's users `manifest has no core artifact` days later.
+`stage` installs the release on every platform. One thing remains that no automated check covers: **read the attribution out loud.** It is a licence obligation. It lives in `build/payload/theme/libera/meta/config.json` and shows in Help ▸ About.
 
 ## Publish
 
-Publish in this order, because the parts refer to each other:
+`publish` does this in this order, from the staged directory, because the parts refer to each other:
 
-1. **The payload** to `https://cdn.abilian.com/libera/`, under the payload version:
-
-    ```sh
-    export CDN_TOKEN=...          # cdn create-token, scoped to the zone
-    lb release push
-    lb release check                      # --quick for sizes only
-    ```
-
-    `push` refuses a manifest stamped from a dirty tree, because that manifest names no source anyone can check. `check` then reads the origin back over plain HTTPS with no token and no configuration, the way a stranger's machine will, and hashes every byte against the manifest the wheel ships. `curl -T` reports success for a truncated body and for a redirect to an error page; the read-back tells the two apart.
-
-2. **The upstream mirrors**, at the same moment the binaries go out. The AGPL obligation is a commit plus a patch series that provably applies to it; `build/upstream/pins.toml` and `build/upstream/patches/` are that series.
-3. **The packages** to PyPI: `libera-core` (a wheel per platform and its sdist) and `libera-web` first, then `libera`, with `uv publish --check-url https://pypi.org/simple/`, and then `lb release check --wheel pypi`. `make publish` uploads `libera` alone, which is not a release: 0.7.0b1 went up that way and no install of it resolved.
-
-    That last command is the one that closes the loop: it fetches the wheel PyPI is actually serving, reads the manifest inside it, and verifies the origin against that copy. The wheel for `libera` 0.1.0 shipped naming a payload rebuilt two days later. Every check passed, because each one was looking at something correct.
-4. **`Libera.app`, both `.flatpak` bundles and the Windows installer** wherever the release is downloaded from. `extras` first signs each bundle here with the release key (`SIGNING_KEY` in `origin/publish.py`), which may ask its passphrase, and puts the signature beside it as `.asc`; without a good signature nothing goes up, and `ship` refuses `publish` at the start when gpg does not have the key. A dry run signs nothing. The Windows installer goes up with `lb release extras` when `ship`'s `bundles` brought it, or later on its own with `lb release windows`: each moves its own pointer, `bundles/latest-windows` for `install.ps1` and `bundles/latest` for `install.sh`, and each moves it only once the files it names are up. A release whose Windows build is a week late ships its Flatpaks today; Windows users keep the previous version until the installer goes up.
-5. **This documentation**, which deploys on its own and is not part of `make ship`:
+1. **The packages** to PyPI: `libera-core` (a wheel per platform and its sdist) and `libera-web` first, then `libera`, with `uv publish --check-url https://pypi.org/simple/`. `make publish` uploads `libera` alone, which is not a release, and refuses one whose components PyPI does not have yet: 0.7.0b1 and 0.7.0 went up that way.
+2. **The bundles and the Windows installer** to the CDN (`CDN_TOKEN`, scoped to the zone). `extras` first signs each bundle here with the release key (`SIGNING_KEY` in `origin/publish.py`), which may ask its passphrase, and puts the signature beside it as `.asc`; without a good signature nothing goes up, and `ship` refuses `publish` at the start when gpg does not have the key. A dry run signs nothing. The Windows installer goes up with `lb release extras` when `ship`'s `bundles` brought it, or later on its own with `lb release windows`: each moves its own pointer, `bundles/latest-windows` for `install.ps1` and `bundles/latest` for `install.sh`, and each moves it only once the files it names are up. A release whose Windows build is a week late ships its Flatpaks today; Windows users keep the previous version until the installer goes up.
+3. **The upstream mirrors**, at the same moment the binaries go out, by hand. The AGPL obligation is a commit plus a patch series that provably applies to it; `build/upstream/pins.toml` and `build/upstream/patches/` are that series.
+4. **This documentation**, which deploys on its own and is not part of `make ship`:
 
     ```sh
     cd docs && make check       # a broken link fails the build
@@ -330,7 +295,7 @@ Publish in this order, because the parts refer to each other:
 
     `make publish` runs `hop3 deploy --context prod -y` against the app named in `docs/hop3.toml`: `libera-docs`, a static site serving `docs/site/` at `docs.liberasuite.eu`. It depends on `clean build`, so the deployed tree is never a stale one. `make deploy` is an alias. `hop3check` validates the config without touching the server.
 
-6. **Push the tag.**
+5. **Push the tag.**
 
 The last word belongs to the application, on a machine that never built it: `verify` installs it from PyPI and converts, and nothing opens a window, so `pipx install libera==<version>` (with `--pip-args=--pre` for a pre-release), then a document opened. `make ship` prints that line at the end.
 
