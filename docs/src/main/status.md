@@ -39,7 +39,7 @@ Libera Suite is early. This page is a status list: it says what is built, what i
 | **Diagrams cannot save** | It opens `.vsdx` and shows it. The converter cannot write any Visio format, so there is nothing to save and no blank to start from. |
 | **Edited PDF text does not reflow** | A line changed with *Edit Text* keeps its width, so new words go to a line of their own, set in one of our fonts when the PDF's cannot be used. |
 | **LibreOffice 26's own protected files do not open** | By default, LibreOffice 26 encrypts an OpenDocument file in a way Libera Suite cannot read yet. Libera Suite says so instead of asking for the password. |
-| **Certified PDFs cannot be saved** | A PDF certified against any change. The save fails with a general message, and the file is left as it was. |
+| **Certified PDFs cannot be saved** | A PDF under a certification signature, even one that permits comments. The save fails with a general message, and the file is left as it was. |
 | **A shallow menu bar, with few shortcuts shown on Linux and none on Windows** | Linux and Windows get File, Edit, View and Help, drawn in the window. On Linux, New, Open and Close show Ctrl-N, Ctrl-O and Ctrl-W, and no other item shows its key; on Windows none does. The keys work all the same: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S, Ctrl-P and Ctrl-Z. macOS gets those menus plus Window, with the usual shortcuts. |
 | **No tabs on Linux or Windows** | One window per document there. macOS has tabs. |
 | **Windows warns about the installer** | The downloaded installer is not yet code-signed, so SmartScreen says *"Windows protected your PC"* the first time. [Install](install.md#windows) has the way past it. The one-line PowerShell install never meets it. |

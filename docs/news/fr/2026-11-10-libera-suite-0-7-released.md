@@ -21,7 +21,7 @@ Un PDF s'ouvre dans Libera PDF. Vous pouvez y ajouter des commentaires, des surl
 
 L'enregistrement ajoute vos modifications après l'original, qui reste dans le fichier tel qu'il était. Une page supprimée ou un texte corrigé peut donc encore être retrouvé dans le fichier enregistré : ne comptez ni sur l'un ni sur l'autre pour retirer une information confidentielle d'un PDF que vous envoyez.
 
-Un texte modifié ne se recompose pas. Un PDF certifié contre toute modification ne peut pas être enregistré : l'enregistrement échoue, et le fichier reste tel qu'il était. Vous ne pouvez pas encore créer de formulaire ni convertir un PDF en document. Libera Suite est proposée dans *Ouvrir avec* pour un PDF, jamais par défaut. [Travailler avec les documents](../guide/documents.md#pdfs) donne le détail.
+Un texte modifié ne se recompose pas. Un PDF certifié ne peut pas être enregistré, même si sa certification autorise les commentaires : l'enregistrement échoue, et le fichier reste tel qu'il était. Vous ne pouvez pas encore créer de formulaire ni convertir un PDF en document. Libera Suite est proposée dans *Ouvrir avec* pour un PDF, jamais par défaut. [Travailler avec les documents](../guide/documents.md#pdfs) donne le détail.
 
 ## Mots de passe
 

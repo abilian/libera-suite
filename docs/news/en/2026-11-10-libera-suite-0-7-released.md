@@ -21,7 +21,7 @@ A PDF opens in Libera PDF. You can add comments, highlights, drawings and text b
 
 Saving adds your changes after the original, which stays in the file as it was. This means a page you delete or text you correct can still be recovered from the saved file, so don't rely on either to remove something confidential from a PDF you send.
 
-Edited text does not reflow. A PDF certified against any change cannot be saved: the save fails, and the file is left as it was. You can't create a form or convert a PDF into a document yet. Libera Suite is offered in *Open With* for a PDF, never as the default. [Work with documents](../guide/documents.md#pdfs) has the detail.
+Edited text does not reflow. A certified PDF cannot be saved, even one whose certification permits comments: the save fails, and the file is left as it was. You can't create a form or convert a PDF into a document yet. Libera Suite is offered in *Open With* for a PDF, never as the default. [Work with documents](../guide/documents.md#pdfs) has the detail.
 
 ## Passwords
 

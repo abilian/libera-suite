@@ -123,7 +123,7 @@ Eine `.pdf`-Datei öffnet sich in **Libera PDF**. Libera Suite wird für ein PDF
 
 **Speichern ergänzt die Datei.** Ihre Änderungen werden hinter den ursprünglichen Inhalt des PDFs geschrieben, der genau so bleibt, wie er war. Eine gelöschte Seite oder ein korrigierter Text lässt sich also aus der gespeicherten Datei noch wiederherstellen: Verlassen Sie sich auf keines von beiden, um etwas Vertrauliches aus einem PDF zu entfernen, das Sie verschicken. Eine Signatur, die Kommentare erlaubt, bleibt daher für das gültig, was sie signiert hat. Ein PDF wird nur als PDF gespeichert.
 
-**Ein PDF, das ein Kennwort verlangt,** öffnet sich, sobald Sie das Kennwort angeben, und wird mit Ihren Änderungen gespeichert, weiterhin unter demselben Kennwort. **Ein PDF, das gegen jede Änderung zertifiziert ist, lässt sich nicht speichern**: Das Speichern schlägt fehl und sagt es, die Datei bleibt, wie sie war, und Ihre Änderungen bleiben im Fenster.
+**Ein PDF, das ein Kennwort verlangt,** öffnet sich, sobald Sie das Kennwort angeben, und wird mit Ihren Änderungen gespeichert, weiterhin unter demselben Kennwort. **Ein zertifiziertes PDF lässt sich nicht speichern**, auch wenn seine Zertifizierung Kommentare erlaubt: Das Speichern schlägt mit einer allgemeinen Fehlermeldung fehl, die Datei bleibt, wie sie war, und Ihre Änderungen bleiben im Fenster.
 
 Ein Formular zu erstellen ist noch nicht möglich, ebenso wenig, ein PDF in ein Dokument umzuwandeln.
 

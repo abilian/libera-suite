@@ -123,7 +123,7 @@ Un `.pdf` si apre in **Libera PDF**. Libera Suite è proposto in *Apri con* per 
 
 **Il salvataggio si aggiunge al file.** Le tue modifiche sono scritte dopo il contenuto originale del PDF, che resta esattamente com'era. Una pagina che elimini o un testo che correggi si può quindi ancora recuperare dal file salvato: non contare su nessuno dei due per togliere qualcosa di riservato da un PDF che invii. Una firma che consente i commenti resta quindi valida per la parte firmata. Un PDF si salva solo come PDF.
 
-**Un PDF che chiede una password** si apre quando dai la password, e si salva con le tue modifiche, sempre sotto la stessa password. **Un PDF certificato contro ogni modifica non si può salvare**: il salvataggio non riesce e lo dice, il file resta com'era, e le tue modifiche restano nella finestra.
+**Un PDF che chiede una password** si apre quando dai la password, e si salva con le tue modifiche, sempre sotto la stessa password. **Un PDF certificato non si può salvare**, anche se la sua certificazione consente i commenti: il salvataggio non riesce con un messaggio di errore generico, il file resta com'era, e le tue modifiche restano nella finestra.
 
 Non è ancora possibile creare un modulo, né convertire un PDF in un documento.
 

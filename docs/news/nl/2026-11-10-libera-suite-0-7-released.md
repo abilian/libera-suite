@@ -21,7 +21,7 @@ Een pdf opent in Libera PDF. Je kunt opmerkingen, markeringen, tekeningen en tek
 
 Bij het opslaan komen je wijzigingen achter het origineel, dat in het bestand blijft zoals het was. Een pagina die je verwijdert of tekst die je corrigeert, is dus nog uit het opgeslagen bestand te halen: reken op geen van beide om iets vertrouwelijks te verwijderen uit een pdf die je verstuurt.
 
-Bewerkte tekst loopt niet opnieuw door. Een pdf die tegen elke wijziging is gecertificeerd, kan niet worden opgeslagen: het opslaan mislukt, en het bestand blijft zoals het was. Een formulier maken of een pdf naar een document omzetten kan nog niet. Libera Suite wordt voor een pdf aangeboden bij *Openen met*, nooit als standaard. [Werken met documenten](../guide/documents.md#pdfs) heeft de details.
+Bewerkte tekst loopt niet opnieuw door. Een gecertificeerde pdf kan niet worden opgeslagen, ook niet als de certificering opmerkingen toestaat: het opslaan mislukt, en het bestand blijft zoals het was. Een formulier maken of een pdf naar een document omzetten kan nog niet. Libera Suite wordt voor een pdf aangeboden bij *Openen met*, nooit als standaard. [Werken met documenten](../guide/documents.md#pdfs) heeft de details.
 
 ## Wachtwoorden
 

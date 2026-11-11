@@ -21,7 +21,7 @@ Ein PDF öffnet sich in Libera PDF. Sie können Kommentare, Markierungen, Zeichn
 
 Beim Speichern kommen Ihre Änderungen hinter das Original, das unverändert in der Datei bleibt. Eine gelöschte Seite oder ein korrigierter Text lässt sich also aus der gespeicherten Datei noch wiederherstellen: Verlassen Sie sich auf keines von beiden, um etwas Vertrauliches aus einem PDF zu entfernen, das Sie verschicken.
 
-Bearbeiteter Text wird nicht neu umbrochen. Ein PDF, das gegen jede Änderung zertifiziert ist, lässt sich nicht speichern: Das Speichern schlägt fehl, und die Datei bleibt, wie sie war. Ein Formular erstellen oder ein PDF in ein Dokument umwandeln können Sie noch nicht. Libera Suite wird für ein PDF unter *Öffnen mit* angeboten, nie als Standard. [Mit Dokumenten arbeiten](../guide/documents.md#pdfs) hat die Einzelheiten.
+Bearbeiteter Text wird nicht neu umbrochen. Ein zertifiziertes PDF lässt sich nicht speichern, auch wenn seine Zertifizierung Kommentare erlaubt: Das Speichern schlägt fehl, und die Datei bleibt, wie sie war. Ein Formular erstellen oder ein PDF in ein Dokument umwandeln können Sie noch nicht. Libera Suite wird für ein PDF unter *Öffnen mit* angeboten, nie als Standard. [Mit Dokumenten arbeiten](../guide/documents.md#pdfs) hat die Einzelheiten.
 
 ## Kennwörter
 

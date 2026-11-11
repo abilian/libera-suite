@@ -123,7 +123,7 @@ Un `.pdf` se abre en **Libera PDF**. Libera Suite se ofrece en *Abrir con* para 
 
 **Guardar añade al archivo.** Tus cambios se escriben después del contenido original del PDF, que queda exactamente como estaba. Por eso una página que eliminas o un texto que corriges todavía se pueden recuperar del archivo guardado: no cuentes con ninguno de los dos para quitar algo confidencial de un PDF que envías. Por eso una firma que permite comentarios sigue siendo válida para lo que firmó. Un PDF solo se guarda como PDF.
 
-**Un PDF que pide una contraseña** se abre cuando das la contraseña, y se guarda con tus cambios, con la misma contraseña. **Un PDF certificado contra cualquier cambio no se puede guardar**: el guardado falla y lo dice, el archivo queda como estaba y tus cambios siguen en la ventana.
+**Un PDF que pide una contraseña** se abre cuando das la contraseña, y se guarda con tus cambios, con la misma contraseña. **Un PDF certificado no se puede guardar**, aunque su certificación permita comentarios: el guardado falla con un mensaje de error genérico, el archivo queda como estaba y tus cambios siguen en la ventana.
 
 Todavía no se puede crear un formulario, ni convertir un PDF en un documento.
 

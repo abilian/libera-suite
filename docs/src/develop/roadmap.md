@@ -83,7 +83,7 @@ These are outside the current product. Each could arrive one day, in the shape d
 
 **Telemetry, analytics, crash reporting.** There is none. Anything of the kind would be opt-in and off until you turn it on. [What leaves your machine](../index.md#what-leaves-your-machine) would list it beside everything else the application does on the network.
 
-**Changing the document engine.** The patch queue makes upstream build on macOS and Windows, brands it, and fixes the converter, mostly for OpenDocument files. **None of it touches the editing engine** (see [the patch queue](patches.md)), which is what keeps following upstream affordable. If we ever need the engine to behave differently, the change goes in the same way: one reviewable patch, offered upstream first.
+**Forking the document engine.** The patch queue makes upstream build on macOS and Windows, brands it, and fixes the converter, mostly for OpenDocument files. It also carries a few fixes to the editors themselves: missing fonts substituted the way Word does, Markdown headings kept through a save, the PDF editor able to open a PDF, and two cross-site scripting holes closed (see [the patch queue](patches.md)). Each is one small patch that says what it is for, so following upstream means rebasing a short series, not maintaining a fork. A further change to the engine goes in the same way: one reviewable patch, offered upstream first.
 
 ## How to influence this
 

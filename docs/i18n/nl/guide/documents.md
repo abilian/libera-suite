@@ -123,7 +123,7 @@ Een `.pdf` opent in **Libera PDF**. Libera Suite wordt voor een pdf aangeboden o
 
 **Opslaan voegt toe aan het bestand.** Je wijzigingen worden achter de oorspronkelijke inhoud van de pdf geschreven, die precies blijft zoals hij was. Een pagina die je verwijdert of tekst die je corrigeert, is dus nog uit het opgeslagen bestand terug te halen: reken op geen van beide om iets vertrouwelijks te verwijderen uit een pdf die je verstuurt. Een handtekening die opmerkingen toestaat, blijft dus geldig voor wat ze ondertekende. Een pdf wordt alleen als pdf opgeslagen.
 
-**Een pdf die om een wachtwoord vraagt** opent zodra je het wachtwoord geeft, en wordt met je wijzigingen opgeslagen, nog steeds met hetzelfde wachtwoord. **Een pdf die tegen elke wijziging is gecertificeerd, kan niet worden opgeslagen**: het opslaan mislukt en dat wordt gezegd, het bestand blijft zoals het was, en je wijzigingen blijven in het venster.
+**Een pdf die om een wachtwoord vraagt** opent zodra je het wachtwoord geeft, en wordt met je wijzigingen opgeslagen, nog steeds met hetzelfde wachtwoord. **Een gecertificeerde pdf kan niet worden opgeslagen**, ook niet als de certificering opmerkingen toestaat: het opslaan mislukt met een algemene foutmelding, het bestand blijft zoals het was, en je wijzigingen blijven in het venster.
 
 Een formulier maken kan nog niet, en een pdf omzetten naar een document ook niet.
 

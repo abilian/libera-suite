@@ -21,7 +21,7 @@ Un PDF se abre en Libera PDF. Puedes añadir comentarios, resaltados, dibujos y 
 
 Al guardar, tus cambios se añaden después del original, que queda en el archivo tal como estaba. Por eso una página que eliminas o un texto que corriges todavía se pueden recuperar del archivo guardado: no cuentes con ninguno de los dos para quitar algo confidencial de un PDF que envías.
 
-El texto editado no se recompone. Un PDF certificado contra cualquier cambio no se puede guardar: el guardado falla y el archivo queda como estaba. Todavía no puedes crear un formulario ni convertir un PDF en un documento. Libera Suite se ofrece en *Abrir con* para un PDF, nunca como opción predeterminada. [Trabajar con documentos](../guide/documents.md#pdfs) tiene el detalle.
+El texto editado no se recompone. Un PDF certificado no se puede guardar, aunque su certificación permita comentarios: el guardado falla y el archivo queda como estaba. Todavía no puedes crear un formulario ni convertir un PDF en un documento. Libera Suite se ofrece en *Abrir con* para un PDF, nunca como opción predeterminada. [Trabajar con documentos](../guide/documents.md#pdfs) tiene el detalle.
 
 ## Contraseñas
 

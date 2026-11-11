@@ -21,7 +21,7 @@ Un PDF si apre in Libera PDF. Potete aggiungere commenti, evidenziazioni, disegn
 
 Il salvataggio aggiunge le vostre modifiche dopo l'originale, che resta nel file com'era. Una pagina che eliminate o un testo che correggete si può quindi ancora recuperare dal file salvato: non contate su nessuno dei due per togliere qualcosa di riservato da un PDF che inviate.
 
-Il testo modificato non si reimpagina. Un PDF certificato contro ogni modifica non si può salvare: il salvataggio non riesce, e il file resta com'era. Non potete ancora creare un modulo né convertire un PDF in un documento. Libera Suite è proposta in *Apri con* per un PDF, mai come predefinita. [Lavorare con i documenti](../guide/documents.md#pdfs) ha i dettagli.
+Il testo modificato non si reimpagina. Un PDF certificato non si può salvare, anche se la sua certificazione consente i commenti: il salvataggio non riesce, e il file resta com'era. Non potete ancora creare un modulo né convertire un PDF in un documento. Libera Suite è proposta in *Apri con* per un PDF, mai come predefinita. [Lavorare con i documenti](../guide/documents.md#pdfs) ha i dettagli.
 
 ## Password
 
