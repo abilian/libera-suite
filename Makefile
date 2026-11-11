@@ -157,7 +157,16 @@ build: ## the wheel
 	rm -rf dist
 	uv build
 
-publish: build ## the wheel, to PyPI
+# `libera` pins libera-core and libera-web to one version, and a `libera` on
+# PyPI before them is a release nobody gets: uv and pip resolve to the last
+# one they can install and say nothing. 0.7.0b1 and 0.7.0 both went up that
+# way. So the wheel must resolve against PyPI as it is, before it goes there;
+# `make ship` uploads the components first and needs none of this.
+publish: build ## the wheel, to PyPI, once PyPI has the components it pins
+	@echo "$(CURDIR)/$$(ls dist/libera-*.whl)" \
+		| uv pip compile --refresh --no-config --index-url https://pypi.org/simple \
+			--python-version 3.12 -q - >/dev/null \
+		|| { echo "make publish: PyPI cannot install this libera yet: its components go first: lb release ship check publish" >&2; exit 1; }
 	uv publish
 
 # --- this project's own ------------------------------------------------------
