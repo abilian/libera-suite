@@ -596,6 +596,28 @@ def test_markdown_opens_and_saves(tmp_path):
     assert "cœur 🎯" in document.read_text(encoding="utf-8")
 
 
+def test_markdown_puts_no_style_of_its_own_in_the_gallery(tmp_path):
+    """x2t reads Markdown as HTML, and its HTML reader names a style after
+    each CSS id it compiles, text-3, text-5, and flagged every one for the
+    style gallery: a document converted from Markdown offered "text-5" and
+    "text-3" beside Normal (core 0198)."""
+    document = tmp_path / "notes.md"
+    document.write_text("# Title\n\nBody.\n\n## Part\n\nMore.\n", encoding="utf-8")
+    notes = open_in(apps.WORDS, document, tmp_path / "session")
+    docx = tmp_path / "notes.docx"
+
+    export(notes, docx, apps.WORDS.ids_by_ext["docx"], None)
+
+    styles = zipfile.ZipFile(docx).read("word/styles.xml").decode()
+    gallery = [
+        re.findall(r'<w:name w:val="([^"]+)"', style)[0]
+        for style in re.findall(r"<w:style .*?</w:style>", styles, re.DOTALL)
+        if "<w:qFormat/>" in style
+    ]
+    assert "Normal" in gallery
+    assert not [name for name in gallery if name.startswith("text-")], gallery
+
+
 MHT = (
     b"MIME-Version: 1.0\r\n"
     b'Content-Type: multipart/related; type="text/html"; boundary="b"\r\n\r\n'

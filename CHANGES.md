@@ -4,6 +4,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 Two versions move here and they move independently. The **application** is this package, `libera`. The **editor payload** is the Euro-Office build, from 0.7 two packages of its own (`libera-core` and `libera-web`), versioned separately so that a fix to the host does not rebuild them. `libera --version` prints both.
 
+## [Unreleased]
+
+### Fixed
+
+- **A document converted from Markdown or HTML no longer offers styles called "text-5" and "text-3"** in the style gallery, beside Normal. The converter named a style after each CSS rule it read and listed every one there. A core patch, so the payload moves on from 0.7.1.
+- **The release tooling.** `make publish` refuses a `libera` whose `libera-core` and `libera-web` are not on PyPI yet: 0.7.0b1 and 0.7.0 both went up before them, and `uvx libera` installed 0.6.0 without a word. `lb release released-gui` installs what the CDN serves before it opens a window, on Linux in a Flatpak installation of its own, and now on Windows too, with `install.ps1`: it had tested whatever was installed on the builder, and passed 0.7.0 on a 0.5.0.
+- **The documentation.** A certified PDF cannot be saved even when its certification permits comments, and the save fails with a general message: the pages said only a PDF certified against any change failed, and that the save said why.
+
 ## [0.7.0] - 2026-11-10
 
 PDFs, passwords and signatures, with payload **0.7.1**. What 0.7.0b1 lists below is part of this release too, and this adds what has been fixed since. The Flatpak bundles are signed. The macOS application and the Windows installer are not, although 0.7.0b1 said they would be: those accounts move to a later release.

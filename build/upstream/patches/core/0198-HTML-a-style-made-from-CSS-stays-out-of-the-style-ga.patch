@@ -1,0 +1,29 @@
+From 8f1e42168b41a48156703ad8b6e9205eb77e7bf5 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Wed, 11 Nov 2026 22:46:39 +0100
+Subject: [PATCH] HTML: a style made from CSS stays out of the style gallery
+
+Each paragraph style the HTML reader compiles from CSS is named after its
+CSS id, text-3, text-5, and was flagged for the gallery, so a document
+read from Markdown or HTML offered "text-5" and "text-3" beside Normal.
+The styles stay, and the paragraphs keep them; only the flag goes.
+---
+ Common/3dParty/html/css/src/xhtml/CDocumentStyle.cpp | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/Common/3dParty/html/css/src/xhtml/CDocumentStyle.cpp b/Common/3dParty/html/css/src/xhtml/CDocumentStyle.cpp
+index 5554dd9901..df0b9cb86b 100644
+--- a/Common/3dParty/html/css/src/xhtml/CDocumentStyle.cpp
++++ b/Common/3dParty/html/css/src/xhtml/CDocumentStyle.cpp
+@@ -302,8 +302,6 @@ namespace NSCSS
+ 		m_sId = oStyle.GetId();
+ 		if(!bIsPStyle)
+ 			m_sId += L"-c";
+-		else
+-			oElement.AddBasicProperties(BProperties::B_QFormat, L"true");
+ 
+ 		oElement.AddBasicProperties(BProperties::B_StyleId, m_sId);
+ 		oElement.AddBasicProperties(BProperties::B_Name, m_sId);
+-- 
+2.55.0
+
