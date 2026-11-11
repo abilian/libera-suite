@@ -16,9 +16,9 @@ ARM = Builder("linux-arm64", "arm", None, False, "~/r")
 
 
 def test_phases_run_in_their_order_whatever_order_they_are_asked_in():
-    assert plan.choose_phases(["push", "collect"], narrowed=False) == [
-        "collect",
-        "push",
+    assert plan.choose_phases(["publish", "wheel"], narrowed=False) == [
+        "wheel",
+        "publish",
     ]
 
 
@@ -29,8 +29,8 @@ def test_no_phase_means_all_of_them_or_those_that_narrow():
 
 def test_only_refuses_the_phases_that_span_every_builder():
     with pytest.raises(RefusedError) as e:
-        plan.choose_phases(["build", "collect"], narrowed=True)
-    assert "not collect" in str(e.value)
+        plan.choose_phases(["build", "wheel"], narrowed=True)
+    assert "not wheel" in str(e.value)
 
 
 def test_an_unknown_phase_is_refused():
@@ -39,29 +39,29 @@ def test_an_unknown_phase_is_refused():
 
 
 def test_uploading_wants_a_token():
-    assert plan.token_problems(["push"], have_token=False)
-    assert not plan.token_problems(["push"], have_token=True)
+    assert plan.token_problems(["publish"], have_token=False)
+    assert not plan.token_problems(["publish"], have_token=True)
     assert not plan.token_problems(["build"], have_token=False)
 
 
 def test_publishing_wants_the_signing_key():
     assert plan.signing_problems(["publish"], have_key=False)
     assert not plan.signing_problems(["publish"], have_key=True)
-    assert not plan.signing_problems(["push"], have_key=False)
+    assert not plan.signing_problems(["wheel"], have_key=False)
 
 
 def test_a_dirty_tree_stops_only_what_stamps_the_manifest():
     assert not plan.dirty_problems(["build"], dirty=3, allow_dirty=False)
-    assert plan.dirty_problems(["collect"], dirty=3, allow_dirty=False)
-    assert not plan.dirty_problems(["collect"], dirty=3, allow_dirty=True)
-    assert not plan.dirty_problems(["collect"], dirty=0, allow_dirty=False)
+    assert plan.dirty_problems(["publish"], dirty=3, allow_dirty=False)
+    assert not plan.dirty_problems(["publish"], dirty=3, allow_dirty=True)
+    assert not plan.dirty_problems(["publish"], dirty=0, allow_dirty=False)
 
 
 def test_uploading_wants_the_commit_somewhere_else_too():
-    (problem,) = plan.unpushed_problems(["push"], on_a_remote=False, head="a" * 40)
+    (problem,) = plan.unpushed_problems(["publish"], on_a_remote=False, head="a" * 40)
     assert "aaaaaaaaa" in problem
     assert "push it first" in problem
-    assert not plan.unpushed_problems(["push"], on_a_remote=True, head="a" * 40)
+    assert not plan.unpushed_problems(["publish"], on_a_remote=True, head="a" * 40)
     assert not plan.unpushed_problems(["build"], on_a_remote=False, head="a" * 40)
 
 
@@ -71,17 +71,12 @@ MANIFEST = Manifest("0.4", (), source={"libera_commit": "h" * 40})
 @pytest.mark.parametrize(
     ("phases", "manifest", "says"),
     [
-        (["publish"], MANIFEST, "publish without check"),
-        (["check", "publish"], None, "needs src/libera/manifest.json"),
+        (["publish"], None, "needs src/libera/manifest.json"),
+        (["publish"], replace(MANIFEST, payload_version="0.3"), "for payload 0.3"),
         (
-            ["check", "publish"],
-            replace(MANIFEST, payload_version="0.3"),
-            "for payload 0.3",
-        ),
-        (
-            ["check", "publish"],
+            ["publish"],
             replace(MANIFEST, source={"libera_commit": "o" * 40}),
-            "collected at ooooooooo",
+            "stamped at ooooooooo",
         ),
     ],
 )
@@ -92,12 +87,12 @@ def test_publish_refuses_a_manifest_that_is_not_this_release(phases, manifest, s
     assert any(says in p for p in found), found
 
 
-def test_publish_accepts_this_release_and_a_collect_in_the_same_run():
+def test_publish_accepts_this_release_and_a_native_in_the_same_run():
     assert not plan.publish_problems(
-        ["check", "publish"], manifest=MANIFEST, payload_version="0.4", head="h" * 40
+        ["publish"], manifest=MANIFEST, payload_version="0.4", head="h" * 40
     )
     assert not plan.publish_problems(
-        ["collect", "check", "publish"], manifest=None, payload_version="0.4", head="h"
+        ["native", "publish"], manifest=None, payload_version="0.4", head="h"
     )
 
 
@@ -147,10 +142,10 @@ def test_each_platform_bundles_what_its_users_download():
     assert builders.bundle_of(MAC, "0.4.0") is None
 
 
-def test_the_components_are_built_after_the_cores_and_before_collect():
+def test_the_components_are_built_after_the_cores_and_before_the_wheel():
     """They are built from the trees `build` has just brought to the pin."""
     order = list(plan.PHASES)
-    assert order.index("build") < order.index("components") < order.index("collect")
+    assert order.index("build") < order.index("components") < order.index("wheel")
     assert "components" in plan.PER_BUILDER
 
 

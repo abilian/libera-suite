@@ -39,7 +39,7 @@ def native(ctx: Context) -> None:
         return
     step("the native core, here")
     if sys.platform != "darwin":
-        # Skipping and going on let collect publish the previous macOS core.
+        # Skipping and going on would ship the previous macOS core.
         msg = f"the local builder makes the macOS core, and this is {sys.platform}"
         raise RefusedError(msg)
     problems(
@@ -146,10 +146,9 @@ def git_out(tree: Path, *args: str, stdin: bytes = b"") -> bytes:
 def wheel(ctx: Context) -> None:
     """The suite, then the wheel -- in that order, and the order is the point.
 
-    The wheel carries the manifest, which `collect` has just restamped over
-    every core. Building it before the suite has run means publishing a wheel
-    nothing has exercised; running the suite before `collect` means testing
-    against the previous payload.
+    The wheel carries the manifest, which `native`'s dist stamped. Building
+    it before the suite has run means publishing a wheel nothing has
+    exercised.
     """
     step("the suite, then the wheel")
     run_here(["make", "verify"], "wheel", cwd=ctx.root)

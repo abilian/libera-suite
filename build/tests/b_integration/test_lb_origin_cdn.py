@@ -1,4 +1,4 @@
-"""push, check and collect against a CDN that is really there: a small HTTP
+"""Uploads to a CDN that is really there: a small HTTP
 server in a thread, which stores what is PUT and serves it back, and can be
 told to lose bytes, to have no zone, or to refuse the token."""
 
@@ -11,13 +11,10 @@ import subprocess
 import sys
 import tempfile
 import threading
-from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import pytest
-from libera_build.hosts import LocalHost
-from libera_build.inventory import Builder
-from libera_build.origin import check, collect, publish
+from libera_build.origin import cdn as cdn_, publish
 from libera_build.origin.place import Origin
 from libera_build.report import RefusedError
 
@@ -215,95 +212,27 @@ def test_a_dry_run_signs_nothing(cdn, checkout, monkeypatch, capsys):
     assert not list(store.iterdir())
 
 
-def test_what_push_uploads_check_reads_back(cdn, release, monkeypatch, capsys):
-    origin, _, store = cdn
-    monkeypatch.setenv("CDN_TOKEN", "t")
-    publish.push(release, origin, dist_of(release), dry=False)
-    assert sorted(p.name for p in (store / "0.4").iterdir()) == [
-        "core-linux-arm64.tar.gz",
-        "fonts-core.tar.gz",
-        "manifest.json",
-    ]
-    stamped = manifest.Manifest.read(release / "src" / "libera" / "manifest.json")
-    check.check(origin.base, stamped, quick=False)
-    assert "all 2 artifacts match" in capsys.readouterr().out
+def upload(tmp_path: Path, origin: Origin) -> None:
+    sent = tmp_path / "libera-0.4.0-amd64.flatpak"
+    sent.write_bytes(b"12345")
+    cdn_.put(origin, sent, cdn_.key_for("bundles", sent.name), token="t", dry=False)
 
 
-def test_a_short_upload_is_refused_when_the_cdn_says_what_it_kept(
-    cdn, release, monkeypatch
-):
+def test_a_short_upload_is_refused_when_the_cdn_says_what_it_kept(cdn, tmp_path):
     origin, handler, _ = cdn
     handler.mode = "short"
-    monkeypatch.setenv("CDN_TOKEN", "t")
     with pytest.raises(RefusedError, match="sent 5 bytes, the CDN stored 4"):
-        publish.push(release, origin, dist_of(release), dry=False)
+        upload(tmp_path, origin)
 
 
 @pytest.mark.parametrize(
     ("mode", "says"), [("no-zone", "create-zone"), ("refuse", "401")]
 )
-def test_a_missing_zone_or_a_refused_token_says_so(
-    cdn, release, monkeypatch, mode, says
-):
+def test_a_missing_zone_or_a_refused_token_says_so(cdn, tmp_path, mode, says):
     origin, handler, _ = cdn
     handler.mode = mode
-    monkeypatch.setenv("CDN_TOKEN", "t")
     with pytest.raises(RefusedError, match=says):
-        publish.push(release, origin, dist_of(release), dry=False)
-
-
-def test_check_finds_what_changed_and_what_is_gone(cdn, release, monkeypatch, capsys):
-    origin, _, store = cdn
-    monkeypatch.setenv("CDN_TOKEN", "t")
-    publish.push(release, origin, dist_of(release), dry=False)
-    (store / "0.4" / "fonts-core.tar.gz").write_bytes(b"fontz")
-    (store / "0.4" / "core-linux-arm64.tar.gz").unlink()
-    stamped = manifest.Manifest.read(release / "src" / "libera" / "manifest.json")
-    with pytest.raises(RefusedError, match="2 of 3"):
-        check.check(origin.base, stamped, quick=False)
-    out = capsys.readouterr().out
-    assert "MISSING  core-linux-arm64.tar.gz" in out
-    assert "WRONG    fonts-core.tar.gz" in out
-    # Sizes alone cannot see a changed byte of the same length.
-    check.check(
-        origin.base, replace(stamped, artifacts=stamped.artifacts[1:]), quick=True
-    )
-
-
-def test_a_manifest_of_another_payload_is_not_pushed(cdn, release, monkeypatch):
-    origin, _, store = cdn
-    path = release / "src" / "libera" / "manifest.json"
-    doc = json.loads(path.read_text())
-    doc["payload_version"] = "0.3"
-    path.write_text(json.dumps(doc))
-    monkeypatch.setenv("CDN_TOKEN", "t")
-    for dry in (True, False):
-        with pytest.raises(RefusedError, match=r"for payload 0\.3, this tree for 0\.4"):
-            publish.push(release, origin, dist_of(release), dry=dry)
-    assert not list(store.iterdir())
-
-
-def test_a_dirty_manifest_is_not_pushed_without_saying_so(cdn, release, monkeypatch):
-    origin, _, store = cdn
-    path = release / "src" / "libera" / "manifest.json"
-    doc = json.loads(path.read_text())
-    doc["source"]["libera_dirty"] = True
-    path.write_text(json.dumps(doc))
-    monkeypatch.setenv("CDN_TOKEN", "t")
-    monkeypatch.delenv("ALLOW_DIRTY", raising=False)
-    with pytest.raises(RefusedError, match="dirty tree"):
-        publish.push(release, origin, dist_of(release), dry=False)
-    assert not (store / "0.4").exists()
-
-
-def test_dry_run_needs_no_token_and_sends_nothing(cdn, release, monkeypatch, capsys):
-    origin, _, store = cdn
-    monkeypatch.delenv("CDN_TOKEN", raising=False)
-    publish.push(release, origin, dist_of(release), dry=True)
-    assert "would PUT 0.4/fonts-core.tar.gz" in capsys.readouterr().out
-    assert not (store / "0.4").exists()
-    with pytest.raises(RefusedError, match="CDN_TOKEN is not set"):
-        publish.push(release, origin, dist_of(release), dry=False)
+        upload(tmp_path, origin)
 
 
 def test_extras_refuses_while_no_windows_installer_is_named(cdn, release, monkeypatch):
@@ -372,92 +301,3 @@ def test_a_pre_release_goes_up_under_its_own_names_and_moves_nothing(
     ]
     assert not (store / "install.sh").exists()
     assert not (store / "install.ps1").exists()
-
-
-def test_collect_takes_each_core_and_one_shared_pair_then_stamps(tmp_path, monkeypatch):
-    """Two LocalHost builders with their own dists; the neutral one supplies
-    the shared pair. The manifest lands in the dist and in the wheel's place."""
-    root = tmp_path / "root"
-    (root / "src" / "libera").mkdir(parents=True)
-    (root / "build" / "upstream").mkdir(parents=True)
-    (root / "build" / "upstream" / "pins.toml").write_text('[repos]\ncore = "abc"\n')
-    subprocess.run(["git", "init", "-q", str(root)], check=True)
-    monkeypatch.setenv("BUILD_ROOT", str(tmp_path / "here"))
-    homes = {}
-    builders = []
-    for platform, neutral in (("linux-x86_64", False), ("linux-arm64", True)):
-        home = tmp_path / platform
-        out = home / "dist" / "0.4"
-        out.mkdir(parents=True)
-        (out / f"core-{platform}.tar.gz").write_bytes(platform.encode() * 50)
-        for shared in collect.SHARED:
-            (out / shared).write_bytes(f"{shared} from {platform}".encode())
-        b = Builder(platform, platform, "~/dist", neutral, "~/r")
-        homes[b] = LocalHost(home)
-        builders.append(b)
-    collect.collect(root, "0.4", builders, homes.__getitem__, dry=False)
-    dist = tmp_path / "here" / "out" / "dist" / "0.4"
-    stamped = manifest.Manifest.read(root / "src" / "libera" / "manifest.json")
-    assert stamped.core_platforms == ["linux-arm64", "linux-x86_64"]
-    assert (dist / "editors.tar.gz").read_text() == "editors.tar.gz from linux-arm64"
-    assert (dist / "manifest.json").read_text() == stamped.to_json()
-
-
-def test_collect_stamps_nothing_when_a_builder_is_missing_its_core(
-    tmp_path, monkeypatch
-):
-    root = tmp_path / "root"
-    (root / "src" / "libera").mkdir(parents=True)
-    monkeypatch.setenv("BUILD_ROOT", str(tmp_path / "here"))
-    home = tmp_path / "empty"
-    home.mkdir()
-    b = Builder("linux-arm64", "arm", "~/dist", True, "~/r")
-    with pytest.raises(RefusedError, match="did not arrive"):
-        collect.collect(root, "0.4", [b], lambda _: LocalHost(home), dry=False)
-    assert not (root / "src" / "libera" / "manifest.json").exists()
-
-
-def a_checkout(tmp_path: Path) -> Path:
-    """A driving checkout collect can stamp from: pins and a git repository."""
-    root = tmp_path / "root"
-    (root / "src" / "libera").mkdir(parents=True)
-    (root / "build" / "upstream").mkdir(parents=True)
-    (root / "build" / "upstream" / "pins.toml").write_text('[repos]\ncore = "abc"\n')
-    subprocess.run(["git", "init", "-q", str(root)], check=True)
-    return root
-
-
-def test_collect_reads_a_builder_with_no_dist_where_its_build_wrote(
-    tmp_path, monkeypatch
-):
-    """A Linux builder's `payload container` writes under
-    ~/euro-office-build/linux-<arch>, and that is where collect looks."""
-    root = a_checkout(tmp_path)
-    monkeypatch.setenv("BUILD_ROOT", str(tmp_path / "here"))
-    home = tmp_path / "arm"
-    out = home / "euro-office-build" / "linux-arm64" / "out" / "dist" / "0.4"
-    out.mkdir(parents=True)
-    (out / "core-linux-arm64.tar.gz").write_bytes(b"core" * 50)
-    for shared in collect.SHARED:
-        (out / shared).write_bytes(shared.encode())
-    b = Builder("linux-arm64", "arm", None, True, "~/r")
-    collect.collect(root, "0.4", [b], lambda _: LocalHost(home), dry=False)
-    dist = tmp_path / "here" / "out" / "dist" / "0.4"
-    assert (dist / "core-linux-arm64.tar.gz").read_bytes() == b"core" * 50
-
-
-def test_collect_refuses_an_empty_core_over_the_last_releases(tmp_path, monkeypatch):
-    root = a_checkout(tmp_path)
-    monkeypatch.setenv("BUILD_ROOT", str(tmp_path / "here"))
-    dist = tmp_path / "here" / "out" / "dist" / "0.4"
-    dist.mkdir(parents=True)
-    (dist / "core-linux-arm64.tar.gz").write_bytes(b"the last release's")
-    home = tmp_path / "arm"
-    out = home / "dist" / "0.4"
-    out.mkdir(parents=True)
-    (out / "core-linux-arm64.tar.gz").write_bytes(b"")
-    for shared in collect.SHARED:
-        (out / shared).write_bytes(shared.encode())
-    b = Builder("linux-arm64", "arm", "~/dist", True, "~/r")
-    with pytest.raises(RefusedError, match="did not arrive: core-linux-arm64"):
-        collect.collect(root, "0.4", [b], lambda _: LocalHost(home), dry=False)

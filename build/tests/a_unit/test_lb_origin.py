@@ -1,5 +1,5 @@
-"""The origin's rules: where it is, what an upload is called and answered,
-what a check compares, and what to do next."""
+"""The CDN's rules: where it is, what an upload is called and answered, and
+what status reads from PyPI."""
 
 from __future__ import annotations
 
@@ -7,8 +7,7 @@ import io
 import json
 
 import pytest
-from libera_build.inventory import Builder
-from libera_build.origin import cdn, check, collect, place, publish, status
+from libera_build.origin import cdn, place, status
 from libera_build.report import RefusedError
 
 from libera.manifest import Artifact, Manifest
@@ -79,51 +78,6 @@ MANIFEST = Manifest(
         Artifact("fonts-core.tar.gz", "fonts", None, 4, "b" * 64),
     ),
 )
-
-
-def test_push_goes_smallest_first_and_the_manifest_last():
-    assert publish.upload_order(MANIFEST) == [
-        "fonts-core.tar.gz",
-        "core-linux-arm64.tar.gz",
-        "manifest.json",
-    ]
-
-
-def test_a_check_wants_every_artifact_then_the_manifest():
-    names = [w.name for w in check.wanted(MANIFEST)]
-    assert names == ["core-linux-arm64.tar.gz", "fonts-core.tar.gz", "manifest.json"]
-
-
-def test_a_check_says_what_it_compared():
-    core, _, man = check.wanted(MANIFEST)
-    assert check.verdict(core, 68, "a" * 64) == (True, "size and sha256 ok")
-    assert check.verdict(core, 68, None) == (True, "size ok")
-    assert check.verdict(man, 123, "f" * 64) == (True, "present")
-    ok, note = check.verdict(core, 67, "c" * 64)
-    assert not ok
-    assert "67 bytes" in note
-    assert "sha256 cccccccccccc" in note
-
-
-def test_the_shared_pair_comes_from_the_neutral_builder_else_the_first():
-    a = Builder("linux-x86_64", "x", None, False, "~/r")
-    b = Builder("macos-arm64", "local", None, True, "~/r")
-    assert collect.neutral_of([a, b]) is b
-    assert collect.neutral_of([a]) is a
-    with pytest.raises(RefusedError):
-        collect.neutral_of([])
-
-
-def test_status_names_one_command_per_machine_and_then_collect():
-    lines = status.next_steps(["core-linux-arm64", "editors", "core-macos-arm64"])
-    assert lines[0] == "not here yet: core-linux-arm64 editors core-macos-arm64"
-    assert sum("lb payload dist" in line for line in lines) == 1
-    assert any("--arch arm64" in line for line in lines)
-    assert not any("x86_64 box" in line for line in lines)
-    assert lines[-1].endswith("lb release collect")
-    assert status.next_steps([])[0].startswith("every core is here")
-    (_, windows, _) = status.next_steps(["core-windows-x86_64"])
-    assert windows.endswith("lb payload all")
 
 
 def test_status_reads_the_project_from_pypi_and_says_what_is_yanked(monkeypatch):

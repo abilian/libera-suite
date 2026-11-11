@@ -1,4 +1,4 @@
-"""collect, push, check, publish and verify: the origin and PyPI."""
+"""publish and verify: PyPI, then the bundles and install scripts on the CDN."""
 
 from __future__ import annotations
 
@@ -25,8 +25,8 @@ if TYPE_CHECKING:
     from libera_build.release.context import Context
 
 
-def origin(ctx: Context, verb: str, *, wheel: str | None = None) -> None:
-    run(OriginOptions(verb, wheel=wheel, root=ctx.root, host_for=ctx.host_for))
+def origin(ctx: Context, verb: str) -> None:
+    run(OriginOptions(verb, root=ctx.root))
 
 
 def publish(ctx: Context) -> None:
@@ -111,21 +111,7 @@ def confirm(app: str) -> None:
 
 
 def verify(ctx: Context) -> None:
-    """Read the *published* wheel back and check it against the origin.
-
-    Not the manifest in this tree, which is correct by construction. `libera`
-    0.1.0 went up naming a payload that was rebuilt two days later, and every
-    check that existed passed, because each read the copy that agreed with it.
-    """
-    step("the published wheel against the published payload")
-    try:
-        origin(ctx, "check", wheel="pypi")
-    except RefusedError as e:
-        msg = (
-            "what PyPI serves and what the origin serves do not agree.\n"
-            "       This is the check 0.1.0 never had; believe it."
-        )
-        raise RefusedError(msg) from e
+    """What PyPI serves, installed as a user installs it, on every platform."""
     installed(ctx)
 
 

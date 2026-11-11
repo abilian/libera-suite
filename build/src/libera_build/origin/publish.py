@@ -20,8 +20,8 @@ import urllib.request
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from libera.manifest import Manifest, hash_file
-from libera_build import repo, versions
+from libera.manifest import hash_file
+from libera_build import versions
 from libera_build.artifacts import bundle_name, installer_name
 from libera_build.origin.cdn import key_for, put
 from libera_build.report import RefusedError, say, step
@@ -35,22 +35,6 @@ ARCHES = ("amd64", "arm64")
 SIGNING_KEY = "E1B31B9935BEDA0C53D21A1DD35A9ACA9BE0C732"
 
 
-def upload_order(manifest: Manifest) -> list[str]:
-    """What `push` uploads: what the manifest names, smallest first, then the
-    manifest itself.
-
-    From the manifest rather than a glob of the dist directory, which also
-    holds dist.sh's staging and, after a version bump, the previous release.
-    Smallest first, so a wrong token or a missing zone costs the 3.8 MB of
-    fonts rather than the 68 MB of a core. manifest.json last: a half-finished
-    upload that already carries the manifest describes artifacts the origin
-    does not have yet.
-    """
-    return [a.name for a in sorted(manifest.artifacts, key=lambda a: a.size)] + [
-        "manifest.json"
-    ]
-
-
 def need_token(token: str | None, *, dry: bool, zone: str) -> None:
     if not token and not dry:
         msg = (
@@ -60,55 +44,6 @@ def need_token(token: str | None, *, dry: bool, zone: str) -> None:
             "--scopes read,write"
         )
         raise RefusedError(msg)
-
-
-def push(root: Path, origin: Origin, dist: Path, *, dry: bool) -> None:
-    stamped = root / repo.MANIFEST
-    if not stamped.is_file():
-        msg = f"no {stamped}\n  Run: lb release collect"
-        raise RefusedError(msg)
-    manifest = Manifest.read(stamped)
-    # What `publish` asks too. Alone, `push` would put an earlier collect's
-    # manifest under this version, naming files this version does not have.
-    if manifest.payload_version != origin.version:
-        msg = (
-            f"the manifest is for payload {manifest.payload_version}, this tree "
-            f"for {origin.version}\n  Run: lb release collect"
-        )
-        raise RefusedError(msg)
-    # The dirty check before the token check, because it is the one that costs
-    # something to fix: commit, collect again, and only then come back. The
-    # manifest is the provenance a user reads out of `libera --payload-status`
-    # to find the source these binaries came from, which under the AGPL is the
-    # point of recording it, and "a commit, plus some uncommitted changes"
-    # names nothing.
-    if manifest.dirty:
-        if os.environ.get("ALLOW_DIRTY") != "1":
-            msg = (
-                "the manifest was stamped from a dirty tree, so it names no source\n"
-                "  anyone could check. Commit, run collect again, then push.\n"
-                "  To publish anyway: ALLOW_DIRTY=1 lb release push"
-            )
-            raise RefusedError(msg)
-        say("    ALLOW_DIRTY=1: publishing artifacts with no reproducible provenance")
-    token = os.environ.get("CDN_TOKEN")
-    need_token(token, dry=dry, zone=origin.zone)
-
-    step(f"publishing payload {origin.version} to {origin.base}/")
-    names = upload_order(manifest)
-    for name in names:
-        src = stamped if name == "manifest.json" else dist / name
-        if not src.is_file():
-            msg = f"the manifest names {name} and {src} is not there"
-            raise RefusedError(msg)
-        put(origin, src, key_for(origin.version, name), token=token, dry=dry)
-    if dry:
-        step("nothing was uploaded (--dry-run)")
-        return
-    step("published")
-    for name in names:
-        say(f"    {origin.base}/{name}")
-    say("\n    check it:  lb release check")
 
 
 def pointer(

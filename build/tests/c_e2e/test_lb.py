@@ -172,26 +172,14 @@ def origin_reachable() -> bool:
         return False
 
 
-def test_status_reads_the_tree_the_origin_and_pypi():
+def test_status_reads_the_tree_the_files_and_pypi():
     if not origin_reachable():
-        pytest.skip("the origin cannot be reached from here")
+        pytest.skip("PyPI cannot be reached from here")
     done = lb("release", "status")
     assert done.returncode == 0, done.stdout + done.stderr
-    for heading in ("versions", "this tree", "the origin, and PyPI", "next"):
+    for heading in ("version", "this tree", "PyPI"):
         assert f"==> {heading}" in done.stdout
-    assert "PyPI         latest " in done.stdout, "PyPI was not read"
-
-
-def test_check_quick_reads_the_live_origin_as_a_stranger(monkeypatch):
-    if not origin_reachable():
-        pytest.skip("the origin cannot be reached from here")
-    monkeypatch.delenv("CDN_TOKEN", raising=False)
-    done = lb("release", "check", "--quick", "--wheel", "pypi")
-    if "is not on PyPI" in done.stdout + done.stderr:
-        pytest.skip("this version is between its bump and its publish")
-    assert done.returncode == 0, done.stdout + done.stderr
-    assert "as PyPI serves it" in done.stdout
-    assert "manifest.json                present" in done.stdout
+    assert "latest " in done.stdout, "PyPI was not read"
 
 
 def test_the_build_container_says_what_it_is_pinned_to():

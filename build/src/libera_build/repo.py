@@ -15,7 +15,7 @@ from libera_build.report import RefusedError
 
 # Paths in a checkout, from its root: each is spelt here once.
 PAYLOAD_VERSION = Path("src", "libera", "payload", "payload.version")
-# The manifest the wheel ships, gitignored: whatever collect last stamped.
+# The manifest the wheel ships, gitignored: whatever dist.sh last stamped here.
 MANIFEST = Path("src", "libera", "manifest.json")
 BUILDERS = Path("build", "builders.toml")
 PINS = Path("build", "upstream", "pins.toml")
@@ -65,7 +65,7 @@ def build_root() -> Path:
 
 def dist(version: str) -> Path:
     """$BUILD_ROOT/out/dist/<version>: where dist.sh writes a payload version's
-    artifacts on this machine, and where collect gathers every builder's."""
+    artifacts on this machine."""
     return build_root() / "out" / "dist" / version
 
 

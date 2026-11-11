@@ -18,25 +18,24 @@ if TYPE_CHECKING:
     from libera_build.inventory import Builder
 
 # The phases, in the only order they work in, with what each does. `wheel`
-# follows `collect` because the wheel carries the manifest collect restamps;
-# `verify` follows `publish` because what it checks is the *published* wheel.
+# follows `native` because the wheel carries the manifest native's dist
+# stamps; `verify` follows `publish` because what it checks is the *published*
+# wheel. The CDN carries the bundles and the install scripts only: since 0.7
+# nothing downloads a payload from it, so none is collected, pushed or checked.
 PHASES = {
     "update": "send this commit to each builder and check it out there",
     "native": "the macOS core and its tarballs, here",
     "build": "the Linux and Windows cores, each on its builder, in parallel (hours)",
     "components": "libera-core's wheel on each builder, libera-web here, for PyPI",
-    "collect": "every core here, the manifest restamped over all of them",
-    "push": "upload the payload to the origin (needs CDN_TOKEN)",
-    "check": "read the origin back with no token and verify every hash",
     "bundles": "the Flatpaks and the Windows installer, each on its builder",
     "wheel": "make verify, then the wheel",
     "publish": "the components then libera to PyPI, bundles and scripts to the origin",
-    "verify": "the published wheel against the origin, and installed from PyPI alone",
+    "verify": "libera installed from PyPI alone on each platform, a document converted",
 }
 
-# What `--only` can narrow. The rest act on every builder at once -- collect
-# reads them all -- so a run narrowed to one platform that went on to them
-# published cores nobody had rebuilt.
+# What `--only` can narrow. The rest act on every builder at once, so a run
+# narrowed to one platform that went on to them would publish what nobody had
+# rebuilt.
 PER_BUILDER = ("update", "native", "build", "components", "bundles")
 
 # The phases that reach outside this machine and cannot be taken back. PyPI
@@ -44,14 +43,14 @@ PER_BUILDER = ("update", "native", "build", "components", "bundles")
 # version number rather than a retry.
 IRREVERSIBLE = ("publish",)
 
-# The phases that stamp or upload the manifest, which records this commit.
-STAMPING = ("collect", "push", "publish")
-UPLOADING = ("push", "publish")
+# The phases that upload the manifest, which records this commit, in the wheel.
+STAMPING = ("publish",)
+UPLOADING = ("publish",)
 
 
 def choose_phases(asked: Sequence[str], *, narrowed: bool) -> list[str]:
     """The phases to run, in the order they work in, whatever order they were
-    asked in: `push collect` means `collect push`, because there is only one
+    asked in: `publish wheel` means `wheel publish`, because there is only one
     order that works and a command line is a poor place to discover that.
 
     Asked for none, all of them; or, narrowed to some builders, those that
@@ -74,7 +73,7 @@ def choose_phases(asked: Sequence[str], *, narrowed: bool) -> list[str]:
 
 def token_problems(phases: Sequence[str], *, have_token: bool) -> list[str]:
     """A missing CDN token is a one-second discovery that used to be a two-hour
-    one, because push is the last stage and the builds are the first."""
+    one, because publish is the last stage and the builds are the first."""
     if (needs := [p for p in UPLOADING if p in phases]) and not have_token:
         return [f"{'/'.join(needs)} needs CDN_TOKEN in the environment"]
     return []
@@ -94,8 +93,7 @@ def dirty_problems(
     """Uncommitted files here. Harmless to a build -- the builders are sent
     the commit and never see this tree -- and fatal to anything that stamps the
     manifest, which records the commit as its provenance: a dirty tree names
-    nothing anyone could check. lb release push refuses the same, with the same
-    escape; both exist because they happen hours apart."""
+    nothing anyone could check."""
     stamping = [p for p in STAMPING if p in phases]
     if dirty and stamping and not allow_dirty:
         return [
@@ -135,33 +133,26 @@ def publish_problems(
 ) -> list[str]:
     """Why what `publish` would upload is not this release, if it is not.
 
-    The manifest is whatever the last collect wrote. Publishing used to want
-    only that it existed, so a run of `publish` alone uploaded a wheel carrying
-    an earlier run's manifest -- another payload version, another commit --
-    that nothing had read back from the origin.
+    The manifest is whatever the last `native` stamped. Publishing used to
+    want only that it existed, so a run of `publish` alone uploaded a wheel
+    carrying an earlier run's manifest: another payload version, another
+    commit.
     """
-    if "publish" not in phases:
-        return []
+    if "publish" not in phases or "native" in phases:
+        return []  # stamped in this run, from this commit
     problems = []
-    if "check" not in phases:
-        problems.append(
-            "publish without check: add check, so that what goes up is what "
-            "the origin serves"
-        )
-    if "collect" in phases:
-        return problems  # written in this run, from this commit
     if manifest is None:
-        return [*problems, "publish needs src/libera/manifest.json; run collect"]
+        return ["publish needs src/libera/manifest.json; run native"]
     if manifest.payload_version != payload_version:
         problems.append(
             f"the manifest is for payload {manifest.payload_version}, this tree "
-            f"for {payload_version}; run collect"
+            f"for {payload_version}; run native"
         )
     stamped = manifest.libera_commit
     if stamped != head:
         problems.append(
-            f"the manifest was collected at {stamped[:9] or 'no commit'}, this "
-            f"tree is at {head[:9]}; run collect"
+            f"the manifest was stamped at {stamped[:9] or 'no commit'}, this "
+            f"tree is at {head[:9]}; run native"
         )
     return problems
 

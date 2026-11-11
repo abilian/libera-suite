@@ -205,27 +205,22 @@ def test_matrix_takes_its_lists_as_words(monkeypatch):
     [
         (["release", "status"], OriginOptions("status"), {}),
         (
-            ["release", "push", "--dry-run"],
-            OriginOptions("push", dry_run=True),
+            ["release", "extras", "--dry-run"],
+            OriginOptions("extras", dry_run=True),
             {"DRY": "1"},
-        ),
-        (
-            ["release", "check", "--quick", "--wheel", "pypi"],
-            OriginOptions("check", quick=True, wheel="pypi"),
-            {"QUICK": "1", "WHEEL": "pypi"},
         ),
         (["release", "windows"], OriginOptions("windows"), {}),
     ],
 )
 def test_the_origin_verbs_are_called_here(argv, options, env, monkeypatch):
-    for name in ("DRY", "QUICK", "WHEEL", "BUILD_ROOT"):
+    for name in ("DRY", "BUILD_ROOT"):
         monkeypatch.delenv(name, raising=False)
     assert cli.plan(argv) == [cli.Call(verbs.run, (options,), env=env)]
 
 
 def test_dry_still_works_as_an_environment_variable(monkeypatch):
     monkeypatch.setenv("DRY", "1")
-    (call,) = cli.plan(["release", "push"])
+    (call,) = cli.plan(["release", "extras"])
     assert call.args[0].dry_run
 
 
@@ -244,7 +239,7 @@ def no_knobs(monkeypatch):
         ["payload", "export"],
         ["payload", "container", "--versions"],
         ["release", "status"],
-        ["release", "push"],
+        ["release", "extras"],
     ],
 )
 def test_build_root_reaches_a_command_done_in_this_process(argv, no_knobs):

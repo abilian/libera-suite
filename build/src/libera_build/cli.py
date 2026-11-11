@@ -197,13 +197,6 @@ VOLUME = Knob(
     "--volume", "VOLUME", "a named Docker volume instead of --build-dir", "NAME"
 )
 DRY = Knob("--dry-run", "DRY", "say, change nothing", switch=True)
-QUICK = Knob("--quick", "QUICK", "sizes only", switch=True)
-WHEEL = Knob(
-    "--wheel",
-    "WHEEL",
-    "the manifest from a wheel, or `pypi`: this version's",
-    "WHEEL",
-)
 DISTROS = Knob("--distros", "DISTROS", "images to try", '"IMAGE ..."')
 ARCHES = Knob("--arches", "ARCHES", "architectures to try", '"x86_64 arm64"')
 YES = Knob("--yes", "YES", "delete; without it, a dry run", switch=True)
@@ -434,8 +427,6 @@ def release_origin(args: argparse.Namespace) -> Steps:
     options = OriginOptions(
         args.action,
         dry_run=switched(args, DRY),
-        quick=switched(args, QUICK),
-        wheel=given(args, WHEEL),
     )
     return [Call(verbs.run, (options,))]
 
@@ -830,17 +821,11 @@ def add_release(groups: Groups) -> None:
     p.add_argument("version", help="the new version, digits and dots, or a pre-release")
 
     for action, summary in (
-        ("status", "where this release has got to, and the next command (read-only)"),
-        (
-            "collect",
-            "every builder's core here, the manifest restamped over all of them",
-        ),
-        ("push", "upload the payload to the origin"),
-        ("check", "read the origin back as a stranger and verify every hash"),
+        ("status", "where this release has got to, here and on PyPI (read-only)"),
         ("extras", "upload the Flatpak bundles, install.sh and install.ps1"),
         ("windows", "upload the Windows installer alone, once bundles fetched it"),
     ):
-        knobs = {"status": (), "check": (DRY, QUICK, WHEEL)}.get(action, (DRY,))
+        knobs = {"status": ()}.get(action, (DRY,))
         p = g.command(action, summary, release_origin, BUILD_ROOT, *knobs)
         p.set_defaults(action=action)
 

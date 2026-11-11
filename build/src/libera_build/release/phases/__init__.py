@@ -3,5 +3,5 @@
 update      sends this commit to every builder
 builders    build and bundles: `lb` on the builders, in parallel
 here        native and wheel: on this machine
-publishing  collect, push, check, publish, verify: the origin and PyPI
+publishing  publish and verify: PyPI, then the bundles on the CDN
 """

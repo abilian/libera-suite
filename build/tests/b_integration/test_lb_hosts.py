@@ -11,8 +11,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 from libera_build.hosts import SshHost
-from libera_build.inventory import Builder
-from libera_build.origin import collect
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -45,16 +43,3 @@ def test_a_copy_cannot_sit_at_a_password_prompt(scp_log, tmp_path):
     for line in (fetched, sent):
         assert "-o BatchMode=yes" in line
         assert "-o ConnectTimeout=10" in line
-
-
-@pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="the stand-in is an sh script, which Windows does not run",
-)
-def test_collect_does_not_take_the_last_releases_file_for_a_copy(scp_log, tmp_path):
-    local = tmp_path / "core-linux-arm64.tar.gz"
-    local.write_bytes(b"the last release's core")
-    b = Builder("linux-arm64", "builder", "~/dist", False, "~/r")
-    assert not collect.fetch(b, SshHost("builder"), "~/dist/0.4/x", local, dry=False)
-    assert scp_log.read_text(), "scp was asked"
-    assert not local.exists()

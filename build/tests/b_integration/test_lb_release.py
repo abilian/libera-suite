@@ -267,7 +267,7 @@ def test_ship_refuses_publishing_from_a_tree_it_cannot_vouch_for(
     builders_toml(driver)
     (driver / "dirty.txt").write_text("uncommitted")
     options = ShipOptions(
-        phases=("collect",), root=driver, host_for=lambda _: LocalHost(home)
+        phases=("publish",), root=driver, host_for=lambda _: LocalHost(home)
     )
     monkeypatch.delenv("ALLOW_DIRTY", raising=False)
     with pytest.raises(RefusedError, match="nothing was started"):
