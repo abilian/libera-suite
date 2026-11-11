@@ -140,6 +140,16 @@ log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 
 xvfb-run -a --server-args='-screen 0 1600x1000x24' sh -c "
+    # xvfb-run starts Xvfb, sleeps three seconds and runs this whether Xvfb
+    # listens or not, with its errors sent to /dev/null. An Xvfb that cannot
+    # start (Linuxbrew's, missing its libLLVM, on 2026-11-10) then shows up as
+    # the app's 'cannot open display', which blames the app.
+    tries=0
+    while [ ! -S /tmp/.X11-unix/X\${DISPLAY#:} ]; do
+        [ \$tries -lt 20 ] || { echo \"__NOXVFB__ \$DISPLAY\"; exit; }
+        sleep 0.5
+        tries=\$((tries + 1))
+    done
     export WEBKIT_DISABLE_COMPOSITING_MODE=1 LIBGL_ALWAYS_SOFTWARE=1
     $LAUNCHER -v '$DOC' >'$log' 2>&1 &
     app=\$!
@@ -167,6 +177,8 @@ verdict=$(cat "$log.outer" 2>/dev/null || echo)
 rm -f "$log.outer"
 
 case "$verdict" in
+*__NOXVFB__*) die "Xvfb never listened on ${verdict#*__NOXVFB__ }
+       Does it start at all?  $(command -v Xvfb) :120" ;;
 *__GONE__*)   die "$LAUNCHER exited before a window appeared
 $(sed 's/^/       | /' "$log")" ;;
 *__WINDOW__*) ;;

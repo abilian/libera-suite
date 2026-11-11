@@ -92,7 +92,7 @@ pipx install --system-site-packages libera        # Linux: the flag is not optio
 uv tool install libera                            # macOS
 ```
 
-> **Linux is x86_64**; arm64 stays on 0.4.1 for now. The converter is built on Ubuntu 22.04 and needs glibc 2.35: Ubuntu 22.04, Debian 12, Fedora 36 and anything newer, measured in a clean container of each. The Flatpak needs none of that, since the editors inside it run against the GNOME runtime.
+> **Linux is x86_64**; arm64 stays on 0.4.1 for now. The converter is built on Ubuntu 22.04 and needs glibc 2.34 and GLIBCXX 3.4.29: Ubuntu 22.04, Debian 12, Fedora 36, RHEL 9 and anything newer, measured in a clean container of each. The Flatpak needs none of that, since the editors inside it run against the GNOME runtime.
 >
 > **macOS is Apple Silicon**, on macOS 14 or later. There is no Intel build.
 
