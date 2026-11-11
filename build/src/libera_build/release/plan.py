@@ -29,7 +29,8 @@ PHASES = {
     "components": "libera-core's wheel on each builder, libera-web here, for PyPI",
     "bundles": "the Flatpaks and the Windows installer, each on its builder",
     "wheel": "make verify, then the wheel",
-    "publish": "the components then libera to PyPI, bundles and scripts to the origin",
+    "stage": "every file publish uploads, gathered and installed on every platform",
+    "publish": "the staged files: the packages to PyPI, the bundles to the CDN",
     "verify": "libera installed from PyPI alone on each platform, a document converted",
 }
 

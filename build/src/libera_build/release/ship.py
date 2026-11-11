@@ -15,7 +15,14 @@ from libera_build.hosts import ssh_host
 from libera_build.release import plan, precheck
 from libera_build.release.builds import mmss
 from libera_build.release.context import Context
-from libera_build.release.phases import builders, components, here, publishing, update
+from libera_build.release.phases import (
+    builders,
+    components,
+    here,
+    publishing,
+    staging,
+    update,
+)
 from libera_build.report import say, step
 
 if TYPE_CHECKING:
@@ -43,7 +50,8 @@ ACTIONS: dict[str, Callable[[Context], None]] = {
     "components": components.run,
     "bundles": builders.bundles,
     "wheel": here.wheel,
-    "publish": publishing.publish,
+    "stage": staging.run,
+    "publish": staging.publish,
     "verify": publishing.verify,
 }
 

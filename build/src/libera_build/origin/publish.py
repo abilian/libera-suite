@@ -203,13 +203,17 @@ def put_bundles(
             )
 
 
-def extras(root: Path, origin: Origin, *, dry: bool) -> None:
+def extras(
+    root: Path, origin: Origin, *, dry: bool, bundles: Path | None = None
+) -> None:
     """The bundles, the Windows installer if it is here, install.sh and
-    install.ps1, then `latest`, which moves both install scripts."""
+    install.ps1, then `latest`, which moves both install scripts. From
+    `bundles`, the staged release when `publish` calls it, else where the
+    builders' bundles are brought."""
     token = os.environ.get("CDN_TOKEN")
     need_token(token, dry=dry, zone=origin.zone)
     app = versions.app_version(root)
-    bundles = root / "build" / "out" / "bundles"
+    bundles = bundles or root / "build" / "out" / "bundles"
     step(f"publishing the extras for {app} to {origin.cdn_url}/{origin.zone}/")
     setup = installer_here(bundles, app)
     pre = versions.is_prerelease(app)

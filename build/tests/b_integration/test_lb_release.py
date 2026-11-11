@@ -25,7 +25,13 @@ from libera_build.inventory import Builder
 from libera_build.release import builds, precheck
 from libera_build.release.context import Context
 from libera_build.release.on import OnOptions, on
-from libera_build.release.phases import builders, components, here, publishing, update
+from libera_build.release.phases import (
+    builders,
+    components,
+    here,
+    staging,
+    update,
+)
 from libera_build.release.ship import ShipOptions, ship
 from libera_build.report import RefusedError
 
@@ -587,16 +593,17 @@ def test_the_components_phase_fails_when_a_wheel_was_not_made(driver, home):
         components.run(ctx)
 
 
-def test_publish_refuses_before_asking_when_the_components_are_missing(
+def test_stage_refuses_before_copying_when_the_components_are_missing(
     driver, home, capsys
 ):
-    """Before the question, and before anything goes up."""
-    ctx = replace(context(driver, home, ["publish"]), builders=[WIN], yes=False)
+    """Before anything is copied, and so long before anything goes up."""
+    ctx = replace(context(driver, home, ["stage"]), builders=[WIN], yes=False)
     (driver / "dist").mkdir()
     (driver / "dist" / "libera-9.9.9-py3-none-any.whl").write_bytes(b"")
 
-    with pytest.raises(RefusedError, match="nothing was published"):
-        publishing.publish(ctx)
+    with pytest.raises(RefusedError, match="nothing was staged"):
+        staging.run(ctx)
+    assert not staging.folder(driver).exists()
 
     said = capsys.readouterr().out
     assert "libera_core-9.9-py3-none-win_amd64.whl is not here" in said

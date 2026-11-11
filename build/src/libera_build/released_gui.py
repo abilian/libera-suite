@@ -45,6 +45,9 @@ WINDOWS_RUN = (
 class ReleasedGuiOptions:
     on: str | None = None  # one ssh target; default every remote Linux builder
     doc: str | None = None  # a document on that machine, instead of the payload's blank
+    # A release's staged files here (`stage`), sent to each machine and
+    # installed from there, instead of what the CDN serves.
+    staged: Path | None = None
     root: Path = REPO
     host_for: Callable[[str], Host] = field(default=SshHost)
 
@@ -72,7 +75,8 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
         say("    unreachable")
         return False
     install = options.root / "build" / "install"
-    if is_windows(uname):
+    windows = is_windows(uname)
+    if windows:
         script, shot_there = WINDOWS_SCRIPT, WINDOWS_SHOT
         doc = f' -Doc "{options.doc}"' if options.doc else ""
         command = WINDOWS_RUN + doc
@@ -80,6 +84,15 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
         script, shot_there = SCRIPT, SHOT
         doc = f" --doc {options.doc}" if options.doc else ""
         command = f"sh {SCRIPT} --out {SHOT}{doc}"
+    if options.staged:
+        sent = send_staged(host, name, options.staged, windows=windows)
+        if sent is None:
+            return False
+        command += (
+            f' -Installer "$(cygpath -w "$HOME/{sent}")"'
+            if windows
+            else f' --bundle "$HOME/{sent}"'
+        )
     if host.send(install / script.removeprefix("~/"), script)[0]:
         say("    could not copy the script there")
         return False
@@ -95,6 +108,35 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
         return False
     say(f"    {shot}")
     return True
+
+
+def staged_files(staged: Path, platform: str) -> list[Path]:
+    """What a machine of `platform` installs from the staged release: its
+    Flatpak bundle, or the Windows installer and its checksum."""
+    if platform.startswith("windows-"):
+        found = sorted(staged.glob("Libera-Suite-Setup-*.exe"))
+        return (
+            [found[0], found[0].with_name(found[0].name + ".sha256")] if found else []
+        )
+    arch = "arm64" if platform.endswith("arm64") else "amd64"
+    return sorted(staged.glob(f"libera-*-{arch}.flatpak"))[:1]
+
+
+def send_staged(
+    host: Host, platform: str, staged: Path, *, windows: bool
+) -> str | None:
+    """Copy this machine's staged file there; its path from home, or None."""
+    files = staged_files(staged, platform)
+    if not files or not all(f.is_file() for f in files):
+        say(f"    nothing staged for {platform} in {staged}")
+        return None
+    for f in files:
+        # scp's relative paths are the home directory, on Windows too.
+        there = f.name if windows else f"~/{f.name}"
+        if host.send(f, there)[0]:
+            say(f"    could not copy {f.name} there")
+            return None
+    return files[0].name
 
 
 def run(options: ReleasedGuiOptions) -> int:

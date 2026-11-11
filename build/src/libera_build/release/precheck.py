@@ -15,6 +15,7 @@ from libera_build import repo, versions
 from libera_build.hosts import facts_from, remote_path
 from libera_build.origin import publish
 from libera_build.release import plan
+from libera_build.release.phases import staging
 from libera_build.report import problems, say, step
 
 if TYPE_CHECKING:
@@ -53,6 +54,10 @@ def run(ctx: Context) -> None:
         payload_version=versions.payload_version(ctx.root),
         head=head,
     )
+    # A publish without a stage in the same run uploads the last one's, which
+    # must still hold: found now, not after hours of building.
+    if "publish" in ctx.phases and "stage" not in ctx.phases:
+        found += staging.stamp_problems(ctx.root)
     if any(p in ctx.phases for p in plan.UPLOADING):
         found += plan.unpushed_problems(
             ctx.phases, on_a_remote=repo.on_a_remote(ctx.root), head=head

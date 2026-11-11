@@ -2,6 +2,7 @@
 # Open a real window from a *released* Libera Suite, and prove something was drawn.
 #
 #   sh released-gui.sh                    the Flatpak the CDN serves now
+#   sh released-gui.sh --bundle FILE      a bundle not published yet (`stage`)
 #   sh released-gui.sh --installed        the Flatpak installed here
 #   sh released-gui.sh --pypi libera      a libera on $PATH
 #
@@ -51,6 +52,7 @@ ORIGIN="${LIBERA_ORIGIN:-https://cdn.abilian.com/libera}"
 MODE=release
 LAUNCH=
 WANT=
+BUNDLE=
 DOC=
 OUT=
 
@@ -68,10 +70,11 @@ die()  {
 while [ $# -gt 0 ]; do
     case "$1" in
     --installed) MODE=flatpak ;;
+    --bundle)  BUNDLE="${2:?--bundle wants a .flatpak}"; shift ;;
     --pypi)    MODE=pypi; LAUNCH="${2:?--pypi wants the libera to run}"; shift ;;
     --doc)     DOC="${2:?--doc wants a file}"; shift ;;
     --out)     OUT="${2:?--out wants a path}"; shift ;;
-    -h | --help) sed -n '2,16p' "$0" | sed 's/^#\{1,\} \{0,1\}//'; exit 0 ;;
+    -h | --help) sed -n '2,17p' "$0" | sed 's/^#\{1,\} \{0,1\}//'; exit 0 ;;
     *) die "unknown option: $1" ;;
     esac
     shift
@@ -94,8 +97,6 @@ done
 case "$MODE" in
 release)
     command -v flatpak >/dev/null 2>&1 || die "this machine has no flatpak"
-    WANT=$(curl -fsSL "$ORIGIN/bundles/latest" | tr -d ' \n\r') \
-        || die "could not read $ORIGIN/bundles/latest"
     case "$(uname -m)" in
     x86_64) arch=amd64 ;;
     aarch64 | arm64) arch=arm64 ;;
@@ -104,10 +105,20 @@ release)
     # Its own installation: the runtime downloads once into it, and stays.
     export FLATPAK_USER_DIR="$HOME/.cache/libera-released-gui/flatpak"
     mkdir -p "$FLATPAK_USER_DIR"
-    bundle="$FLATPAK_USER_DIR/../libera-$WANT-$arch.flatpak"
-    step "installing the published $WANT, apart from this machine's own"
-    curl -fsSL -o "$bundle" "$ORIGIN/bundles/libera-$WANT-$arch.flatpak" \
-        || die "$ORIGIN serves no libera-$WANT-$arch.flatpak"
+    if [ -n "$BUNDLE" ]; then
+        [ -f "$BUNDLE" ] || die "no such bundle: $BUNDLE"
+        bundle=$BUNDLE
+        WANT=$(basename "$BUNDLE" | sed -n "s/^libera-\(.*\)-$arch\.flatpak$/\1/p")
+        [ -n "$WANT" ] || die "$BUNDLE is not named libera-VERSION-$arch.flatpak"
+        step "installing the staged $WANT, apart from this machine's own"
+    else
+        WANT=$(curl -fsSL "$ORIGIN/bundles/latest" | tr -d ' \n\r') \
+            || die "could not read $ORIGIN/bundles/latest"
+        bundle="$FLATPAK_USER_DIR/../libera-$WANT-$arch.flatpak"
+        step "installing the published $WANT, apart from this machine's own"
+        curl -fsSL -o "$bundle" "$ORIGIN/bundles/libera-$WANT-$arch.flatpak" \
+            || die "$ORIGIN serves no libera-$WANT-$arch.flatpak"
+    fi
     flatpak remote-add --user --if-not-exists flathub \
         https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null \
         || die "could not add Flathub, where the runtime comes from"
