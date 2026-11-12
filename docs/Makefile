@@ -25,6 +25,7 @@ build: preprocess
 	$(ZENSICAL) build
 	@$(call EACH_EDITION)
 	$(SITE_ROOT)
+	@python3 scripts/build_stamp.py
 
 # Live-reloading, one edition at a time, so the language selector is hidden
 # and the root chooser is not there: `make serve EDITION=fr` for another
