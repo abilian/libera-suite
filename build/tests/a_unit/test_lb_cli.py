@@ -237,7 +237,7 @@ def no_knobs(monkeypatch):
     "argv",
     [
         ["payload", "export"],
-        ["payload", "container", "--versions"],
+        ["payload", "container"],
         ["tidy"],
     ],
 )
@@ -254,7 +254,7 @@ def test_build_root_reaches_a_command_done_in_this_process(argv, no_knobs):
         ["release", "status"],
         ["release", "extras"],
         ["linux", "lint"],
-        ["linux", "image"],
+        ["container", "image", "linux"],
     ],
 )
 def test_a_command_offers_only_the_options_it_reads(argv, no_knobs):
@@ -282,8 +282,26 @@ def test_the_payload_container_is_the_whole_build_or_one_script(no_knobs):
     (call,) = cli.plan(["payload", "container", "dist.sh", "--fonts", "core"])
     assert call.fn.__name__ == "script"
     assert call.args == ("dist.sh", ["--fonts", "core"])
-    (call,) = cli.plan(["payload", "container", "--shell"])
+
+
+def test_each_container_answers_the_same_four_verbs(no_knobs):
+    (call,) = cli.plan(["container", "shell", "payload", "--arch", "arm64"])
     assert call.args == ("exec /bin/bash",)
+    assert call.fn.__self__.options.arch == "arm64"
+    (call,) = cli.plan(["container", "versions", "flatpak"])
+    assert call == cli.Call(flatpak.run, (FlatpakOptions("versions", host_arch()),))
+    (call,) = cli.plan(["container", "image", "linux"])
+    assert call.args[0] == linux.LinuxOptions("image", arch=host_arch())
+    with pytest.raises(SystemExit):
+        cli.plan(["container", "clean", "linux"])
+
+
+def test_dropping_the_flatpak_volume_asks_unless_yes(no_knobs):
+    asked, call = cli.plan(["container", "clean", "flatpak"])
+    assert asked.fn is cli.ask
+    assert call.args[0] == FlatpakOptions("clean", host_arch())
+    (call,) = cli.plan(["container", "clean", "flatpak", "--yes"])
+    assert call.args[0].action == "clean"
 
 
 def test_the_flatpak_defaults_to_this_machines_architecture(no_knobs):

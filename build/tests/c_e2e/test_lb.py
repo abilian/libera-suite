@@ -132,8 +132,8 @@ def test_a_refusal_is_a_sentence_and_a_failure():
     assert "Traceback" not in done.stderr
 
 
-def test_linux_versions_runs_the_test_image():
-    """`lb linux versions`: the engine, the image, a container, its output.
+def test_the_test_container_says_what_it_is_pinned_to():
+    """`lb container versions linux`: the engine, the image, a container, its output.
 
     Only where the image is already built: `lb linux` builds a missing one
     first, which is minutes, and not this test's to spend.
@@ -146,8 +146,8 @@ def test_linux_versions_runs_the_test_image():
     ).returncode:
         pytest.skip(f"{engine.name} is not running")
     if not engine.has_image(engine.image(f"libera-test-linux-{host_arch()}")):
-        pytest.skip("no test image here: lb linux image")
-    done = lb("linux", "versions")
+        pytest.skip("no test image here: lb container image linux")
+    done = lb("container", "versions", "linux")
     assert done.returncode == 0, done.stdout + done.stderr
     assert "==> versions, on Linux" in done.stdout
     assert "uv" in done.stdout
@@ -183,7 +183,7 @@ def test_the_build_container_says_what_it_is_pinned_to():
         pytest.skip(f"{engine.name} is not running")
     arch = host_arch()
     if not engine.has_image(engine.image(f"libera-build-linux-{arch}")):
-        pytest.skip("no build image here: lb payload container --image")
-    done = lb("payload", "container", "--arch", arch, "--versions")
+        pytest.skip("no build image here: lb container image payload")
+    done = lb("container", "versions", "payload", "--arch", arch)
     assert done.returncode == 0, done.stdout + done.stderr
     assert "base:" in done.stdout

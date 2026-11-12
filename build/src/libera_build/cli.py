@@ -37,6 +37,7 @@ from libera_build import (
     linux,
     matrix,
     released_gui,
+    report,
     tidy,
     versions,
 )
@@ -295,12 +296,6 @@ def box_options(args: argparse.Namespace) -> BoxOptions:
 
 def payload_container(args: argparse.Namespace) -> Steps:
     box = buildbox.Box(box_options(args))
-    if args.shell:
-        return [Call(box.run, ("exec /bin/bash",))]
-    if args.versions:
-        return [Call(box.versions)]
-    if args.image:
-        return [Call(box.build_image)]
     if args.rest:
         return [Call(box.script, (args.rest[0], args.rest[1:]))]
     return [Call(box.all)]
@@ -403,6 +398,40 @@ def linux_(args: argparse.Namespace) -> Steps:
         pytest_args=tuple(args.rest),
     )
     return [Call(linux.run, (options,))]
+
+
+# Each container by the group whose work it does.
+CONTAINERS = ("payload", "flatpak", "linux")
+
+
+def container(args: argparse.Namespace) -> Steps:
+    """The three containers' shell, pins, image and volume, by one name.
+
+    Their other options (the build tree, the container's LANG) still arrive as
+    their environment variables, which each reads."""
+    arch, verb = given(args, ARCH) or host_arch(), args.action
+    if args.kind == "payload":
+        box = buildbox.Box(replace(box_options(args), arch=arch))
+        return [
+            {
+                "shell": Call(box.run, ("exec /bin/bash",)),
+                "versions": Call(box.versions),
+                "image": Call(box.build_image),
+            }[verb]
+        ]
+    if args.kind == "flatpak":
+        steps: Steps = []
+        if verb == "clean" and not switched(args, YES):
+            question = f"drop the Flatpak builder's {arch} runtime volume (~4 GB)?"
+            steps.append(Call(ask, (question, "nothing was removed.")))
+        return [*steps, Call(flatpak.run, (FlatpakOptions(verb, arch=arch),))]
+    options = LinuxOptions(action=verb, arch=arch, lang=given(args, LINUX_LANG))
+    return [Call(linux.run, (options,))]
+
+
+def ask(question: str, refused: str) -> int:
+    report.confirm(question, refused)
+    return 0
 
 
 def release_ship(args: argparse.Namespace) -> Steps:
@@ -664,12 +693,6 @@ def add_payload(groups: Groups) -> None:
         ),
     )
     p.set_defaults(passes_on=True)
-    for flag, what in (
-        ("--shell", "a shell in the build container"),
-        ("--versions", "what the build image is pinned to"),
-        ("--image", "build, or rebuild, the build image"),
-    ):
-        p.add_argument(flag, action="store_true", help=what)
     g.command(
         "export",
         "the container build's artifacts, copied here, and where they went",
@@ -744,13 +767,6 @@ def add_app(groups: Groups) -> None:
             "smoke",
             "the built Flatpak installed, converting a document",
         ),
-        (
-            "flatpak-clean",
-            "clean",
-            "the Flatpak builder's runtime volume, dropped (~4 GB)",
-        ),
-        ("flatpak-shell", "shell", "a shell in the Flatpak builder container"),
-        ("flatpak-versions", "versions", "what the Flatpak builder image is pinned to"),
     ):
         p = g.command(name, summary, app_flatpak, ARCH_HERE)
         p.set_defaults(action=action)
@@ -787,12 +803,38 @@ def add_linux(groups: Groups) -> None:
             runs_libera,
         ),
         ("dialog", "the GTK question the host asks, answered", runs_libera),
-        ("versions", "what the test image is pinned to", ()),
-        ("shell", "a shell in the test container", (LINUX_LANG,)),
-        ("image", "the test image, built or rebuilt", ()),
     ):
         p = g.command(action, summary, linux_, ARCH_HERE, *knobs)
         p.set_defaults(action=action, passes_on=action == "test")
+
+
+def add_container(groups: Groups) -> None:
+    g = groups.group(
+        "container",
+        "the containers the other groups build and test in, by the group's name",
+        "payload builds the Linux payload, flatpak the Flatpak, linux runs the\n"
+        "suite. Each is built when first needed; `image` rebuilds it.\n\n"
+        + examples(
+            "container shell linux",
+            "container versions flatpak --arch arm64",
+            "container image payload",
+            "container clean flatpak",
+        ),
+    )
+    for verb, summary, kinds, knobs in (
+        ("shell", "a shell in one of the containers", CONTAINERS, ()),
+        ("versions", "what a container's image is pinned to", CONTAINERS, ()),
+        ("image", "a container's image, built or rebuilt", CONTAINERS, ()),
+        (
+            "clean",
+            "the Flatpak builder's runtime volume, dropped",
+            ("flatpak",),
+            (YES,),
+        ),
+    ):
+        p = g.command(verb, summary, container, ARCH_HERE, *knobs)
+        p.add_argument("kind", choices=kinds, metavar="|".join(kinds))
+        p.set_defaults(action=verb)
 
 
 WIDEST = max(map(len, PHASES))
@@ -911,7 +953,7 @@ def add_others(groups: Groups) -> None:
         on_,
         epilog="The builder runs the commit its checkout is at; --update sends this\n"
         "checkout's first. The command's output streams back as it comes; it\n"
-        "has no terminal there, so nothing interactive (a --shell) works.\n\n"
+        "has no terminal there, so nothing interactive (container shell) works.\n\n"
         + examples(
             "on linux-x86_64 app flatpak-smoke",
             "on linux-arm64 --update linux lint",
@@ -977,6 +1019,7 @@ def make_parser() -> argparse.ArgumentParser:
     add_linux(groups)
     add_release(groups)
     add_components(groups)
+    add_container(groups)
     add_others(groups)
     commands = "\n".join(f"  {name:<24} {what}" for name, what in groups.listing)
     parser.epilog = (

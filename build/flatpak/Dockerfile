@@ -27,7 +27,7 @@ ARG BASE_DIGEST=sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b0
 FROM debian:bookworm-slim@${BASE_DIGEST}
 
 # Re-declared: an ARG from before FROM is out of scope after it, and the only
-# symptom is an empty value -- `lb app flatpak-versions` printed
+# symptom is an empty value -- `lb container versions flatpak` printed
 # "debian:bookworm-slim@" and nothing else. build/docker/Dockerfile has the
 # same line for the same reason.
 ARG BASE_DIGEST
@@ -57,7 +57,7 @@ RUN flatpak-builder --version | grep -Eq '[ -]1\.[4-9]' \
 RUN ls /usr/lib/*/gdk-pixbuf-2.0/2.10.0/loaders/ | grep -q 'libpixbufloader-svg' \
     || { echo "FATAL: no gdk-pixbuf SVG loader in this base; icon export will fail" >&2; exit 1; }
 
-# What this image is, for the record. `lb app flatpak-versions` prints it.
+# What this image is, for the record. `lb container versions flatpak` prints it.
 RUN { \
       echo "base:            debian:bookworm-slim@${BASE_DIGEST}"; \
       echo "flatpak:         $(flatpak --version)"; \

@@ -6,7 +6,7 @@
 # this, gui.why_no_window() has nothing to say.
 #
 # Measured in the runtime, not assumed (flatpak run --command=... or
-# lb app flatpak-shell):
+# lb container shell flatpak):
 #
 #   bin/python3.13
 #   lib/python3.13/site-packages/gi

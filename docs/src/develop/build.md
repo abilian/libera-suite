@@ -125,11 +125,11 @@ lb payload export                  # the artifacts out of the volume, and where 
 Underneath, the same container takes one step at a time:
 
 ```sh
-lb payload container --image                # build the image (about two minutes)
-lb payload container --versions             # what it is pinned to
+lb container image payload                  # build the image (about two minutes)
+lb container versions payload               # what it is pinned to
 lb payload container dist.sh --fonts core   # one build/ script, in the container
 lb payload export                           # where the artifacts are; prints it
-lb payload container --shell                # poke around inside
+lb container shell payload                  # poke around inside
 ```
 
 `export` writes the artifacts' location to stdout and everything else to stderr, so `payload install` can read it. The default build tree is already on this disk, so that is `$BUILD_ROOT/linux-<arch>/out/dist/<version>`. With `--volume` it copies them out first, into `$BUILD_ROOT/out/dist/<version>`, through a tar pipe, so extraction runs as you and nothing lands owned by root. The copy is extracted into a fresh directory and checked there, on both ends' exit statuses, since a pipeline's own is only tar's, and on content: an earlier export's files in the destination would otherwise pass for this one's. Either way it checks that the manifest and at least one tarball are there.
@@ -153,7 +153,7 @@ Bumping it invalidates V8's object tree and **ninja will not notice**: it keys o
 
 The last layer checks the toolchain itself: every tool on `PATH`, `perl` with `FindBin` and `IPC::Cmd`, and a static C++ link. That last one is ICU's namespace probe, so a missing `libstdc++.a` fails here in a second, where a build takes twenty minutes to fail with a message about namespaces. The check earned its place on the first build, failing on `libtool`: Debian's package of that name ships only `libtoolize`; `/usr/bin/libtool` is in `libtool-bin`.
 
-`lb payload container --versions` prints the pins and the compiler versions out of the finished image; `/etc/libera-build-packages.txt` inside it is every package and version.
+`lb container versions payload` prints the pins and the compiler versions out of the finished image; `/etc/libera-build-packages.txt` inside it is every package and version.
 
 Two mounts:
 

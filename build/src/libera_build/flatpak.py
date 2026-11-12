@@ -45,7 +45,7 @@ MUST_HAVE = (
 
 @dataclass(frozen=True)
 class FlatpakOptions:
-    action: str  # build, wheels, check, smoke, shell, versions, clean
+    action: str  # build, wheels, check, smoke, shell, versions, image, clean
     arch: str = "amd64"
 
 
@@ -103,7 +103,7 @@ class Builder:
         # lives in a volume. A named one and not a directory on $BUILD_ROOT:
         # flatpak's store is an ostree repo, ostree keeps metadata in user
         # xattrs, and a macOS volume through virtiofs has none ("user xattr:
-        # NO"). `lb app flatpak-clean` drops it: about 4 GB per architecture.
+        # NO"). `lb container clean flatpak` drops it: about 4 GB per architecture.
         self.volume = f"libera-flatpak-{self.arch}"
         self.app = versions.app_version(REPO)
         self.bundle = bundle_name(self.app, self.arch)
@@ -372,5 +372,6 @@ def run(options: FlatpakOptions) -> int:
         "clean": builder.clean,
         "versions": lambda: builder.call("cat /etc/libera-flatpak-image.txt"),
         "shell": lambda: builder.call("exec /bin/bash"),
+        "image": builder.build_image,
     }
     return actions[options.action]()

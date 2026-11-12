@@ -210,7 +210,7 @@ RUN set -eu; \
     clang --version | grep -q "clang version ${CLANG_VERSION}\." || { \
         echo "FATAL: wanted clang ${CLANG_VERSION}, got $(clang --version | head -1)" >&2; exit 1; }
 
-# What this image is, for the record. `lb payload container --versions` prints the
+# What this image is, for the record. `lb container versions payload` prints the
 # first; the second is every package and version, for when that is the question.
 RUN set -eu; \
     { \
