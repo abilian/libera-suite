@@ -145,8 +145,12 @@ def run_once(
         first = wait_for(lambda: read_trace(trace, started), started, watching)
         if watching:
             watchers.append(watch(process, screen, new=True))
-            # It creates the file once it knows the windows already there.
+            # It creates the file once it knows the windows already there; a
+            # watcher that died first (no pyobjc, a crash) never will.
             while not screen.exists():
+                if watchers[-1].poll() is not None or time.time() - started > TIMEOUT:
+                    msg = f"the window watcher never started watching ({WATCHER.name})"
+                    raise SystemExit(msg)
                 time.sleep(0.02)
         asked = time.time()
         subprocess.run(

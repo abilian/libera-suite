@@ -20,16 +20,24 @@ commit. `stage` runs as often as wanted; nothing leaves the builders.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from libera_build import released_gui, repo, versions
-from libera_build.artifacts import bundle_name, core_wheel_name, installer_name
+from libera.manifest import hash_file
+from libera_build import inventory, released_gui, repo, versions
+from libera_build.artifacts import (
+    BUNDLES_DIR,
+    app_wheel_name,
+    bundle_name,
+    core_wheel_name,
+    installer_name,
+    web_wheel_name,
+)
 from libera_build.components import TAGS
 from libera_build.hosts import LocalHost, facts_from
+from libera_build.release import plan
 from libera_build.release.phases import publishing
 from libera_build.released_gui import ReleasedGuiOptions
 from libera_build.report import RefusedError, problems, say, step
@@ -53,24 +61,15 @@ def folder(root: Path) -> Path:
 def bundle_files(ctx: Context) -> list[Path]:
     """The bundles the builders of this run make, as `bundles` left them here."""
     app = versions.app_version(ctx.root)
-    bundles = ctx.root / "build" / "out" / "bundles"
+    bundles = ctx.root / BUNDLES_DIR
     found = []
     for b in ctx.builders:
-        if b.platform.startswith("linux-"):
-            arch = "arm64" if b.platform.endswith("arm64") else "amd64"
-            found.append(bundles / bundle_name(app, arch))
-        elif b.platform.startswith("windows-"):
+        if b.os == "linux":
+            found.append(bundles / bundle_name(app, b.arch))
+        elif b.os == "windows":
             setup = bundles / installer_name(app)
             found += [setup, setup.with_name(setup.name + ".sha256")]
     return found
-
-
-def digest(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for block in iter(lambda: f.read(1 << 20), b""):
-            h.update(block)
-    return h.hexdigest()
 
 
 def run(ctx: Context) -> None:
@@ -84,6 +83,15 @@ def run(ctx: Context) -> None:
             for f in files
             if not f.is_file()
         ],
+        "nothing was staged.",
+    )
+    head = repo.head(ctx.root)
+    problems(
+        plan.wheel_problems(
+            publishing.manifest_of(own[0]),
+            payload_version=versions.payload_version(ctx.root),
+            head=head,
+        ),
         "nothing was staged.",
     )
     dest = folder(ctx.root)
@@ -103,16 +111,17 @@ def run(ctx: Context) -> None:
     for b in ctx.builders:
         host = ctx.host_for(b) if b.remote else LocalHost(Path.home())
         found += installs(host, b, dest, app, deps)
-    remote_guis = [b for b in ctx.remotes if not b.platform.startswith("macos-")]
-    for b in remote_guis:
+    for b in inventory.gui_remotes(ctx.builders):
         options = ReleasedGuiOptions(staged=dest, root=ctx.root)
         if not released_gui.on_host(ctx.host_for(b), b.platform, options):
             found.append(f"{b.platform}: the staged bundle did not draw a window")
     problems(found, "nothing was stamped, and publish will refuse.")
 
     stamp = {
-        "commit": repo.head(ctx.root),
-        "files": {f.name: digest(f) for f in sorted(dest.iterdir()) if f.name != STAMP},
+        "commit": head,
+        "files": {
+            f.name: hash_file(f) for f in sorted(dest.iterdir()) if f.name != STAMP
+        },
     }
     (dest / STAMP).write_text(json.dumps(stamp, indent=2) + "\n", encoding="utf-8")
     step(f"staged: {dest}")
@@ -124,13 +133,13 @@ def installs(
     """libera and this platform's components, sent there and installed from
     there alone; a problem, or nothing. The components are the version libera
     pins, which is `app` unless an exception was made by hand."""
-    pins = publishing.requires_of(dest / f"libera-{app}-py3-none-any.whl")
+    pins = publishing.requires_of(dest / app_wheel_name(app))
     components = {r.split("==")[0]: r.split("==")[1] for r in pins if "==" in r}
     stage = f"libera-stage/{app}"
     wanted = [
-        f"libera-{app}-py3-none-any.whl",
+        app_wheel_name(app),
         core_wheel_name(components["libera-core"], TAGS[b.platform]),
-        f"libera_web-{components['libera-web']}-py3-none-any.whl",
+        web_wheel_name(components["libera-web"]),
     ]
     # Overwritten file by file: the names carry the version, so nothing left
     # from another one can stand in for these.
@@ -141,7 +150,7 @@ def installs(
         if host.send(dest / name, there)[0]:
             return [f"{b.platform}: could not copy {name} there"]
     # A window here too, on the Mac: no builder opens one of this platform's.
-    window = b.platform.startswith("macos-")
+    window = b.os == "macos"
     script = publishing.install_script(app, staged=stage, deps=deps, window=window)
     out = host.capture(script)
     facts = facts_from(out)
@@ -176,14 +185,14 @@ def stamp_problems(root: Path) -> list[str]:
     for name, sha in sorted(stamp["files"].items()):
         if name not in now:
             found.append(f"{name} was staged and is gone")
-        elif digest(now[name]) != sha:
+        elif hash_file(now[name]) != sha:
             found.append(f"{name} changed after the stage")
     return found
 
 
 def publish(ctx: Context) -> None:
     """What `stage` stamped, uploaded; refused if it no longer holds."""
-    publishing.publish(ctx, staged(ctx.root))
+    publishing.publish(ctx, folder(ctx.root), staged(ctx.root))
 
 
 def staged(root: Path) -> list[Path]:

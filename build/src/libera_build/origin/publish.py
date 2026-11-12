@@ -1,11 +1,9 @@
-"""push, extras, windows: what goes up to the origin, and in what order.
+"""extras, windows: what goes up to the CDN, and in what order.
 
-The payload goes under its version. What a release ships that the payload
-manifest does not name -- the Flatpak bundles, the Windows installer, the two
-install scripts -- carries the *application* version and sits outside it: the
-two versions move independently, which is why `libera --version` prints both.
-The install scripts sit at the zone root, because the URL in the README cannot
-move every release.
+The Flatpak bundles, the Windows installer and the two install scripts; since
+0.7 nothing downloads a payload from it. The install scripts sit at the zone
+root, because the URL in the README cannot move every release; the pointers
+under bundles/ move last, so that nothing ever names a file not up yet.
 """
 
 from __future__ import annotations
@@ -22,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from libera.manifest import hash_file
 from libera_build import versions
-from libera_build.artifacts import bundle_name, installer_name
+from libera_build.artifacts import BUNDLES_DIR, bundle_name, installer_name
 from libera_build.origin.cdn import key_for, put
 from libera_build.report import RefusedError, say, step
 
@@ -68,17 +66,22 @@ def installer_here(bundles: Path, app: str) -> Path | None:
     return setup if setup.is_file() and digest.is_file() else None
 
 
+def hash_problem(setup: Path) -> Path:
+    """The installer's .sha256, refused unless it describes the installer:
+    install.ps1 checks one against the other, and would refuse every download."""
+    digest = setup.with_name(setup.name + ".sha256")
+    if digest.read_text(encoding="utf-8").split()[0] != hash_file(setup):
+        msg = f"{digest} does not describe {setup}"
+        raise RefusedError(msg)
+    return digest
+
+
 def put_windows(
     origin: Origin, setup: Path, app: str, *, token: str | None, dry: bool
 ) -> None:
     """The Windows installer and its SHA-256; then, for a release, the stable
     name and the pointer, which a pre-release leaves alone."""
-    digest = setup.with_name(setup.name + ".sha256")
-    # The hash file has to describe the file being published, or install.ps1
-    # refuses every download of it: checked before either goes out.
-    if digest.read_text(encoding="utf-8").split()[0] != hash_file(setup):
-        msg = f"{digest} does not describe {setup}"
-        raise RefusedError(msg)
+    digest = hash_problem(setup)
     put(origin, setup, key_for("bundles", setup.name), token=token, dry=dry)
     put(origin, digest, key_for("bundles", digest.name), token=token, dry=dry)
     if versions.is_prerelease(app):
@@ -143,11 +146,15 @@ def signature_of(bundle: Path) -> Path:
 def sign(bundle: Path) -> None:
     """A detached signature beside `bundle`, made on the machine that publishes:
     that is where the key is, and where someone can answer its passphrase. A
-    builder's job is detached, with nobody to ask."""
+    builder's job is detached, with nobody to ask.
+
+    A good signature already there is kept: `publish` signs every bundle before
+    PyPI takes the packages, and the upload after asks for nothing."""
+    if signature_problem(bundle) is None:
+        return
     if not signing_key_here():
         msg = f"gpg has no secret key {SIGNING_KEY} here, and a bundle goes up signed"
         raise RefusedError(msg)
-    signature = signature_of(bundle)
     subprocess.run(
         [
             "gpg",
@@ -156,40 +163,49 @@ def sign(bundle: Path) -> None:
             "--local-user",
             SIGNING_KEY,
             "--output",
-            str(signature),
+            str(signature_of(bundle)),
             "--detach-sign",
             str(bundle),
         ],
         check=False,
     )
+    # gpg's status says whether it signed; its exit code, not reliably.
+    if problem := signature_problem(bundle):
+        msg = f"gpg made no good signature of {bundle.name}\n{problem}"
+        raise RefusedError(msg)
+
+
+def signature_problem(bundle: Path) -> str | None:
+    """Why the signature beside `bundle` is not a good one by the release key,
+    or None."""
     checked = subprocess.run(
-        ["gpg", "--status-fd", "1", "--verify", str(signature), str(bundle)],
+        ["gpg", "--status-fd", "1", "--verify", str(signature_of(bundle)), str(bundle)],
         capture_output=True,
         text=True,
         check=False,
     )
-    if not re.search(
+    if re.search(
         rf"^\[GNUPG:\] VALIDSIG .* {SIGNING_KEY}$", checked.stdout, re.MULTILINE
     ):
-        msg = f"gpg made no good signature of {bundle.name}\n{checked.stderr}"
-        raise RefusedError(msg)
+        return None
+    return checked.stderr.strip() or "no signature"
+
+
+def bundles_here(bundles: Path, app: str) -> dict[str, Path | None]:
+    """Each architecture's Flatpak bundle, or None. Optional: an arm64 builder
+    short of disk is a normal state of the world, and should not stop
+    install.sh going out."""
+    made = {arch: bundles / bundle_name(app, arch) for arch in ARCHES}
+    return {arch: b if b.is_file() else None for arch, b in made.items()}
 
 
 def put_bundles(
     origin: Origin, bundles: Path, app: str, *, token: str | None, dry: bool
 ) -> None:
-    """The Flatpak bundles and their signatures. Optional: an arm64 builder short
-    of disk is a normal state of the world, and should not stop install.sh going
-    out."""
-    made = {arch: bundles / bundle_name(app, arch) for arch in ARCHES}
-    here = [bundle for bundle in made.values() if bundle.is_file()]
-    # All signed first: a passphrase not given then leaves the origin as it was.
-    if not dry:
-        for bundle in here:
-            sign(bundle)
-    for arch, bundle in made.items():
-        if bundle not in here:
-            say(f"    no bundle for {arch} ({bundle})")
+    """The Flatpak bundles and their signatures, which `ready` made."""
+    for arch, bundle in bundles_here(bundles, app).items():
+        if bundle is None:
+            say(f"    no bundle for {arch}")
             continue
         put(origin, bundle, key_for("bundles", bundle.name), token=token, dry=dry)
         if not dry:
@@ -203,6 +219,27 @@ def put_bundles(
             )
 
 
+def ready(root: Path, origin: Origin, *, dry: bool, bundles: Path) -> None:
+    """Everything `extras` could refuse, refused before anything goes up:
+    `publish` runs it before PyPI takes the packages, which has no undo, so a
+    passphrase not given or an origin naming no installer leaves the release
+    as it was rather than half out. Signs the bundles."""
+    need_token(os.environ.get("CDN_TOKEN"), dry=dry, zone=origin.zone)
+    app = versions.app_version(root)
+    # An installer in this run moves latest-windows before install.ps1 goes up;
+    # a pre-release puts up no install script, so it needs neither.
+    setup = installer_here(bundles, app)
+    pre = versions.is_prerelease(app)
+    if not pre and setup is None and (problem := windows_ready(origin)):
+        raise RefusedError(problem)
+    if setup is not None:
+        hash_problem(setup)
+    if not dry:
+        for bundle in bundles_here(bundles, app).values():
+            if bundle is not None:
+                sign(bundle)
+
+
 def extras(
     root: Path, origin: Origin, *, dry: bool, bundles: Path | None = None
 ) -> None:
@@ -210,17 +247,13 @@ def extras(
     install.ps1, then `latest`, which moves both install scripts. From
     `bundles`, the staged release when `publish` calls it, else where the
     builders' bundles are brought."""
+    bundles = bundles or root / BUNDLES_DIR
+    ready(root, origin, dry=dry, bundles=bundles)
     token = os.environ.get("CDN_TOKEN")
-    need_token(token, dry=dry, zone=origin.zone)
     app = versions.app_version(root)
-    bundles = bundles or root / "build" / "out" / "bundles"
     step(f"publishing the extras for {app} to {origin.cdn_url}/{origin.zone}/")
     setup = installer_here(bundles, app)
     pre = versions.is_prerelease(app)
-    # An installer in this run moves latest-windows before install.ps1 goes up;
-    # a pre-release puts up no install script, so it needs neither.
-    if not pre and setup is None and (problem := windows_ready(origin)):
-        raise RefusedError(problem)
     put_bundles(origin, bundles, app, token=token, dry=dry)
     if setup:
         put_windows(origin, setup, app, token=token, dry=dry)
@@ -261,7 +294,7 @@ def windows(root: Path, origin: Origin, *, dry: bool) -> None:
     token = os.environ.get("CDN_TOKEN")
     need_token(token, dry=dry, zone=origin.zone)
     app = versions.app_version(root)
-    bundles = root / "build" / "out" / "bundles"
+    bundles = root / BUNDLES_DIR
     step(f"publishing the Windows installer for {app} to {origin.public('bundles')}/")
     if (setup := installer_here(bundles, app)) is None:
         msg = (

@@ -39,6 +39,13 @@ def size_problem(platform: str, name: str, size: int, minimum: int) -> str | Non
 # Where the release keeps what goes to PyPI beside `libera`: on each builder
 # under its checkout, and here, all of them together.
 PYPI_DIR = "build/out/pypi"
+# Where the Flatpak bundles and the Windows installer are brought, here.
+BUNDLES_DIR = "build/out/bundles"
+
+
+def app_wheel_name(app_version: str) -> str:
+    """libera's own wheel."""
+    return f"libera-{app_version}-py3-none-any.whl"
 
 
 def core_wheel_name(payload_version: str, tag: str) -> str:

@@ -58,7 +58,7 @@ def run(ctx: Context) -> None:
     # must still hold: found now, not after hours of building.
     if "publish" in ctx.phases and "stage" not in ctx.phases:
         found += staging.stamp_problems(ctx.root)
-    if any(p in ctx.phases for p in plan.UPLOADING):
+    if "publish" in ctx.phases:
         found += plan.unpushed_problems(
             ctx.phases, on_a_remote=repo.on_a_remote(ctx.root), head=head
         )

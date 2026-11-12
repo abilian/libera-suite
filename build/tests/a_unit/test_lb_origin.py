@@ -10,9 +10,7 @@ import pytest
 from libera_build.origin import cdn, place, status, verbs
 from libera_build.report import RefusedError
 
-from libera.manifest import Artifact, Manifest
-
-ORIGIN = place.Origin("https://cdn.example", "libera", "0.4")
+ORIGIN = place.Origin("https://cdn.example", "libera")
 
 
 def test_the_origin_splits_into_host_and_zone():
@@ -25,9 +23,11 @@ def test_the_origin_splits_into_host_and_zone():
 
 
 def test_an_object_is_read_and_written_at_two_urls():
-    assert ORIGIN.base == "https://cdn.example/libera/0.4"
-    assert ORIGIN.api("0.4/x.tar.gz") == (
-        "https://cdn.example/_/api/v1/zones/libera/objects/0.4/x.tar.gz"
+    assert (
+        ORIGIN.public("bundles/latest") == "https://cdn.example/libera/bundles/latest"
+    )
+    assert ORIGIN.api("bundles/latest") == (
+        "https://cdn.example/_/api/v1/zones/libera/objects/bundles/latest"
     )
 
 
@@ -39,8 +39,6 @@ def test_the_zone_root_has_no_empty_directory():
 @pytest.mark.parametrize(
     ("name", "kind"),
     [
-        ("core-linux-arm64.tar.gz", "application/gzip"),
-        ("manifest.json", "application/json"),
         ("install.sh", "text/plain; charset=utf-8"),
         ("libera-0.3.3-amd64.flatpak.asc", "text/plain; charset=utf-8"),
         ("latest-windows", "text/plain; charset=utf-8"),
@@ -69,15 +67,6 @@ def test_the_cdns_answer_is_believed_only_when_it_stored_it_all(status_, body, s
 
 def test_a_whole_upload_is_no_problem():
     assert cdn.answer_problem(201, '{"size": 10}', sent=10, zone="libera") is None
-
-
-MANIFEST = Manifest(
-    "0.4",
-    (
-        Artifact("core-linux-arm64.tar.gz", "core", "linux-arm64", 68, "a" * 64),
-        Artifact("fonts-core.tar.gz", "fonts", None, 4, "b" * 64),
-    ),
-)
 
 
 def test_status_reads_the_project_from_pypi_and_says_what_is_yanked(monkeypatch):

@@ -58,12 +58,19 @@ def test_the_architecture_comes_from_the_platform():
         ),
         (
             (
-                "[[builders]]\nplatform = 'a'\ntarget = 'x'\nneutral = true\n"
-                "[[builders]]\nplatform = 'b'\ntarget = 'y'\nneutral = true\n"
+                "[[builders]]\nplatform = 'linux-arm64'\ntarget = 'x'\nneutral = true\n"
+                "[[builders]]\nplatform = 'macos-arm64'\ntarget = 'y'\nneutral = true\n"
             ),
             "2 builders marked neutral",
         ),
         ("[[builders]\n", "builders.toml:"),
+        # A typo once read as no architecture, which skipped the check that a
+        # builder is the machine it says and built a path into linux-None.
+        (
+            "[[builders]]\nplatform = 'linux-x86-64'\ntarget = 'x'\n",
+            "builder 1: platform 'linux-x86-64' is not",
+        ),
+        ("[[builders]]\nplatform = 'freebsd-arm64'\ntarget = 'x'\n", "is not"),
     ],
 )
 def test_a_wrong_file_is_refused_saying_why(text, says):

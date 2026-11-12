@@ -40,17 +40,39 @@ class Builder:
         return self.target != "local"
 
     @property
-    def arch(self) -> str | None:
+    def os(self) -> str:
+        """linux, macos or windows: the platform's first half."""
+        return self.platform.partition("-")[0]
+
+    @property
+    def arch(self) -> str:
         """The docker arch this builder builds, from the tail of its platform.
 
-        buildbox.py defaults ARCH to amd64 whatever the host is, deliberately:
-        on a Mac you want the amd64 core under Rosetta. On a builder whose whole
-        job is its own architecture that default is wrong, and it fails late
-        and obscurely -- `image ... does not provide the specified platform
+        A container built for the wrong architecture fails late and
+        obscurely -- `image ... does not provide the specified platform
         (linux/amd64)` at a COPY step, after several minutes of installing
-        arm64 packages. So the platform each builder is *for* decides the flag.
+        arm64 packages. So the platform each builder is *for* decides the
+        flag, not the host it happens to run on.
         """
-        return DOCKER_ARCH.get(self.platform.rsplit("-", 1)[-1])
+        return arch_of(self.platform)
+
+
+def arch_of(platform: str) -> str:
+    """amd64 or arm64, from a platform such as linux-x86_64."""
+    return DOCKER_ARCH[platform.rpartition("-")[2]]
+
+
+def platform_problem(platform: str) -> str | None:
+    """Why `platform` is not one a builder can be, or None. A typo once read
+    as no architecture at all, which skipped the check that a builder is the
+    machine it says, and built a path into linux-None."""
+    system, _, arch = platform.partition("-")
+    if system in SYSTEMS and arch in DOCKER_ARCH:
+        return None
+    return (
+        f"platform {platform!r} is not <{'|'.join(SYSTEMS)}>-<arch>, "
+        f"the arch one of {', '.join(DOCKER_ARCH)}"
+    )
 
 
 def read(path: Path) -> list[Builder]:
@@ -85,6 +107,9 @@ def parse(text: str, source: str) -> list[Builder]:
         if unknown := sorted(set(entry) - KNOWN_KEYS):
             msg = f"{source}: builder {entry['platform']} has unknown key(s) {unknown}"
             raise RefusedError(msg)
+        if problem := platform_problem(entry["platform"]):
+            msg = f"{source}: builder {i}: {problem}"
+            raise RefusedError(msg)
         out.append(
             Builder(
                 platform=entry["platform"],
@@ -109,11 +134,7 @@ def parse(text: str, source: str) -> list[Builder]:
 def gui_remotes(builders: list[Builder]) -> list[Builder]:
     """The remote Linux and Windows builders: the ones `release check downloads` opens a
     window on. A Mac has nothing published to open: Homebrew and pip build it."""
-    return [
-        b
-        for b in builders
-        if b.remote and b.platform.startswith(("linux-", "windows-"))
-    ]
+    return [b for b in builders if b.remote and b.os != "macos"]
 
 
 def narrow(builders: list[Builder], only: list[str]) -> list[Builder]:
@@ -142,8 +163,7 @@ def dist_of(b: Builder) -> str:
         return b.dist
     if not b.remote:
         return str(repo.build_root() / "out" / "dist")
-    system, _, _ = b.platform.partition("-")
-    root = repo.default_build_root(SYSTEMS.get(system, system))
-    if system == "linux":
+    root = repo.default_build_root(SYSTEMS[b.os])
+    if b.os == "linux":
         return f"{root}/linux-{b.arch}/out/dist"
     return f"{root}/out/dist"

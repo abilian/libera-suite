@@ -21,9 +21,9 @@ from libera.payload import generate, locate
 from libera_build import buildbox
 from libera_build.containers import host_arch
 from libera_build.process import run_here
-from libera_build.release.phases.here import source_problems
 from libera_build.repo import build_root
 from libera_build.report import RefusedError, say, step
+from libera_build.sources import source_problems
 
 CORE = Path("components", "core")
 WEB = Path("components", "web")
@@ -81,7 +81,7 @@ def build_web(repo: Path, into: Path, core_bin: Path) -> None:
         cwd=repo,
         env=env,
     )
-    unpack_web(into, dist, {})
+    unpack_web(into, dist)
 
 
 def build_core(repo: Path, into: Path) -> str:
@@ -142,7 +142,7 @@ def unpack_core(into: Path, dist: Path, platform: str) -> None:
     _replace_links(into / "bin")
 
 
-def unpack_web(into: Path, dist: Path, extra: dict[str, str]) -> None:
+def unpack_web(into: Path, dist: Path) -> None:
     """The editors and their fonts, and payload.json from the build's
     manifest: what --payload-status and the start window show, the source
     among it, which the AGPL wants said."""
@@ -154,7 +154,6 @@ def unpack_web(into: Path, dist: Path, extra: dict[str, str]) -> None:
     manifest = Manifest.read(dist / "manifest.json")
     record = {
         "payload_version": manifest.payload_version,
-        **extra,
         "font_set": manifest.font_set,
         "built": manifest.built,
         "source": manifest.source,

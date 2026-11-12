@@ -6,7 +6,7 @@ from dataclasses import replace
 
 import pytest
 from libera_build.inventory import Builder
-from libera_build.release import plan
+from libera_build.release import plan, ship
 from libera_build.release.phases import builders
 from libera_build.report import RefusedError
 
@@ -187,3 +187,9 @@ def test_a_libera_that_pins_another_payload_does_not_go_up():
 
     (problem,) = found
     assert "libera-core==0.7.dev1" in problem
+
+
+def test_every_phase_has_an_action_and_every_action_a_phase():
+    # Two tables kept in step by hand: one missing a key is a KeyError found
+    # after the hours of building, not before.
+    assert list(ship.ACTIONS) == list(plan.PHASES)

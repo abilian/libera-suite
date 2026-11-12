@@ -40,6 +40,7 @@ src/libera/manifest.json
 
 # Written by `uv run pytest --cov=libera`, and committed once by accident.
 .coverage
+htmlcov/
 
 # An inventory of build hosts (build/builders.toml.example is the template).
 build/builders.toml

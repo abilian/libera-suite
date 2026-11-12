@@ -134,17 +134,10 @@ class Builder:
         )
 
     def build_image(self) -> int:
-        return subprocess.call([
-            self.engine.name,
-            "build",
-            "--platform",
-            f"linux/{self.arch}",
-            "--label",
-            f"libera.dockerfile={dockerfile_sum()}",
-            "-t",
-            self.image,
-            str(WORK),
-        ])
+        label = ("--label", f"libera.dockerfile={dockerfile_sum()}")
+        return subprocess.call(
+            self.engine.build_argv(self.image, WORK, arch=self.arch, extra=label)
+        )
 
     def ensure_image(self) -> None:
         self.engine.refuse_remote()
@@ -204,7 +197,8 @@ class Builder:
         if (here := locate.get_current_platform()) != linux_platform(self.arch):
             msg = (
                 f"the {self.arch} Flatpak carries a core built where it is made,\n"
-                f"  and this is {here}: lb on {linux_platform(self.arch)} app flatpak"
+                f"  and this is {here}: "
+                f"lb on {linux_platform(self.arch)} app build flatpak"
             )
             raise RefusedError(msg)
         tmp = WORK / "wheels.tmp"
@@ -352,14 +346,25 @@ flatpak install -y --noninteractive /bundles/{self.bundle} >/dev/null
         done = subprocess.run(
             [self.engine.name, "volume", "rm", self.volume],
             capture_output=True,
+            text=True,
             check=False,
         )
-        say(
-            f"removed {self.volume}"
-            if done.returncode == 0
-            else f"{self.volume} was not there"
-        )
+        return clean_verdict(self.volume, done)
+
+
+def clean_verdict(volume: str, done: subprocess.CompletedProcess[str]) -> int:
+    """`volume rm`, read: removed, not there (docker and podman both say "no
+    such volume"), or refused, with what the engine said. A volume in use was
+    once reported as not there, to someone who had just said yes to dropping
+    four gigabytes."""
+    if done.returncode == 0:
+        say(f"removed {volume}")
         return 0
+    if "no such volume" in done.stderr:
+        say(f"{volume} was not there")
+        return 0
+    msg = f"{volume} was not removed:\n  {done.stderr.strip()}"
+    raise RefusedError(msg)
 
 
 def run(options: FlatpakOptions) -> int:

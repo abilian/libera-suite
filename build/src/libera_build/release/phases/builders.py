@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from libera_build import versions
 from libera_build.artifacts import (
+    BUNDLES_DIR,
     MIN_BUNDLE_BYTES,
     MIN_CORE_BYTES,
     bundle_name,
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
 
 
 def arch_suffix(b: Builder) -> str:
-    return f" --arch {b.arch}" if b.arch else ""
+    return f" --arch {b.arch}"
 
 
 def build_command(b: Builder) -> str:
@@ -40,7 +41,7 @@ def build_command(b: Builder) -> str:
     directory. On Linux, the container, whose glibc decides the oldest
     distribution the core loads on. Elsewhere, the machine's own toolchain,
     which `payload build` checks before its hours of building."""
-    if b.platform.startswith("linux-"):
+    if b.os == "linux":
         return f"container run payload{arch_suffix(b)}"
     return "payload build"
 
@@ -58,13 +59,13 @@ def bundle_of(b: Builder, app: str) -> Bundle | None:
     """A Flatpak per Linux architecture; the installer on Windows, with the
     SHA-256 that install.ps1 checks the download against. None for a Mac:
     macOS ships through Homebrew, which builds from source."""
-    if b.platform.startswith("linux-"):
+    if b.os == "linux":
         return Bundle(
             f"app build flatpak{arch_suffix(b)}",
-            (f"build/out/{bundle_name(app, b.arch or '')}",),
+            (f"build/out/{bundle_name(app, b.arch)}",),
         )
-    if b.platform.startswith("windows-"):
-        setup = f"build/out/bundles/{installer_name(app)}"
+    if b.os == "windows":
+        setup = f"{BUNDLES_DIR}/{installer_name(app)}"
         return Bundle("app build windows", (setup, f"{setup}.sha256"))
     return None
 
@@ -107,7 +108,7 @@ def fetch_bundles(ctx: Context, made: dict[Builder, Bundle]) -> None:
     """Bring every bundle here, where `publish` uploads them from, so that one
     directory holds the whole release."""
     step("collecting the bundles")
-    dest = ctx.root / "build" / "out" / "bundles"
+    dest = ctx.root / BUNDLES_DIR
     dest.mkdir(parents=True, exist_ok=True)
     found = []
     for b, bundle in made.items():

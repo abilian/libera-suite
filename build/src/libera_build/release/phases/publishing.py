@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import json
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from libera.manifest import Manifest
 from libera_build import report, versions
-from libera_build.artifacts import core_sdist_name, core_wheel_name, web_wheel_name
+from libera_build.artifacts import (
+    app_wheel_name,
+    core_sdist_name,
+    core_wheel_name,
+    web_wheel_name,
+)
 from libera_build.components import TAGS
 from libera_build.hosts import LocalHost, facts_from
 from libera_build.origin import place, publish as cdn
@@ -20,6 +27,8 @@ from libera_build.report import problems, say, step
 # already up, and the install check installs from it and nothing else.
 PYPI_SIMPLE = "https://pypi.org/simple/"
 CHECK_END = "__LIBERA_CHECK_END__"
+WHEEL_MANIFEST = "libera/manifest.json"
+COMPONENTS = ("libera_core-", "libera_web-")
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -27,27 +36,25 @@ if TYPE_CHECKING:
     from libera_build.release.context import Context
 
 
-def publish(ctx: Context, staged: list[Path]) -> None:
+def publish(ctx: Context, folder: Path, staged: list[Path]) -> None:
     """PyPI, then the bundles and the install scripts: the staged files and
     nothing else. The one phase with no undo.
 
     PyPI refuses a version it has already seen, even after a yank, so a
     mistaken publish costs a version number. It asks unless told not to, and it
     asks on /dev/tty: this is sometimes run under tmux with its output
-    redirected, and a prompt nobody can see is a hang.
+    redirected, and a prompt nobody can see is a hang. Whatever the CDN could
+    refuse is refused before PyPI is asked anything.
     """
     app = versions.app_version(ctx.root)
     step(f"publishing libera {app}")
-    components = [
-        f for f in staged if f.name.startswith(("libera_core-", "libera_web-"))
-    ]
-    own = [
-        f
-        for f in staged
-        if f.name.startswith(f"libera-{app}") and f.suffix != ".flatpak"
-    ]
-    for f in [*components, *own]:
+    pypi = [f for f in staged if f.name.endswith((".whl", ".tar.gz"))]
+    components = [f for f in pypi if f.name.startswith(COMPONENTS)]
+    own = [f for f in pypi if f not in components]
+    for f in pypi:
         say(f"    {f.name}")
+    where = place.here()
+    cdn.ready(ctx.root, where, dry=False, bundles=folder)
     if not ctx.yes:
         confirm(app)
     # The components first: `libera` names them, and a `libera` up without
@@ -60,7 +67,7 @@ def publish(ctx: Context, staged: list[Path]) -> None:
             "publish",
             cwd=ctx.root,
         )
-    cdn.extras(ctx.root, place.here(ctx.root), dry=False, bundles=staged[0].parent)
+    cdn.extras(ctx.root, where, dry=False, bundles=folder)
 
 
 def upload_files(ctx: Context) -> tuple[list[Path], list[Path]]:
@@ -72,7 +79,7 @@ def upload_files(ctx: Context) -> tuple[list[Path], list[Path]]:
     dist = ctx.root / "dist"
     names = [core_wheel_name(payload, TAGS[b.platform]) for b in ctx.builders]
     names += [core_sdist_name(payload), web_wheel_name(payload)]
-    own = [dist / f"libera-{app}-py3-none-any.whl", dist / f"libera-{app}.tar.gz"]
+    own = [dist / app_wheel_name(app), dist / f"libera-{app}.tar.gz"]
     present = {p.name for p in pypi.glob("*")} | {p.name for p in dist.glob("*")}
     found = plan.upload_problems(
         present,
@@ -82,6 +89,14 @@ def upload_files(ctx: Context) -> tuple[list[Path], list[Path]]:
     )
     problems(found, "nothing was staged.")
     return [pypi / name for name in names], own
+
+
+def manifest_of(wheel: Path) -> Manifest | None:
+    """The payload manifest packed in a libera wheel, if it carries one."""
+    with zipfile.ZipFile(wheel) as package:
+        if WHEEL_MANIFEST not in package.namelist():
+            return None
+        return Manifest.from_dict(json.loads(package.read(WHEEL_MANIFEST)))
 
 
 def requires_of(wheel: Path) -> list[str]:
@@ -107,11 +122,6 @@ def confirm(app: str) -> None:
 
 
 def verify(ctx: Context) -> None:
-    """What PyPI serves, installed as a user installs it, on every platform."""
-    installed(ctx)
-
-
-def installed(ctx: Context) -> None:
     """`libera` from PyPI alone, on every platform, as a user gets it: a
     clean environment, nothing from this tree or a builder's, the version
     asked for by name, then a document converted and its text read back.

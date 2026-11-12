@@ -168,7 +168,7 @@ def choose_payload(options: LinuxOptions, arch: str) -> tuple[Path | None, Path 
         return wheels, None
     msg = (
         f"no libera-core wheel for {linux_platform(arch)} in {wheels}\n"
-        f"  build them on Linux:  lb on {linux_platform(arch)} components wheels\n"
+        f"  build them on Linux:  lb on {linux_platform(arch)} components build\n"
         "  or point at them: --wheels DIR, or at a payload: --payload DIR"
     )
     raise RefusedError(msg)

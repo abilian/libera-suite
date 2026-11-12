@@ -28,7 +28,7 @@ class OriginOptions:
 
 def run(options: OriginOptions) -> int:
     root, dry = options.root, options.dry_run
-    where = place.here(root)
+    where = place.here()
     if options.verb != "status" and not (dry or options.yes):
         confirm(f"upload {options.verb} to the CDN?", "nothing was uploaded.")
     if options.verb == "status":

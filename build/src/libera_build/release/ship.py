@@ -107,5 +107,5 @@ def show_plan(ctx: Context) -> None:
     for b in ctx.builders:
         where = f"{b.target}:{b.repo}" if b.remote else "local"
         say(f"    {b.platform:<14} {where}{'  neutral' if b.neutral else ''}")
-    if irreversible := [p for p in plan.IRREVERSIBLE if p in ctx.phases]:
-        say(f"    note     {', '.join(irreversible)} cannot be undone")
+    if "publish" in ctx.phases:
+        say("    note     publish cannot be undone")

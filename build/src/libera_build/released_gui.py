@@ -18,7 +18,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from libera_build import inventory, repo
+from libera_build import inventory, repo, versions
+from libera_build.artifacts import bundle_name, installer_name
 from libera_build.hosts import MARK, SshHost, facts_from
 from libera_build.repo import REPO
 from libera_build.report import RefusedError, say, step
@@ -85,7 +86,7 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
         doc = f" --doc {options.doc}" if options.doc else ""
         command = f"sh {SCRIPT} --out {SHOT}{doc}"
     if options.staged:
-        sent = send_staged(host, name, options.staged, windows=windows)
+        sent = send_staged(host, name, options.staged, options.root, windows=windows)
         if sent is None:
             return False
         command += (
@@ -110,24 +111,21 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
     return True
 
 
-def staged_files(staged: Path, platform: str) -> list[Path]:
-    """What a machine of `platform` installs from the staged release: its
-    Flatpak bundle, or the Windows installer and its checksum."""
+def staged_files(staged: Path, platform: str, app: str) -> list[Path]:
+    """What a machine of `platform` installs from the staged release of `app`:
+    its Flatpak bundle, or the Windows installer and its checksum."""
     if platform.startswith("windows-"):
-        found = sorted(staged.glob("Libera-Suite-Setup-*.exe"))
-        return (
-            [found[0], found[0].with_name(found[0].name + ".sha256")] if found else []
-        )
-    arch = "arm64" if platform.endswith("arm64") else "amd64"
-    return sorted(staged.glob(f"libera-*-{arch}.flatpak"))[:1]
+        setup = staged / installer_name(app)
+        return [setup, setup.with_name(setup.name + ".sha256")]
+    return [staged / bundle_name(app, inventory.arch_of(platform))]
 
 
 def send_staged(
-    host: Host, platform: str, staged: Path, *, windows: bool
+    host: Host, platform: str, staged: Path, root: Path, *, windows: bool
 ) -> str | None:
     """Copy this machine's staged file there; its path from home, or None."""
-    files = staged_files(staged, platform)
-    if not files or not all(f.is_file() for f in files):
+    files = staged_files(staged, platform, versions.app_version(root))
+    if not all(f.is_file() for f in files):
         say(f"    nothing staged for {platform} in {staged}")
         return None
     for f in files:

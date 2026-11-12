@@ -9,27 +9,16 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
 from libera.payload import locate
-from libera_build import versions
 from libera_build.report import RefusedError
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @dataclass(frozen=True)
 class Origin:
     cdn_url: str  # https://host
     zone: str  # the first path segment: how the CDN resolves one
-    version: str  # the payload version: the directory a release goes in
-
-    @property
-    def base(self) -> str:
-        """The payload's directory, as a stranger's machine reads it."""
-        return f"{self.cdn_url}/{self.zone}/{self.version}"
 
     def public(self, key: str) -> str:
         return f"{self.cdn_url}/{self.zone}/{key}"
@@ -49,11 +38,8 @@ def split_origin(url: str) -> tuple[str, str]:
     return f"{parts.scheme}://{parts.netloc}", zone
 
 
-def here(root: Path) -> Origin:
+def here() -> Origin:
     """The origin this checkout publishes to. CDN_URL and ZONE override the
     two halves of locate.ORIGIN, for a test origin."""
     cdn_url, zone = split_origin(locate.ORIGIN)
-    version = versions.payload_version(root)
-    return Origin(
-        os.environ.get("CDN_URL") or cdn_url, os.environ.get("ZONE") or zone, version
-    )
+    return Origin(os.environ.get("CDN_URL") or cdn_url, os.environ.get("ZONE") or zone)

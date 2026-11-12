@@ -34,6 +34,7 @@ from libera_build.release.phases import (
 )
 from libera_build.release.ship import ShipOptions, ship
 from libera_build.report import RefusedError
+from libera_build.sources import source_problems
 
 STAND_IN = """
 import sys
@@ -362,13 +363,13 @@ def sources(tmp_path: Path, patches: int) -> tuple[Path, Path, list[str]]:
 def test_native_takes_a_tree_at_its_pin_plus_the_queue(tmp_path):
     root, src, queue = sources(tmp_path, 2)
     git(src / "core", "am", "-q", *queue)
-    assert here.source_problems(root, src) == []
+    assert source_problems(root, src) == []
 
 
 def test_native_refuses_a_tree_fetched_before_a_patch_was_added(tmp_path):
     root, src, queue = sources(tmp_path, 2)
     git(src / "core", "am", "-q", queue[0])
-    (problem,) = here.source_problems(root, src)
+    (problem,) = source_problems(root, src)
     assert "carries 1 commit(s) on its pin" in problem
     assert "the 2 patch(es) in the queue" in problem
 
@@ -379,7 +380,7 @@ def test_native_refuses_a_patch_that_changed_since_it_was_applied(tmp_path):
     edited = Path(queue[0])
     text = edited.read_text(encoding="utf-8")
     edited.write_text(text.replace("+patch 0", "+patch zero"), encoding="utf-8")
-    (problem,) = here.source_problems(root, src)
+    (problem,) = source_problems(root, src)
     assert "not the 1 patch(es)" in problem
 
 
@@ -387,9 +388,9 @@ def test_native_refuses_a_tree_off_its_pin_or_missing(tmp_path):
     root, src, _ = sources(tmp_path, 0)
     git(src / "core", "checkout", "-q", "--orphan", "elsewhere")
     git(src / "core", "commit", "-qm", "elsewhere")
-    (problem,) = here.source_problems(root, src)
+    (problem,) = source_problems(root, src)
     assert "is not on its pin" in problem
-    (problem,) = here.source_problems(root, tmp_path / "nowhere")
+    (problem,) = source_problems(root, tmp_path / "nowhere")
     assert "no source tree" in problem
 
 
@@ -424,7 +425,7 @@ def test_native_refuses_a_build_older_than_a_tree_at_its_pin(tmp_path):
     root, src, queue = sources(tmp_path, 1)
     built_payload(tmp_path, age=60)
     git(src / "core", "am", "-q", *queue)
-    assert here.source_problems(root, src) == []
+    assert source_problems(root, src) == []
     (problem,) = here.stale_problems(root, tmp_path)
     assert problem.startswith("core: moved ")
 

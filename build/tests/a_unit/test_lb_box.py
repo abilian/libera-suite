@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -155,3 +156,23 @@ def test_tidy_removes_nothing_unless_told_yes(tmp_path, monkeypatch):
     assert not asked
     assert not (root / "build" / "out").exists()
     assert not build_root.exists()
+
+
+@pytest.mark.parametrize(
+    ("status", "stderr", "says"),
+    [
+        (0, "", "removed v"),
+        (1, 'Error: no volume with name "v" found: no such volume', "was not there"),
+        (1, "Error response from daemon: get v: no such volume", "was not there"),
+    ],
+)
+def test_clean_says_what_happened_to_the_volume(capsys, status, stderr, says):
+    done = subprocess.CompletedProcess([], status, "", stderr)
+    assert flatpak.clean_verdict("v", done) == 0
+    assert says in capsys.readouterr().out
+
+
+def test_clean_refuses_a_volume_that_would_not_go():
+    done = subprocess.CompletedProcess([], 1, "", "Error: volume v is being used")
+    with pytest.raises(RefusedError, match="is being used"):
+        flatpak.clean_verdict("v", done)

@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import os
 import platform
+import subprocess
 from pathlib import Path
 
-from libera_build.process import capture
 from libera_build.report import RefusedError
 
 # Paths in a checkout, from its root: each is spelt here once.
@@ -69,30 +69,33 @@ def dist(version: str) -> Path:
     return build_root() / "out" / "dist" / version
 
 
-def git(root: Path, *args: str) -> tuple[int, str]:
-    return capture(["git", "-C", str(root), *args])
+def git(root: Path, *args: str) -> str:
+    """What git printed, its standard output only; refused, with what it said,
+    if it failed. Its errors once read as an answer: `branch -r --contains`
+    failing printed to stderr, and a commit no remote had passed as pushed."""
+    done = subprocess.run(
+        ["git", "-C", str(root), *args], capture_output=True, text=True, check=False
+    )
+    if done.returncode != 0:
+        msg = f"git {' '.join(args)} failed in {root}:\n  {done.stderr.strip()}"
+        raise RefusedError(msg)
+    return done.stdout
 
 
 def head(root: Path) -> str:
-    status, out = git(root, "rev-parse", "HEAD")
-    if status != 0:
-        msg = f"{root} has no HEAD"
-        raise RefusedError(msg)
-    return out.strip()
+    return git(root, "rev-parse", "HEAD").strip()
 
 
 def branch(root: Path) -> str:
-    _, out = git(root, "rev-parse", "--abbrev-ref", "HEAD")
-    return out.strip()
+    return git(root, "rev-parse", "--abbrev-ref", "HEAD").strip()
 
 
 def dirty(root: Path) -> list[str]:
-    _, out = git(root, "status", "--porcelain")
+    out = git(root, "status", "--porcelain")
     return [line for line in out.splitlines() if line.strip()]
 
 
 def on_a_remote(root: Path) -> bool:
     """Whether a remote has this commit, after asking every remote."""
     git(root, "fetch", "--quiet", "--all")
-    _, out = git(root, "branch", "-r", "--contains", "HEAD")
-    return bool(out.strip())
+    return bool(git(root, "branch", "-r", "--contains", "HEAD").strip())

@@ -154,16 +154,7 @@ NEEDS_ARGUMENTS = {
 def every_command_line() -> list[list[str]]:
     """Every command the top-level help lists, with what it needs to plan."""
     groups = cli.Groups(cli.argparse.ArgumentParser())
-    for add in (
-        cli.add_payload,
-        cli.add_toolchain,
-        cli.add_app,
-        cli.add_linux,
-        cli.add_release,
-        cli.add_components,
-        cli.add_container,
-        cli.add_others,
-    ):
+    for add in cli.GROUPS:
         add(groups)
     return [[*n.split(), *NEEDS_ARGUMENTS.get(n, [])] for n, _ in groups.listing]
 

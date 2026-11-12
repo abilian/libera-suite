@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import re
 import shutil
 import subprocess
@@ -45,6 +44,7 @@ import sys
 import time
 from pathlib import Path
 
+from libera.manifest import hash_file
 from libera_build.repo import REPO
 
 CORPUS_REPO = "https://github.com/leag1234/elixiroffice"
@@ -104,10 +104,6 @@ def read_manifest(manifest: Path) -> list[tuple[str, Path]]:
                 raise SystemExit(msg)
             documents.append((row["id"], path))
     return documents
-
-
-def hash_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def name_documents(paths: list[Path]) -> list[tuple[str, Path]]:

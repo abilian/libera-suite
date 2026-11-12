@@ -39,14 +39,11 @@ PHASES = {
 # rebuilt.
 PER_BUILDER = ("update", "native", "build", "components", "bundles")
 
-# The phases that reach outside this machine and cannot be taken back. PyPI
-# refuses a version it has already seen, so a mistaken `publish` costs a
-# version number rather than a retry.
-IRREVERSIBLE = ("publish",)
-
-# The phases that upload the manifest, which records this commit, in the wheel.
-STAMPING = ("publish",)
-UPLOADING = ("publish",)
+# `publish` is the one phase that reaches outside the builders, the one that
+# cannot be taken back (PyPI refuses a version it has already seen, so a
+# mistaken publish costs a version number rather than a retry), and the one
+# that uploads the manifest the wheel carries, which records this commit. The
+# refusals below are about it alone.
 
 
 def choose_phases(asked: Sequence[str], *, narrowed: bool) -> list[str]:
@@ -75,14 +72,14 @@ def choose_phases(asked: Sequence[str], *, narrowed: bool) -> list[str]:
 def token_problems(phases: Sequence[str], *, have_token: bool) -> list[str]:
     """A missing CDN token is a one-second discovery that used to be a two-hour
     one, because publish is the last stage and the builds are the first."""
-    if (needs := [p for p in UPLOADING if p in phases]) and not have_token:
-        return [f"{'/'.join(needs)} needs CDN_TOKEN in the environment"]
+    if "publish" in phases and not have_token:
+        return ["publish needs CDN_TOKEN in the environment"]
     return []
 
 
 def signing_problems(phases: Sequence[str], *, have_key: bool) -> list[str]:
-    """`publish` signs the bundles after PyPI has taken the packages, which has
-    no undo: a key missing here is found before any of that."""
+    """`publish` signs the bundles, before PyPI takes the packages: a key
+    missing here is found now, not after the hours of building."""
     if "publish" in phases and not have_key:
         return ["publish signs the bundles, and gpg has no release key here"]
     return []
@@ -95,11 +92,10 @@ def dirty_problems(
     the commit and never see this tree -- and fatal to anything that stamps the
     manifest, which records the commit as its provenance: a dirty tree names
     nothing anyone could check."""
-    stamping = [p for p in STAMPING if p in phases]
-    if dirty and stamping and not allow_dirty:
+    if dirty and "publish" in phases and not allow_dirty:
         return [
             (
-                f"{dirty} uncommitted file(s) here, and {'/'.join(stamping)} "
+                f"{dirty} uncommitted file(s) here, and publish "
                 "would stamp a commit that describes none of them. Commit "
                 "first, or ALLOW_DIRTY=1 to publish with no reproducible "
                 "provenance."
@@ -114,11 +110,10 @@ def unpushed_problems(
     """The builders do not need the commit pushed; the manifest does. It
     stamps this commit as the release's provenance, and a commit only this
     laptop holds is provenance nobody can check."""
-    uploading = [p for p in UPLOADING if p in phases]
-    if uploading and not on_a_remote:
+    if "publish" in phases and not on_a_remote:
         return [
             (
-                f"{'/'.join(uploading)} would stamp {head[:9]} into the "
+                f"publish would stamp {head[:9]} into the "
                 "manifest, and no remote has it: push it first"
             )
         ]
@@ -141,21 +136,50 @@ def publish_problems(
     """
     if "publish" not in phases or "native" in phases:
         return []  # stamped in this run, from this commit
-    problems = []
     if manifest is None:
         return ["publish needs src/libera/manifest.json; run native"]
+    return manifest_problems(
+        manifest, payload_version=payload_version, head=head, fix="run native"
+    )
+
+
+def manifest_problems(
+    manifest: Manifest, *, payload_version: str, head: str, fix: str
+) -> list[str]:
+    """Why `manifest` does not describe this tree: another payload version, or
+    stamped at another commit. `fix` is what to run about it."""
+    problems = []
     if manifest.payload_version != payload_version:
         problems.append(
             f"the manifest is for payload {manifest.payload_version}, this tree "
-            f"for {payload_version}; run native"
+            f"for {payload_version}; {fix}"
         )
     stamped = manifest.libera_commit
     if stamped != head:
         problems.append(
             f"the manifest was stamped at {stamped[:9] or 'no commit'}, this "
-            f"tree is at {head[:9]}; run native"
+            f"tree is at {head[:9]}; {fix}"
         )
     return problems
+
+
+def wheel_problems(
+    manifest: Manifest | None, *, payload_version: str, head: str
+) -> list[str]:
+    """Why the libera wheel `stage` would gather is not this commit's.
+
+    The precheck reads the tree's manifest, which `native` restamps; the wheel
+    in dist/ carries whatever manifest it was built with. `ship native stage
+    publish` after a commit restamped the tree and staged the last commit's
+    wheel, so stage reads the one inside the wheel."""
+    if manifest is None:
+        return ["the libera wheel in dist/ carries no manifest: run wheel"]
+    return [
+        f"the libera wheel in dist/: {p}"
+        for p in manifest_problems(
+            manifest, payload_version=payload_version, head=head, fix="run wheel"
+        )
+    ]
 
 
 def builder_problems(b: Builder, facts: dict[str, str]) -> list[str]:
@@ -164,7 +188,7 @@ def builder_problems(b: Builder, facts: dict[str, str]) -> list[str]:
     # Cross-building is not what these machines are for: a container built for
     # the other architecture either runs under emulation for hours or fails
     # partway through with a platform mismatch.
-    if b.arch and DOCKER_ARCH.get(facts["ARCH"]) != b.arch:
+    if DOCKER_ARCH.get(facts["ARCH"]) != b.arch:
         problems.append(
             f"{b.platform}: wants {b.arch} and {b.target} reports "
             f"{facts['ARCH']}. Assign it a machine of that architecture."

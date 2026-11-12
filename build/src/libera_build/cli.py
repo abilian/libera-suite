@@ -282,9 +282,11 @@ def misplaced(
     args: argparse.Namespace, chosen: set[str], owners: dict[str, tuple[str, ...]]
 ) -> None:
     """Refuse an option given for a stage or a target this run does not have:
-    an option that does nothing is a mistake the person cannot see."""
+    an option that does nothing is a mistake the person cannot see. `owners`
+    is keyed by each option's dest, which is its flag's: the message names the
+    flag from it."""
     for dest, theirs in owners.items():
-        if getattr(args, dest, None) and not chosen & set(theirs):
+        if getattr(args, dest) and not chosen & set(theirs):
             flag = "--" + dest.replace("_", "-")
             msg = f"{flag} is for {' and '.join(theirs)}, which this does not run"
             raise RefusedError(msg)
@@ -296,7 +298,7 @@ def payload_build(args: argparse.Namespace) -> Steps:
         args,
         set(stages),
         {
-            "repos": ("fetch",),
+            "repo": ("fetch",),
             "mirror": ("fetch",),
             "v8_jobs": ("core",),
             "core_jobs": ("core",),
@@ -309,7 +311,7 @@ def payload_build(args: argparse.Namespace) -> Steps:
     for stage in stages:
         name, *rest = STAGES[stage]
         if stage == "fetch":
-            rest += args.repos or []
+            rest += args.repo or []
         if stage == "dist":
             rest += ["--fonts", args.fonts or "core"]
             rest += ["--manifest-only"] if args.manifest_only else []
@@ -421,8 +423,8 @@ def app_test(args: argparse.Namespace) -> Steps:
 def given(args: argparse.Namespace, knob: Knob) -> str | None:
     """A knob's value: the option, else its environment variable, which keeps
     working for a command done in this process as it did for a script."""
-    # A knob the command does not take is not given: `payload install` reads
-    # the container's options without offering all of them.
+    # A knob the command does not take is not given: `container shell` reads
+    # the payload container's options without offering all of them.
     return getattr(args, knob.dest, None) or os.environ.get(knob.env) or None
 
 
@@ -476,7 +478,7 @@ def container(args: argparse.Namespace) -> Steps:
     if verb == "export":
         return container_export(args)
     if args.kind == "payload":
-        box = buildbox.Box(replace(box_options(args), arch=arch))
+        box = buildbox.Box(box_options(args))
         return [
             {
                 "shell": Call(box.run, ("exec /bin/bash",)),
@@ -500,13 +502,7 @@ def ask(question: str, refused: str) -> int:
 
 
 def release_ship(args: argparse.Namespace) -> Steps:
-    options = ShipOptions(
-        phases=tuple(args.phases),
-        only=tuple(args.only or ()),
-        yes=getattr(args, "yes", False),
-        dry_run=getattr(args, "dry_run", False),
-    )
-    return [Call(ship, (options,))]
+    return ship_steps(args, yes=args.yes, dry_run=False)
 
 
 def release_bump(args: argparse.Namespace) -> Steps:
@@ -514,8 +510,17 @@ def release_bump(args: argparse.Namespace) -> Steps:
 
 
 def release_plan(args: argparse.Namespace) -> Steps:
-    args.dry_run, args.yes = True, False
-    return release_ship(args)
+    return ship_steps(args, yes=False, dry_run=True)
+
+
+def ship_steps(args: argparse.Namespace, *, yes: bool, dry_run: bool) -> Steps:
+    options = ShipOptions(
+        phases=tuple(args.phases),
+        only=tuple(args.only or ()),
+        yes=yes,
+        dry_run=dry_run,
+    )
+    return [Call(ship, (options,))]
 
 
 def release_origin(args: argparse.Namespace) -> Steps:
@@ -718,7 +723,6 @@ def add_payload(groups: Groups) -> None:
     )
     p.add_argument(
         "--repo",
-        dest="repos",
         action="append",
         metavar="REPO",
         help="fetch only this repository; repeatable (default: all)",
@@ -967,6 +971,8 @@ def add_release(groups: Groups) -> None:
             help="one builder, by its platform in build/builders.toml; repeatable",
         )
         if name == "ship":
+            # The flag alone, not the YES knob: its variable, set for a tidy,
+            # would skip the one question PyPI's no-undo is worth asking.
             p.add_argument(
                 "--yes", action="store_true", help="do not ask before publishing"
             )
@@ -1105,6 +1111,19 @@ what is usually run:
   lb help GROUP [COMMAND]         a group's commands, or one command's options"""
 
 
+# Each group's commands, in the order the help lists them.
+GROUPS = (
+    add_payload,
+    add_toolchain,
+    add_app,
+    add_linux,
+    add_release,
+    add_components,
+    add_container,
+    add_others,
+)
+
+
 @functools.cache
 def make_parser() -> argparse.ArgumentParser:
     """Built once: a parse leaves it as it was, and building it is ~85 ms,
@@ -1117,14 +1136,8 @@ def make_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     groups = Groups(parser)
-    add_payload(groups)
-    add_toolchain(groups)
-    add_app(groups)
-    add_linux(groups)
-    add_release(groups)
-    add_components(groups)
-    add_container(groups)
-    add_others(groups)
+    for add in GROUPS:
+        add(groups)
     commands = "\n".join(f"  {name:<24} {what}" for name, what in groups.listing)
     parser.epilog = (
         f"commands (lb help GROUP COMMAND: its options, and examples):\n"

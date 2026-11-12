@@ -44,16 +44,7 @@ def test_help_lists_every_command():
     done = lb("--help")
     assert done.returncode == 0, done.stderr
     groups = cli.Groups(cli.argparse.ArgumentParser())
-    for add in (
-        cli.add_payload,
-        cli.add_toolchain,
-        cli.add_app,
-        cli.add_linux,
-        cli.add_release,
-        cli.add_components,
-        cli.add_container,
-        cli.add_others,
-    ):
+    for add in cli.GROUPS:
         add(groups)
     for name, _ in groups.listing:
         assert f"  {name} " in done.stdout, name
@@ -91,6 +82,8 @@ def test_toolchain_list_names_this_machines_packages():
     done = lb("toolchain", "list")
     assert done.returncode == 0, done.stderr
     assert "+ sh build/engine/toolchain.sh list" in done.stdout
+    # What it printed, not that it was run: every system's list has cmake.
+    assert "cmake" in done.stdout.split("toolchain.sh list", 1)[1]
 
 
 def test_patches_still_apply_to_the_pins():

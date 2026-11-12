@@ -15,7 +15,7 @@ import urllib.request
 from typing import TYPE_CHECKING
 
 from libera_build import repo, versions
-from libera_build.artifacts import PYPI_DIR, bundle_name, installer_name
+from libera_build.artifacts import BUNDLES_DIR, PYPI_DIR, bundle_name, installer_name
 from libera_build.report import say, step
 
 if TYPE_CHECKING:
@@ -30,14 +30,14 @@ def status(root: Path) -> None:
     say(f"    {version}  (pyproject.toml; payload {versions.payload_version(root)})")
 
     step("this tree")
-    _, tag = repo.git(root, "tag", "--points-at", "HEAD")
+    tag = repo.git(root, "tag", "--points-at", "HEAD")
     dirty = len(repo.dirty(root))
     say(f"    commit       {repo.head(root)[:7]}  ({dirty} file(s) modified)")
     say(f"    tag          {tag.splitlines()[0] if tag.strip() else 'none on HEAD'}")
 
     step(f"the release's files here, for {version}")
     wheels = root / PYPI_DIR / versions.payload_version(root)
-    bundles = root / "build" / "out" / "bundles"
+    bundles = root / BUNDLES_DIR
     files = sorted(wheels.glob("*")) if wheels.is_dir() else []
     files += sorted((root / "dist").glob(f"libera-{version}*"))
     files += [

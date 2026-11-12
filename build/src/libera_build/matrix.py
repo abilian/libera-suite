@@ -71,16 +71,23 @@ def holds_text(odt: Path, needle: str) -> bool:
 def choose(options: MatrixOptions) -> tuple[Path, tuple[str, ...]]:
     """The artifacts, and the architectures to try.
 
-    The staged release, with both architectures; on a builder, which has
-    none, its own container build, and its own architecture.
+    `--dist`, which must be there; else the staged release, once stamped (a
+    stage that failed leaves its directory behind, half checked), with both
+    architectures; on a builder, which has none, its own container build, and
+    its own architecture.
     """
-    dist = options.dist or staging.folder(REPO)
-    if dist.is_dir():
-        return dist, options.arches or ARCHES
+    if options.dist:
+        if not options.dist.is_dir():
+            msg = f"--dist {options.dist} is not a directory"
+            raise RefusedError(msg)
+        return options.dist, options.arches or ARCHES
+    staged = staging.folder(REPO)
+    if (staged / staging.STAMP).is_file():
+        return staged, options.arches or ARCHES
     own = host_arch()
     found = exported_dist(own)
     if found is None:
-        msg = f"no artifacts in {dist}, and no container build here: --dist DIR"
+        msg = f"nothing stamped in {staged}, and no container build here: --dist DIR"
         raise RefusedError(msg)
     return found, options.arches or (own,)
 

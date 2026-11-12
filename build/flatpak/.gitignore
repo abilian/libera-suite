@@ -1,4 +1,6 @@
 wheels/
+wheels.tmp/
+# Written by builds before 0.7, and still on the builders that ran them.
 payload/
 payload.tmp/
 # Copied from src/libera/ by flatpak.py: flatpak-builder resolves a source

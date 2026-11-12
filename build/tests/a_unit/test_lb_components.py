@@ -136,7 +136,7 @@ def test_the_editors_say_what_they_are_built_from(dist, tmp_path):
     from the build."""
     web = tmp_path / "libera_web"
 
-    components.unpack_web(web, dist, {})
+    components.unpack_web(web, dist)
 
     assert (web / "sdkjs" / "word" / "sdk-all.js").is_file()
     assert (web / "fonts-src" / "a.ttf").is_file()

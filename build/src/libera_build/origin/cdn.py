@@ -25,8 +25,6 @@ if TYPE_CHECKING:
 # download install.sh instead of showing it has made `curl URL | sh` harder to
 # audit than it needed to be.
 CONTENT_TYPES = (
-    (".tar.gz", "application/gzip"),
-    (".json", "application/json"),
     (".sh", "text/plain; charset=utf-8"),
     (".ps1", "text/plain; charset=utf-8"),
     (".sha256", "text/plain; charset=utf-8"),
@@ -84,7 +82,7 @@ def put(origin: Origin, src: Path, key: str, *, token: str | None, dry: bool) ->
     """Upload one file to `key`, and refuse unless the CDN says it stored it all."""
     size = src.stat().st_size
     url = origin.api(key)
-    if dry or token is None:
+    if dry:
         say(f"    would PUT {key} ({size // 1_000_000} MB) -> {url}")
         return
     print(f"    {key:<40} {size // 1_000_000:6} MB  ", end="", flush=True)

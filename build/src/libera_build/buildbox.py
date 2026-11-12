@@ -204,18 +204,11 @@ class Box:
         self.image = self.engine.image(f"libera-build-linux-{options.arch}")
 
     def build_image(self) -> int:
-        argv = [
-            self.engine.name,
-            "build",
-            "--platform",
-            f"linux/{self.options.arch}",
-            "-t",
-            self.image,
-            *build_args(self.options.arch),
-            "-f",
-            str(REPO / "build" / "docker" / "Dockerfile"),
-            str(REPO / "build"),
-        ]
+        dockerfile = REPO / "build" / "docker" / "Dockerfile"
+        extra = (*build_args(self.options.arch), "-f", str(dockerfile))
+        argv = self.engine.build_argv(
+            self.image, REPO / "build", arch=self.options.arch, extra=extra
+        )
         return subprocess.call(argv)
 
     def recorded_base(self) -> str:
@@ -235,7 +228,6 @@ class Box:
         return done.stdout.strip()
 
     def ensure_image(self) -> None:
-        self.engine.refuse_absent()
         self.engine.refuse_remote()
         if not self.engine.has_image(self.image):
             clang = CLANG[self.options.arch]

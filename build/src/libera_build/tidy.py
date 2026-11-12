@@ -35,6 +35,8 @@ REPO_PATHS = (
     "build/flatpak/builddir",
     "build/flatpak/repo",
     "build/flatpak/wheels",
+    "build/flatpak/wheels.tmp",
+    # Written by builds before 0.7, and still on the builders that ran them.
     "build/flatpak/payload",
     "build/flatpak/payload.tmp",
     "docs/site",

@@ -28,6 +28,7 @@ API = "/_/api/v1/zones/"
 
 class FakeCdn(http.server.BaseHTTPRequestHandler):
     store: Path
+    keys: list[str]  # what was stored, in the order it arrived
     mode = "ok"  # or "short", "no-zone", "refuse"
 
     def log_message(self, *_args) -> None:
@@ -43,6 +44,7 @@ class FakeCdn(http.server.BaseHTTPRequestHandler):
         kept = body[:-1] if self.mode == "short" else body
         (self.store / key).parent.mkdir(parents=True, exist_ok=True)
         (self.store / key).write_bytes(kept)
+        self.keys.append(key)
         return self.answer(201, {"size": len(kept)})
 
     def do_GET(self) -> None:
@@ -76,36 +78,16 @@ def cdn(tmp_path):
     """The fake CDN, and an Origin pointing at it."""
     store = tmp_path / "cdn" / "libera"
     store.mkdir(parents=True)
-    handler = type("Handler", (FakeCdn,), {"store": store})
+    handler = type("Handler", (FakeCdn,), {"store": store, "keys": []})
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    origin = Origin(f"http://127.0.0.1:{server.server_address[1]}", "libera", "0.4")
+    origin = Origin(f"http://127.0.0.1:{server.server_address[1]}", "libera")
     try:
         yield origin, handler, store
     finally:
         server.shutdown()
         thread.join(timeout=5)
-
-
-@pytest.fixture
-def release(tmp_path) -> Path:
-    """A checkout with a stamped manifest, and the dist directory it names."""
-    root = tmp_path / "root"
-    (root / "src" / "libera").mkdir(parents=True)
-    (root / "build" / "upstream").mkdir(parents=True)
-    (root / "build" / "upstream" / "pins.toml").write_text('[repos]\ncore = "abc"\n')
-    dist = tmp_path / "dist"
-    dist.mkdir()
-    (dist / "core-linux-arm64.tar.gz").write_bytes(b"core" * 100)
-    (dist / "fonts-core.tar.gz").write_bytes(b"fonts")
-    stamped = manifest.stamp(dist, payload_version="0.4", font_set="core", repo=root)
-    (root / "src" / "libera" / "manifest.json").write_text(stamped.to_json())
-    return root
-
-
-def dist_of(root: Path) -> Path:
-    return root.parent / "dist"
 
 
 def gpg(*args: str) -> subprocess.CompletedProcess[str]:
@@ -144,23 +126,32 @@ def signing_key(monkeypatch):
         subprocess.run(["gpgconf", "--kill", "gpg-agent"], check=False)
 
 
-@pytest.fixture
-def checkout(tmp_path) -> Path:
-    """A checkout at 0.4.0 with an amd64 bundle and the two install scripts."""
+def make_checkout(
+    tmp_path: Path, *, version: str = "0.4.0", flatpak: bool = True, setup: bool = True
+) -> Path:
+    """A checkout at `version` with the two install scripts, and, as asked, an
+    amd64 bundle and the Windows installer with its SHA-256."""
     root = tmp_path / "root"
     (root / "build" / "install").mkdir(parents=True)
     for script in ("install.sh", "install.ps1"):
         (root / "build" / "install" / script).write_text("# installs\n")
-    (root / "pyproject.toml").write_text('[project]\nversion = "0.4.0"\n')
+    (root / "pyproject.toml").write_text(f'[project]\nversion = "{version}"\n')
     bundles = root / "build" / "out" / "bundles"
     bundles.mkdir(parents=True)
-    setup = bundles / "Libera-Suite-Setup-0.4.0.exe"
-    setup.write_bytes(b"MZ" * 100)
-    (bundles / f"{setup.name}.sha256").write_text(
-        f"{manifest.hash_file(setup)}  {setup.name}\n"
-    )
-    (bundles / "libera-0.4.0-amd64.flatpak").write_bytes(b"flatpak" * 100)
+    if setup:
+        installer = bundles / f"Libera-Suite-Setup-{version}.exe"
+        installer.write_bytes(b"MZ" * 100)
+        (bundles / f"{installer.name}.sha256").write_text(
+            f"{manifest.hash_file(installer)}  {installer.name}\n"
+        )
+    if flatpak:
+        (bundles / f"libera-{version}-amd64.flatpak").write_bytes(b"flatpak" * 100)
     return root
+
+
+@pytest.fixture
+def checkout(tmp_path) -> Path:
+    return make_checkout(tmp_path)
 
 
 def test_a_bundle_goes_up_with_a_signature_only_of_it(
@@ -235,39 +226,95 @@ def test_a_missing_zone_or_a_refused_token_says_so(cdn, tmp_path, mode, says):
         upload(tmp_path, origin)
 
 
-def test_extras_refuses_while_no_windows_installer_is_named(cdn, release, monkeypatch):
+def test_extras_refuses_while_no_windows_installer_is_named(cdn, tmp_path, monkeypatch):
+    """install.ps1 installs what bundles/latest-windows names: republished
+    while that is no installer, it would fail every Windows install."""
     origin, _, store = cdn
     monkeypatch.setenv("CDN_TOKEN", "t")
-    assert publish.windows_ready(origin) is not None
+    root = make_checkout(tmp_path, flatpak=False, setup=False)
+    with pytest.raises(RefusedError, match="names no installer"):
+        publish.extras(root, origin, dry=False)
+    assert not list(store.iterdir())
     (store / "bundles").mkdir()
     (store / "bundles" / "latest-windows").write_text("0.3.3\n")
-    assert publish.windows_ready(origin) is not None, "named, but not there"
+    with pytest.raises(RefusedError, match="names no installer"):
+        publish.extras(root, origin, dry=False)  # named, but not there
+    assert not (store / "install.ps1").exists()
     (store / "bundles" / "Libera-Suite-Setup-0.3.3.exe").write_bytes(b"MZ")
-    assert publish.windows_ready(origin) is None
+    publish.extras(root, origin, dry=False)
+    assert (store / "install.ps1").is_file()
 
 
-def test_extras_with_an_installer_here_names_it_before_install_ps1_goes_up(
+def test_extras_with_an_installer_here_moves_the_pointers_after_their_files(
     cdn, tmp_path, monkeypatch
 ):
     """The installer `ship`'s bundles brought here moves latest-windows in the
-    same run, so an origin that names none yet is no reason to refuse."""
-    origin, _, store = cdn
+    same run, so an origin that names none yet is no reason to refuse; each
+    pointer goes up after what it names, so no install script ever reads a
+    version whose file is not there."""
+    origin, handler, store = cdn
     monkeypatch.setenv("CDN_TOKEN", "t")
-    root = tmp_path / "root"
-    (root / "build" / "install").mkdir(parents=True)
-    for script in ("install.sh", "install.ps1"):
-        (root / "build" / "install" / script).write_text("# installs\n")
-    (root / "pyproject.toml").write_text('[project]\nversion = "0.4.0"\n')
-    bundles = root / "build" / "out" / "bundles"
-    bundles.mkdir(parents=True)
-    setup = bundles / "Libera-Suite-Setup-0.4.0.exe"
-    setup.write_bytes(b"MZ" * 100)
-    digest = f"{manifest.hash_file(setup)}  {setup.name}\n"
-    (bundles / f"{setup.name}.sha256").write_text(digest)
+    root = make_checkout(tmp_path, flatpak=False)
     publish.extras(root, origin, dry=False)
     assert (store / "bundles" / "latest-windows").read_text() == "0.4.0\n"
-    assert (store / "bundles" / setup.name).read_bytes() == setup.read_bytes()
-    assert (store / "install.ps1").is_file()
+    keys = handler.keys
+    assert keys.index("bundles/latest-windows") > keys.index(
+        "bundles/Libera-Suite-Setup-0.4.0.exe"
+    )
+    assert keys[-1] == "bundles/latest"
+    assert keys.index("install.ps1") > keys.index("bundles/latest-windows")
+
+
+def test_an_installer_its_hash_does_not_describe_sends_nothing(
+    cdn, checkout, monkeypatch
+):
+    origin, _, store = cdn
+    monkeypatch.setenv("CDN_TOKEN", "t")
+    sha = checkout / "build" / "out" / "bundles" / "Libera-Suite-Setup-0.4.0.exe.sha256"
+    sha.write_text("0" * 64 + "  Libera-Suite-Setup-0.4.0.exe\n")
+    with pytest.raises(RefusedError, match="does not describe"):
+        publish.extras(checkout, origin, dry=False)
+    with pytest.raises(RefusedError, match="does not describe"):
+        publish.windows(checkout, origin, dry=False)
+    assert not list(store.iterdir())
+
+
+def test_the_installer_alone_goes_up_with_its_pointer_last(cdn, tmp_path, monkeypatch):
+    origin, handler, store = cdn
+    monkeypatch.setenv("CDN_TOKEN", "t")
+    publish.windows(make_checkout(tmp_path, flatpak=False), origin, dry=False)
+    assert handler.keys == [
+        "bundles/Libera-Suite-Setup-0.4.0.exe",
+        "bundles/Libera-Suite-Setup-0.4.0.exe.sha256",
+        "bundles/Libera-Suite-Setup.exe",
+        "bundles/latest-windows",
+    ]
+    assert not (store / "bundles" / "latest").exists()
+
+
+def test_the_installer_alone_refuses_when_it_is_not_here(cdn, tmp_path, monkeypatch):
+    origin, _, store = cdn
+    monkeypatch.setenv("CDN_TOKEN", "t")
+    with pytest.raises(RefusedError, match="ship bundles --only windows"):
+        publish.windows(make_checkout(tmp_path, setup=False), origin, dry=False)
+    assert not list(store.iterdir())
+
+
+def test_a_good_signature_already_there_is_kept(
+    cdn, checkout, signing_key, monkeypatch
+):
+    """`publish` signs before PyPI and uploads after: the upload asks for no
+    passphrase, and needs no secret key any more."""
+    origin, _, store = cdn
+    monkeypatch.setenv("CDN_TOKEN", "t")
+    bundles = checkout / "build" / "out" / "bundles"
+    publish.ready(checkout, origin, dry=False, bundles=bundles)
+    signed = (bundles / "libera-0.4.0-amd64.flatpak.asc").read_bytes()
+    rows = gpg("--list-secret-keys", "--with-colons").stdout.splitlines()
+    for fpr in [r.split(":")[9] for r in rows if r.startswith("fpr:")]:
+        gpg("--delete-secret-keys", f"{fpr}!")
+    publish.extras(checkout, origin, dry=False)
+    assert (store / "bundles" / "libera-0.4.0-amd64.flatpak.asc").read_bytes() == signed
 
 
 def test_a_pre_release_goes_up_under_its_own_names_and_moves_nothing(
@@ -280,17 +327,7 @@ def test_a_pre_release_goes_up_under_its_own_names_and_moves_nothing(
     monkeypatch.setattr(
         publish, "sign", lambda b: publish.signature_of(b).write_text("signed")
     )
-    root = tmp_path / "root"
-    (root / "build" / "install").mkdir(parents=True)
-    (root / "pyproject.toml").write_text('[project]\nversion = "0.4.0rc1"\n')
-    bundles = root / "build" / "out" / "bundles"
-    bundles.mkdir(parents=True)
-    (bundles / "libera-0.4.0rc1-amd64.flatpak").write_bytes(b"flatpak")
-    setup = bundles / "Libera-Suite-Setup-0.4.0rc1.exe"
-    setup.write_bytes(b"MZ" * 100)
-    (bundles / f"{setup.name}.sha256").write_text(
-        f"{manifest.hash_file(setup)}  {setup.name}\n"
-    )
+    root = make_checkout(tmp_path, version="0.4.0rc1")
     publish.extras(root, origin, dry=False)
     up = sorted(p.name for p in (store / "bundles").iterdir())
     assert up == [

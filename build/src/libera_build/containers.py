@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 from libera_build.report import RefusedError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
 
 # Docker on a Mac, because Docker Desktop shares the home directory across for
 # you and podman would want a VM of its own; podman first elsewhere. ENGINE=
@@ -129,8 +129,10 @@ class Engine:
         Every command here bind-mounts this tree, and an engine reached
         through a docker context or DOCKER_HOST over ssh or tcp mounts the
         paths of the machine it runs on: an x86_64 one also builds an arm64
-        image no further than "exec format error".
+        image no further than "exec format error". An engine not installed at
+        all is refused first: every command that needs one asks this.
         """
+        self.refuse_absent()
         if host := remote_host(self.name, os.environ):
             msg = (
                 f"{self.name} runs on {host}, not on this machine, so it cannot"
@@ -168,12 +170,17 @@ class Engine:
             argv += ["-w", run.workdir]
         return [*argv, *run.extra, run.image, *run.command]
 
-    def build_argv(self, image: str, context: Path, *, arch: str) -> list[str]:
+    def build_argv(
+        self, image: str, context: Path, *, arch: str, extra: Sequence[str] = ()
+    ) -> list[str]:
+        """The command line that builds `image` from `context` for `arch`;
+        `extra`, the options of one Dockerfile (build args, -f, a label)."""
         return [
             self.name,
             "build",
             "--platform",
             docker_platform(arch),
+            *extra,
             "-t",
             image,
             str(context),
