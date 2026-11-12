@@ -14,17 +14,16 @@ from libera_build.report import RefusedError
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from libera.manifest import Manifest
     from libera_build.inventory import Builder
 
-# The phases, in the only order they work in, with what each does. `wheel`
-# follows `native` because the wheel carries the manifest native's dist
-# stamps; `verify` follows `publish` because what it checks is the *published*
-# wheel. The CDN carries the bundles and the install scripts only: since 0.7
-# nothing downloads a payload from it, so none is collected, pushed or checked.
+# The phases, in the only order they work in, with what each does. `stage`
+# follows everything that makes a file, and `verify` follows `publish`
+# because what it checks is the *published* wheel. The CDN carries the
+# bundles and the install scripts only: since 0.7 nothing downloads a payload
+# from it, so none is collected, pushed or checked. The macOS core is built
+# by `components`, into libera-core's wheel: there is no tarball of it to make.
 PHASES = {
     "update": "send this commit to each builder and check it out there",
-    "native": "the macOS core and its tarballs, here",
     "build": "the Linux and Windows cores, each on its builder, in parallel (hours)",
     "components": "libera-core's wheel on each builder, libera-web here, for PyPI",
     "bundles": "the Flatpaks and the Windows installer, each on its builder",
@@ -37,13 +36,12 @@ PHASES = {
 # What `--only` can narrow. The rest act on every builder at once, so a run
 # narrowed to one platform that went on to them would publish what nobody had
 # rebuilt.
-PER_BUILDER = ("update", "native", "build", "components", "bundles")
+PER_BUILDER = ("update", "build", "components", "bundles")
 
-# `publish` is the one phase that reaches outside the builders, the one that
-# cannot be taken back (PyPI refuses a version it has already seen, so a
-# mistaken publish costs a version number rather than a retry), and the one
-# that uploads the manifest the wheel carries, which records this commit. The
-# refusals below are about it alone.
+# `publish` is the one phase that reaches outside the builders, and the one
+# that cannot be taken back: PyPI refuses a version it has already seen, so a
+# mistaken publish costs a version number rather than a retry. The refusals
+# below up to `unpushed_problems` are about it alone.
 
 
 def choose_phases(asked: Sequence[str], *, narrowed: bool) -> list[str]:
@@ -118,68 +116,6 @@ def unpushed_problems(
             )
         ]
     return []
-
-
-def publish_problems(
-    phases: Sequence[str],
-    *,
-    manifest: Manifest | None,
-    payload_version: str,
-    head: str,
-) -> list[str]:
-    """Why what `publish` would upload is not this release, if it is not.
-
-    The manifest is whatever the last `native` stamped. Publishing used to
-    want only that it existed, so a run of `publish` alone uploaded a wheel
-    carrying an earlier run's manifest: another payload version, another
-    commit.
-    """
-    if "publish" not in phases or "native" in phases:
-        return []  # stamped in this run, from this commit
-    if manifest is None:
-        return ["publish needs src/libera/manifest.json; run native"]
-    return manifest_problems(
-        manifest, payload_version=payload_version, head=head, fix="run native"
-    )
-
-
-def manifest_problems(
-    manifest: Manifest, *, payload_version: str, head: str, fix: str
-) -> list[str]:
-    """Why `manifest` does not describe this tree: another payload version, or
-    stamped at another commit. `fix` is what to run about it."""
-    problems = []
-    if manifest.payload_version != payload_version:
-        problems.append(
-            f"the manifest is for payload {manifest.payload_version}, this tree "
-            f"for {payload_version}; {fix}"
-        )
-    stamped = manifest.libera_commit
-    if stamped != head:
-        problems.append(
-            f"the manifest was stamped at {stamped[:9] or 'no commit'}, this "
-            f"tree is at {head[:9]}; {fix}"
-        )
-    return problems
-
-
-def wheel_problems(
-    manifest: Manifest | None, *, payload_version: str, head: str
-) -> list[str]:
-    """Why the libera wheel `stage` would gather is not this commit's.
-
-    The precheck reads the tree's manifest, which `native` restamps; the wheel
-    in dist/ carries whatever manifest it was built with. `ship native stage
-    publish` after a commit restamped the tree and staged the last commit's
-    wheel, so stage reads the one inside the wheel."""
-    if manifest is None:
-        return ["the libera wheel in dist/ carries no manifest: run wheel"]
-    return [
-        f"the libera wheel in dist/: {p}"
-        for p in manifest_problems(
-            manifest, payload_version=payload_version, head=head, fix="run wheel"
-        )
-    ]
 
 
 def builder_problems(b: Builder, facts: dict[str, str]) -> list[str]:

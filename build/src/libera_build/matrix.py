@@ -2,7 +2,7 @@
 where we say it runs?
 
 For each architecture and each image, it unpacks that architecture's
-libera-core wheel, as `stage` left it in build/out/release/<version>/, into a
+libera-core wheel, as `stage` left it for this commit, into a
 clean container and has x2t convert a docx to odt, the way the host runs it,
 then looks for the document's text in what came out. On a builder, which has
 no stage, it takes the core tarball its own container build left. The glibc

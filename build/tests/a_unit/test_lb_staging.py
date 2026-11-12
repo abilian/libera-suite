@@ -6,12 +6,11 @@ import json
 import zipfile
 
 import pytest
+from libera_build.artifacts import run_pypi
 from libera_build.inventory import Builder
 from libera_build.release.context import Context
 from libera_build.release.phases import publishing, staging
 from libera_build.report import RefusedError
-
-from libera.manifest import Manifest
 
 HEAD = "c" * 40
 
@@ -58,19 +57,16 @@ def test_publish_refuses_a_stage_that_moved(stage, change, says):
         staging.staged(stage)
 
 
-def test_publish_refuses_a_stage_from_another_commit(stage, monkeypatch):
+def test_another_commit_finds_nothing_staged(stage, monkeypatch):
+    """Each commit stages into a directory of its own, so a stage from the
+    commit before is not this one's to publish."""
     monkeypatch.setattr(staging.repo, "head", lambda _root: "d" * 40)
     (problem,) = staging.stamp_problems(stage)
-    assert "staged at ccccccccc" in problem
+    assert "nothing is staged at ddddddddd: run stage" in problem
 
 
-def test_nothing_staged_says_to_stage(tmp_path):
-    (tmp_path / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
-    (problem,) = staging.stamp_problems(tmp_path)
-    assert "run stage" in problem
-
-
-def test_each_builder_stages_the_bundle_its_users_download(tmp_path):
+def test_each_builder_stages_the_bundle_its_users_download(tmp_path, monkeypatch):
+    monkeypatch.setattr(staging.repo, "head", lambda _root: HEAD)
     (tmp_path / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
     ctx = Context(
         root=tmp_path,
@@ -100,54 +96,43 @@ def test_a_staged_install_takes_libera_and_its_components_from_there_alone():
     assert "WINDOW=" in publishing.install_script("9.9.9", staged="s", window=True)
 
 
-def release_tree(root, *, stamped_at):
+def release_tree(root):
     """A 9.9.9 with every file stage gathers for no builder: the components,
-    and a libera wheel whose manifest was stamped at `stamped_at` (None: no
-    manifest in it at all)."""
+    and libera's wheel and sdist."""
     (root / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
     payload = root / "src" / "libera" / "payload"
     payload.mkdir(parents=True)
     (payload / "payload.version").write_text('version = "9.9.9"\n')
-    pypi = root / "build" / "out" / "pypi" / "9.9.9"
+    pypi = run_pypi(root)
     pypi.mkdir(parents=True)
     for name in ("libera_core-9.9.9.tar.gz", "libera_web-9.9.9-py3-none-any.whl"):
         (pypi / name).write_bytes(name.encode())
-    dist = root / "dist"
-    dist.mkdir()
-    (dist / "libera-9.9.9.tar.gz").write_bytes(b"sdist")
-    with zipfile.ZipFile(dist / "libera-9.9.9-py3-none-any.whl", "w") as wheel:
+    (pypi / "libera-9.9.9.tar.gz").write_bytes(b"sdist")
+    with zipfile.ZipFile(pypi / "libera-9.9.9-py3-none-any.whl", "w") as wheel:
         wheel.writestr(
             "libera-9.9.9.dist-info/METADATA",
             "Requires-Dist: libera-core==9.9.9\nRequires-Dist: libera-web==9.9.9\n",
         )
-        if stamped_at is not None:
-            manifest = Manifest("9.9.9", (), source={"libera_commit": stamped_at})
-            wheel.writestr(publishing.WHEEL_MANIFEST, manifest.to_json())
     return Context(root=root, builders=[], phases=["stage"])
 
 
-def test_stage_stamps_a_wheel_built_at_this_commit(tmp_path, monkeypatch):
+def test_stage_stamps_what_this_commit_gathered(tmp_path, monkeypatch):
     monkeypatch.setattr(staging.repo, "head", lambda _root: HEAD)
-    ctx = release_tree(tmp_path, stamped_at=HEAD)
+    ctx = release_tree(tmp_path)
     staging.run(ctx)
     assert staging.stamp_problems(tmp_path) == []
     assert "libera-9.9.9-py3-none-any.whl" in [f.name for f in staging.staged(tmp_path)]
 
 
-@pytest.mark.parametrize(
-    ("stamped_at", "says"),
-    [("d" * 40, "stamped at ddddddddd"), (None, "carries no manifest")],
-)
-def test_stage_refuses_a_wheel_another_commit_built(
-    tmp_path, monkeypatch, capsys, stamped_at, says
-):
-    # `ship native stage publish` after a commit: native restamps the tree, and
-    # dist/ still holds the wheel the commit before built.
+def test_stage_refuses_what_another_commit_gathered(tmp_path, monkeypatch, capsys):
+    """A run directory is a commit's: the files the commit before gathered
+    are not this one's to stage."""
     monkeypatch.setattr(staging.repo, "head", lambda _root: HEAD)
-    ctx = release_tree(tmp_path, stamped_at=stamped_at)
+    ctx = release_tree(tmp_path)
+    monkeypatch.setattr(staging.repo, "head", lambda _root: "d" * 40)
     with pytest.raises(RefusedError, match="nothing was staged"):
         staging.run(ctx)
-    assert says in capsys.readouterr().out
+    assert "is not here: run the components phase" in capsys.readouterr().out
     assert not staging.folder(tmp_path).exists()
 
 

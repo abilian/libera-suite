@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from libera.manifest import hash_file
 from libera_build import versions
-from libera_build.artifacts import BUNDLES_DIR, bundle_name, installer_name
+from libera_build.artifacts import bundle_name, installer_name, run_bundles
 from libera_build.origin.cdn import key_for, put
 from libera_build.report import RefusedError, say, step
 
@@ -58,8 +58,8 @@ def pointer(
 
 
 def installer_here(bundles: Path, app: str) -> Path | None:
-    """The Windows installer, if it is here with its SHA-256: brought by
-    `ship`'s bundles, or built on this machine. None is a normal state, since
+    """The Windows installer, if it is here with its SHA-256, as `ship`'s
+    bundles brought it. None is a normal state, since
     a release's Flatpaks can go out before its Windows build."""
     setup = bundles / installer_name(app)
     digest = setup.with_name(setup.name + ".sha256")
@@ -247,7 +247,7 @@ def extras(
     install.ps1, then `latest`, which moves both install scripts. From
     `bundles`, the staged release when `publish` calls it, else where the
     builders' bundles are brought."""
-    bundles = bundles or root / BUNDLES_DIR
+    bundles = bundles or run_bundles(root)
     ready(root, origin, dry=dry, bundles=bundles)
     token = os.environ.get("CDN_TOKEN")
     app = versions.app_version(root)
@@ -294,7 +294,7 @@ def windows(root: Path, origin: Origin, *, dry: bool) -> None:
     token = os.environ.get("CDN_TOKEN")
     need_token(token, dry=dry, zone=origin.zone)
     app = versions.app_version(root)
-    bundles = root / BUNDLES_DIR
+    bundles = run_bundles(root)
     step(f"publishing the Windows installer for {app} to {origin.public('bundles')}/")
     if (setup := installer_here(bundles, app)) is None:
         msg = (

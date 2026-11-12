@@ -45,7 +45,6 @@ class ShipOptions:
 
 ACTIONS: dict[str, Callable[[Context], None]] = {
     "update": update.run,
-    "native": here.native,
     "build": builders.build,
     "components": components.run,
     "bundles": builders.bundles,

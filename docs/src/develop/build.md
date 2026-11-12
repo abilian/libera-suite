@@ -178,7 +178,7 @@ Every item is checked on the file the build uses, whoever installed it, so a mac
 
 The first line takes hours, V8 alone about one, with OpenSSL from vcpkg. `windows-app.sh` refuses without its output: it wants the manifest and `core-windows-x86_64.tar.gz` under `$BUILD_ROOT/out/dist/<version>`. It writes the frozen application and `Libera-Suite-Setup-<version>.exe`, and copies the installer into `build/out/bundles/` with its SHA-256. Unlike the macOS `.app`, it embeds its own interpreter, because a Windows user has no Python.
 
-`make ship` builds Windows with the rest. Its `build` phase runs `payload build` there; `bundles` runs `app build windows` there and brings the installer and its `.sha256` here, into `build/out/bundles/`, where `publish` uploads them with the Flatpaks. The upload checks the hash first and each stored size after, and moves `bundles/latest-windows`, the version `install.ps1` installs, last, so the installer is on the origin before any user is sent to it.
+`make ship` builds Windows with the rest. Its `build` phase runs `payload build` there; `bundles` runs `app build windows` there and brings the installer and its `.sha256` here, into the run directory (`build/out/release/<commit>/bundles/`), where `stage` gathers them with the Flatpaks. The upload checks the hash first and each stored size after, and moves `bundles/latest-windows`, the version `install.ps1` installs, last, so the installer is on the origin before any user is sent to it.
 
 A Windows build that comes after the release's Flatpaks goes up on its own, from here:
 

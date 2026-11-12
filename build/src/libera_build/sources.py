@@ -1,8 +1,7 @@
 """The pinned upstream trees: build/upstream/pins.toml, and whether a tree on
 this machine is at its pin with the patch queue applied.
 
-Read by the release's `native` phase and by the components' build hooks,
-which must not import a release phase to ask.
+Read by the components' build hooks, which fetch a tree that is not.
 """
 
 from __future__ import annotations

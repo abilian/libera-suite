@@ -14,6 +14,7 @@ import threading
 from typing import TYPE_CHECKING
 
 import pytest
+from libera_build.artifacts import run_bundles
 from libera_build.origin import cdn as cdn_, publish
 from libera_build.origin.place import Origin
 from libera_build.report import RefusedError
@@ -133,10 +134,14 @@ def make_checkout(
     amd64 bundle and the Windows installer with its SHA-256."""
     root = tmp_path / "root"
     (root / "build" / "install").mkdir(parents=True)
+    # A repository, since the run directory the bundles wait in names a commit.
+    git = ["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run([*git, "init", "-q"], check=True)
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "c"], check=True)
     for script in ("install.sh", "install.ps1"):
         (root / "build" / "install" / script).write_text("# installs\n")
     (root / "pyproject.toml").write_text(f'[project]\nversion = "{version}"\n')
-    bundles = root / "build" / "out" / "bundles"
+    bundles = run_bundles(root)
     bundles.mkdir(parents=True)
     if setup:
         installer = bundles / f"Libera-Suite-Setup-{version}.exe"
@@ -198,7 +203,7 @@ def test_a_dry_run_signs_nothing(cdn, checkout, monkeypatch, capsys):
     monkeypatch.delenv("CDN_TOKEN", raising=False)
     publish.extras(checkout, origin, dry=True)
     assert "would PUT bundles/libera-0.4.0-amd64.flatpak" in capsys.readouterr().out
-    bundles = checkout / "build" / "out" / "bundles"
+    bundles = run_bundles(checkout)
     assert not list(bundles.glob("*.asc"))
     assert not list(store.iterdir())
 
@@ -270,7 +275,7 @@ def test_an_installer_its_hash_does_not_describe_sends_nothing(
 ):
     origin, _, store = cdn
     monkeypatch.setenv("CDN_TOKEN", "t")
-    sha = checkout / "build" / "out" / "bundles" / "Libera-Suite-Setup-0.4.0.exe.sha256"
+    sha = run_bundles(checkout) / "Libera-Suite-Setup-0.4.0.exe.sha256"
     sha.write_text("0" * 64 + "  Libera-Suite-Setup-0.4.0.exe\n")
     with pytest.raises(RefusedError, match="does not describe"):
         publish.extras(checkout, origin, dry=False)
@@ -307,7 +312,7 @@ def test_a_good_signature_already_there_is_kept(
     passphrase, and needs no secret key any more."""
     origin, _, store = cdn
     monkeypatch.setenv("CDN_TOKEN", "t")
-    bundles = checkout / "build" / "out" / "bundles"
+    bundles = run_bundles(checkout)
     publish.ready(checkout, origin, dry=False, bundles=bundles)
     signed = (bundles / "libera-0.4.0-amd64.flatpak.asc").read_bytes()
     rows = gpg("--list-secret-keys", "--with-colons").stdout.splitlines()

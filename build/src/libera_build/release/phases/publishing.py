@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import json
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from libera.manifest import Manifest
 from libera_build import report, versions
 from libera_build.artifacts import (
     app_wheel_name,
     core_sdist_name,
     core_wheel_name,
+    run_pypi,
     web_wheel_name,
 )
 from libera_build.components import TAGS
@@ -20,14 +19,12 @@ from libera_build.hosts import LocalHost, facts_from
 from libera_build.origin import place, publish as cdn
 from libera_build.process import run_here
 from libera_build.release import plan
-from libera_build.release.phases import components
 from libera_build.report import problems, say, step
 
 # PyPI's simple index: `uv publish --check-url` reads it to skip a file
 # already up, and the install check installs from it and nothing else.
 PYPI_SIMPLE = "https://pypi.org/simple/"
 CHECK_END = "__LIBERA_CHECK_END__"
-WHEEL_MANIFEST = "libera/manifest.json"
 COMPONENTS = ("libera_core-", "libera_web-")
 
 if TYPE_CHECKING:
@@ -75,12 +72,11 @@ def upload_files(ctx: Context) -> tuple[list[Path], list[Path]]:
     names what is missing before anything is staged."""
     app = versions.app_version(ctx.root)
     payload = versions.payload_version(ctx.root)
-    pypi = components.folder(ctx)
-    dist = ctx.root / "dist"
+    pypi = run_pypi(ctx.root)
     names = [core_wheel_name(payload, TAGS[b.platform]) for b in ctx.builders]
     names += [core_sdist_name(payload), web_wheel_name(payload)]
-    own = [dist / app_wheel_name(app), dist / f"libera-{app}.tar.gz"]
-    present = {p.name for p in pypi.glob("*")} | {p.name for p in dist.glob("*")}
+    own = [pypi / app_wheel_name(app), pypi / f"libera-{app}.tar.gz"]
+    present = {p.name for p in pypi.glob("*")}
     found = plan.upload_problems(
         present,
         wanted=[*names, *(p.name for p in own)],
@@ -89,14 +85,6 @@ def upload_files(ctx: Context) -> tuple[list[Path], list[Path]]:
     )
     problems(found, "nothing was staged.")
     return [pypi / name for name in names], own
-
-
-def manifest_of(wheel: Path) -> Manifest | None:
-    """The payload manifest packed in a libera wheel, if it carries one."""
-    with zipfile.ZipFile(wheel) as package:
-        if WHEEL_MANIFEST not in package.namelist():
-            return None
-        return Manifest.from_dict(json.loads(package.read(WHEEL_MANIFEST)))
 
 
 def requires_of(wheel: Path) -> list[str]:

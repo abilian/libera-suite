@@ -7,6 +7,13 @@ a build.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+from libera_build import repo
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 # A core tarball is tens of megabytes.
 MIN_CORE_BYTES = 10 * 1024 * 1024
 
@@ -36,11 +43,30 @@ def size_problem(platform: str, name: str, size: int, minimum: int) -> str | Non
     return None
 
 
-# Where the release keeps what goes to PyPI beside `libera`: on each builder
-# under its checkout, and here, all of them together.
+# Where a builder leaves, under its checkout, what goes to PyPI beside
+# `libera`, and where the Windows installer is made.
 PYPI_DIR = "build/out/pypi"
-# Where the Flatpak bundles and the Windows installer are brought, here.
 BUNDLES_DIR = "build/out/bundles"
+
+RELEASE_DIR = "build/out/release"
+
+
+def run_dir(root: Path) -> Path:
+    """build/out/release/<commit>/: everything a release run gathers here, from
+    this machine and the builders, and stages. Named by the commit, so a run
+    can read nothing another commit made: a libera-core wheel or a bundle left
+    by an earlier run of the same version used to stage as this one's."""
+    return root / RELEASE_DIR / repo.head(root)
+
+
+def run_pypi(root: Path) -> Path:
+    """Every file of the release that goes to PyPI: the components and libera."""
+    return run_dir(root) / "pypi"
+
+
+def run_bundles(root: Path) -> Path:
+    """The Flatpak bundles and the Windows installer, brought from the builders."""
+    return run_dir(root) / "bundles"
 
 
 def app_wheel_name(app_version: str) -> str:

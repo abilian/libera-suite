@@ -4,7 +4,8 @@ before any of it is published.
 0.7.0b1 and 0.7.0 both went to PyPI before anything had installed them, and
 both were broken there for an hour: the first without its components, the
 second before them. So every file `publish` uploads is gathered first into
-one directory, build/out/release/<version>/, and from there:
+one directory, `staged/` in the run's (artifacts.run_dir, named by the
+commit), and from there:
 
 - on every builder and here, libera, libera-core and libera-web install into
   a new environment from that directory and nowhere else, and convert a
@@ -12,10 +13,11 @@ one directory, build/out/release/<version>/, and from there:
 - on every Linux builder the Flatpak bundle, and on the Windows builder the
   installer, install and open a document in a window (released_gui);
 
-and only when all of that passed is the directory stamped, with this commit
-and each file's hash. `publish` uploads that directory and refuses anything
-else: a file changed or added after the stamp, or a stamp from another
-commit. `stage` runs as often as wanted; nothing leaves the builders.
+and only when all of that passed is the directory stamped, with each file's
+hash. `publish` uploads that directory and refuses anything else: a file
+changed or added after the stamp. Another commit's stage is another
+directory, so nothing from it can be published. `stage` runs as often as
+wanted; nothing leaves the builders.
 """
 
 from __future__ import annotations
@@ -28,16 +30,16 @@ from typing import TYPE_CHECKING
 from libera.manifest import hash_file
 from libera_build import inventory, released_gui, repo, versions
 from libera_build.artifacts import (
-    BUNDLES_DIR,
     app_wheel_name,
     bundle_name,
     core_wheel_name,
     installer_name,
+    run_bundles,
+    run_dir,
     web_wheel_name,
 )
 from libera_build.components import TAGS
 from libera_build.hosts import LocalHost, facts_from
-from libera_build.release import plan
 from libera_build.release.phases import publishing
 from libera_build.released_gui import ReleasedGuiOptions
 from libera_build.report import RefusedError, problems, say, step
@@ -47,7 +49,6 @@ if TYPE_CHECKING:
     from libera_build.inventory import Builder
     from libera_build.release.context import Context
 
-RELEASE_DIR = Path("build", "out", "release")
 # A window's picture of a page with a document on it; an empty canvas posts a
 # few kilobytes. The GUI tests measure the ink; this has no imaging library.
 MIN_SHOT_BYTES = 20_000
@@ -55,13 +56,13 @@ STAMP = "STAGED.json"
 
 
 def folder(root: Path) -> Path:
-    return root / RELEASE_DIR / versions.app_version(root)
+    return run_dir(root) / "staged"
 
 
 def bundle_files(ctx: Context) -> list[Path]:
     """The bundles the builders of this run make, as `bundles` left them here."""
     app = versions.app_version(ctx.root)
-    bundles = ctx.root / BUNDLES_DIR
+    bundles = run_bundles(ctx.root)
     found = []
     for b in ctx.builders:
         if b.os == "linux":
@@ -86,14 +87,6 @@ def run(ctx: Context) -> None:
         "nothing was staged.",
     )
     head = repo.head(ctx.root)
-    problems(
-        plan.wheel_problems(
-            publishing.manifest_of(own[0]),
-            payload_version=versions.payload_version(ctx.root),
-            head=head,
-        ),
-        "nothing was staged.",
-    )
     dest = folder(ctx.root)
     if dest.exists():
         shutil.rmtree(dest)
@@ -170,14 +163,9 @@ def stamp_problems(root: Path) -> list[str]:
     dest = folder(root)
     stamped = dest / STAMP
     if not stamped.is_file():
-        return [f"nothing is staged for {versions.app_version(root)}: run stage"]
+        return [f"nothing is staged at {repo.head(root)[:9]}: run stage"]
     stamp = json.loads(stamped.read_text(encoding="utf-8"))
     found = []
-    head = repo.head(root)
-    if stamp["commit"] != head:
-        found.append(
-            f"staged at {stamp['commit'][:9]}, this tree is at {head[:9]}: run stage"
-        )
     # The bundles' signatures are made by `publish`, beside them, after.
     now = {f.name: f for f in dest.iterdir() if f.name != STAMP and f.suffix != ".asc"}
     for name in sorted(set(now) - set(stamp["files"])):

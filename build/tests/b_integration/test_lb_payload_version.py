@@ -11,7 +11,7 @@ import subprocess
 
 import pytest
 from libera_build import versions
-from libera_build.repo import MANIFEST, PAYLOAD_VERSION, PINS, REPO
+from libera_build.repo import PAYLOAD_VERSION, PINS, REPO
 from libera_build.report import RefusedError
 
 from libera import manifest
@@ -46,12 +46,10 @@ def test_the_build_scripts_and_lb_read_the_same_version(tmp_path, text):
 
 
 def checkout_with_dist(tmp_path, *, built_for: str):
-    """A checkout wanting payload 0.5, holding the last release's manifest, and
-    artifacts built for `built_for`."""
+    """A checkout wanting payload 0.5, and artifacts built for `built_for`."""
     root = tmp_path / "root"
     (root / PAYLOAD_VERSION).parent.mkdir(parents=True)
     (root / PAYLOAD_VERSION).write_text('version = "0.5"\n')
-    (root / MANIFEST).write_text('{"payload_version": "0.4.1"}')
     (root / PINS).parent.mkdir(parents=True)
     (root / PINS).write_text('[repos]\ncore = "abc"\n')
     dist = tmp_path / "dist"

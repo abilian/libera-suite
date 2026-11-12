@@ -167,7 +167,7 @@ CORE_JOBS = Knob(
 DIST = Knob(
     "--dist",
     "DIST",
-    "distros: the staged files to use (default: build/out/release/<version>)",
+    "distros: the staged files to use (default: what stage left for this commit)",
     "DIR",
 )
 MEMORY = Knob(
@@ -1104,7 +1104,7 @@ what is usually run:
   a release:
   lb release bump X.Y.Z           the version, in all six places
   lb release plan                 what ship would do, running nothing
-  lb release ship update native build components bundles wheel stage
+  lb release ship update build components bundles wheel stage
                                   built and installed everywhere, nothing published
   lb release ship publish verify  the staged files to PyPI and the CDN (asks first)
 

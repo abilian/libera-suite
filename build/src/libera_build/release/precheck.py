@@ -10,7 +10,6 @@ import os
 import time
 from typing import TYPE_CHECKING
 
-from libera.manifest import Manifest
 from libera_build import repo, versions
 from libera_build.hosts import facts_from, remote_path
 from libera_build.origin import publish
@@ -46,16 +45,9 @@ def run(ctx: Context) -> None:
         say(f"    note: {dirty} uncommitted file(s) here, which no builder sees")
     found += refused
 
-    stamped = ctx.root / repo.MANIFEST
-    manifest = Manifest.read(stamped) if stamped.is_file() else None
-    found += plan.publish_problems(
-        ctx.phases,
-        manifest=manifest,
-        payload_version=versions.payload_version(ctx.root),
-        head=head,
-    )
-    # A publish without a stage in the same run uploads the last one's, which
-    # must still hold: found now, not after hours of building.
+    # A publish without a stage in the same run uploads the one this commit
+    # staged before, which must still hold: found now, not after hours of
+    # building.
     if "publish" in ctx.phases and "stage" not in ctx.phases:
         found += staging.stamp_problems(ctx.root)
     if "publish" in ctx.phases:

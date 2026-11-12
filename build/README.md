@@ -46,7 +46,6 @@ Environment knobs, all with working defaults. The ones a command takes are also 
 | `CORE_BUILD_JOBS` | the same, for core's own ninja. The memory figure comes from the cgroup limit when there is one: `/proc/meminfo` reports the *host's* memory inside a container, so without this a 64 GB builder starts thirty compilers in an 8 GB box |
 | `DOCKER_MEMORY` | a ceiling for the build container, e.g. `8g`. Without one the VM takes what the build asks for and the *host* runs out. On a 16 GB Mac that arrives as the build being killed from outside with nothing in the log |
 | `V8_KEEP_BUILD_DIR` | default 1: an interrupted V8 build resumes where it stopped |
-| `INSTALL_MANIFEST` | `dist.sh` also copies the manifest into the wheel |
 | `ARCH` | the containers: the architecture to build for; default this machine's |
 | `BUILD_DIR` | `container run payload` and `container export payload` only: where the container's build tree goes. Defaults to `$BUILD_ROOT/linux-<arch>`, a directory on a real disk |
 | `VOLUME` | `container run payload` and `container export payload` only: a named Docker volume, on the VM's own disk |

@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
-
 import pytest
 from libera_build.inventory import Builder
 from libera_build.release import plan, ship
 from libera_build.release.phases import builders
 from libera_build.report import RefusedError
-
-from libera.manifest import Manifest
 
 ARM = Builder("linux-arm64", "arm", None, False, "~/r")
 
@@ -63,37 +59,6 @@ def test_uploading_wants_the_commit_somewhere_else_too():
     assert "push it first" in problem
     assert not plan.unpushed_problems(["publish"], on_a_remote=True, head="a" * 40)
     assert not plan.unpushed_problems(["build"], on_a_remote=False, head="a" * 40)
-
-
-MANIFEST = Manifest("0.4", (), source={"libera_commit": "h" * 40})
-
-
-@pytest.mark.parametrize(
-    ("phases", "manifest", "says"),
-    [
-        (["publish"], None, "needs src/libera/manifest.json"),
-        (["publish"], replace(MANIFEST, payload_version="0.3"), "for payload 0.3"),
-        (
-            ["publish"],
-            replace(MANIFEST, source={"libera_commit": "o" * 40}),
-            "stamped at ooooooooo",
-        ),
-    ],
-)
-def test_publish_refuses_a_manifest_that_is_not_this_release(phases, manifest, says):
-    found = plan.publish_problems(
-        phases, manifest=manifest, payload_version="0.4", head="h" * 40
-    )
-    assert any(says in p for p in found), found
-
-
-def test_publish_accepts_this_release_and_a_native_in_the_same_run():
-    assert not plan.publish_problems(
-        ["publish"], manifest=MANIFEST, payload_version="0.4", head="h" * 40
-    )
-    assert not plan.publish_problems(
-        ["native", "publish"], manifest=None, payload_version="0.4", head="h"
-    )
 
 
 def test_a_builder_of_the_wrong_architecture_or_dirty_is_refused():

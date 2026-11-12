@@ -20,6 +20,7 @@ from libera_build.artifacts import (
     bundle_name,
     core_name,
     installer_name,
+    run_bundles,
 )
 from libera_build.hosts import remote_path
 from libera_build.inventory import dist_of
@@ -105,10 +106,10 @@ def bundles(ctx: Context) -> None:
 
 
 def fetch_bundles(ctx: Context, made: dict[Builder, Bundle]) -> None:
-    """Bring every bundle here, where `publish` uploads them from, so that one
-    directory holds the whole release."""
+    """Bring every bundle here, into the run's directory, where `stage`
+    gathers the whole release."""
     step("collecting the bundles")
-    dest = ctx.root / BUNDLES_DIR
+    dest = run_bundles(ctx.root)
     dest.mkdir(parents=True, exist_ok=True)
     found = []
     for b, bundle in made.items():

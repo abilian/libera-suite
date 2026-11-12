@@ -10,7 +10,6 @@ libera_build` there, as on a builder.
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 from dataclasses import replace
@@ -18,7 +17,12 @@ from pathlib import Path
 
 import pytest
 from libera_build import detached, repo
-from libera_build.artifacts import MIN_BUNDLE_BYTES, MIN_CORE_BYTES
+from libera_build.artifacts import (
+    MIN_BUNDLE_BYTES,
+    MIN_CORE_BYTES,
+    run_bundles,
+    run_pypi,
+)
 from libera_build.containers import host_arch, linux_platform
 from libera_build.hosts import LocalHost
 from libera_build.inventory import Builder
@@ -28,7 +32,6 @@ from libera_build.release.on import OnOptions, on
 from libera_build.release.phases import (
     builders,
     components,
-    here,
     staging,
     update,
 )
@@ -249,7 +252,7 @@ def test_bundles_makes_the_installer_on_windows_and_brings_it_here(driver, home)
     builders.bundles(ctx)
     log = (driver / "tmp" / "remote" / "windows-x86_64.log").read_text()
     assert "stand-in lb app build windows" in log
-    here = driver / "build" / "out" / "bundles"
+    here = run_bundles(driver)
     assert (here / setup.name).stat().st_size == MIN_BUNDLE_BYTES
     assert (here / f"{setup.name}.sha256").read_text() == f"0  {setup.name}\n"
 
@@ -332,7 +335,7 @@ def test_on_says_why_a_command_never_ran(driver, home):
         on(options)
 
 
-# --- native: the trees the macOS core is built from --------------------------
+# --- sources: is a tree its pin plus the queue ------------------------------
 
 
 def sources(tmp_path: Path, patches: int) -> tuple[Path, Path, list[str]]:
@@ -360,13 +363,13 @@ def sources(tmp_path: Path, patches: int) -> tuple[Path, Path, list[str]]:
     return root, src, sorted(str(p) for p in queue.iterdir())
 
 
-def test_native_takes_a_tree_at_its_pin_plus_the_queue(tmp_path):
+def test_a_tree_at_its_pin_plus_the_queue_passes(tmp_path):
     root, src, queue = sources(tmp_path, 2)
     git(src / "core", "am", "-q", *queue)
     assert source_problems(root, src) == []
 
 
-def test_native_refuses_a_tree_fetched_before_a_patch_was_added(tmp_path):
+def test_a_tree_fetched_before_a_patch_was_added_is_refused(tmp_path):
     root, src, queue = sources(tmp_path, 2)
     git(src / "core", "am", "-q", queue[0])
     (problem,) = source_problems(root, src)
@@ -374,7 +377,7 @@ def test_native_refuses_a_tree_fetched_before_a_patch_was_added(tmp_path):
     assert "the 2 patch(es) in the queue" in problem
 
 
-def test_native_refuses_a_patch_that_changed_since_it_was_applied(tmp_path):
+def test_a_patch_that_changed_since_it_was_applied_is_refused(tmp_path):
     root, src, queue = sources(tmp_path, 1)
     git(src / "core", "am", "-q", *queue)
     edited = Path(queue[0])
@@ -384,7 +387,7 @@ def test_native_refuses_a_patch_that_changed_since_it_was_applied(tmp_path):
     assert "not the 1 patch(es)" in problem
 
 
-def test_native_refuses_a_tree_off_its_pin_or_missing(tmp_path):
+def test_a_tree_off_its_pin_or_missing_is_refused(tmp_path):
     root, src, _ = sources(tmp_path, 0)
     git(src / "core", "checkout", "-q", "--orphan", "elsewhere")
     git(src / "core", "commit", "-qm", "elsewhere")
@@ -392,81 +395,6 @@ def test_native_refuses_a_tree_off_its_pin_or_missing(tmp_path):
     assert "is not on its pin" in problem
     (problem,) = source_problems(root, tmp_path / "nowhere")
     assert "no source tree" in problem
-
-
-@pytest.mark.skipif(sys.platform != "darwin", reason="native makes the macOS core")
-def test_native_refuses_before_it_re_tars_anything(tmp_path, monkeypatch):
-    root, _, _ = sources(tmp_path, 1)
-    monkeypatch.setenv("BUILD_ROOT", str(tmp_path))
-    mac = Builder("macos-arm64", "local", None, True, "~/r")
-    ctx = Context(root=root, builders=[mac], phases=["native"])
-    with pytest.raises(RefusedError, match="these trees are not at them"):
-        here.native(ctx)
-
-
-def built_payload(tmp_path: Path, *, age: int) -> None:
-    """A finished payload under $BUILD_ROOT, `age` seconds older than the tree."""
-    finished = tmp_path / here.PAYLOAD_FINISHED
-    finished.parent.mkdir(parents=True)
-    finished.touch()
-    moved = (tmp_path / "src" / "core" / ".git" / "logs" / "HEAD").stat().st_mtime
-    os.utime(finished, (moved - age, moved - age))
-
-
-def test_native_takes_a_build_finished_after_its_trees_moved(tmp_path):
-    root, _, _ = sources(tmp_path, 0)
-    built_payload(tmp_path, age=-60)
-    assert here.stale_problems(root, tmp_path) == []
-
-
-def test_native_refuses_a_build_older_than_a_tree_at_its_pin(tmp_path):
-    """The trees pass source_problems, patch and all, and the editors are from
-    before the patch: nothing else looks at what out/ was made from."""
-    root, src, queue = sources(tmp_path, 1)
-    built_payload(tmp_path, age=60)
-    git(src / "core", "am", "-q", *queue)
-    assert source_problems(root, src) == []
-    (problem,) = here.stale_problems(root, tmp_path)
-    assert problem.startswith("core: moved ")
-
-
-def test_native_goes_by_when_a_tree_moved_not_its_commits_date(tmp_path, monkeypatch):
-    """A pin bumped to an old commit is news to a newer build all the same."""
-    root, src, _ = sources(tmp_path, 0)
-    built_payload(tmp_path, age=60)
-    monkeypatch.setenv("GIT_COMMITTER_DATE", "2001-01-01T00:00:00")
-    git(src / "core", "commit", "-q", "--allow-empty", "-m", "old")
-    os.utime(tmp_path / here.PAYLOAD_FINISHED, (1_000_000_000, 1_000_000_000))
-    (problem,) = here.stale_problems(root, tmp_path)
-    assert problem.startswith("core: moved ")
-
-
-def test_native_refuses_when_no_payload_build_finished(tmp_path):
-    root, _, _ = sources(tmp_path, 0)
-    (problem,) = here.stale_problems(root, tmp_path)
-    assert "no finished payload build" in problem
-
-
-@pytest.mark.skipif(sys.platform != "darwin", reason="native makes the macOS core")
-@pytest.mark.parametrize(("age", "packs"), [(60, False), (-60, True)])
-def test_native_packs_only_a_build_newer_than_its_trees(
-    tmp_path, monkeypatch, age, packs
-):
-    root, _, _ = sources(tmp_path, 0)
-    built_payload(tmp_path, age=age)
-    monkeypatch.setenv("BUILD_ROOT", str(tmp_path))
-    packed: list[list[str]] = []
-    monkeypatch.setattr(here, "run_here", lambda argv, *_, **__: packed.append(argv))
-    mac = Builder("macos-arm64", "local", None, True, "~/r")
-    ctx = Context(root=root, builders=[mac], phases=["native"])
-    if packs:
-        here.native(ctx)
-    else:
-        with pytest.raises(RefusedError, match="older than the trees"):
-            here.native(ctx)
-    assert packed == (
-        [["uv", "run", "lb", "payload", "build", "dist"]] if packs else []
-    )
 
 
 class Flaky:
@@ -571,7 +499,7 @@ WIN = Builder("windows-x86_64", "win", "C:/b/out/dist", False, "~/checkout")
 
 def test_the_components_phase_brings_each_builders_core_wheel_here(driver, home):
     """`lb components build` run there, its wheel looked for there, then
-    fetched to build/out/pypi here, where publish uploads from."""
+    fetched into this commit's run directory here, where stage gathers from."""
     ctx = replace(context(driver, home, ["update", "components"]), builders=[WIN])
     update.run(ctx)
     made = home / "checkout" / "build" / "out" / "pypi" / "9.9"
@@ -584,7 +512,7 @@ def test_the_components_phase_brings_each_builders_core_wheel_here(driver, home)
 
     log = (driver / "tmp" / "remote" / "windows-x86_64.log").read_text()
     assert "stand-in lb components build --out build/out/pypi/9.9" in log
-    here = driver / "build" / "out" / "pypi" / "9.9" / wheel.name
+    here = run_pypi(driver) / wheel.name
     assert here.stat().st_size == MIN_CORE_BYTES
 
 
@@ -601,8 +529,8 @@ def test_stage_refuses_before_copying_when_the_components_are_missing(
 ):
     """Before anything is copied, and so long before anything goes up."""
     ctx = replace(context(driver, home, ["stage"]), builders=[WIN], yes=False)
-    (driver / "dist").mkdir()
-    (driver / "dist" / "libera-9.9.9-py3-none-any.whl").write_bytes(b"")
+    run_pypi(driver).mkdir(parents=True)
+    (run_pypi(driver) / "libera-9.9.9-py3-none-any.whl").write_bytes(b"")
 
     with pytest.raises(RefusedError, match="nothing was staged"):
         staging.run(ctx)

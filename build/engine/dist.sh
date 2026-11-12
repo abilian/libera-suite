@@ -278,9 +278,9 @@ fi  # the editors
 fi  # MANIFEST_ONLY
 
 # --- manifest -----------------------------------------------------------------
-# The wheel ships this and verifies downloads against it, so the origin is
-# untrusted storage. Provenance is recorded here because a shipped binary has to
-# name the source it was built from -- see notes/05-packaging.md on licensing.
+# The components take their payload.json from this (libera_build.components):
+# provenance, because a shipped binary has to name the source it was built
+# from -- see notes/05-packaging.md on licensing.
 echo "==> manifest"
 # libera.manifest, the one definition of the format, run from this checkout:
 # inside the build container nothing is installed, and its Python is 3.10,
@@ -289,14 +289,6 @@ echo "==> manifest"
 # every path handed to it is absolute.
 (dist="$(cd "$DIST" && pwd)" && cd "$BUILD/../src" && py -m libera.manifest stamp "$dist" \
     --payload-version "$VERSION" --font-set "$FONT_SET" --repo "$REPO_ROOT")
-
-# The wheel verifies downloads against this, which is what makes the origin
-# untrusted storage. It is a source file, so a release commits it -- and a
-# release needs every platform's core sitting in $DIST first.
-if [ "${INSTALL_MANIFEST:-0}" = "1" ]; then
-    cp "$DIST/manifest.json" "$BUILD/../src/libera/manifest.json"
-    echo "    manifest installed into the wheel"
-fi
 
 rm -rf "$STAGE"
 echo

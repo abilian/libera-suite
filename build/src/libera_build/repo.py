@@ -15,8 +15,6 @@ from libera_build.report import RefusedError
 
 # Paths in a checkout, from its root: each is spelt here once.
 PAYLOAD_VERSION = Path("src", "libera", "payload", "payload.version")
-# The manifest the wheel ships, gitignored: whatever dist.sh last stamped here.
-MANIFEST = Path("src", "libera", "manifest.json")
 BUILDERS = Path("build", "builders.toml")
 PINS = Path("build", "upstream", "pins.toml")
 PATCHES = Path("build", "upstream", "patches")  # a directory per pinned repo

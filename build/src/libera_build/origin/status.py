@@ -15,7 +15,7 @@ import urllib.request
 from typing import TYPE_CHECKING
 
 from libera_build import repo, versions
-from libera_build.artifacts import BUNDLES_DIR, PYPI_DIR, bundle_name, installer_name
+from libera_build.artifacts import bundle_name, installer_name, run_bundles, run_pypi
 from libera_build.report import say, step
 
 if TYPE_CHECKING:
@@ -36,10 +36,9 @@ def status(root: Path) -> None:
     say(f"    tag          {tag.splitlines()[0] if tag.strip() else 'none on HEAD'}")
 
     step(f"the release's files here, for {version}")
-    wheels = root / PYPI_DIR / versions.payload_version(root)
-    bundles = root / BUNDLES_DIR
+    wheels = run_pypi(root)
+    bundles = run_bundles(root)
     files = sorted(wheels.glob("*")) if wheels.is_dir() else []
-    files += sorted((root / "dist").glob(f"libera-{version}*"))
     files += [
         f
         for f in (

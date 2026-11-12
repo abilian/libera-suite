@@ -10,20 +10,22 @@ uploaded the wheel `make build` made, and no phase knew of the others.
 So each builder runs `lb components build`, which builds its core wheel from
 the core's source, reusing the build tree `build` has just brought to the pin,
 and the editors' wheel. Every platform's wheel, the Mac's source and the Mac's
-editors' wheel are then brought to one folder here, `build/out/pypi/<payload
-version>/`, where `publish` uploads them from.
+editors' wheel are then brought to one folder here, the run's `pypi/`
+(artifacts.run_pypi), which `stage` gathers from.
 """
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
-from libera_build import versions
+from libera_build import repo, versions
 from libera_build.artifacts import (
     MIN_CORE_BYTES,
     PYPI_DIR,
     core_sdist_name,
     core_wheel_name,
+    run_pypi,
     web_wheel_name,
 )
 from libera_build.components import TAGS
@@ -32,17 +34,13 @@ from libera_build.process import run_here
 from libera_build.release.builds import check_remote_file, run_builds
 from libera_build.report import problems, say, step
 
-if TYPE_CHECKING:
-    from pathlib import Path
+# Under $BUILD_ROOT, beside src/ and out/: see release_env.
+RELEASE_ROOT = "release"
 
+if TYPE_CHECKING:
     from libera_build.hosts import Host
     from libera_build.inventory import Builder
     from libera_build.release.context import Context
-
-
-def folder(ctx: Context) -> Path:
-    """Here, where every platform's files are gathered for `publish`."""
-    return ctx.root / PYPI_DIR / versions.payload_version(ctx.root)
 
 
 def run(ctx: Context) -> None:
@@ -66,32 +64,42 @@ def run(ctx: Context) -> None:
         fetch(ctx, payload, out)
     if [b for b in ctx.builders if not b.remote]:
         step("the components, here")
-        dest = folder(ctx)
+        dest = run_pypi(ctx.root)
+        argv = ["uv", "run", "--no-sync", "lb", "components", "wheels"]
         run_here(
-            [
-                "uv",
-                "run",
-                "--no-sync",
-                "lb",
-                "components",
-                "wheels",
-                "--out",
-                str(dest),
-            ],
-            "components",
-            cwd=ctx.root,
+            [*argv, "--out", str(dest)], "components", cwd=ctx.root, env=release_env()
         )
     problems(missing(ctx, payload), "the components are not all here.")
-    for name in sorted(p.name for p in folder(ctx).glob("libera_*")):
-        size = (folder(ctx) / name).stat().st_size // 1048576
+    for name in sorted(p.name for p in run_pypi(ctx.root).glob("libera_*")):
+        size = (run_pypi(ctx.root) / name).stat().st_size // 1048576
         say(f"    {name}  {size} MB")
+
+
+def release_env() -> dict[str, str]:
+    """This machine's build, in a build root of its own, $BUILD_ROOT/release.
+
+    The working trees under $BUILD_ROOT/src are where upstream fixes are made
+    and committed before they are exported to the queue, and the components'
+    hooks fetch a tree that is not its pin plus the queue, which resets it and
+    removes what is not committed. In a root of their own, the release's trees
+    hold nothing but what fetch put there, and the working trees are never
+    touched. They are its MIRROR, unless one is set, so a pin they already
+    have is not downloaded again. Its out/ is kept between runs, as a compile
+    cache.
+    """
+    working = repo.build_root()
+    return {
+        "MIRROR": str(working / "src"),
+        **os.environ,
+        "BUILD_ROOT": str(working / RELEASE_ROOT),
+    }
 
 
 def fetch(ctx: Context, payload: str, out: str) -> None:
     """Each remote builder's core wheel, here. Not its source or editors'
     wheel: one of each goes up, the Mac's."""
     step("collecting the components")
-    dest = folder(ctx)
+    dest = run_pypi(ctx.root)
     dest.mkdir(parents=True, exist_ok=True)
     found = []
     for b in ctx.remotes:
@@ -111,7 +119,7 @@ def fetch(ctx: Context, payload: str, out: str) -> None:
 
 def missing(ctx: Context, payload: str) -> list[str]:
     """What the selected builders should have left here and did not."""
-    dest = folder(ctx)
+    dest = run_pypi(ctx.root)
     wanted = [core_wheel_name(payload, TAGS[b.platform]) for b in ctx.builders]
     if [b for b in ctx.builders if not b.remote]:
         wanted += [core_sdist_name(payload), web_wheel_name(payload)]
