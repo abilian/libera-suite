@@ -36,6 +36,10 @@ from libera_build.report import problems, say, step
 
 # Under $BUILD_ROOT, beside src/ and out/: see release_env.
 RELEASE_ROOT = "release"
+# What each machine runs, on a builder and here alike. One spelling: here it
+# said `components wheels` for weeks after the command was renamed, and no
+# test ran it.
+COMMAND = "components build"
 
 if TYPE_CHECKING:
     from libera_build.hosts import Host
@@ -57,7 +61,7 @@ def run(ctx: Context) -> None:
         run_builds(
             ctx,
             ctx.remotes,
-            lambda _b: f"components build --out {out}",
+            lambda _b: f"{COMMAND} --out {out}",
             verify,
             "building the components",
         )
@@ -65,10 +69,8 @@ def run(ctx: Context) -> None:
     if [b for b in ctx.builders if not b.remote]:
         step("the components, here")
         dest = run_pypi(ctx.root)
-        argv = ["uv", "run", "--no-sync", "lb", "components", "wheels"]
-        run_here(
-            [*argv, "--out", str(dest)], "components", cwd=ctx.root, env=release_env()
-        )
+        argv = ["uv", "run", "--no-sync", "lb", *COMMAND.split(), "--out", str(dest)]
+        run_here(argv, "components", cwd=ctx.root, env=release_env())
     problems(missing(ctx, payload), "the components are not all here.")
     for name in sorted(p.name for p in run_pypi(ctx.root).glob("libera_*")):
         size = (run_pypi(ctx.root) / name).stat().st_size // 1048576

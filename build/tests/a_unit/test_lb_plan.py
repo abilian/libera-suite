@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import pytest
+from libera_build import cli
 from libera_build.inventory import Builder
 from libera_build.release import plan, run
-from libera_build.release.phases import builders
+from libera_build.release.phases import builders, components
 from libera_build.report import RefusedError
 
 ARM = Builder("linux-arm64", "arm", "~/r")
@@ -162,3 +163,16 @@ def test_every_phase_has_an_action_and_every_action_a_phase():
     # Two tables kept in step by hand: one missing a key is a KeyError found
     # after the hours of building, not before.
     assert list(run.ACTIONS) == list(plan.PHASES)
+
+
+def test_every_lb_command_a_release_runs_is_one_lb_has():
+    """The phases name `lb` commands as strings, which the tests' stand-in
+    builders run without parsing: `components wheels` outlived its rename by
+    weeks, found only by a real run."""
+    commands = [f"{components.COMMAND} --out build/out/pypi/9.9"]
+    for b in (ARM, WINDOWS):
+        bundle = builders.bundle_of(b, "9.9.9")
+        assert bundle is not None
+        commands.append(bundle.command)
+    for command in commands:
+        cli.plan(command.split())
