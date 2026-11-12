@@ -34,28 +34,31 @@ TOOLCHAIN = sh("engine/toolchain.sh", "check")
 @pytest.mark.parametrize(
     ("argv", "steps"),
     [
-        (["payload", "fetch"], [TOOLCHAIN, sh("engine/build.sh", "fetch")]),
+        (["payload", "build", "fetch"], [TOOLCHAIN, sh("engine/build.sh", "fetch")]),
         (
-            ["payload", "fetch", "core", "--mirror", "/m"],
+            ["payload", "build", "fetch", "--repo", "core", "--mirror", "/m"],
             [
                 sh("engine/toolchain.sh", "check", MIRROR="/m"),
                 sh("engine/build.sh", "fetch", "core", MIRROR="/m"),
             ],
         ),
         (
-            ["payload", "core", "--v8-jobs", "4"],
+            ["payload", "build", "core", "--v8-jobs", "4"],
             [
                 sh("engine/toolchain.sh", "check", V8_BUILD_JOBS="4"),
                 sh("engine/build.sh", "build", V8_BUILD_JOBS="4"),
             ],
         ),
-        (["payload", "dist"], [TOOLCHAIN, sh("engine/dist.sh", "--fonts", "core")]),
         (
-            ["payload", "dist", "--fonts", "full", "--manifest-only"],
+            ["payload", "build", "dist"],
+            [TOOLCHAIN, sh("engine/dist.sh", "--fonts", "core")],
+        ),
+        (
+            ["payload", "build", "dist", "--fonts", "full", "--manifest-only"],
             [TOOLCHAIN, sh("engine/dist.sh", "--fonts", "full", "--manifest-only")],
         ),
         (
-            ["payload", "all"],
+            ["payload", "build"],
             [
                 TOOLCHAIN,
                 sh("engine/build.sh", "fetch"),
@@ -66,14 +69,43 @@ TOOLCHAIN = sh("engine/toolchain.sh", "check")
                 sh("engine/smoke.sh"),
             ],
         ),
-        (["payload", "patches"], [sh("engine/check-patches.sh")]),
+        (["payload", "check"], [sh("engine/check-patches.sh")]),
+        (
+            ["payload", "build", "configure", "fetch"],
+            [
+                TOOLCHAIN,
+                sh("engine/build.sh", "fetch"),
+                sh("engine/build.sh", "configure"),
+            ],
+        ),
         (["toolchain", "list"], [sh("engine/toolchain.sh", "list")]),
-        (["app", "macos", "--standalone"], [sh("macos/macos-app.sh", STANDALONE="1")]),
-        (["app", "macos-launcher"], [sh("macos/launcher.sh")]),
+        (
+            ["app", "build", "macos", "--standalone"],
+            [sh("macos/macos-app.sh", STANDALONE="1")],
+        ),
+        (["app", "build", "macos-launcher"], [sh("macos/launcher.sh")]),
+        (["app", "test", "windows"], [sh("windows/gui-test.sh")]),
     ],
 )
 def test_a_command_line_runs_its_scripts(argv, steps):
     assert cli.plan(argv) == steps
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["payload", "build", "core", "--fonts", "full"],
+        ["payload", "build", "dist", "--repo", "core"],
+        ["app", "build", "flatpak", "--standalone"],
+        ["app", "build", "macos", "--arch", "arm64"],
+        ["app", "test", "windows", "--arch", "arm64"],
+        ["release", "check", "distros", "--on", "h"],
+        ["release", "check", "downloads", "--distros", "a"],
+    ],
+)
+def test_an_option_for_a_stage_or_target_not_run_is_refused(argv):
+    with pytest.raises(cli.RefusedError, match="which this does not run"):
+        cli.plan(argv)
 
 
 def test_ship_is_called_here_with_its_phases_and_options():
@@ -104,8 +136,18 @@ def test_an_unknown_phase_is_refused():
 
 # Commands that need arguments, and a line for each to plan with.
 NEEDS_ARGUMENTS = {
-    "on": ["linux-arm64", "app", "flatpak-smoke"],
+    "on": ["linux-arm64", "app", "test", "flatpak"],
     "release bump": ["0.7.2"],
+    "app build": ["macos"],
+    "app check": ["flatpak"],
+    "app test": ["flatpak"],
+    "release check": ["distros"],
+    "container run": ["payload"],
+    "container export": ["payload"],
+    "container shell": ["linux"],
+    "container versions": ["linux"],
+    "container image": ["linux"],
+    "container clean": ["flatpak", "--yes"],
 }
 
 
@@ -119,6 +161,7 @@ def every_command_line() -> list[list[str]]:
         cli.add_linux,
         cli.add_release,
         cli.add_components,
+        cli.add_container,
         cli.add_others,
     ):
         add(groups)
@@ -128,17 +171,17 @@ def every_command_line() -> list[list[str]]:
 def test_every_listed_command_plans():
     """The top-level help lists them, so each must at least plan."""
     lines = every_command_line()
-    assert len(lines) > 30
+    assert len(lines) > 25
     for line in lines:
         assert cli.plan(line), line
 
 
 def test_every_step_names_a_script_that_exists():
     for argv in (
-        ["payload", "all"],
-        ["payload", "container"],
-        ["app", "flatpak"],
-        ["linux", "gui"],
+        ["payload", "build"],
+        ["container", "run", "payload"],
+        ["app", "build", "flatpak"],
+        ["linux", "screenshot"],
     ):
         for step in cli.plan(argv):
             if isinstance(step, Step) and step.argv[0] == "sh" and step.argv[1] != "-c":
@@ -152,7 +195,7 @@ def test_bench_passes_its_options_on():
 
 def test_an_unknown_option_is_refused_where_nothing_takes_it():
     with pytest.raises(SystemExit):
-        cli.plan(["payload", "core", "--v8jobs", "4"])
+        cli.plan(["payload", "build", "core", "--v8jobs", "4"])
 
 
 def test_linux_is_called_here_with_its_options(monkeypatch):
@@ -178,7 +221,7 @@ def test_an_environment_variable_still_sets_a_knob(monkeypatch):
     monkeypatch.setenv("PAYLOAD", "/p")
     monkeypatch.delenv("ARCH", raising=False)
     monkeypatch.delenv("DIST", raising=False)
-    (call,) = cli.plan(["linux", "gui"])
+    (call,) = cli.plan(["linux", "screenshot"])
     assert call.args[0].payload == Path("/p")
 
 
@@ -187,7 +230,8 @@ def test_matrix_takes_its_lists_as_words(monkeypatch):
         monkeypatch.delenv(name, raising=False)
     (call,) = cli.plan([
         "release",
-        "matrix",
+        "check",
+        "distros",
         "--distros",
         "a:1 b:2",
         "--arches",
@@ -205,11 +249,11 @@ def test_matrix_takes_its_lists_as_words(monkeypatch):
     [
         (["release", "status"], OriginOptions("status"), {}),
         (
-            ["release", "extras", "--dry-run"],
+            ["release", "upload", "--dry-run"],
             OriginOptions("extras", dry_run=True),
             {"DRY": "1"},
         ),
-        (["release", "windows"], OriginOptions("windows"), {}),
+        (["release", "upload", "windows"], OriginOptions("windows"), {}),
     ],
 )
 def test_the_origin_verbs_are_called_here(argv, options, env, monkeypatch):
@@ -220,7 +264,7 @@ def test_the_origin_verbs_are_called_here(argv, options, env, monkeypatch):
 
 def test_dry_still_works_as_an_environment_variable(monkeypatch):
     monkeypatch.setenv("DRY", "1")
-    (call,) = cli.plan(["release", "extras"])
+    (call,) = cli.plan(["release", "upload"])
     assert call.args[0].dry_run
 
 
@@ -236,8 +280,8 @@ def no_knobs(monkeypatch):
 @pytest.mark.parametrize(
     "argv",
     [
-        ["payload", "export"],
-        ["payload", "container"],
+        ["container", "export", "payload"],
+        ["container", "run", "payload"],
         ["tidy"],
     ],
 )
@@ -252,7 +296,7 @@ def test_build_root_reaches_a_command_done_in_this_process(argv, no_knobs):
     "argv",
     [
         ["release", "status"],
-        ["release", "extras"],
+        ["release", "upload"],
         ["linux", "lint"],
         ["container", "image", "linux"],
     ],
@@ -266,9 +310,9 @@ def test_a_command_offers_only_the_options_it_reads(argv, no_knobs):
 
 
 def test_the_container_builds_what_payload_all_builds():
-    """One sequence, run here by `payload all` and in the container by
-    `payload container`: the two were written out twice."""
-    _toolchain, *steps = cli.plan(["payload", "all"])
+    """One sequence, run here by `payload build` and in the container by
+    `container run payload`: the two were written out twice."""
+    _toolchain, *steps = cli.plan(["payload", "build"])
     assert buildbox.ALL.splitlines() == [
         "set -e",
         *(shlex.join(step.argv[1:]) for step in steps),
@@ -276,10 +320,12 @@ def test_the_container_builds_what_payload_all_builds():
 
 
 def test_the_payload_container_is_the_whole_build_or_one_script(no_knobs):
-    (call,) = cli.plan(["payload", "container", "--arch", "arm64", "--memory", "12g"])
+    (call,) = cli.plan([
+        "container", "run", "payload", "--arch", "arm64", "--memory", "12g"
+    ])  # fmt: skip
     assert call.fn.__name__ == "all"
     assert call.fn.__self__.options == BoxOptions(arch="arm64", memory="12g")
-    (call,) = cli.plan(["payload", "container", "dist.sh", "--fonts", "core"])
+    (call,) = cli.plan(["container", "run", "payload", "dist.sh", "--fonts", "core"])
     assert call.fn.__name__ == "script"
     assert call.args == ("dist.sh", ["--fonts", "core"])
 
@@ -305,16 +351,16 @@ def test_dropping_the_flatpak_volume_asks_unless_yes(no_knobs):
 
 
 def test_the_flatpak_defaults_to_this_machines_architecture(no_knobs):
-    (call,) = cli.plan(["app", "flatpak-smoke"])
+    (call,) = cli.plan(["app", "test", "flatpak"])
     assert call == cli.Call(flatpak.run, (FlatpakOptions("smoke", arch=host_arch()),))
-    (call,) = cli.plan(["app", "flatpak", "--arch", "amd64"])
+    (call,) = cli.plan(["app", "build", "flatpak", "--arch", "amd64"])
     assert call.args[0] == FlatpakOptions("build", arch="amd64")
 
 
 def test_released_gui_is_every_builder_unless_one_is_named():
-    (call,) = cli.plan(["release", "released-gui", "--on", "h"])
+    (call,) = cli.plan(["release", "check", "downloads", "--on", "h"])
     assert call.args[0].on == "h"
-    (call,) = cli.plan(["release", "released-gui"])
+    (call,) = cli.plan(["release", "check", "downloads"])
     assert call.args[0].on is None
 
 
@@ -390,5 +436,5 @@ def test_a_dry_toolchain_install_installs_nothing():
 
 def test_linux_gui_takes_a_language(monkeypatch):
     monkeypatch.delenv("LINUX_LANG", raising=False)
-    (call,) = cli.plan(["linux", "gui", "--lang", "fr_FR.UTF-8"])
+    (call,) = cli.plan(["linux", "screenshot", "--lang", "fr_FR.UTF-8"])
     assert call.args[0].lang == "fr_FR.UTF-8"

@@ -46,7 +46,7 @@ LIVE_LIB="$OUT/core/bin/libdoctrenderer.dylib"
 cmd_build() {
     [ -d "$OUT/core/third_party/install" ] || {
         echo "FATAL: no third-party tree at $OUT/core/third_party/install." >&2
-        echo "       Run the ordinary build first: lb payload configure" >&2
+        echo "       Run the ordinary build first: lb payload build configure" >&2
         exit 1
     }
     mkdir -p "$JSC_DIR"
@@ -88,7 +88,7 @@ cmd_check() {
         exit 1
     }
     [ -f "$LIVE_LIB" ] || {
-        echo "FATAL: no ordinary build at $LIVE_LIB -- run lb payload core" >&2
+        echo "FATAL: no ordinary build at $LIVE_LIB -- run lb payload build core" >&2
         exit 1
     }
 

@@ -50,6 +50,8 @@ def test_help_lists_every_command():
         cli.add_app,
         cli.add_linux,
         cli.add_release,
+        cli.add_components,
+        cli.add_container,
         cli.add_others,
     ):
         add(groups)
@@ -98,7 +100,7 @@ def test_patches_still_apply_to_the_pins():
     still ends with "patch queue: clean": so the SKIP lines are what decide
     whether this checked anything.
     """
-    done = lb("payload", "patches")
+    done = lb("payload", "check")
     skipped = [line for line in done.stdout.splitlines() if line.startswith("SKIP")]
     if skipped:
         pytest.skip(f"pinned sources not cloned here: {skipped[0]}")

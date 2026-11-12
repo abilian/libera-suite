@@ -11,12 +11,12 @@
 # Libera Suite stays as it is, and refuses one whose --version is not that
 # release. Testing whatever was installed is how 0.7.0 was declared to draw a
 # window by a 0.5.0 that happened to be on the builder. From a Mac, which can run
-# none of this itself, `lb release released-gui` copies it to every Linux
+# none of this itself, `lb release check downloads` copies it to every Linux
 # builder (or --on one), runs it, and fetches the screenshots into build/out/.
 # A builder missing the tools says so, with the line that installs them, and
 # is not counted as a pass.
 #
-# `lb linux gui` does this from the build tree, in the test container. It
+# `lb linux screenshot` does this from the build tree, in the test container. It
 # proves the code opens a window; it says nothing about the artifact anybody
 # downloads, which on Linux is a Flatpak whose GTK and WebKit come from the
 # GNOME runtime rather than from the distribution. That is a different WebKit,
@@ -57,7 +57,7 @@ DOC=
 OUT=
 
 # The verdict is a line of its own, __LIBERA__=ok or the reason, which is what
-# `lb release released-gui` reads: over ssh the exit status is the login
+# `lb release check downloads` reads: over ssh the exit status is the login
 # shell's, and a word like PASS can turn up in a path or in the app's log.
 say()  { printf '%s\n' "$*"; }
 step() { printf '\n==> %s\n' "$*"; }

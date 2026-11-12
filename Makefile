@@ -123,7 +123,7 @@ test-e2e: ## the editor in headless Chromium; needs a payload and a browser
 
 # Real windows, on this platform, and Word on a Mac: skipped by every other run,
 # because they take over the screen for minutes. On Linux they need a display --
-# `lb linux gui-test` brings an Xvfb one.
+# `lb linux test --gui` brings an Xvfb one.
 test-gui: ## the application in real windows, in the engine that ships; takes over the screen
 	uv run pytest -m gui
 

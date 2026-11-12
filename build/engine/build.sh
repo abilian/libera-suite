@@ -167,7 +167,7 @@ require_case_sensitive() {
 # (the Windows one's does, because an ssh session cannot save HTTPS
 # credentials) clones over ssh, and ssh, with no terminal, put GitHub's
 # unknown host key to SSH_ASKPASS: on Git for Windows a dialog nobody could
-# see, and a `payload all` that sat on its first clone for an hour. BatchMode
+# see, and a `payload build` that sat on its first clone for an hour. BatchMode
 # makes that a failure in half a second (measured).
 export GIT_TERMINAL_PROMPT=0
 export GIT_ASKPASS=true
@@ -213,7 +213,7 @@ fetch_repo() {
             echo "       for a username here is usually GitHub throttling" >&2
             echo "       unauthenticated traffic." >&2
             echo "       Wait and run it again, or fetch from local clones:" >&2
-            echo "           MIRROR=/path/to/clones lb payload fetch" >&2
+            echo "           MIRROR=/path/to/clones lb payload build fetch" >&2
             echo "       Host key verification failed: git config rewrites the" >&2
             echo "       URL to ssh, which has never met github.com here." >&2
             echo "       Run ssh -T git@github.com once, by hand, and check the key." >&2

@@ -157,7 +157,7 @@ def choose_payload(options: LinuxOptions, arch: str) -> tuple[Path | None, Path 
     """The component wheels to install, or a payload folder to mount.
 
     The wheels by default, because installing them is what a user does: the
-    folder asked for, else the one `lb components wheels` writes, which on a
+    folder asked for, else the one `lb components build` writes, which on a
     Linux machine of this architecture holds its core.
     """
     if options.payload:

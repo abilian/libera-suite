@@ -424,7 +424,7 @@ check_clang_version() {
         echo "FATAL: clang $major, and V8 8.9 demands exactly $wanted on Linux arm64." >&2
         echo "       nc-build.py aborts on anything else, around its arm64 check." >&2
         echo >&2
-        echo "  build it in the container instead:  lb payload container" >&2
+        echo "  build it in the container instead:  lb container run payload" >&2
         return 1
     fi
 
@@ -436,7 +436,7 @@ check_clang_version() {
         echo "       into a thirty-minute build." >&2
         echo >&2
         echo "  the container pins clang 14 and is the supported path:" >&2
-        echo "      lb payload container" >&2
+        echo "      lb container run payload" >&2
         return 1
     fi
     return 0

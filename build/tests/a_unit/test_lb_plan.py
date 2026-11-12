@@ -125,20 +125,20 @@ MAC = Builder("macos-x86_64", "mac", None, False, "~/r")
 
 
 def test_each_platform_builds_its_core_its_own_way():
-    assert builders.build_command(ARM) == "payload container --arch arm64"
-    assert builders.build_command(WINDOWS) == "payload all"
-    assert builders.build_command(MAC) == "payload all"
+    assert builders.build_command(ARM) == "container run payload --arch arm64"
+    assert builders.build_command(WINDOWS) == "payload build"
+    assert builders.build_command(MAC) == "payload build"
 
 
 def test_each_platform_bundles_what_its_users_download():
     flatpak = builders.bundle_of(ARM, "0.4.0")
     assert flatpak == builders.Bundle(
-        "app flatpak --arch arm64",
+        "app build flatpak --arch arm64",
         ("build/out/libera-0.4.0-arm64.flatpak",),
     )
     installer = builders.bundle_of(WINDOWS, "0.4.0")
     setup = "build/out/bundles/Libera-Suite-Setup-0.4.0.exe"
-    assert installer == builders.Bundle("app windows", (setup, f"{setup}.sha256"))
+    assert installer == builders.Bundle("app build windows", (setup, f"{setup}.sha256"))
     assert builders.bundle_of(MAC, "0.4.0") is None
 
 

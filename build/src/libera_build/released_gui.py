@@ -1,6 +1,6 @@
-"""`lb release released-gui`: does what users download open a window?
+"""`lb release check downloads`: does what users download open a window?
 
-`lb linux gui` opens one from the build tree, in the test container: it proves
+`lb linux screenshot` opens one from the build tree, in the test container: it proves
 the code opens a window and says nothing about the artifact anybody downloads,
 which on Linux is a Flatpak whose GTK and WebKit come from the GNOME runtime
 rather than the distribution. A different WebKit, and the one users get.

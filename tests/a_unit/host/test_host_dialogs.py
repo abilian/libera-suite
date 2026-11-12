@@ -1,7 +1,7 @@
 """What the close prompt decides, once somebody has answered it.
 
 The GTK dialog itself is checked in the container, under Xvfb, by
-`lb linux dialog`: whether a window appears and whether the answer gets back
+`lb linux screenshot --dialog`: whether a window appears and whether the answer gets back
 across a thread is a thing only a display can settle. The Windows message box
 is `win32.ask`, and what its Yes, No and Cancel mean is pinned below. What is here is the half
 that can be wrong on any platform -- which button means keep the window, and

@@ -15,9 +15,9 @@ There is one directory per kind of thing:
 | `upstream/` | what we build from: `pins.toml`, the upstream revisions by SHA, and `patches/<repo>/`, our changes as `git format-patch` output. `engine/build.sh fetch` reads its repo list from the pins, so the two cannot drift |
 | `engine/` | the payload build, in shell, run here or in the build container: `build.sh` (fetch, patch, configure, build `core`: x2t and the native libraries), `payload.sh` (sdkjs, web-apps, fonts, blanks, dictionaries, branding), `dist.sh` (the tarballs and the manifest), `smoke.sh` (does it convert documents, judged by what it wrote), `check-patches.sh`, `toolchain.sh`, `doctrenderer-jsc.sh`, and `common.sh`, which the rest source |
 | `payload/` | what ships beside upstream: `theme/` (our branding, copied into `web-apps/theme/` at payload time), `dictionaries.txt` and `fonts-core.txt` (what ships, out of repositories holding far more) |
-| `docker/` | the image for `lb payload container`: the engine in a pinned Ubuntu 22.04 container, the reproducible Linux build, and the only way to build Linux from the Mac |
+| `docker/` | the image for `lb container run payload`: the engine in a pinned Ubuntu 22.04 container, the reproducible Linux build, and the only way to build Linux from the Mac |
 | `test-linux/` | the test image and its two smoke scripts, for `lb linux` |
-| `flatpak/` | the Flatpak's manifest and image, for `lb app flatpak`: the Linux install channel |
+| `flatpak/` | the Flatpak's manifest and image, for `lb app build flatpak`: the Linux install channel |
 | `macos/` | the `.app`: `macos-app.sh`, `macos-icon.py`, `launcher.m` |
 | `windows/` | the installer and its toolchain: `windows-app.sh`, `windows-setup.ps1`, `msvc-env.sh`, `vcpkg.sh`, and what PyInstaller and Inno Setup read |
 | `install/` | what runs on users' machines: `install.sh` (`curl … \| sh`) and `install.ps1` (`irm … \| iex`), published at the origin's root, and `released-gui.sh`, which opens a window from the *published* artifact on a machine it is installed on |
@@ -30,7 +30,7 @@ There is one directory per kind of thing:
     lb help payload           the commands in one group (lb payload --help)
     lb help payload core      one command: its options, and examples
 
-Each command says which script it runs before running it, so the scripts stay usable on their own for an argument `lb` does not pass. `lb on PLATFORM COMMAND…` runs any of them on a builder from `builders.toml`. The Makefile has only the standard jobs, plus `make payload` (`lb payload all`) and `make ship` (`lb release ship`). The builders, which have nothing installed, run it as `python3 -m libera_build` with `build/src` and `src` on `PYTHONPATH`.
+Each command says which script it runs before running it, so the scripts stay usable on their own for an argument `lb` does not pass. `lb on PLATFORM COMMAND…` runs any of them on a builder from `builders.toml`. The Makefile has only the standard jobs, plus `make payload` (`lb payload build`) and `make ship` (`lb release ship`). The builders, which have nothing installed, run it as `python3 -m libera_build` with `build/src` and `src` on `PYTHONPATH`.
 
 Environment knobs, all with working defaults. The ones a command takes are also its options (`--build-root`, `--mirror`, `--v8-jobs`, `--core-jobs`, `--memory`, `--arch`, `--build-dir`, `--volume`, `--dist`), and its `--help` names the variable:
 
@@ -47,9 +47,9 @@ Environment knobs, all with working defaults. The ones a command takes are also 
 | `DOCKER_MEMORY` | a ceiling for the build container, e.g. `8g`. Without one the VM takes what the build asks for and the *host* runs out. On a 16 GB Mac that arrives as the build being killed from outside with nothing in the log |
 | `V8_KEEP_BUILD_DIR` | default 1: an interrupted V8 build resumes where it stopped |
 | `INSTALL_MANIFEST` | `dist.sh` also copies the manifest into the wheel |
-| `ARCH` | the containers: the architecture to build for; `payload container` defaults to `amd64`, the others to this machine's |
-| `BUILD_DIR` | `payload container` only: where the container's build tree goes. Defaults to `$BUILD_ROOT/linux-<arch>`, a directory on a real disk |
-| `VOLUME` | `payload container` only: a named Docker volume, on the VM's own disk |
+| `ARCH` | the containers: the architecture to build for; default this machine's |
+| `BUILD_DIR` | `container run payload` and `container export payload` only: where the container's build tree goes. Defaults to `$BUILD_ROOT/linux-<arch>`, a directory on a real disk |
+| `VOLUME` | `container run payload` and `container export payload` only: a named Docker volume, on the VM's own disk |
 
 `build.sh` points `BOTO_CONFIG` at an empty file: depot_tools shells out to gsutil, which picks up `~/.boto` and then fails on stale credentials even for public buckets. `--no_auth` no longer has any effect. The problem belongs to the local environment, so the script handles it and V8 stays unpatched.
 

@@ -90,7 +90,7 @@ def test_only_narrows_and_refuses_a_builder_that_is_not_there():
 
 
 def test_a_builder_with_no_dist_is_read_where_its_build_writes(monkeypatch):
-    """`payload container` on Linux, `payload all` elsewhere, each under that
+    """`container run payload` on Linux, `payload build` elsewhere, each under that
     system's default BUILD_ROOT; this machine's own, here. `build` checked
     one directory and `collect` fetched from another."""
     monkeypatch.setenv("BUILD_ROOT", "/here")

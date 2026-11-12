@@ -63,7 +63,7 @@ def can_open_a_window() -> str | None:
     """None when a window can be put on screen here, else why not."""
     if sys.platform.startswith("linux"):
         if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
-            return "no display: run it under xvfb-run, or `lb linux gui-test`"
+            return "no display: run it under xvfb-run, or `lb linux test --gui`"
         from libera import gui
 
         cannot = gui.explain_why_no_window()

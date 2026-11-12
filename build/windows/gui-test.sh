@@ -22,7 +22,7 @@ REPO="$(cd "$BUILD/.." && pwd)"
 [ -n "$EXE" ] || { echo "FATAL: this runs the Windows gui tier; run it on Windows" >&2; exit 1; }
 
 PAYLOAD_DIR="${LIBERA_PAYLOAD:-$OUT/payload}"
-[ -d "$PAYLOAD_DIR" ] || { echo "FATAL: no payload at $PAYLOAD_DIR -- lb payload all" >&2; exit 1; }
+[ -d "$PAYLOAD_DIR" ] || { echo "FATAL: no payload at $PAYLOAD_DIR -- lb payload build" >&2; exit 1; }
 # Fifteen minutes: the tier takes two, a cold payload two more.
 BUDGET="${GUI_TEST_BUDGET:-900}"
 TASK="libera-gui-test"

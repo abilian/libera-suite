@@ -105,7 +105,7 @@ fi
 def watch(ctx: Context, b: Builder, name: str, log: Path, started: float) -> str:
     """Poll a detached job until it ends; its verdict line, "" for none.
 
-    A heartbeat rather than the output itself: `lb payload container` is
+    A heartbeat rather than the output itself: `lb container run payload` is
     tens of thousands of lines and two of them interleaved is noise; silence
     for two hours is worse. The log has everything. A builder that does not
     answer for `ctx.unreachable_seconds` ends the watch, saying the job may

@@ -1,5 +1,5 @@
 # The Windows payload and installer, built on a hosted runner the way the
-# Windows builder builds them: `lb payload all`, then `lb app windows`.
+# Windows builder builds them: `lb payload build`, then `lb app build windows`.
 #
 #   patches     every push that touches build/: does the patch queue still apply
 #               on Windows, with line-ending conversion off? About a minute.
@@ -93,11 +93,11 @@ jobs:
 
       # configure is where the third-party builder runs: cmake asks for every
       # dependency, and each one missing its ok_marker is built.
-      - name: lb payload fetch, then configure
+      - name: lb payload build fetch, then configure
         run: |
           lb() { PYTHONPATH="$PWD/build/src:$PWD/src" python -m libera_build "$@"; }
-          lb payload fetch
-          lb payload configure
+          lb payload build fetch
+          lb payload build configure
 
       - name: Components built now
         id: after
@@ -150,15 +150,15 @@ jobs:
       # phases, in the same order: payload all ends with the smoke test, which
       # converts a document and reads the text back, and app windows freezes
       # the application and makes the installer.
-      - name: lb payload all
+      - name: lb payload build
         run: |
           lb() { PYTHONPATH="$PWD/build/src:$PWD/src" python -m libera_build "$@"; }
-          lb payload all
+          lb payload build
 
-      - name: lb app windows
+      - name: lb app build windows
         run: |
           lb() { PYTHONPATH="$PWD/build/src:$PWD/src" python -m libera_build "$@"; }
-          lb app windows
+          lb app build windows
 
       # By name, from the version files, so a run that made something else
       # fails here instead of uploading it.

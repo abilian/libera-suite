@@ -234,7 +234,7 @@ def test_an_artifact_under_its_floor_fails_the_build(driver, home):
 
 
 def test_bundles_makes_the_installer_on_windows_and_brings_it_here(driver, home):
-    """The whole phase against a Windows builder: `lb app windows` run there,
+    """The whole phase against a Windows builder: `lb app build windows` run there,
     the installer looked for there, then it and its SHA-256 fetched here."""
     win = Builder("windows-x86_64", "win", "C:/b/out/dist", False, "~/checkout")
     ctx = replace(context(driver, home, ["update", "bundles"]), builders=[win])
@@ -247,7 +247,7 @@ def test_bundles_makes_the_installer_on_windows_and_brings_it_here(driver, home)
     (made / f"{setup.name}.sha256").write_text(f"0  {setup.name}\n")
     builders.bundles(ctx)
     log = (driver / "tmp" / "remote" / "windows-x86_64.log").read_text()
-    assert "stand-in lb app windows" in log
+    assert "stand-in lb app build windows" in log
     here = driver / "build" / "out" / "bundles"
     assert (here / setup.name).stat().st_size == MIN_BUNDLE_BYTES
     assert (here / f"{setup.name}.sha256").read_text() == f"0  {setup.name}\n"
@@ -463,7 +463,9 @@ def test_native_packs_only_a_build_newer_than_its_trees(
     else:
         with pytest.raises(RefusedError, match="older than the trees"):
             here.native(ctx)
-    assert packed == ([["uv", "run", "lb", "payload", "dist"]] if packs else [])
+    assert packed == (
+        [["uv", "run", "lb", "payload", "build", "dist"]] if packs else []
+    )
 
 
 class Flaky:
@@ -567,7 +569,7 @@ WIN = Builder("windows-x86_64", "win", "C:/b/out/dist", False, "~/checkout")
 
 
 def test_the_components_phase_brings_each_builders_core_wheel_here(driver, home):
-    """`lb components wheels` run there, its wheel looked for there, then
+    """`lb components build` run there, its wheel looked for there, then
     fetched to build/out/pypi here, where publish uploads from."""
     ctx = replace(context(driver, home, ["update", "components"]), builders=[WIN])
     update.run(ctx)
@@ -580,7 +582,7 @@ def test_the_components_phase_brings_each_builders_core_wheel_here(driver, home)
     components.run(ctx)
 
     log = (driver / "tmp" / "remote" / "windows-x86_64.log").read_text()
-    assert "stand-in lb components wheels --out build/out/pypi/9.9" in log
+    assert "stand-in lb components build --out build/out/pypi/9.9" in log
     here = driver / "build" / "out" / "pypi" / "9.9" / wheel.name
     assert here.stat().st_size == MIN_CORE_BYTES
 

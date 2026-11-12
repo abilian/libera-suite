@@ -183,7 +183,9 @@ def test_the_artifacts_carry_no_apple_metadata() -> None:
 
     dist = built_dist(payload.PAYLOAD_VERSION)
     if dist is None:
-        pytest.skip("needs built artifacts: `lb payload dist`, or set LIBERA_DIST")
+        pytest.skip(
+            "needs built artifacts: `lb payload build dist`, or set LIBERA_DIST"
+        )
 
     archives = sorted(dist.glob("*.tar.gz"))
     # An empty directory would make every assertion below vacuous, and a check

@@ -4,7 +4,7 @@
 #   sh build/windows/windows-app.sh          icon, freeze, installer
 #
 # Freezes the environment `uv run` syncs, which holds the components that
-# `uv sync` builds (an hour the first time, minutes after a `payload all`),
+# `uv sync` builds (an hour the first time, minutes after a `payload build`),
 # and needs build/windows/windows-setup.ps1's tools, Inno Setup among them.
 # Writes:
 #
@@ -151,7 +151,7 @@ SETUP="$WORK/Libera-Suite-Setup-$APP_VERSION.exe"
 echo
 echo "installer: $SETUP ($(du -h "$SETUP" | cut -f1))"
 
-# Beside the Flatpak bundles, which is where `lb release extras` publishes
+# Beside the Flatpak bundles, which is where `lb release upload` publishes
 # from, with its SHA-256 in sha256sum's format: install.ps1 checks the
 # download against it, and anyone can by hand with Get-FileHash.
 BUNDLES="$REPO/build/out/bundles"

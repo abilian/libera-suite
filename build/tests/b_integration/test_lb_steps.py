@@ -13,6 +13,7 @@ import sys
 import pytest
 from libera_build import cli, process
 from libera_build.cli import Step
+from libera_build.containers import host_arch
 from libera_build.report import RefusedError
 
 SRC = cli.REPO / "src"
@@ -106,16 +107,19 @@ def test_a_builder_never_imports_the_application():
 
 
 def test_build_root_reaches_the_code_and_goes_no_further(tmp_path, capsys, monkeypatch):
-    """`payload export` done in this process, with --build-root: it looks
+    """`container export payload` done in this process, with --build-root: it looks
     under that root, and the variable is ours again afterwards."""
     for name in ("ARCH", "BUILD_DIR", "VOLUME"):
         monkeypatch.delenv(name, raising=False)
     before = os.environ.get("BUILD_ROOT")
     assert (
-        cli.run_steps(cli.plan(["payload", "export", "--build-root", str(tmp_path)]))
+        cli.run_steps(
+            cli.plan(["container", "export", "payload", "--build-root", str(tmp_path)])
+        )
         == 1
     )
-    assert f"no manifest.json in {tmp_path / 'linux-amd64'}" in capsys.readouterr().err
+    built_for = tmp_path / f"linux-{host_arch()}"
+    assert f"no manifest.json in {built_for}" in capsys.readouterr().err
     assert os.environ.get("BUILD_ROOT") == before
 
 

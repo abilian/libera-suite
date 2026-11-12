@@ -107,7 +107,7 @@ def parse(text: str, source: str) -> list[Builder]:
 
 
 def gui_remotes(builders: list[Builder]) -> list[Builder]:
-    """The remote Linux and Windows builders: the ones `released-gui` opens a
+    """The remote Linux and Windows builders: the ones `release check downloads` opens a
     window on. A Mac has nothing published to open: Homebrew and pip build it."""
     return [
         b
@@ -133,8 +133,8 @@ def dist_of(b: Builder) -> str:
     """The parent of the per-version directories on that builder, `~` left for
     whoever reaches it to expand: its `dist`, else where its build writes them.
 
-    `ship` builds a Linux core with `payload container`, into
-    $BUILD_ROOT/linux-<arch> there, and anything else with `payload all`, into
+    `ship` builds a Linux core with `container run payload`, into
+    $BUILD_ROOT/linux-<arch> there, and anything else with `payload build`, into
     $BUILD_ROOT. A remote builder's $BUILD_ROOT is taken to be its system's
     default; this machine's is whatever it is here.
     """

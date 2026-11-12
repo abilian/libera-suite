@@ -1,4 +1,4 @@
-"""`lb release status`, `extras` and `windows`.
+"""`lb release status` and `lb release upload [windows]`.
 
 The two that upload ask first, on the terminal, unless --yes or --dry-run.
 `ship`'s publish calls `publish` directly, and asks once, for the whole

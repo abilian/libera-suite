@@ -1,4 +1,4 @@
-"""`lb release matrix`: does the Linux converter about to be published run
+"""`lb release check distros`: does the Linux converter about to be published run
 where we say it runs?
 
 For each architecture and each image, it unpacks that architecture's

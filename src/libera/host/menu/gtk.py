@@ -8,7 +8,7 @@ hands it to `Gtk.Application.set_menubar`. That is the menu GNOME stopped
 exporting in 3.32, so the worry was that it would render nowhere -- but
 pywebview's windows are `Gtk.ApplicationWindow`s, which draw the application's
 menubar themselves whenever the shell has not claimed it. Measured before
-relying on it: `lb linux gui` screenshots File, Edit, View and Help across
+relying on it: `lb linux screenshot` screenshots File, Edit, View and Help across
 the top of the window. So the whole bar is one list, handed to
 `webview.start(menu=...)` before the application starts.
 

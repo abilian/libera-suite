@@ -21,7 +21,7 @@ The whole of a release, in order. Each step says what to run and what has to be 
 ```sh
 git switch devel && git pull
 make verify                         # lint, the whole suite, docs links, the patch queue, the converter
-lb payload patches                  # the queue still applies to the pinned SHAs
+lb payload check                  # the queue still applies to the pinned SHAs
 ```
 
 - `CHANGES.md`: the section's `Unreleased` becomes the date.
@@ -32,8 +32,8 @@ lb payload patches                  # the queue still applies to the pinned SHAs
 
 ```sh
 lb release ship update native build components bundles wheel stage
-lb on linux-x86_64 linux gui-test                           # the gui tier, WebKitGTK
-lb on windows-x86_64 app windows-gui-test                   # the gui tier, WebView2
+lb on linux-x86_64 linux test --gui                           # the gui tier, WebKitGTK
+lb on windows-x86_64 app test windows                   # the gui tier, WebView2
 make test-gui                                               # the gui tier, here
 ```
 
@@ -52,7 +52,7 @@ lb release status                   # after any pause: where the release has got
 **5. Check what users get.**
 
 ```sh
-lb release released-gui             # the published Flatpak and Windows installer, screenshotted on the builders
+lb release check downloads             # the published Flatpak and Windows installer, screenshotted on the builders
 ```
 
 On a machine that has never had Libera Suite: `curl -fsSL https://cdn.abilian.com/libera/install.sh | sh` on Linux and macOS, `irm https://cdn.abilian.com/libera/install.ps1 | iex` on Windows, then open a document. `libera --payload-status` names the new payload.
@@ -124,11 +124,11 @@ step you are on and does not ask you to remember.
 | `update` | Send the commit you are at to each builder over ssh and check it out there, detached; refuse a dirty builder. Any branch, pushed or not: only `publish` wants the commit on a remote, because the manifest names it. | the driving machine |
 | `native` | The macOS core and its tarballs. | **a Mac, and only this** |
 | `build` | The Linux and Windows cores, on their own machines, in parallel. Hours. | the Linux and Windows builders |
-| `components` | `lb components wheels` on each builder: its platform's `libera-core` wheel, built from the core's sdist on the tree `build` has just brought to the pin, and, here, that sdist and `libera-web`'s wheel. All of them land in `build/out/pypi/<version>/`. | each builder, and the Mac |
+| `components` | `lb components build` on each builder: its platform's `libera-core` wheel, built from the core's sdist on the tree `build` has just brought to the pin, and, here, that sdist and `libera-web`'s wheel. All of them land in `build/out/pypi/<version>/`. | each builder, and the Mac |
 | `bundles` | The two `.flatpak` bundles (neither can be cross-built) and the Windows installer, each brought to the driving machine. | a machine of each platform |
 | `wheel` | `make verify`, then the wheel. | anywhere |
 | `stage` | Every file `publish` uploads, copied to `build/out/release/<version>/`; installed on every platform from there, and a window opened from each bundle; then stamped with the commit and each file's hash. See [Stage](#stage). | the driving machine and each builder |
-| | A Windows build later than the rest, on its own: `lb release ship bundles --only windows-x86_64`, then `lb release windows`, which moves only its own pointer. | the driving machine |
+| | A Windows build later than the rest, on its own: `lb release ship bundles --only windows-x86_64`, then `lb release upload windows`, which moves only its own pointer. | the driving machine |
 | `publish` | The staged files, refused if the stamp no longer holds: `libera-core` and `libera-web`, then `libera`, to PyPI; a file PyPI already has is skipped, so a publish that broke part way is run again. Then the bundles, signed, `install.sh` and `install.ps1` to the CDN; then `bundles/latest`, which moves both install scripts to the new version. | anywhere with the credentials |
 | `verify` | On every platform, `libera` installed from PyPI alone into a new environment and a document converted: what `stage` checked, now against what PyPI serves. | the driving machine and each builder |
 
@@ -162,7 +162,7 @@ Three constraints have each cost somebody a build:
 
 **There is no macOS container.** A Mac builds its own core natively. Everything else about a Mac release follows from that one fact.
 
-**A Linux core is built in a container, whatever the host is.** `lb payload container` exists so that a Linux payload never depends on what the host has installed. That holds on a Linux builder as much as on a Mac: the host's own architecture is one more container target, so do not build it natively there. An Apple Silicon Mac can stand in, building `linux/arm64` natively and `linux/amd64` under Rosetta, which is the fallback when a builder is unreachable.
+**A Linux core is built in a container, whatever the host is.** `lb container run payload` exists so that a Linux payload never depends on what the host has installed. That holds on a Linux builder as much as on a Mac: the host's own architecture is one more container target, so do not build it natively there. An Apple Silicon Mac can stand in, building `linux/arm64` natively and `linux/amd64` under Rosetta, which is the fallback when a builder is unreachable.
 
 **Flatpak bundles cannot be cross-built.** `flatpak-builder` runs every build command inside bubblewrap, which installs a seccomp filter compiled for the target architecture. Under emulation the kernel is still the host's, so it is rejected:
 
@@ -207,14 +207,14 @@ git tag -a 0.1.0 -m 'Libera Suite 0.1.0'
 
 Then `lb release plan`, and `lb release status` after any pause: a release runs over days and several machines.
 
-**The payload is never skippable.** A release once shipped an `editors.tar.gz` eighteen hours older than the licence text inside it, because the core tarball was present, the whole native half was skipped, and `dist.sh` (which repackages the theme, the branding and the attribution) never ran. `native` runs `lb payload dist` for that reason, every time.
+**The payload is never skippable.** A release once shipped an `editors.tar.gz` eighteen hours older than the licence text inside it, because the core tarball was present, the whole native half was skipped, and `dist.sh` (which repackages the theme, the branding and the attribution) never ran. `native` runs `lb payload build dist` for that reason, every time.
 
-**The build it packs has to be newer than its sources.** `lb payload dist` packs what is under `out/`, and building that is `make payload`, by hand, beforehand. `native` refuses when a pinned tree moved after that build finished, or when none did: the Mac supplies the shared `editors.tar.gz`, so a stale build there reaches every platform with every other check green. Refused, run `make payload`.
+**The build it packs has to be newer than its sources.** `lb payload build dist` packs what is under `out/`, and building that is `make payload`, by hand, beforehand. `native` refuses when a pinned tree moved after that build finished, or when none did: the Mac supplies the shared `editors.tar.gz`, so a stale build there reaches every platform with every other check green. Refused, run `make payload`.
 
 ## Any command, on a builder
 
 ```sh
-lb on linux-x86_64 app flatpak-smoke          # the bundle, converting under the runtime
+lb on linux-x86_64 app test flatpak          # the bundle, converting under the runtime
 lb on linux-arm64 --update linux lint         # this commit sent first, then the checks
 ```
 
@@ -225,15 +225,15 @@ lb on linux-arm64 --update linux lint         # this commit sent first, then the
 No release depends on this. It is the only place the suite runs on real arm64 hardware:
 
 ```sh
-lb payload container --arch arm64            # payload in the pinned container
+lb container run payload --arch arm64            # payload in the pinned container
 lb linux test                                # the suite, on Linux, with that payload
-lb linux gui                                 # a real GTK/WebKitGTK window under Xvfb, screenshotted
-lb app flatpak-check                         # install the bundle, run --diagnose in the sandbox
+lb linux screenshot                                 # a real GTK/WebKitGTK window under Xvfb, screenshotted
+lb app check flatpak                         # install the bundle, run --diagnose in the sandbox
 ```
 
 On a small machine the build is tight on memory before it is slow. `build/engine/payload.sh` and `build/engine/build.sh` size themselves from the cgroup limit; a 4 GB box needs swap to finish the core (see [Build the payload](build.md)). The symptom is `Killed signal terminated program cc1plus`. The answer is `fallocate`.
 
-`lb app flatpak` ends by installing the bundle and running `libera --diagnose` inside the sandbox, which is as far as a container goes, since there is no display in one. It proves three things: the GNOME runtime supplies GTK and WebKit, the application imports, `--diagnose` says the payload is bundled. `lb app flatpak-smoke` goes one further and converts a document with it.
+`lb app build flatpak` ends by installing the bundle and running `libera --diagnose` inside the sandbox, which is as far as a container goes, since there is no display in one. It proves three things: the GNOME runtime supplies GTK and WebKit, the application imports, `--diagnose` says the payload is bundled. `lb app test flatpak` goes one further and converts a document with it.
 
 **Check what else is in `build/out` first.** Nothing cleans it. Every build writes a new filename, so bundles from earlier versions, including from before the product was renamed, sit there indefinitely. Delete them, so they are not in the way at upload time.
 
@@ -242,8 +242,8 @@ On a small machine the build is tight on memory before it is slow. `build/engine
 `stage` tests what is about to be published. Once the bundles are on the CDN, one command asks the build machines whether **what a user downloads** opens a window:
 
 ```sh
-lb release released-gui                           # every Linux and Windows builder in builders.toml
-lb release released-gui --on fedora.zt            # one of them
+lb release check downloads                           # every Linux and Windows builder in builders.toml
+lb release check downloads --on fedora.zt            # one of them
 ```
 
 It copies a script to each machine over ssh, and the script installs what the CDN serves now, the way a user would get it. **It never tests what happens to be installed there**: 0.7.0 was once declared to draw a window by a 0.5.0 left on the builder.
@@ -268,13 +268,13 @@ It copies every file `publish` will upload into `build/out/release/<version>/`: 
 
 Only when all of it passed is the directory stamped: `STAGED.json`, with the commit and each file's SHA-256. `publish` uploads that directory and refuses one whose stamp no longer holds. `stage` can be run as often as needed; nothing leaves the machines.
 
-The manifest in `libera`'s wheel is what `native`'s `lb payload dist` stamped: the upstream pins and the commit, which is the release's provenance.
+The manifest in `libera`'s wheel is what `native`'s `lb payload build dist` stamped: the upstream pins and the commit, which is the release's provenance.
 
 ## Verify before publishing
 
 ```sh
 make verify                    # lint, the whole suite, docs links, the patch queue, the converter
-lb payload patches                            # the queue still applies to the pinned SHAs
+lb payload check                            # the queue still applies to the pinned SHAs
 ```
 
 `stage` installs the release on every platform. One thing remains that no automated check covers: **read the attribution out loud.** It is a licence obligation. It lives in `build/payload/theme/libera/meta/config.json` and shows in Help ▸ About.
@@ -284,7 +284,7 @@ lb payload patches                            # the queue still applies to the p
 `publish` does this in this order, from the staged directory, because the parts refer to each other:
 
 1. **The packages** to PyPI: `libera-core` (a wheel per platform and its sdist) and `libera-web` first, then `libera`, with `uv publish --check-url https://pypi.org/simple/`. `make publish` uploads `libera` alone, which is not a release, and refuses one whose components PyPI does not have yet: 0.7.0b1 and 0.7.0 went up that way.
-2. **The bundles and the Windows installer** to the CDN (`CDN_TOKEN`, scoped to the zone). `extras` first signs each bundle here with the release key (`SIGNING_KEY` in `origin/publish.py`), which may ask its passphrase, and puts the signature beside it as `.asc`; without a good signature nothing goes up, and `ship` refuses `publish` at the start when gpg does not have the key. A dry run signs nothing. The Windows installer goes up with `lb release extras` when `ship`'s `bundles` brought it, or later on its own with `lb release windows`: each moves its own pointer, `bundles/latest-windows` for `install.ps1` and `bundles/latest` for `install.sh`, and each moves it only once the files it names are up. A release whose Windows build is a week late ships its Flatpaks today; Windows users keep the previous version until the installer goes up.
+2. **The bundles and the Windows installer** to the CDN (`CDN_TOKEN`, scoped to the zone). `lb release upload` first signs each bundle here with the release key (`SIGNING_KEY` in `origin/publish.py`), which may ask its passphrase, and puts the signature beside it as `.asc`; without a good signature nothing goes up, and `ship` refuses `publish` at the start when gpg does not have the key. A dry run signs nothing. The Windows installer goes up with `lb release upload` when `ship`'s `bundles` brought it, or later on its own with `lb release upload windows`: each moves its own pointer, `bundles/latest-windows` for `install.ps1` and `bundles/latest` for `install.sh`, and each moves it only once the files it names are up. A release whose Windows build is a week late ships its Flatpaks today; Windows users keep the previous version until the installer goes up.
 3. **The upstream mirrors**, at the same moment the binaries go out, by hand. The AGPL obligation is a commit plus a patch series that provably applies to it; `build/upstream/pins.toml` and `build/upstream/patches/` are that series.
 4. **This documentation**, which deploys on its own and is not part of `make ship`:
 
@@ -306,7 +306,7 @@ The last word belongs to the application, on a machine that never built it: `ver
 | `exec format error` a minute into an image build | No binfmt handler for a foreign architecture. `docker run --privileged --rm tonistiigi/binfmt --install all`, or build that architecture on a machine that is one. |
 | `Killed signal terminated program cc1plus` | The OOM killer. Add swap; the build prints the `fallocate`/`mkswap`/`swapon` lines when it detects a small machine. |
 | `FATAL: heap out of memory` in a webpack | V8 sizes its heap from the cgroup limit, ignoring the work: a *smaller* container aims lower and dies sooner. `build/engine/payload.sh` sets a floor below 6 GB; see [Build the payload](build.md). |
-| A patch no longer applies | News, and something to investigate. `lb payload patches` names it; read the upstream change before rebasing. |
+| A patch no longer applies | News, and something to investigate. `lb payload check` names it; read the upstream change before rebasing. |
 | The build ran the JS pipeline unpatched | The source tree was fetched before the patch existed. `git -C $BUILD_ROOT/src/<repo> log --oneline` answers it in one line. |
 | `INCOMPLETE: no editors.tar.gz` | A Linux-only run whose architectures were all already built, so nothing produced the platform-neutral half. The command to fix it is printed with the message. |
 | `FATAL: artwork in the payload that is not ours` | `dist.sh` found a logo-shaped file it does not recognise. Look at it before deciding: if it is upstream's it wants removing in `build/upstream/patches/web-apps/` or writing over in `payload.sh`; if it is ours, its name goes in `OURS` in `dist.sh`. |

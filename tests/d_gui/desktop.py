@@ -53,7 +53,7 @@ class X:
     def why_no_drag(self) -> str | None:
         if sys.platform.startswith("linux") and shutil.which("xdotool"):
             return None
-        return "a real drag needs X and xdotool, or Windows: `lb linux gui-test`"
+        return "a real drag needs X and xdotool, or Windows: `lb linux test --gui`"
 
     def _xdotool(self, *args: object) -> str:
         return subprocess.run(

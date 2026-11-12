@@ -143,10 +143,11 @@ class Knob(NamedTuple):
 
 
 ARCH = Knob(
-    "--arch", "ARCH", "amd64 or arm64; default amd64", choices=("amd64", "arm64")
+    "--arch",
+    "ARCH",
+    "amd64 or arm64; default this machine's",
+    choices=("amd64", "arm64"),
 )
-# The same variable, where the default is the machine it runs on.
-ARCH_HERE = ARCH._replace(help="amd64 or arm64; default this machine's")
 BUILD_ROOT = Knob(
     "--build-root",
     "BUILD_ROOT",
@@ -250,41 +251,62 @@ def toolchain_first(args: argparse.Namespace, *steps: Step) -> Steps:
     return [sh("engine/toolchain.sh", "check", env=env_of(args)), *steps]
 
 
-def payload_fetch(args: argparse.Namespace) -> Steps:
-    return toolchain_first(
-        args, sh("engine/build.sh", "fetch", *args.repos, env=env_of(args))
+# The payload's stages, in the one order they work in, each a build/engine
+# script. `payload build` with none named runs them all, then the smoke test,
+# which is buildbox.STEPS: what the container runs.
+STAGES = {
+    "fetch": ("build.sh", "fetch"),
+    "configure": ("build.sh", "configure"),
+    "core": ("build.sh", "build"),
+    "assemble": ("payload.sh",),
+    "dist": ("dist.sh",),
+}
+
+
+def misplaced(
+    args: argparse.Namespace, chosen: set[str], owners: dict[str, tuple[str, ...]]
+) -> None:
+    """Refuse an option given for a stage or a target this run does not have:
+    an option that does nothing is a mistake the person cannot see."""
+    for dest, theirs in owners.items():
+        if getattr(args, dest, None) and not chosen & set(theirs):
+            flag = "--" + dest.replace("_", "-")
+            msg = f"{flag} is for {' and '.join(theirs)}, which this does not run"
+            raise RefusedError(msg)
+
+
+def payload_build(args: argparse.Namespace) -> Steps:
+    stages = [stage for stage in STAGES if stage in args.stages] or list(STAGES)
+    misplaced(
+        args,
+        set(stages),
+        {
+            "repos": ("fetch",),
+            "mirror": ("fetch",),
+            "v8_jobs": ("core",),
+            "core_jobs": ("core",),
+            "fonts": ("dist",),
+            "manifest_only": ("dist",),
+        },
     )
-
-
-def payload_configure(args: argparse.Namespace) -> Steps:
-    return toolchain_first(args, sh("engine/build.sh", "configure", env=env_of(args)))
-
-
-def payload_core(args: argparse.Namespace) -> Steps:
-    return toolchain_first(args, sh("engine/build.sh", "build", env=env_of(args)))
-
-
-def payload_assemble(args: argparse.Namespace) -> Steps:
-    return toolchain_first(args, sh("engine/payload.sh", env=env_of(args)))
-
-
-def payload_dist(args: argparse.Namespace) -> Steps:
-    extra = ["--manifest-only"] if args.manifest_only else []
-    return toolchain_first(
-        args, sh("engine/dist.sh", "--fonts", args.fonts, *extra, env=env_of(args))
-    )
-
-
-def payload_all(args: argparse.Namespace) -> Steps:
     env = env_of(args)
-    return toolchain_first(
-        args, *(sh(f"engine/{name}", *rest, env=env) for name, *rest in buildbox.STEPS)
-    )
+    steps = []
+    for stage in stages:
+        name, *rest = STAGES[stage]
+        if stage == "fetch":
+            rest += args.repos or []
+        if stage == "dist":
+            rest += ["--fonts", args.fonts or "core"]
+            rest += ["--manifest-only"] if args.manifest_only else []
+        steps.append(sh(f"engine/{name}", *rest, env=env))
+    if not args.stages:
+        steps.append(sh("engine/smoke.sh", env=env))
+    return toolchain_first(args, *steps)
 
 
 def box_options(args: argparse.Namespace) -> BoxOptions:
     return BoxOptions(
-        arch=given(args, ARCH) or "amd64",
+        arch=given(args, ARCH) or host_arch(),
         build_dir=path_given(args, BUILD_DIR),
         volume=given(args, VOLUME),
         memory=given(args, MEMORY),
@@ -294,14 +316,14 @@ def box_options(args: argparse.Namespace) -> BoxOptions:
     )
 
 
-def payload_container(args: argparse.Namespace) -> Steps:
+def container_run(args: argparse.Namespace) -> Steps:
     box = buildbox.Box(box_options(args))
     if args.rest:
         return [Call(box.script, (args.rest[0], args.rest[1:]))]
     return [Call(box.all)]
 
 
-def payload_export(args: argparse.Namespace) -> Steps:
+def container_export(args: argparse.Namespace) -> Steps:
     """The directory on stdout, alone, so that a caller can read it."""
     return [Call(print_exported, (box_options(args),))]
 
@@ -311,11 +333,11 @@ def print_exported(options: BoxOptions) -> int:
     return 0
 
 
-def payload_smoke(args: argparse.Namespace) -> Steps:
+def payload_test(args: argparse.Namespace) -> Steps:
     return [sh("engine/smoke.sh", env=env_of(args))]
 
 
-def payload_patches(_args: argparse.Namespace) -> Steps:
+def payload_check(_args: argparse.Namespace) -> Steps:
     return [sh("engine/check-patches.sh")]
 
 
@@ -347,27 +369,38 @@ def toolchain_steps(action: str, platform: str, *, dry: bool = False) -> Steps:
     return [sh("engine/toolchain.sh", action)]
 
 
-def app_macos(args: argparse.Namespace) -> Steps:
-    return [
-        sh("macos/macos-app.sh", env={"STANDALONE": "1"} if args.standalone else {})
-    ]
+# What `app build` makes, and the Flatpak builder's name for each it makes.
+APP_TARGETS = ("macos", "macos-launcher", "flatpak", "flatpak-wheels", "windows")
+FLATPAK_ACTION = {"flatpak": "build", "flatpak-wheels": "wheels"}
 
 
-def app_macos_launcher(_args: argparse.Namespace) -> Steps:
-    return [sh("macos/launcher.sh")]
+def app_build(args: argparse.Namespace) -> Steps:
+    target = args.target
+    misplaced(args, {target}, {"standalone": ("macos",), "arch": tuple(FLATPAK_ACTION)})
+    if target == "macos":
+        env = {"STANDALONE": "1"} if args.standalone else {}
+        return [sh("macos/macos-app.sh", env=env)]
+    if target == "macos-launcher":
+        return [sh("macos/launcher.sh")]
+    if target == "windows":
+        return [sh("windows/windows-app.sh")]
+    return [flatpak_call(args, FLATPAK_ACTION[target])]
 
 
-def app_flatpak(args: argparse.Namespace) -> Steps:
-    options = FlatpakOptions(args.action, arch=given(args, ARCH) or host_arch())
-    return [Call(flatpak.run, (options,))]
+def flatpak_call(args: argparse.Namespace, action: str) -> Call:
+    options = FlatpakOptions(action, arch=given(args, ARCH) or host_arch())
+    return Call(flatpak.run, (options,))
 
 
-def app_windows(_args: argparse.Namespace) -> Steps:
-    return [sh("windows/windows-app.sh")]
+def app_check(args: argparse.Namespace) -> Steps:
+    return [flatpak_call(args, "check")]
 
 
-def app_windows_gui_test(_args: argparse.Namespace) -> Steps:
-    return [sh("windows/gui-test.sh")]
+def app_test(args: argparse.Namespace) -> Steps:
+    misplaced(args, {args.target}, {"arch": ("flatpak",)})
+    if args.target == "windows":
+        return [sh("windows/gui-test.sh")]
+    return [flatpak_call(args, "smoke")]
 
 
 def given(args: argparse.Namespace, knob: Knob) -> str | None:
@@ -389,8 +422,16 @@ def switched(args: argparse.Namespace, knob: Knob) -> bool:
 
 
 def linux_(args: argparse.Namespace) -> Steps:
+    action = args.action
+    if getattr(args, "gui", False):
+        if args.rest:
+            msg = "test --gui runs the gui tier as it is: no pytest arguments"
+            raise RefusedError(msg)
+        action = "gui-test"
+    if getattr(args, "dialog", False):
+        action = "dialog"
     options = LinuxOptions(
-        action=args.action,
+        action=action,
         arch=given(args, ARCH),
         wheels=path_given(args, WHEELS),
         payload=path_given(args, PAYLOAD),
@@ -410,6 +451,10 @@ def container(args: argparse.Namespace) -> Steps:
     Their other options (the build tree, the container's LANG) still arrive as
     their environment variables, which each reads."""
     arch, verb = given(args, ARCH) or host_arch(), args.action
+    if verb == "run":
+        return container_run(args)
+    if verb == "export":
+        return container_export(args)
     if args.kind == "payload":
         box = buildbox.Box(replace(box_options(args), arch=arch))
         return [
@@ -454,26 +499,38 @@ def release_plan(args: argparse.Namespace) -> Steps:
 
 
 def release_origin(args: argparse.Namespace) -> Steps:
+    """`status`, and `upload`: the bundles and the scripts, or the Windows
+    installer alone."""
+    verb = args.action if args.action == "status" else args.what or "extras"
     options = OriginOptions(
-        args.action,
+        verb,
         dry_run=switched(args, DRY),
         yes=switched(args, YES),
     )
     return [Call(verbs.run, (options,))]
 
 
-def release_matrix(args: argparse.Namespace) -> Steps:
-    options = MatrixOptions(
+def release_check(args: argparse.Namespace) -> Steps:
+    misplaced(
+        args,
+        {args.what},
+        {
+            "dist": ("distros",),
+            "distros": ("distros",),
+            "arches": ("distros",),
+            "on": ("downloads",),
+            "doc": ("downloads",),
+        },
+    )
+    if args.what == "downloads":
+        options = ReleasedGuiOptions(on=args.on, doc=args.doc)
+        return [Call(released_gui.run, (options,))]
+    matrix_options = MatrixOptions(
         dist=path_given(args, DIST),
         distros=tuple((given(args, DISTROS) or "").split()),
         arches=tuple((given(args, ARCHES) or "").split()),
     )
-    return [Call(matrix.run, (options,))]
-
-
-def release_released_gui(args: argparse.Namespace) -> Steps:
-    options = ReleasedGuiOptions(on=args.on, doc=args.doc)
-    return [Call(released_gui.run, (options,))]
+    return [Call(matrix.run, (matrix_options,))]
 
 
 def on_(args: argparse.Namespace) -> Steps:
@@ -481,7 +538,7 @@ def on_(args: argparse.Namespace) -> Steps:
     return [Call(on, (options,))]
 
 
-def components_wheels(args: argparse.Namespace) -> Steps:
+def components_build(args: argparse.Namespace) -> Steps:
     version = payload_version(REPO)
     out = path_given(args, OUT) or build_root() / "out" / "wheels" / version
     return [Call(components.wheels, (REPO, out))]
@@ -559,7 +616,7 @@ class Groups:
 
 
 class Group:
-    """One group's commands: `payload fetch`, `payload core`..."""
+    """One group's commands: `payload build`, `payload test`..."""
 
     def __init__(
         self,
@@ -604,114 +661,69 @@ def add_command(
 def add_payload(groups: Groups) -> None:
     g = groups.group(
         "payload",
-        "the editor payload: build it here or in a container, and check it",
-        "Built here, the order is fetch, configure, core, assemble, then dist for\n"
-        "the tarballs; `all` runs the five, then smoke, as `container` does in\n"
-        "the container. Each checks the toolchain first. `uv sync` builds the\n"
-        "components itself, through their projects' build hooks.\n\n"
-        + examples("payload all", "payload container --arch arm64", "payload export"),
+        "the editor payload, built here, and checked",
+        "Its stages, in their order: fetch, configure, core, assemble, dist.\n"
+        "`build` with none named runs them all, then `test`; on Linux the\n"
+        "build runs in a container instead: `container run payload`. Each\n"
+        "checks the toolchain first. `uv sync` builds the components itself,\n"
+        "through their projects' build hooks.\n\n"
+        + examples("payload build", "payload build core assemble", "payload check"),
     )
     p = g.command(
-        "fetch",
-        "clone or reset the sources to the pinned SHAs, and apply the patch queue",
-        payload_fetch,
+        "build",
+        "the payload, from a checkout: every stage then the test, or those named",
+        payload_build,
         BUILD_ROOT,
         MIRROR,
-        epilog=examples(
-            "payload fetch", "payload fetch core sdkjs --mirror ~/ghorg/euro-office"
-        ),
-    )
-    p.add_argument("repos", nargs="*", metavar="REPO", help="only these (default: all)")
-    g.command(
-        "configure",
-        "cmake configure only: missing tools and CMake gaps in minutes",
-        payload_configure,
-        BUILD_ROOT,
-    )
-    g.command(
-        "core",
-        "x2t and the native libraries (long: V8 alone is ~30 min)",
-        payload_core,
-        BUILD_ROOT,
         V8_JOBS,
         CORE_JOBS,
-        epilog=examples("payload core", "payload core --v8-jobs 4 --core-jobs 8"),
-    )
-    g.command(
-        "assemble",
-        "sdkjs, web-apps, fonts, blanks, dictionaries, branding (~4 min)",
-        payload_assemble,
-        BUILD_ROOT,
-    )
-    p = g.command(
-        "dist",
-        "the tarballs and the manifest, which the components are built from",
-        payload_dist,
-        BUILD_ROOT,
-        epilog=examples(
-            "payload dist", "payload dist --fonts full", "payload dist --manifest-only"
+        epilog="fetch clones or resets the sources to the pinned SHAs and applies\n"
+        "the patch queue; configure is cmake's (missing tools in minutes);\n"
+        "core is x2t and the native libraries (V8 alone is ~30 min); assemble\n"
+        "is sdkjs, web-apps, fonts, blanks, dictionaries and branding (~4 min);\n"
+        "dist is the tarballs and the manifest the components are built from.\n\n"
+        + examples(
+            "payload build",
+            "payload build fetch --repo core --repo sdkjs --mirror ~/ghorg/euro-office",
+            "payload build core --v8-jobs 4 --core-jobs 8",
+            "payload build dist --fonts full",
         ),
+    )
+    p.add_argument(
+        "stages",
+        nargs="*",
+        choices=[*STAGES, []],
+        metavar="STAGE",
+        help="the stages to run, in their order (default: all, then the test)",
+    )
+    p.add_argument(
+        "--repo",
+        dest="repos",
+        action="append",
+        metavar="REPO",
+        help="fetch only this repository; repeatable (default: all)",
     )
     p.add_argument(
         "--fonts",
         choices=("core", "full"),
-        default="core",
-        help="the font set: core, what ships, or full, all of core-fonts; "
+        help="dist's font set: core, what ships, or full, all of core-fonts; "
         "default: core",
     )
     p.add_argument(
-        "--manifest-only", action="store_true", help="the manifest, over what is there"
+        "--manifest-only",
+        action="store_true",
+        help="dist writes the manifest, over what is there",
     )
     g.command(
-        "all",
-        "fetch, configure, core, assemble, dist, then smoke: a checkout to a payload",
-        payload_all,
-        BUILD_ROOT,
-        MIRROR,
-        V8_JOBS,
-        CORE_JOBS,
-    )
-    p = g.command(
-        "container",
-        "the whole Linux build in the pinned Ubuntu container, or one build/ script",
-        payload_container,
-        ARCH,
-        BUILD_ROOT,
-        BUILD_DIR,
-        VOLUME,
-        MEMORY,
-        MIRROR,
-        V8_JOBS,
-        CORE_JOBS,
-        epilog="Anything after the options is one build/ script and its arguments,\n"
-        "run in the container instead of the whole build.\n\n"
-        + examples(
-            "payload container",
-            "payload container --arch arm64 --memory 12g",
-            "payload container --build-dir /Volumes/T7/linux-amd64",
-            "payload container --arch arm64 dist.sh --fonts core",
-        ),
-    )
-    p.set_defaults(passes_on=True)
-    g.command(
-        "export",
-        "the container build's artifacts, copied here, and where they went",
-        payload_export,
-        ARCH,
-        BUILD_ROOT,
-        BUILD_DIR,
-        VOLUME,
-    )
-    g.command(
-        "smoke",
+        "test",
         "the converter: fonts, docx -> odt -> docx, docx -> pdf",
-        payload_smoke,
+        payload_test,
         BUILD_ROOT,
     )
     g.command(
-        "patches",
+        "check",
         "whether the patch queue still applies to the pinned SHAs (~20 s)",
-        payload_patches,
+        payload_check,
     )
     g.command(
         "status", "which payload this checkout runs, and where from", payload_status
@@ -740,72 +752,92 @@ def add_app(groups: Groups) -> None:
         "app",
         "the applications users install: the .app, the Flatpak, the Windows installer",
         examples(
-            "app macos --standalone", "app flatpak --arch arm64", "app flatpak-check"
+            "app build macos --standalone",
+            "app build flatpak --arch arm64",
+            "app check flatpak",
+            "app test windows",
         ),
     )
-    p = g.command("macos", "Libera.app, unsigned, in build/out/", app_macos)
+    p = g.command(
+        "build",
+        "an application: the .app, its launcher, the Flatpak, the Windows installer",
+        app_build,
+        ARCH,
+        epilog="macos is Libera.app, unsigned; macos-launcher rebuilds\n"
+        "src/libera/macos/, its executable and icon, which are committed;\n"
+        "flatpak is the bundle with its wheels and its check, flatpak-wheels\n"
+        "the offline wheel set alone; windows is the installer, on Windows.\n\n"
+        + examples("app build macos", "app build flatpak --arch arm64"),
+    )
+    p.add_argument("target", choices=APP_TARGETS, metavar="TARGET")
     p.add_argument(
         "--standalone",
         action="store_true",
-        help="with Python, libera and the payload inside; default: runs this checkout",
+        help="macos: with Python, libera and the payload inside; "
+        "default: runs this checkout",
     )
-    g.command(
-        "macos-launcher",
-        "src/libera/macos/, rebuilt: the .app's executable and icon, committed",
-        app_macos_launcher,
+    p = g.command(
+        "check",
+        "the built Flatpak installed, and --diagnose run in it",
+        app_check,
+        ARCH,
     )
-    for name, action, summary in (
-        ("flatpak", "build", "the Flatpak bundle: its wheels, the bundle, its check"),
-        ("flatpak-wheels", "wheels", "the Flatpak's offline wheel set on its own"),
-        (
-            "flatpak-check",
-            "check",
-            "the built Flatpak installed, and --diagnose run in it",
-        ),
-        (
-            "flatpak-smoke",
-            "smoke",
-            "the built Flatpak installed, converting a document",
-        ),
-    ):
-        p = g.command(name, summary, app_flatpak, ARCH_HERE)
-        p.set_defaults(action=action)
-    g.command("windows", "the Windows installer, on Windows", app_windows)
-    g.command(
-        "windows-gui-test",
-        "the suite's gui tier in a real window, on Windows, in the desktop session",
-        app_windows_gui_test,
+    p.add_argument("target", choices=("flatpak",), metavar="flatpak")
+    p = g.command(
+        "test",
+        "the Flatpak converting a document, or the gui tier in a Windows window",
+        app_test,
+        ARCH,
+        epilog="flatpak installs the built bundle and converts a document in it;\n"
+        "windows runs the suite's gui tier in a real window, in the desktop\n"
+        "session.\n\n" + examples("app test flatpak", "app test windows"),
     )
+    p.add_argument("target", choices=("flatpak", "windows"), metavar="flatpak|windows")
 
 
 def add_linux(groups: Groups) -> None:
     g = groups.group(
         "linux",
-        "this repository's checks on Linux, in a container: the one place they run",
+        "this repository's checks on Linux, in a container",
         "The suite needs this architecture's component wheels, which\n"
-        "`components wheels` makes on a Linux machine, or a --payload DIR.\n\n"
+        "`components build` makes on a Linux machine, or a --payload DIR.\n\n"
         + examples(
             "linux lint",
             "linux test -k bridge",
-            "linux gui --arch arm64",
-            "linux gui --lang fr_FR.UTF-8",
+            "linux test --gui",
+            "linux screenshot --lang fr_FR.UTF-8",
         ),
     )
-    # The suite and the windows install the components; the rest do not.
-    runs_libera = (WHEELS, PAYLOAD, LINUX_LANG)
-    for action, summary, knobs in (
-        ("test", "the suite; anything after it goes to pytest", runs_libera),
-        ("lint", "the type checkers, where the Linux branches are live", ()),
-        ("gui", "a real GTK window under Xvfb, screenshotted", runs_libera),
-        (
-            "gui-test",
-            "a real GTK window, as the suite's gui tier (tests/d_gui)",
-            runs_libera,
-        ),
-        ("dialog", "the GTK question the host asks, answered", runs_libera),
-    ):
-        p = g.command(action, summary, linux_, ARCH_HERE, *knobs)
-        p.set_defaults(action=action, passes_on=action == "test")
+    runs_libera = (ARCH, WHEELS, PAYLOAD, LINUX_LANG)
+    p = g.command(
+        "test",
+        "the suite; anything after it goes to pytest",
+        linux_,
+        *runs_libera,
+    )
+    p.add_argument(
+        "--gui",
+        action="store_true",
+        help="the gui tier (tests/d_gui), in a real GTK window under Xvfb",
+    )
+    p.set_defaults(action="test", passes_on=True)
+    p = g.command(
+        "lint",
+        "the type checkers, where the Linux branches are live",
+        linux_,
+        ARCH,
+    )
+    p.set_defaults(action="lint")
+    p = g.command(
+        "screenshot",
+        "a real GTK window under Xvfb, screenshotted",
+        linux_,
+        *runs_libera,
+    )
+    p.add_argument(
+        "--dialog", action="store_true", help="the GTK question the host asks, answered"
+    )
+    p.set_defaults(action="gui")
 
 
 def add_container(groups: Groups) -> None:
@@ -815,12 +847,44 @@ def add_container(groups: Groups) -> None:
         "payload builds the Linux payload, flatpak the Flatpak, linux runs the\n"
         "suite. Each is built when first needed; `image` rebuilds it.\n\n"
         + examples(
+            "container run payload --arch arm64",
             "container shell linux",
             "container versions flatpak --arch arm64",
             "container image payload",
             "container clean flatpak",
         ),
     )
+    box = (BUILD_ROOT, BUILD_DIR, VOLUME)
+    p = g.command(
+        "run",
+        "the whole Linux payload build in its container, or one build/ script",
+        container,
+        ARCH,
+        *box,
+        MEMORY,
+        MIRROR,
+        V8_JOBS,
+        CORE_JOBS,
+        epilog="Anything after the options is one build/ script and its arguments,\n"
+        "run in the container instead of the whole build.\n\n"
+        + examples(
+            "container run payload",
+            "container run payload --arch arm64 --memory 12g",
+            "container run payload --build-dir /Volumes/T7/linux-amd64",
+            "container run payload --arch arm64 dist.sh --fonts core",
+        ),
+    )
+    p.add_argument("kind", choices=("payload",), metavar="payload")
+    p.set_defaults(action="run", passes_on=True)
+    p = g.command(
+        "export",
+        "the payload container's artifacts, copied here, and where they went",
+        container,
+        ARCH,
+        *box,
+    )
+    p.add_argument("kind", choices=("payload",), metavar="payload")
+    p.set_defaults(action="export")
     for verb, summary, kinds, knobs in (
         ("shell", "a shell in one of the containers", CONTAINERS, ()),
         ("versions", "what a container's image is pinned to", CONTAINERS, ()),
@@ -832,7 +896,7 @@ def add_container(groups: Groups) -> None:
             (YES,),
         ),
     ):
-        p = g.command(verb, summary, container, ARCH_HERE, *knobs)
+        p = g.command(verb, summary, container, ARCH, *knobs)
         p.add_argument("kind", choices=kinds, metavar="|".join(kinds))
         p.set_defaults(action=verb)
 
@@ -899,50 +963,67 @@ def add_release(groups: Groups) -> None:
         help="the new version, digits and dots, or a pre-release",
     )
 
-    for action, summary in (
-        ("status", "where this release has got to, here and on PyPI (read-only)"),
-        ("extras", "the Flatpak bundles, install.sh and install.ps1, to the CDN"),
-        ("windows", "the Windows installer alone, to the CDN, once bundles fetched it"),
-    ):
-        knobs = {"status": ()}.get(action, (DRY, YES))
-        p = g.command(action, summary, release_origin, *knobs)
-        p.set_defaults(action=action)
-
-    g.command(
-        "matrix",
-        "the staged Linux converter, run in each distribution the install page names",
-        release_matrix,
+    p = g.command(
+        "status",
+        "where this release has got to, here and on PyPI (read-only)",
+        release_origin,
+    )
+    p.set_defaults(action="status")
+    p = g.command(
+        "upload",
+        "the Flatpak bundles and the install scripts to the CDN, or the installer",
+        release_origin,
+        DRY,
+        YES,
+        epilog="With no argument, the Flatpak bundles, install.sh and install.ps1;\n"
+        "`windows`, the Windows installer alone, once `ship bundles` fetched it.\n"
+        "`ship`'s publish uploads both itself.\n\n"
+        + examples("release upload --dry-run", "release upload windows"),
+    )
+    p.add_argument("what", nargs="?", choices=("windows",), metavar="windows")
+    p.set_defaults(action="upload")
+    p = g.command(
+        "check",
+        "the staged converter in each Linux distribution, or what users download",
+        release_check,
         DIST,
         DISTROS,
         ARCHES,
+        epilog="distros runs the staged libera-core wheels in a clean container of\n"
+        "each distribution the install page names. downloads installs the\n"
+        "*published* Flatpak and Windows installer on the builders, opens a\n"
+        "window from each and screenshots it.\n\n"
+        + examples(
+            "release check distros",
+            "release check distros --arches arm64",
+            "release check downloads --on fedora.zt",
+        ),
     )
-    p = g.command(
-        "released-gui",
-        "a window from the *published* Flatpak and Windows installer, screenshotted",
-        release_released_gui,
+    p.add_argument(
+        "what", choices=("distros", "downloads"), metavar="distros|downloads"
     )
     p.add_argument(
         "--on",
         metavar="HOST",
-        help="one machine; default: every Linux and Windows builder",
+        help="downloads: one machine; default: every Linux and Windows builder",
     )
-    p.add_argument("--doc", metavar="FILE", help="the document to open")
+    p.add_argument("--doc", metavar="FILE", help="downloads: the document to open")
 
 
 def add_components(groups: Groups) -> None:
     g = groups.group(
         "components",
         "the components as Python packages: libera-core and libera-web",
-        "`uv sync` builds this machine's from the pinned sources, and `wheels`\n"
+        "`uv sync` builds this machine's from the pinned sources, and `build`\n"
         "makes their wheels, for PyPI: run it on each platform.\n\n"
-        + examples("components wheels"),
+        + examples("components build"),
     )
     g.command(
-        "wheels",
+        "build",
         "libera-core's wheel for this machine, from its sdist, and libera-web's",
-        components_wheels,
+        components_build,
         OUT,
-        epilog=examples("components wheels", "components wheels --out /tmp/wheels"),
+        epilog=examples("components build", "components build --out /tmp/wheels"),
     )
 
 
@@ -955,9 +1036,9 @@ def add_others(groups: Groups) -> None:
         "checkout's first. The command's output streams back as it comes; it\n"
         "has no terminal there, so nothing interactive (container shell) works.\n\n"
         + examples(
-            "on linux-x86_64 app flatpak-smoke",
+            "on linux-x86_64 app test flatpak",
             "on linux-arm64 --update linux lint",
-            "on linux-x86_64 release matrix",
+            "on linux-x86_64 release check distros",
         ),
     )
     p.usage = "lb on [-h] [--update] PLATFORM COMMAND ..."
@@ -985,9 +1066,9 @@ def add_others(groups: Groups) -> None:
 
 USUAL = """\
 what is usually run:
-  lb payload patches              whether the patch queue still applies (~20 s)
-  lb payload all                  this machine's payload, from a checkout (hours)
-  lb payload smoke                whether that payload converts documents
+  lb payload check                whether the patch queue still applies (~20 s)
+  lb payload build                this machine's payload, from a checkout (hours)
+  lb payload test                 whether that payload converts documents
   lb linux test                   the suite on Linux, in a container (lint: linux lint)
   lb on linux-x86_64 COMMAND      any of these, on a builder (--update first)
 
@@ -1058,4 +1139,10 @@ def main(argv: list[str] | None = None) -> int:
     # `lb` and `lb help release ship` are `lb --help` and `lb release ship --help`.
     if not argv or argv[0] == "help":
         argv = [*argv[1:], "--help"]
-    return run_steps(plan(argv))
+    try:
+        steps = plan(argv)
+    except RefusedError as e:
+        # A command line that cannot be planned is a usage error, as argparse's.
+        print(f"lb: error: {e}", file=sys.stderr)
+        return 2
+    return run_steps(steps)

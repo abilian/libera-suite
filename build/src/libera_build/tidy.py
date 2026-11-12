@@ -7,7 +7,7 @@ written on that is 1.4 GB and 44 GB.
 
 $BUILD_ROOT/src goes too. It is a clone of the upstream repositories at the
 pinned SHAs, so a build input rather than a build -- but it lives in the build
-area, `lb payload fetch` recreates it, and leaving 6.5 GB behind after a
+area, `lb payload build fetch` recreates it, and leaving 6.5 GB behind after a
 command called tidy would be its own surprise.
 
 **It lists, then asks.** Not a guard against the person who typed it: they

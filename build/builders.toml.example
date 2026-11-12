@@ -43,7 +43,7 @@ dist = "~/euro-office-build/linux-arm64/out/dist"
 
 [[builders]]
 # Reached over OpenSSH, its shell Git Bash; `ship` builds its core and the
-# installer there with `payload all` and `app windows` (see
+# installer there with `payload build` and `app build windows` (see
 # docs/src/develop/build.md, Windows). C:/b is the build root there
 # (engine/common.sh).
 platform = "windows-x86_64"

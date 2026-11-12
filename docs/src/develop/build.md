@@ -27,7 +27,7 @@ Fedora needs `perl-core`, because OpenSSL's `Configure` needs `FindBin` and `IPC
 
 `libstdc++-static` is split out on Fedora as well. Its absence looks like this: ICU's Linux configure line is `CXXFLAGS=-static-libstdc++ -static-libgcc` (`Common/3dParty/icu/nc-build.py`), Fedora ships `libstdc++.a` in a package of its own, and Debian's `g++` includes it. Without it the first C++ link in `configure` fails with `cannot find -lstdc++`. That link happens to be the namespace probe, so configure reports `Namespace support is required to build ICU`, which says nothing about static linking. The real error is in `config.log`, in the work tree.
 
-On **Linux arm64 only**, V8 8.9 demands clang **13 exactly** and aborts on anything else (`nc-build.py`, around the `targetarch == "arm64"` check). x86_64 has no version gate. Ubuntu 24.04 has no clang 13 at all; its packages start at 14. That is one of the two reasons the container base is 22.04, where `lb payload container` (`libera_build/buildbox.py`) picks clang 13 for arm64 and 14 for x86_64 off one image.
+On **Linux arm64 only**, V8 8.9 demands clang **13 exactly** and aborts on anything else (`nc-build.py`, around the `targetarch == "arm64"` check). x86_64 has no version gate. Ubuntu 24.04 has no clang 13 at all; its packages start at 14. That is one of the two reasons the container base is 22.04, where `lb container run payload` (`libera_build/buildbox.py`) picks clang 13 for arm64 and 14 for x86_64 off one image.
 
 Either way you also need time and disk. **V8 is built from source**, on every platform, and takes about half an hour in a build tree of several gigabytes. `Common/3dParty/v8/hashes.txt` lists cache keys for a Nextcloud store that wants credentials we do not have, so upstream's `ensure_dep` finds nothing and falls through to building it.
 
@@ -63,17 +63,17 @@ make payload       # the whole chain, ending in the smoke check
 Take them one at a time the first time on a new machine: `configure` surfaces missing tools and CMake gaps in minutes, before a forty-minute build reaches them:
 
 ```sh
-lb payload fetch                # clone or reset to the pinned revisions, apply patches
-lb payload configure            # the fast diagnostic
-lb payload core                 # x2t and the native libraries; the long one
-lb payload assemble             # sdkjs, web-apps, fonts, blanks, dictionaries, branding
-lb payload smoke                # check the result converts a document
-lb payload dist                 # the distributable tarballs and their manifest
+lb payload build fetch                # clone or reset to the pinned revisions, apply patches
+lb payload build configure            # the fast diagnostic
+lb payload build core                 # x2t and the native libraries; the long one
+lb payload build assemble             # sdkjs, web-apps, fonts, blanks, dictionaries, branding
+lb payload test                # check the result converts a document
+lb payload build dist                 # the distributable tarballs and their manifest
 ```
 
 Each is a thin wrapper over the script of the same name in `build/`; run those directly when you want to pass something the target does not.
 
-`uv sync` does the same itself. The two component packages, `components/core` and `components/web`, are workspace members whose build hooks build their wheels from the pinned sources, as pip does where PyPI has no wheel for the platform: libera-core's in `$BUILD_ROOT`, in the build container on Linux, libera-web's with that core's x2t, which makes the slide themes. `lb components wheels` makes the same two wheels on purpose, for PyPI: run it on each platform. It makes libera-core's sdist too, which carries the pins, the patch queues and the build scripts, and builds the core's wheel from that sdist, so each run tests what pip builds where there is no wheel. uv keeps the wheels and builds them again only when what they are built from changes: the pins, the patch queue, the scripts in `build/engine/`. A first `uv sync` builds the core, about an hour, with no output but uv's spinner; `lb payload all` first shows the build as it goes. With a built core it takes a few minutes, and the next one nothing.
+`uv sync` does the same itself. The two component packages, `components/core` and `components/web`, are workspace members whose build hooks build their wheels from the pinned sources, as pip does where PyPI has no wheel for the platform: libera-core's in `$BUILD_ROOT`, in the build container on Linux, libera-web's with that core's x2t, which makes the slide themes. `lb components build` makes the same two wheels on purpose, for PyPI: run it on each platform. It makes libera-core's sdist too, which carries the pins, the patch queues and the build scripts, and builds the core's wheel from that sdist, so each run tests what pip builds where there is no wheel. uv keeps the wheels and builds them again only when what they are built from changes: the pins, the patch queue, the scripts in `build/engine/`. A first `uv sync` builds the core, about an hour, with no output but uv's spinner; `lb payload build` first shows the build as it goes. With a built core it takes a few minutes, and the next one nothing.
 
 Or skip packaging entirely while developing and point at the build tree:
 
@@ -95,7 +95,7 @@ Of the 28 `core` patches, 21 are macOS work and 7 are Windows. All but one sit i
 `ENGINE` picks the container engine. Without it, the first installed of `docker` then `podman` on macOS, and of `podman` then `docker` elsewhere:
 
 ```sh
-ENGINE=podman lb payload container
+ENGINE=podman lb container run payload
 ```
 
 On Linux the choice has a consequence beyond taste. A bind mount passes uids through unchanged there, so a container running as root writes a build tree you cannot then delete without `sudo`. That is why `$BUILD_ROOT/linux-amd64` comes out owned by root on Fedora and by you on a Mac, where the daemon lives in a VM that maps ownership across the share. Rootless podman maps container root to your own uid through a user namespace, so the same build writes files you own.
@@ -111,24 +111,24 @@ glibc 2.38, and would not load on Debian 12 at all. musl is not glibc, so Alpine
 cannot run it whatever its version. The Flatpak sidesteps all of this, since the
 editors inside it run against the GNOME runtime's libraries.
 
-`lb payload container` runs the same scripts in an Ubuntu 22.04 image. It is how a Linux payload gets built from the Mac. It is also the reproducible way to build one anywhere: the host's toolchain stops being part of the answer.
+`lb container run payload` runs the same scripts in an Ubuntu 22.04 image. It is how a Linux payload gets built from the Mac. It is also the reproducible way to build one anywhere: the host's toolchain stops being part of the answer.
 
 That is two commands, and either is useful alone:
 
 ```sh
-lb payload container               # fetch, configure, core, payload, dist, smoke, in the image
-lb payload export                  # the artifacts out of the volume, and where they are
+lb container run payload               # fetch, configure, core, payload, dist, smoke, in the image
+lb container export payload                  # the artifacts out of the volume, and where they are
 ```
 
-`payload export` copies the tarballs out of the container's volume and prints where it put them. `lb linux test` installs the component wheels of its architecture, which `lb components wheels` makes on a Linux machine of it; the Mac's own are macOS binaries.
+`container export payload` copies the tarballs out of the container's volume and prints where it put them. `lb linux test` installs the component wheels of its architecture, which `lb components build` makes on a Linux machine of it; the Mac's own are macOS binaries.
 
 Underneath, the same container takes one step at a time:
 
 ```sh
 lb container image payload                  # build the image (about two minutes)
 lb container versions payload               # what it is pinned to
-lb payload container dist.sh --fonts core   # one build/ script, in the container
-lb payload export                           # where the artifacts are; prints it
+lb container run payload dist.sh --fonts core   # one build/ script, in the container
+lb container export payload                           # where the artifacts are; prints it
 lb container shell payload                  # poke around inside
 ```
 
@@ -168,8 +168,8 @@ The Windows machine is a builder like the Linux ones, reached over OpenSSH with 
 lb on windows-x86_64 --update toolchain install --dry-run   # what it would install, changing nothing
 lb on windows-x86_64 toolchain install            # windows-setup.ps1: Visual Studio's C++ tools, the SDK, Perl, NASM, Inno Setup
 lb on windows-x86_64 toolchain check              # in a new session, which sees the new PATH
-lb on windows-x86_64 payload all                  # fetch, configure, core, assemble, dist, smoke: hours, V8 about one
-lb on windows-x86_64 app windows                  # the application and its installer
+lb on windows-x86_64 payload build                  # fetch, configure, core, assemble, dist, smoke: hours, V8 about one
+lb on windows-x86_64 app build windows                  # the application and its installer
 ```
 
 **Smart App Control must be off.** It blocks unsigned programs and DLLs it does not know. A build makes and runs its own: V8's tools, the converter, and Strawberry Perl's modules, where it shows first as *"An Application Control policy has blocked this file"*. In evaluation mode it starts enforcing on its own, which is how a machine that built on Monday stops on Friday. `toolchain check` reads its state and says so; turning it off is by hand, in Windows Security ▸ App & browser control, and on some versions of Windows it cannot be turned back on without a reset.
@@ -178,18 +178,18 @@ Every item is checked on the file the build uses, whoever installed it, so a mac
 
 The first line takes hours, V8 alone about one, with OpenSSL from vcpkg. `windows-app.sh` refuses without its output: it wants the manifest and `core-windows-x86_64.tar.gz` under `$BUILD_ROOT/out/dist/<version>`. It writes the frozen application and `Libera-Suite-Setup-<version>.exe`, and copies the installer into `build/out/bundles/` with its SHA-256. Unlike the macOS `.app`, it embeds its own interpreter, because a Windows user has no Python.
 
-`make ship` builds Windows with the rest. Its `build` phase runs `payload all` there and `collect` fetches the core like any other; `bundles` runs `app windows` there and brings the installer and its `.sha256` here, into `build/out/bundles/`, where `publish` uploads them with the Flatpaks. The upload checks the hash first and each stored size after, and moves `bundles/latest-windows`, the version `install.ps1` installs, last, so the installer is on the origin before any user is sent to it.
+`make ship` builds Windows with the rest. Its `build` phase runs `payload build` there; `bundles` runs `app build windows` there and brings the installer and its `.sha256` here, into `build/out/bundles/`, where `publish` uploads them with the Flatpaks. The upload checks the hash first and each stored size after, and moves `bundles/latest-windows`, the version `install.ps1` installs, last, so the installer is on the origin before any user is sent to it.
 
 A Windows build that comes after the release's Flatpaks goes up on its own, from here:
 
 ```sh
 lb release ship bundles --only windows-x86_64   # the installer, made there and brought here
-lb release windows                              # the installer, its .sha256, and Libera-Suite-Setup.exe
+lb release upload windows                              # the installer, its .sha256, and Libera-Suite-Setup.exe
 ```
 
-The Flatpaks have their own pointer, `bundles/latest`, so either can go first. `lb release extras` refuses while `latest-windows` names no installer on the origin, unless it brings one itself. Neither verb is for the Windows machine: Git for Windows once turned `install.sh` to CRLF in a checkout there, and `extras` from it broke `curl | sh` for everyone.
+The Flatpaks have their own pointer, `bundles/latest`, so either can go first. `lb release upload` refuses while `latest-windows` names no installer on the origin, unless it brings one itself. Neither verb is for the Windows machine: Git for Windows once turned `install.sh` to CRLF in a checkout there, and `lb release upload` from it broke `curl | sh` for everyone.
 
-`.github/workflows/windows.yml` builds the same on a GitHub runner, by hand or on a version tag: the payload with `lb payload all`, then the installer with `lb app windows`, both uploaded as the run's artifacts. On every push that touches `build/`, it checks that the patch queue still applies on Windows. See `notes/14-windows.md` in the development repository.
+`.github/workflows/windows.yml` builds the same on a GitHub runner, by hand or on a version tag: the payload with `lb payload build`, then the installer with `lb app build windows`, both uploaded as the run's artifacts. On every push that touches `build/`, it checks that the patch queue still applies on Windows. See `notes/14-windows.md` in the development repository.
 
 ## Notes
 

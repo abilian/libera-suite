@@ -7,7 +7,7 @@ no wheel fits; and `libera-web`, the same on every platform. 0.7.0b1 went up
 without them, `libera` alone, and nothing could install it: `make publish`
 uploaded the wheel `make build` made, and no phase knew of the others.
 
-So each builder runs `lb components wheels`, which builds its core wheel from
+So each builder runs `lb components build`, which builds its core wheel from
 the core's source, reusing the build tree `build` has just brought to the pin,
 and the editors' wheel. Every platform's wheel, the Mac's source and the Mac's
 editors' wheel are then brought to one folder here, `build/out/pypi/<payload
@@ -59,7 +59,7 @@ def run(ctx: Context) -> None:
         run_builds(
             ctx,
             ctx.remotes,
-            lambda _b: f"components wheels --out {out}",
+            lambda _b: f"components build --out {out}",
             verify,
             "building the components",
         )

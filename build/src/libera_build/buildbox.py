@@ -1,4 +1,4 @@
-"""`lb payload container`: the Linux payload, built in a pinned Ubuntu container.
+"""`lb container run payload`: the Linux payload, built in a pinned Ubuntu container.
 
 The reproducible way to build a Linux payload, and the only way to build one
 from the Mac. On an Apple Silicon Mac, linux/amd64 runs under Rosetta rather
@@ -46,7 +46,7 @@ CLANG = {"arm64": "13", "amd64": "14"}
 ROOM_GB = 30
 
 # A checkout to a payload, each step a script in build/engine and its
-# arguments: what `payload all` runs here and `payload container` in there.
+# arguments: what `payload build` runs here and `container run payload` in there.
 STEPS = (
     ("build.sh", "fetch"),
     ("build.sh", "configure"),
@@ -359,7 +359,7 @@ class Box:
             msg = (
                 f"copying {version} out of the volume {self.options.volume} failed "
                 f"({reader.returncode}, then {written.returncode}): "
-                "build it first, lb payload container"
+                "build it first, lb container run payload"
             )
             raise RefusedError(msg)
         return into / version
@@ -368,7 +368,7 @@ class Box:
 def checked(out: Path) -> Path:
     """A version's artifacts, believed by their content."""
     if not (out / "manifest.json").is_file():
-        msg = f"no manifest.json in {out}: build it first, lb payload container"
+        msg = f"no manifest.json in {out}: build it first, lb container run payload"
         raise RefusedError(msg)
     if not list(out.glob("*.tar.gz")):
         msg = f"no tarballs in {out}"
@@ -378,7 +378,7 @@ def checked(out: Path) -> Path:
 
 def exported_dist(arch: str) -> Path | None:
     """The container build's artifacts for `arch` on this machine, or None:
-    what `lb linux` and `lb release matrix` look for when given no directory."""
+    what `lb linux` and `lb release check distros` look for when given no directory."""
     out = (
         build_root() / f"linux-{arch}" / "out" / "dist" / versions.payload_version(REPO)
     )

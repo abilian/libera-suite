@@ -634,7 +634,7 @@ def _wear_the_application_icon() -> None:
     of startup on purpose.
 
     `icon.svg` ships in the wheel and is the one copy of the mark in the
-    repository; `build/macos/macos-icon.py` and `lb app flatpak`
+    repository; `build/macos/macos-icon.py` and `lb app build flatpak`
     (libera_build/flatpak.py) read the same file.
 
     NSImage has read SVG only since macOS 13. On 11 and 12 it returns nil,

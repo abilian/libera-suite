@@ -27,7 +27,7 @@ PAYLOAD_FINISHED = "out/payload/sdkjs/slide/themes/themes.js"
 def native(ctx: Context) -> None:
     """The macOS core, on this machine, because there is nowhere else for it.
 
-    `lb payload dist` re-tars the core already built under $BUILD_ROOT and
+    `lb payload build dist` re-tars the core already built under $BUILD_ROOT and
     takes a minute. It does not build one: that is `make payload`, an
     afternoon, run by hand beforehand, and one older than its trees is
     refused. It runs every time all the same, because the payload half is
@@ -52,7 +52,7 @@ def native(ctx: Context) -> None:
         "the tarballs would hold a build older than the trees it comes from.\n"
         "  make payload: it rebuilds.",
     )
-    run_here(["uv", "run", "lb", "payload", "dist"], "native", cwd=ctx.root)
+    run_here(["uv", "run", "lb", "payload", "build", "dist"], "native", cwd=ctx.root)
 
 
 def pinned(root: Path) -> dict[str, str]:

@@ -39,10 +39,10 @@ def build_command(b: Builder) -> str:
     """What a builder runs to leave its core, and the shared pair, in its dist
     directory. On Linux, the container, whose glibc decides the oldest
     distribution the core loads on. Elsewhere, the machine's own toolchain,
-    which `payload all` checks before its hours of building."""
+    which `payload build` checks before its hours of building."""
     if b.platform.startswith("linux-"):
-        return f"payload container{arch_suffix(b)}"
-    return "payload all"
+        return f"container run payload{arch_suffix(b)}"
+    return "payload build"
 
 
 @dataclass(frozen=True)
@@ -60,12 +60,12 @@ def bundle_of(b: Builder, app: str) -> Bundle | None:
     macOS ships through Homebrew, which builds from source."""
     if b.platform.startswith("linux-"):
         return Bundle(
-            f"app flatpak{arch_suffix(b)}",
+            f"app build flatpak{arch_suffix(b)}",
             (f"build/out/{bundle_name(app, b.arch or '')}",),
         )
     if b.platform.startswith("windows-"):
         setup = f"build/out/bundles/{installer_name(app)}"
-        return Bundle("app windows", (setup, f"{setup}.sha256"))
+        return Bundle("app build windows", (setup, f"{setup}.sha256"))
     return None
 
 

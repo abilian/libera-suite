@@ -121,7 +121,7 @@ def windows_ready(origin: Origin) -> str | None:
             f"{origin.public('bundles/latest-windows')} names no installer ({e}),\n"
             "  and install.ps1 would then fail every Windows install. Nothing was\n"
             "  uploaded. Publishing an installer moves it: lb release ship\n"
-            "  bundles --only windows-x86_64, then lb release windows"
+            "  bundles --only windows-x86_64, then lb release upload windows"
         )
 
 
@@ -255,7 +255,7 @@ def windows(root: Path, origin: Origin, *, dry: bool) -> None:
     the release's Flatpaks: `lb release ship bundles --only windows-x86_64`
     brings it here, and this sends it up.
 
-    Not `extras`: that also moves `latest`, which would name a version whose
+    Not `lb release upload`: that also moves `latest`, which would name a version whose
     Flatpak bundles are not up yet.
     """
     token = os.environ.get("CDN_TOKEN")

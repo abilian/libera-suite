@@ -1,10 +1,10 @@
-"""`lb app flatpak`: the Flatpak, built in a container.
+"""`lb app build flatpak`: the Flatpak, built in a container.
 
 All of it runs in a container, Mac included: flatpak-builder is an ordinary
 Linux program, and what it needs is user namespaces and /dev/fuse, which Docker
 grants. The bundle is built, installed and run in there: `check` asks the
 application whether it could open a window, `smoke` has it convert a document
-with the payload it carries. The window itself is `lb linux gui`'s job.
+with the payload it carries. The window itself is `lb linux screenshot`'s job.
 
 Bundles cannot be cross-built: flatpak-builder runs every module inside
 bubblewrap, whose seccomp filter is built for the architecture it runs on. So
