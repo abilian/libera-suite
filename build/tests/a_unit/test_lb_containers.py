@@ -195,21 +195,3 @@ def test_a_docker_context_over_ssh_is_another_machine():
 def test_an_engine_that_is_not_installed_is_refused_by_name():
     with pytest.raises(RefusedError, match="no libera-no-such-engine here"):
         Engine("libera-no-such-engine").refuse_absent()
-
-
-def test_the_distros_check_refuses_a_dist_that_is_not_there(tmp_path):
-    # It once fell back to the container build without a word.
-    options = matrix.MatrixOptions(dist=tmp_path / "nowhere")
-    with pytest.raises(RefusedError, match="is not a directory"):
-        matrix.choose(options)
-
-
-def test_the_distros_check_takes_a_stage_only_once_stamped(tmp_path, monkeypatch):
-    staged = tmp_path / "release" / "9.9.9"
-    staged.mkdir(parents=True)
-    monkeypatch.setattr(matrix.staging, "folder", lambda _root: staged)
-    monkeypatch.setattr(matrix, "exported_dist", lambda _arch: None)
-    with pytest.raises(RefusedError, match="nothing stamped"):
-        matrix.choose(matrix.MatrixOptions())
-    (staged / matrix.staging.STAMP).write_text("{}")
-    assert matrix.choose(matrix.MatrixOptions()) == (staged, matrix.ARCHES)

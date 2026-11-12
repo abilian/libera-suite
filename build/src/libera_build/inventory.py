@@ -118,8 +118,9 @@ def parse(text: str, source: str) -> list[Builder]:
 
 
 def gui_remotes(builders: list[Builder]) -> list[Builder]:
-    """The remote Linux and Windows builders: the ones `release check downloads` opens a
-    window on. A Mac has nothing published to open: Homebrew and pip build it."""
+    """The remote Linux and Windows builders: the ones a window is opened on
+    from what users download. A Mac has nothing published to open: Homebrew
+    and pip build it."""
     return [b for b in builders if b.remote and b.os != "macos"]
 
 

@@ -30,7 +30,7 @@ WEB = Path("components", "web")
 
 # The tag each platform's core wheel gets. glibc 2.34, the newest symbol
 # version a Linux core asks for since core 0032, which is RHEL 9: the 0.7 core
-# converts on AlmaLinux 9 in `lb release check distros`, and tagged 2.35 pip there
+# converts on AlmaLinux 9 in the distros check, and tagged 2.35 pip there
 # took the sdist and its hour of build instead. macOS 14, the minos of every
 # binary in the macOS core, read with otool: tagged 11, as the spike did, pip
 # would install it on macOS 11 to 13, where it cannot load.

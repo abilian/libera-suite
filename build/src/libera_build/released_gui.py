@@ -1,4 +1,4 @@
-"""`lb release check downloads`: does what users download open a window?
+"""`lb release publish`'s downloads phase: does what users download open a window?
 
 `lb linux screenshot` opens one from the build tree, in the test container: it proves
 the code opens a window and says nothing about the artifact anybody downloads,
@@ -44,8 +44,6 @@ WINDOWS_RUN = (
 
 @dataclass(frozen=True)
 class ReleasedGuiOptions:
-    only: tuple[str, ...] = ()  # platforms in builders.toml; default all of them
-    doc: str | None = None  # a document on that machine, instead of the payload's blank
     # A release's staged files here (`stage`), sent to each machine and
     # installed from there, instead of what the CDN serves.
     staged: Path | None = None
@@ -79,12 +77,10 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
     windows = is_windows(uname)
     if windows:
         script, shot_there = WINDOWS_SCRIPT, WINDOWS_SHOT
-        doc = f' -Doc "{options.doc}"' if options.doc else ""
-        command = WINDOWS_RUN + doc
+        command = WINDOWS_RUN
     else:
         script, shot_there = SCRIPT, SHOT
-        doc = f" --doc {options.doc}" if options.doc else ""
-        command = f"sh {SCRIPT} --out {SHOT}{doc}"
+        command = f"sh {SCRIPT} --out {SHOT}"
     if options.staged:
         sent = send_staged(host, name, options.staged, options.root, windows=windows)
         if sent is None:
@@ -139,7 +135,7 @@ def send_staged(
 
 def run(options: ReleasedGuiOptions) -> int:
     builders = inventory.read(options.root / repo.BUILDERS)
-    remotes = inventory.narrow(inventory.gui_remotes(builders), list(options.only))
+    remotes = inventory.gui_remotes(builders)
     targets = [(b.platform, b.target) for b in remotes]
     if not targets:
         msg = "no remote Linux or Windows builders in build/builders.toml"

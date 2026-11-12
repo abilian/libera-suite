@@ -255,3 +255,25 @@ def test_a_platform_passes_the_stage_only_installed_converted_and_drawn(
     b = Builder(platform, "x", "~/r")
     found = staging.installs(Answering(said), b, tmp_path, "9.9.9", [])
     assert (found == []) is passes, found
+
+
+def test_distros_tries_a_stamped_stage_on_each_linux_builders_arch(stage, monkeypatch):
+    tried = []
+    monkeypatch.setattr(staging.matrix, "run", lambda d, a: tried.append((d, a)))
+    builders = [
+        Builder("macos-arm64", "local", "~/r"),
+        Builder("linux-x86_64", "x", "~/r"),
+        Builder("linux-arm64", "y", "~/r"),
+    ]
+    staging.distros(Context(root=stage, builders=builders, phases=["distros"]))
+    assert tried == [(staging.folder(stage), ("x86_64", "arm64"))]
+
+
+def test_distros_refuses_a_stage_that_was_never_stamped(stage, monkeypatch):
+    (staging.folder(stage) / staging.STAMP).unlink()
+    monkeypatch.setattr(staging.matrix, "run", lambda *_: pytest.fail("ran"))
+    ctx = Context(
+        root=stage, builders=[Builder("linux-x86_64", "x", "~/r")], phases=["distros"]
+    )
+    with pytest.raises(RefusedError, match="no distribution was tried"):
+        staging.distros(ctx)

@@ -35,7 +35,7 @@ from libera_build.release.phases import (
     staging,
     update,
 )
-from libera_build.release.ship import ShipOptions, ship
+from libera_build.release.run import RunOptions, run
 from libera_build.report import RefusedError
 from libera_build.sources import source_problems
 
@@ -200,7 +200,7 @@ def test_a_build_that_fails_says_how_and_skips_the_check(driver, home):
 
 
 def test_a_byte_that_is_not_utf8_is_logged_and_does_not_end_the_run(driver, home):
-    """Python on Windows writes a pipe in cp1252, and its `…` ended a ship."""
+    """Python on Windows writes a pipe in cp1252, and its `…` ended a release."""
     assert ran(driver, home, "cp1252") is None
     log = (driver / "tmp" / "remote" / f"{ARM.platform}.log").read_text(
         encoding="utf-8"
@@ -274,24 +274,24 @@ def builders_toml(driver: Path) -> None:
     )
 
 
-def test_ship_refuses_publishing_from_a_tree_it_cannot_vouch_for(
-    driver, home, capsys, monkeypatch
-):
+def test_publish_refuses_a_tree_it_cannot_vouch_for(driver, home, capsys, monkeypatch):
     builders_toml(driver)
     (driver / "dirty.txt").write_text("uncommitted")
-    options = ShipOptions(
-        phases=("publish",), root=driver, host_for=lambda _: LocalHost(home)
+    options = RunOptions(
+        "publish", ("publish",), root=driver, host_for=lambda _: LocalHost(home)
     )
     monkeypatch.delenv("ALLOW_DIRTY", raising=False)
     with pytest.raises(RefusedError, match="nothing was started"):
-        ship(options)
+        run(options)
     assert "would stamp a commit" in capsys.readouterr().out
 
 
-def test_ship_dry_names_the_builders_and_runs_nothing(driver, home, capsys):
+def test_a_dry_run_names_the_builders_and_runs_nothing(driver, home, capsys):
     builders_toml(driver)
-    options = ShipOptions(root=driver, dry_run=True, host_for=lambda _: LocalHost(home))
-    assert ship(options) == 0
+    options = RunOptions(
+        "publish", root=driver, dry_run=True, host_for=lambda _: LocalHost(home)
+    )
+    assert run(options) == 0
     out = capsys.readouterr().out
     assert "linux-arm64    arm:~/checkout" in out
     assert "publish cannot be undone" in out

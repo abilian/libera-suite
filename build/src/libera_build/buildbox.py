@@ -366,12 +366,3 @@ def checked(out: Path) -> Path:
         msg = f"no tarballs in {out}"
         raise RefusedError(msg)
     return out
-
-
-def exported_dist(arch: str) -> Path | None:
-    """The container build's artifacts for `arch` on this machine, or None:
-    what `lb linux` and `lb release check distros` look for when given no directory."""
-    out = (
-        build_root() / f"linux-{arch}" / "out" / "dist" / versions.payload_version(REPO)
-    )
-    return out if (out / "manifest.json").is_file() else None

@@ -166,7 +166,7 @@ publish: build ## the wheel, to PyPI, once PyPI has the components it pins
 	@echo "$(CURDIR)/$$(ls dist/libera-*.whl)" \
 		| uv pip compile --refresh --no-config --index-url https://pypi.org/simple \
 			--python-version 3.12 -q - >/dev/null \
-		|| { echo "make publish: PyPI cannot install this libera yet: its components go first: lb release ship check publish" >&2; exit 1; }
+		|| { echo "make publish: PyPI cannot install this libera yet: its components go first: lb release publish" >&2; exit 1; }
 	uv publish
 
 # --- this project's own ------------------------------------------------------
@@ -176,5 +176,6 @@ payload: ## build the editor payload here (lb payload --help for the steps)
 	$(LB) payload all
 
 # The release, on the builders. Phases and --only: lb release --help.
-ship: ## the whole release (lb release ship --help for its phases)
-	$(LB) release ship
+ship: ## the whole release: lb release check, then lb release publish
+	$(LB) release check
+	$(LB) release publish

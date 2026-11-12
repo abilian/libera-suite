@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from libera_build.inventory import Builder
-from libera_build.release import plan, ship
+from libera_build.release import plan, run
 from libera_build.release.phases import builders
 from libera_build.report import RefusedError
 
@@ -12,26 +12,36 @@ ARM = Builder("linux-arm64", "arm", "~/r")
 
 
 def test_phases_run_in_their_order_whatever_order_they_are_asked_in():
-    assert plan.choose_phases(["publish", "wheel"], narrowed=False) == [
+    assert plan.choose_phases("check", ["stage", "wheel"], narrowed=False) == [
         "wheel",
-        "publish",
+        "stage",
     ]
 
 
-def test_no_phase_means_all_of_them_or_those_that_narrow():
-    assert plan.choose_phases([], narrowed=False) == list(plan.PHASES)
-    assert plan.choose_phases([], narrowed=True) == list(plan.PER_BUILDER)
+def test_no_phase_means_all_of_the_verbs_or_those_that_narrow():
+    assert plan.choose_phases("check", [], narrowed=False) == list(plan.CHECK)
+    assert plan.choose_phases("check", [], narrowed=True) == list(plan.PER_BUILDER)
+    assert plan.choose_phases("publish", [], narrowed=False) == list(plan.PUBLISH)
 
 
 def test_only_refuses_the_phases_that_span_every_builder():
     with pytest.raises(RefusedError) as e:
-        plan.choose_phases(["components", "wheel"], narrowed=True)
+        plan.choose_phases("check", ["components", "wheel"], narrowed=True)
     assert "not wheel" in str(e.value)
 
 
+def test_a_check_never_publishes():
+    """The one irreversible phase is reached only by its own verb."""
+    assert "publish" not in plan.CHECK
+    with pytest.raises(RefusedError, match="a phase of `lb release publish`"):
+        plan.choose_phases("check", ["publish"], narrowed=False)
+    with pytest.raises(RefusedError, match="a phase of `lb release check`"):
+        plan.choose_phases("publish", ["stage"], narrowed=False)
+
+
 def test_an_unknown_phase_is_refused():
-    with pytest.raises(RefusedError):
-        plan.choose_phases(["biuld"], narrowed=False)
+    with pytest.raises(RefusedError, match="no such phase"):
+        plan.choose_phases("check", ["biuld"], narrowed=False)
 
 
 def test_uploading_wants_a_token():
@@ -151,4 +161,4 @@ def test_a_libera_that_pins_another_payload_does_not_go_up():
 def test_every_phase_has_an_action_and_every_action_a_phase():
     # Two tables kept in step by hand: one missing a key is a KeyError found
     # after the hours of building, not before.
-    assert list(ship.ACTIONS) == list(plan.PHASES)
+    assert list(run.ACTIONS) == list(plan.PHASES)

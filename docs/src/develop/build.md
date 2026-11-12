@@ -180,14 +180,15 @@ The first line takes hours, V8 alone about one, with OpenSSL from vcpkg. `window
 
 `make ship` builds Windows with the rest. Its `components` phase runs `components build` there; `bundles` runs `app build windows` there, which freezes the components `uv sync` builds from the pins, and brings the installer and its `.sha256` here, into the run directory (`build/out/release/<commit>/bundles/`), where `stage` gathers them with the Flatpaks. The upload checks the hash first and each stored size after, and moves `bundles/latest-windows`, the version `install.ps1` installs, last, so the installer is on the origin before any user is sent to it.
 
-A Windows build that comes after the release's Flatpaks goes up on its own, from here:
+A Windows build that comes after the release's Flatpaks is checked like the rest, then published again, PyPI skipping the files it already has:
 
 ```sh
-lb release ship bundles --only windows-x86_64   # the installer, made there and brought here
-lb release upload windows                              # the installer, its .sha256, and Libera-Suite-Setup.exe
+lb release check bundles --only windows-x86_64   # the installer, made there and brought here
+lb release check stage                           # installed and opened there, with the rest
+lb release publish                               # the new files; latest-windows moves last
 ```
 
-The Flatpaks have their own pointer, `bundles/latest`, so either can go first. `lb release upload` refuses while `latest-windows` names no installer on the origin, unless it brings one itself. Neither verb is for the Windows machine: Git for Windows once turned `install.sh` to CRLF in a checkout there, and `lb release upload` from it broke `curl | sh` for everyone.
+The Flatpaks have their own pointer, `bundles/latest`, so either can go first. `publish` refuses to move it while `latest-windows` names no installer on the origin, unless it brings one itself. Publishing is never done from the Windows machine: Git for Windows once turned `install.sh` to CRLF in a checkout there, and an upload from it broke `curl | sh` for everyone.
 
 `.github/workflows/windows.yml` builds the same on a GitHub runner, by hand or on a version tag: the payload with `lb payload build`, then the installer with `lb app build windows`, both uploaded as the run's artifacts. On every push that touches `build/`, it checks that the patch queue still applies on Windows. See `notes/14-windows.md` in the development repository.
 

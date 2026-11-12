@@ -16,48 +16,59 @@ if TYPE_CHECKING:
 
     from libera_build.inventory import Builder
 
-# The phases, in the only order they work in, with what each does. `stage`
-# follows everything that makes a file, and `verify` follows `publish`
-# because what it checks is the *published* wheel. The CDN carries the
-# bundles and the install scripts only: since 0.7 nothing downloads a payload
-# from it, so none is collected, pushed or checked. The macOS core is built
-# by `components`, into libera-core's wheel: there is no tarball of it to make.
-PHASES = {
+# The phases of each verb, in the only order they work in, with what each
+# does. `check` builds the release and installs it as users will, and
+# publishes nothing, so it runs at any commit, as often as wanted. `publish`
+# is the part with no undo: PyPI refuses a version it has already seen, so a
+# mistaken publish costs a version number rather than a retry. `stage`
+# follows everything that makes a file; `verify` and `downloads` follow
+# `publish`, because what they check is what users get. The macOS core is
+# built by `components`, into libera-core's wheel.
+CHECK = {
     "update": "send this commit to each builder and check it out there",
     "components": "libera-core's wheel on each builder, in parallel, and libera-web"
     " here, for PyPI: built from the pins (hours the first time)",
     "bundles": "the Flatpaks and the Windows installer, each on its builder",
     "wheel": "make verify, then the wheel",
     "stage": "every file publish uploads, gathered and installed on every platform",
+    "distros": "the staged Linux converter in a clean container of each"
+    " distribution the install page names",
+}
+PUBLISH = {
     "publish": "the staged files: the packages to PyPI, the bundles to the CDN",
     "verify": "libera installed from PyPI alone on each platform, a document converted",
+    "downloads": "the published Flatpak and Windows installer, installed on the"
+    " builders, a window opened from each",
 }
+VERBS = {"check": CHECK, "publish": PUBLISH}
+PHASES = {**CHECK, **PUBLISH}
 
 # What `--only` can narrow. The rest act on every builder at once, so a run
-# narrowed to one platform that went on to them would publish what nobody had
+# narrowed to one platform that went on to them would stage what nobody had
 # rebuilt.
 PER_BUILDER = ("update", "components", "bundles")
 
-# `publish` is the one phase that reaches outside the builders, and the one
-# that cannot be taken back: PyPI refuses a version it has already seen, so a
-# mistaken publish costs a version number rather than a retry. The refusals
-# below up to `unpushed_problems` are about it alone.
 
-
-def choose_phases(asked: Sequence[str], *, narrowed: bool) -> list[str]:
-    """The phases to run, in the order they work in, whatever order they were
-    asked in: `publish wheel` means `wheel publish`, because there is only one
-    order that works and a command line is a poor place to discover that.
+def choose_phases(verb: str, asked: Sequence[str], *, narrowed: bool) -> list[str]:
+    """The phases of `verb` to run, in the order they work in, whatever order
+    they were asked in: `stage wheel` means `wheel stage`, because there is
+    only one order that works and a command line is a poor place to discover
+    that.
 
     Asked for none, all of them; or, narrowed to some builders, those that
     narrow with them.
     """
+    own = VERBS[verb]
     if unknown := sorted(set(asked) - set(PHASES)):
         msg = f"no such phase: {', '.join(unknown)}"
         raise RefusedError(msg)
-    default = PER_BUILDER if narrowed else tuple(PHASES)
+    if other := sorted(set(asked) - set(own)):
+        theirs = next(v for v in VERBS if v != verb)
+        msg = f"{', '.join(other)}: a phase of `lb release {theirs}`, not of {verb}"
+        raise RefusedError(msg)
+    default = [p for p in own if p in PER_BUILDER] if narrowed else list(own)
     wanted = set(asked) or set(default)
-    phases = [p for p in PHASES if p in wanted]
+    phases = [p for p in own if p in wanted]
     if narrowed and (spanning := [p for p in phases if p not in PER_BUILDER]):
         msg = (
             f"--only narrows {', '.join(PER_BUILDER)}, and not "

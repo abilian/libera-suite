@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from libera_build import report, versions
+from libera_build import released_gui, report, versions
 from libera_build.artifacts import (
     app_wheel_name,
     core_sdist_name,
@@ -19,6 +19,7 @@ from libera_build.hosts import LocalHost, facts_from
 from libera_build.origin import place, publish as cdn
 from libera_build.process import run_here
 from libera_build.release import plan
+from libera_build.released_gui import ReleasedGuiOptions
 from libera_build.report import problems, say, step
 
 # PyPI's simple index: `uv publish --check-url` reads it to skip a file
@@ -135,6 +136,18 @@ def verify(ctx: Context) -> None:
                 f"{b.platform}: libera {app} did not install and convert\n{tail}"
             )
     problems(found, "a published release a user cannot install.")
+
+
+def downloads(ctx: Context) -> None:
+    """The published Flatpak and Windows installer, installed on each Linux and
+    Windows builder the way users get them, a window opened from each and
+    photographed (released_gui). A pre-release moves no pointer, so there is
+    nothing new for them to download."""
+    app = versions.app_version(ctx.root)
+    if versions.is_prerelease(app):
+        say(f"    {app} is a pre-release: the downloads stay on the last release")
+        return
+    released_gui.run(ReleasedGuiOptions(root=ctx.root))
 
 
 # A window on this machine, from the staged install: its page photographs its

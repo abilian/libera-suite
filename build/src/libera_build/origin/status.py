@@ -24,7 +24,8 @@ if TYPE_CHECKING:
 PYPI = "https://pypi.org/pypi/libera/json"
 
 
-def status(root: Path) -> None:
+def status(root: Path) -> int:
+    """`lb release status`: read-only, so it always succeeds."""
     version = versions.app_version(root)
     step("version")
     say(f"    {version}  (pyproject.toml; payload {versions.payload_version(root)})")
@@ -50,10 +51,11 @@ def status(root: Path) -> None:
     for f in files:
         say(f"    {f.name:56} {f.stat().st_size / 1e6:6.1f} MB")
     if not files:
-        say("    none yet: make ship")
+        say("    none yet: lb release check")
 
     step("PyPI")
     say(f"    {pypi_summary()}")
+    return 0
 
 
 def pypi_summary() -> str:

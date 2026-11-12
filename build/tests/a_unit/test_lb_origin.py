@@ -7,7 +7,7 @@ import io
 import json
 
 import pytest
-from libera_build.origin import cdn, place, status, verbs
+from libera_build.origin import cdn, place, status
 from libera_build.report import RefusedError
 
 ORIGIN = place.Origin("https://cdn.example", "libera")
@@ -93,36 +93,3 @@ def test_status_reads_the_project_from_pypi_and_says_what_is_yanked(monkeypatch)
         "latest 0.3.3; published 0.3.3, 0.4.0rc1; yanked 0.3.1"
     )
     assert opened == ["https://pypi.org/pypi/libera/json"]
-
-
-@pytest.mark.parametrize(
-    ("options", "asks"),
-    [
-        (verbs.OriginOptions("extras"), True),
-        (verbs.OriginOptions("windows"), True),
-        (verbs.OriginOptions("extras", dry_run=True), False),
-        (verbs.OriginOptions("extras", yes=True), False),
-        (verbs.OriginOptions("status"), False),
-    ],
-)
-def test_an_upload_asks_first_unless_dry_or_yes(options, asks, monkeypatch):
-    asked = []
-
-    def refuse(question, refused):
-        asked.append(question)
-        raise RefusedError(refused)
-
-    def done(*_args, **_kwargs):
-        return None
-
-    monkeypatch.setattr(verbs, "confirm", refuse)
-    monkeypatch.setattr(verbs.place, "here", done)
-    for name in ("status", "extras", "windows"):
-        module = verbs.status if name == "status" else verbs.publish
-        monkeypatch.setattr(module, name, done)
-    if asks:
-        with pytest.raises(RefusedError, match="nothing was uploaded"):
-            verbs.run(options)
-    else:
-        verbs.run(options)
-    assert bool(asked) == asks

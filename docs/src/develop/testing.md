@@ -68,9 +68,9 @@ make lint-linux    # the same type checkers in the Linux container
 
 The suite tests this checkout. These read what a user downloads:
 
-- `lb release ship stage` installs every file of the release on every platform before any of it is published: `libera` and its components from the staged files alone, the Flatpak, the Windows installer, and a window on the Mac.
-- `lb release check distros` converts a document with the staged Linux `libera-core` wheels, in a clean container of each distribution the install page names, and looks for the text in the output. Its first run found the page claiming Fedora 35 and RHEL 9, where glibc 2.34 cannot load a core that needs 2.35.
-- `lb release check downloads` installs the *published* Flatpak on each Linux builder and runs it under Xvfb, and installs the published Windows installer on the Windows builder and opens a window in its desktop session, and screenshots both. It is the only check that exercises the GNOME runtime's WebKit, which is not the distribution's.
+- `lb release check` installs every file of the release on every platform before any of it is published: `libera` and its components from the staged files alone, the Flatpak, the Windows installer, and a window on the Mac.
+- Its `distros` phase converts a document with the staged Linux `libera-core` wheels, in a clean container of each distribution the install page names, and looks for the text in the output. Its first run found the page claiming Fedora 35 and RHEL 9, where glibc 2.34 cannot load a core that needs 2.35.
+- `lb release publish`'s `downloads` phase installs the *published* Flatpak on each Linux builder and runs it under Xvfb, and installs the published Windows installer on the Windows builder and opens a window in its desktop session, and screenshots both. It is the only check that exercises the GNOME runtime's WebKit, which is not the distribution's.
 
 Each release phase verifies its own artifact too, after the bundle phase once found a core tarball an earlier build had left behind and reported a pass for a bundle it never produced.
 

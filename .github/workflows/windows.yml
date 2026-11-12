@@ -146,7 +146,7 @@ jobs:
           restore-keys: |
             3rdparty-${{ runner.os }}-${{ hashFiles('build/upstream/pins.toml', 'build/upstream/patches/**', 'build/windows/msvc-env.sh') }}-
 
-      # What the Windows builder runs for `lb release ship`'s build and bundles
+      # What the Windows builder runs for `lb release check`'s components and bundles
       # phases, in the same order: payload all ends with the smoke test, which
       # converts a document and reads the text back, and app windows freezes
       # the application and makes the installer.

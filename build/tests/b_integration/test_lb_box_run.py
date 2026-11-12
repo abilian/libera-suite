@@ -44,8 +44,6 @@ def test_an_export_is_believed_by_its_content(tmp_path, monkeypatch):
         box.exported()
     (out / "core-linux-arm64.tar.gz").write_bytes(b"x")
     assert box.exported() == out
-    assert buildbox.exported_dist("arm64") == out
-    assert buildbox.exported_dist("amd64") is None
 
 
 # An engine that runs the container's script here instead, with /build being

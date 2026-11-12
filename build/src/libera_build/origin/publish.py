@@ -1,4 +1,4 @@
-"""extras, windows: what goes up to the CDN, and in what order.
+"""extras: what goes up to the CDN, and in what order.
 
 The Flatpak bundles, the Windows installer and the two install scripts; since
 0.7 nothing downloads a payload from it. The install scripts sit at the zone
@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from libera.manifest import hash_file
 from libera_build import versions
-from libera_build.artifacts import bundle_name, installer_name, run_bundles
+from libera_build.artifacts import bundle_name, installer_name
 from libera_build.origin.cdn import key_for, put
 from libera_build.report import RefusedError, say, step
 
@@ -123,8 +123,9 @@ def windows_ready(origin: Origin) -> str | None:
         return (
             f"{origin.public('bundles/latest-windows')} names no installer ({e}),\n"
             "  and install.ps1 would then fail every Windows install. Nothing was\n"
-            "  uploaded. Publishing an installer moves it: lb release ship\n"
-            "  bundles --only windows-x86_64, then lb release upload windows"
+            "  uploaded. Publishing an installer moves it: lb release check\n"
+            "  bundles --only windows-x86_64, lb release check stage, then\n"
+            "  lb release publish"
         )
 
 
@@ -240,14 +241,10 @@ def ready(root: Path, origin: Origin, *, dry: bool, bundles: Path) -> None:
                 sign(bundle)
 
 
-def extras(
-    root: Path, origin: Origin, *, dry: bool, bundles: Path | None = None
-) -> None:
+def extras(root: Path, origin: Origin, *, dry: bool, bundles: Path) -> None:
     """The bundles, the Windows installer if it is here, install.sh and
     install.ps1, then `latest`, which moves both install scripts. From
-    `bundles`, the staged release when `publish` calls it, else where the
-    builders' bundles are brought."""
-    bundles = bundles or run_bundles(root)
+    `bundles`, the staged release."""
     ready(root, origin, dry=dry, bundles=bundles)
     token = os.environ.get("CDN_TOKEN")
     app = versions.app_version(root)
@@ -258,7 +255,7 @@ def extras(
     if setup:
         put_windows(origin, setup, app, token=token, dry=dry)
     else:
-        say("    no Windows installer here; lb release ship bundles brings it")
+        say("    no Windows installer staged; lb release check bundles brings it")
     if pre:
         say(f"    {app} is a pre-release: the install scripts and latest stay")
         step("nothing was uploaded (--dry-run)" if dry else "published")
@@ -281,26 +278,3 @@ def extras(
     step("nothing was uploaded (--dry-run)" if dry else "published")
     if not dry:
         say(f"    check it:  curl -fsS {origin.public('install.sh')} | head -5")
-
-
-def windows(root: Path, origin: Origin, *, dry: bool) -> None:
-    """The Windows installer on its own, for a Windows build that comes after
-    the release's Flatpaks: `lb release ship bundles --only windows-x86_64`
-    brings it here, and this sends it up.
-
-    Not `lb release upload`: that also moves `latest`, which would name a version whose
-    Flatpak bundles are not up yet.
-    """
-    token = os.environ.get("CDN_TOKEN")
-    need_token(token, dry=dry, zone=origin.zone)
-    app = versions.app_version(root)
-    bundles = run_bundles(root)
-    step(f"publishing the Windows installer for {app} to {origin.public('bundles')}/")
-    if (setup := installer_here(bundles, app)) is None:
-        msg = (
-            f"no {bundles}/{installer_name(app)} and .sha256\n"
-            "  lb release ship bundles --only windows-x86_64 brings both here."
-        )
-        raise RefusedError(msg)
-    put_windows(origin, setup, app, token=token, dry=dry)
-    step("nothing was uploaded (--dry-run)" if dry else "published")

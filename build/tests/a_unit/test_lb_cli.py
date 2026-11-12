@@ -11,17 +11,14 @@ import shlex
 from pathlib import Path
 
 import pytest
-from libera_build import bench, buildbox, cli, flatpak, linux, matrix, tidy
+from libera_build import bench, buildbox, cli, flatpak, linux, tidy
 from libera_build.buildbox import BoxOptions
 from libera_build.cli import Step
 from libera_build.containers import host_arch
 from libera_build.flatpak import FlatpakOptions
 from libera_build.linux import LinuxOptions
-from libera_build.matrix import MatrixOptions
-from libera_build.origin import verbs
-from libera_build.origin.verbs import OriginOptions
 from libera_build.release.on import OnOptions
-from libera_build.release.ship import ShipOptions, ship
+from libera_build.release.run import RunOptions, run
 
 
 def sh(script, *args, **env):
@@ -99,8 +96,6 @@ def test_a_command_line_runs_its_scripts(argv, steps):
         ["app", "build", "flatpak", "--standalone"],
         ["app", "build", "macos", "--arch", "arm64"],
         ["app", "test", "windows", "--arch", "arm64"],
-        ["release", "check", "distros", "--only", "linux-arm64"],
-        ["release", "check", "downloads", "--distro", "a"],
     ],
 )
 def test_an_option_for_a_stage_or_target_not_run_is_refused(argv):
@@ -108,34 +103,35 @@ def test_an_option_for_a_stage_or_target_not_run_is_refused(argv):
         cli.plan(argv)
 
 
-def test_ship_is_called_here_with_its_phases_and_options():
+def test_check_is_called_here_with_its_phases_and_options():
     (call,) = cli.plan([
         "release",
-        "ship",
+        "check",
         "components",
         "bundles",
         "--only",
         "linux-arm64",
-        "--yes",
     ])
-    assert call == cli.Call(
-        ship,
-        (
-            ShipOptions(
-                phases=("components", "bundles"), only=("linux-arm64",), yes=True
-            ),
-        ),
-    )
+    options = RunOptions("check", ("components", "bundles"), only=("linux-arm64",))
+    assert call == cli.Call(run, (options,))
 
 
-def test_plan_is_ship_dry():
-    (call,) = cli.plan(["release", "plan", "bundles"])
-    assert call == cli.Call(ship, (ShipOptions(phases=("bundles",), dry_run=True),))
-
-
-def test_an_unknown_phase_is_refused():
+def test_publish_asks_unless_yes_and_narrows_nothing():
+    (call,) = cli.plan(["release", "publish", "--yes"])
+    assert call == cli.Call(run, (RunOptions("publish", yes=True),))
     with pytest.raises(SystemExit):
-        cli.plan(["release", "ship", "biuld"])
+        cli.plan(["release", "publish", "--only", "linux-arm64"])
+
+
+def test_dry_run_runs_nothing():
+    (call,) = cli.plan(["release", "check", "bundles", "--dry-run"])
+    assert call == cli.Call(run, (RunOptions("check", ("bundles",), dry_run=True),))
+
+
+def test_the_old_commands_are_gone():
+    for old in ("ship", "plan", "upload"):
+        with pytest.raises(SystemExit):
+            cli.plan(["release", old])
 
 
 # Commands that need arguments, and a line for each to plan with.
@@ -195,7 +191,6 @@ def test_an_unknown_option_is_refused_where_nothing_takes_it():
 
 def test_linux_is_called_here_with_its_options(monkeypatch):
     monkeypatch.delenv("ARCH", raising=False)
-    monkeypatch.delenv("DIST", raising=False)
     monkeypatch.delenv("PAYLOAD", raising=False)
     monkeypatch.delenv("LINUX_LANG", raising=False)
     (call,) = cli.plan(["linux", "test", "-k", "bridge", "--arch", "arm64"])
@@ -215,63 +210,20 @@ def test_an_argument_for_pytest_with_a_space_in_it_stays_one():
 def test_an_environment_variable_still_sets_a_knob(monkeypatch):
     monkeypatch.setenv("PAYLOAD", "/p")
     monkeypatch.delenv("ARCH", raising=False)
-    monkeypatch.delenv("DIST", raising=False)
     (call,) = cli.plan(["linux", "screenshot"])
     assert call.args[0].payload == Path("/p")
 
 
-def test_matrix_takes_its_lists_as_words(monkeypatch):
-    for name in ("DIST", "DISTROS", "ARCHES"):
-        monkeypatch.delenv(name, raising=False)
-    (call,) = cli.plan([
-        "release",
-        "check",
-        "distros",
-        "--distro",
-        "a:1",
-        "--distro",
-        "b:2",
-        "--arch",
-        "arm64",
-    ])
-    assert call == cli.Call(
-        matrix.run,
-        (MatrixOptions(distros=("a:1", "b:2"), arches=("arm64",)),),
-        env={"DISTROS": "a:1 b:2", "ARCHES": "arm64"},
-    )
-    monkeypatch.setenv("DISTROS", "c:3 d:4")
-    (call,) = cli.plan(["release", "check", "distros"])
-    assert call.args[0].distros == ("c:3", "d:4")
-
-
-@pytest.mark.parametrize(
-    ("argv", "options", "env"),
-    [
-        (["release", "status"], OriginOptions("status"), {}),
-        (
-            ["release", "upload", "--dry-run"],
-            OriginOptions("extras", dry_run=True),
-            {"DRY": "1"},
-        ),
-        (["release", "upload", "windows"], OriginOptions("windows"), {}),
-    ],
-)
-def test_the_origin_verbs_are_called_here(argv, options, env, monkeypatch):
-    for name in ("DRY", "BUILD_ROOT"):
-        monkeypatch.delenv(name, raising=False)
-    assert cli.plan(argv) == [cli.Call(verbs.run, (options,), env=env)]
-
-
 def test_dry_still_works_as_an_environment_variable(monkeypatch):
     monkeypatch.setenv("DRY", "1")
-    (call,) = cli.plan(["release", "upload"])
-    assert call.args[0].dry_run
+    (call,) = cli.plan(["tidy"])
+    assert call.kwargs["dry_run"]
 
 
 @pytest.fixture
 def no_knobs(monkeypatch):
     for name in (
-        "ARCH", "DIST", "BUILD_DIR", "VOLUME", "DOCKER_MEMORY", "MIRROR",
+        "ARCH", "BUILD_DIR", "VOLUME", "DOCKER_MEMORY", "MIRROR",
         "V8_BUILD_JOBS", "CORE_BUILD_JOBS", "BUILD_ROOT", "YES",
     ):  # fmt: skip
         monkeypatch.delenv(name, raising=False)
@@ -296,13 +248,12 @@ def test_build_root_reaches_a_command_done_in_this_process(argv, no_knobs):
     "argv",
     [
         ["release", "status"],
-        ["release", "upload"],
         ["linux", "lint"],
         ["container", "image", "linux"],
     ],
 )
 def test_a_command_offers_only_the_options_it_reads(argv, no_knobs):
-    """The release's CDN verbs never read $BUILD_ROOT, and the Linux commands
+    """`release status` never reads $BUILD_ROOT, and the Linux commands
     that start no libera install no components."""
     for option in ("--build-root", "--wheels", "--payload"):
         with pytest.raises(SystemExit):
@@ -355,13 +306,6 @@ def test_the_flatpak_defaults_to_this_machines_architecture(no_knobs):
     assert call == cli.Call(flatpak.run, (FlatpakOptions("smoke", arch=host_arch()),))
     (call,) = cli.plan(["app", "build", "flatpak", "--arch", "amd64"])
     assert call.args[0] == FlatpakOptions("build", arch="amd64")
-
-
-def test_released_gui_is_every_builder_unless_one_is_named():
-    (call,) = cli.plan(["release", "check", "downloads", "--only", "linux-arm64"])
-    assert call.args[0].only == ("linux-arm64",)
-    (call,) = cli.plan(["release", "check", "downloads"])
-    assert call.args[0].only == ()
 
 
 def test_tidy_asks_unless_yes_and_lists_on_a_dry_run(no_knobs):

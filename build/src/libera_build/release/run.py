@@ -1,4 +1,5 @@
-"""`lb release ship`: the phases, in the one order they work in.
+"""`lb release check` and `lb release publish`: their phases, in the one order
+they work in.
 
 Hours, most of it unattended. Every phase asserts on what a machine printed
 rather than on an exit status, and checks for its own artifact.
@@ -34,7 +35,8 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class ShipOptions:
+class RunOptions:
+    verb: str  # check or publish
     phases: tuple[str, ...] = ()
     only: tuple[str, ...] = ()
     yes: bool = False
@@ -49,18 +51,22 @@ ACTIONS: dict[str, Callable[[Context], None]] = {
     "bundles": builders.bundles,
     "wheel": here.wheel,
     "stage": staging.run,
+    "distros": staging.distros,
     "publish": staging.publish,
     "verify": publishing.verify,
+    "downloads": publishing.downloads,
 }
 
 
-def ship(options: ShipOptions) -> int:
+def run(options: RunOptions) -> int:
     builders_ = inventory.read(options.root / repo.BUILDERS)
     # One platform at a time, because the reasons to build them differ: an
     # arm64 flatpak can only be built on an arm64 machine, and a machine short
     # of disk should not be handed a build just because its neighbour is free.
     chosen = inventory.narrow(builders_, list(options.only))
-    phases = plan.choose_phases(options.phases, narrowed=bool(options.only))
+    phases = plan.choose_phases(
+        options.verb, options.phases, narrowed=bool(options.only)
+    )
     ctx = Context(
         root=options.root,
         builders=chosen,

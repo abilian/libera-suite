@@ -151,7 +151,7 @@ SETUP="$WORK/Libera-Suite-Setup-$APP_VERSION.exe"
 echo
 echo "installer: $SETUP ($(du -h "$SETUP" | cut -f1))"
 
-# Beside the Flatpak bundles, which is where `lb release upload` publishes
+# Beside the Flatpak bundles, which is where `lb release publish` uploads
 # from, with its SHA-256 in sha256sum's format: install.ps1 checks the
 # download against it, and anyone can by hand with Get-FileHash.
 BUNDLES="$REPO/build/out/bundles"

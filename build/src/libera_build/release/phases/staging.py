@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from libera.manifest import hash_file
-from libera_build import inventory, released_gui, repo, versions
+from libera_build import inventory, matrix, released_gui, repo, versions
 from libera_build.artifacts import (
     app_wheel_name,
     bundle_name,
@@ -118,6 +118,22 @@ def run(ctx: Context) -> None:
     }
     (dest / STAMP).write_text(json.dumps(stamp, indent=2) + "\n", encoding="utf-8")
     step(f"staged: {dest}")
+
+
+def distros(ctx: Context) -> None:
+    """The staged libera-core wheel of each Linux builder's architecture, in a
+    clean container of every distribution the install page names (matrix):
+    the builders are not where the pip path's users are. Only a stamped
+    stage: a stage that failed leaves its directory behind, half checked."""
+    arches = tuple(
+        b.platform.rpartition("-")[2] for b in ctx.builders if b.os == "linux"
+    )
+    if not arches:
+        say("    no Linux builder; nothing to check")
+        return
+    problems(stamp_problems(ctx.root), "no distribution was tried.")
+    step(f"the staged converter in {len(matrix.DISTROS)} distributions")
+    matrix.run(folder(ctx.root), arches)
 
 
 def installs(

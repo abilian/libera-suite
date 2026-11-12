@@ -1,4 +1,4 @@
-"""What one run of `lb release ship` is about."""
+"""What one run of `lb release check` or `lb release publish` is about."""
 
 from __future__ import annotations
 

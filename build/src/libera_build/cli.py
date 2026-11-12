@@ -35,8 +35,6 @@ from libera_build import (
     fidelity as fidelity_,
     flatpak,
     linux,
-    matrix,
-    released_gui,
     report,
     tidy,
     versions,
@@ -45,13 +43,10 @@ from libera_build.buildbox import BoxOptions
 from libera_build.containers import host_arch
 from libera_build.flatpak import FlatpakOptions
 from libera_build.linux import LinuxOptions
-from libera_build.matrix import MatrixOptions
-from libera_build.origin import verbs
-from libera_build.origin.verbs import OriginOptions
+from libera_build.origin import status
 from libera_build.release.on import OnOptions, on
-from libera_build.release.plan import PHASES
-from libera_build.release.ship import ShipOptions, ship
-from libera_build.released_gui import ReleasedGuiOptions
+from libera_build.release.plan import VERBS
+from libera_build.release.run import RunOptions, run
 from libera_build.repo import REPO, build_root
 from libera_build.report import RefusedError
 from libera_build.versions import payload_version
@@ -77,7 +72,7 @@ class Step:
 
 @dataclass(frozen=True)
 class Call:
-    """A step done in this process: `release ship`, which says its own steps.
+    """A step done in this process: `release check`, which says its own steps.
 
     With the environment its options ask for, for the length of the call, as
     a script gets it: code here reads $BUILD_ROOT where the script it replaced
@@ -136,8 +131,6 @@ class Knob(NamedTuple):
     metavar: str | None = None
     choices: tuple[str, ...] | None = None
     switch: bool = False
-    # Repeatable; its variable is the values separated by spaces.
-    many: bool = False
 
     @property
     def dest(self) -> str:
@@ -163,12 +156,6 @@ MIRROR = Knob(
 V8_JOBS = Knob("--v8-jobs", "V8_BUILD_JOBS", "parallel jobs for V8", "N")
 CORE_JOBS = Knob(
     "--core-jobs", "CORE_BUILD_JOBS", "parallel jobs for core's own ninja", "N"
-)
-DIST = Knob(
-    "--dist",
-    "DIST",
-    "distros: the staged files to use (default: what stage left for this commit)",
-    "DIR",
 )
 MEMORY = Knob(
     "--memory", "DOCKER_MEMORY", "a ceiling for the container, e.g. 12g", "SIZE"
@@ -202,20 +189,6 @@ VOLUME = Knob(
     "--volume", "VOLUME", "a named Docker volume instead of --build-dir", "NAME"
 )
 DRY = Knob("--dry-run", "DRY", "say what it would do, and do nothing", switch=True)
-DISTROS = Knob(
-    "--distro",
-    "DISTROS",
-    "distros: an image to try; repeatable (default: the install page's)",
-    "IMAGE",
-    many=True,
-)
-ARCHES = Knob(
-    "--arch",
-    "ARCHES",
-    "distros: amd64 or arm64; repeatable (default: both)",
-    choices=("amd64", "arm64"),
-    many=True,
-)
 YES = Knob("--yes", "YES", "do not ask first", switch=True)
 OUT = Knob(
     "--out",
@@ -238,7 +211,6 @@ def add_knobs(parser: argparse.ArgumentParser, *knobs: Knob) -> None:
                 dest=knob.dest,
                 metavar=knob.metavar,
                 choices=knob.choices,
-                action="append" if knob.many else "store",
                 help=help_,
             )
     parser.set_defaults(knobs=knobs)
@@ -248,7 +220,7 @@ def env_of(args: argparse.Namespace) -> dict[str, str]:
     """The environment the options given ask for."""
     values = {k: getattr(args, k.dest) for k in args.knobs}
     return {
-        k.env: "1" if k.switch else " ".join(v) if k.many else str(v)
+        k.env: "1" if k.switch else str(v)
         for k, v in values.items()
         if v is not None and v is not False
     }
@@ -428,11 +400,6 @@ def given(args: argparse.Namespace, knob: Knob) -> str | None:
     return getattr(args, knob.dest, None) or os.environ.get(knob.env) or None
 
 
-def listed(args: argparse.Namespace, knob: Knob) -> tuple[str, ...]:
-    """A repeatable knob's values: the options, else its variable's words."""
-    return tuple(getattr(args, knob.dest, None) or os.environ.get(knob.env, "").split())
-
-
 def path_given(args: argparse.Namespace, knob: Knob) -> Path | None:
     value = given(args, knob)
     return Path(value).expanduser() if value else None
@@ -501,61 +468,24 @@ def ask(question: str, refused: str) -> int:
     return 0
 
 
-def release_ship(args: argparse.Namespace) -> Steps:
-    return ship_steps(args, yes=args.yes, dry_run=False)
-
-
 def release_bump(args: argparse.Namespace) -> Steps:
     return [Call(versions.bump, (REPO, args.version)), Step(("uv", "lock"))]
 
 
-def release_plan(args: argparse.Namespace) -> Steps:
-    return ship_steps(args, yes=False, dry_run=True)
-
-
-def ship_steps(args: argparse.Namespace, *, yes: bool, dry_run: bool) -> Steps:
-    options = ShipOptions(
+def release_run(args: argparse.Namespace) -> Steps:
+    """`check` and `publish`: the verb, and the phases of it asked for."""
+    options = RunOptions(
+        verb=args.verb,
         phases=tuple(args.phases),
-        only=tuple(args.only or ()),
-        yes=yes,
-        dry_run=dry_run,
+        only=tuple(getattr(args, "only", None) or ()),
+        yes=getattr(args, "yes", False),
+        dry_run=args.dry_run,
     )
-    return [Call(ship, (options,))]
+    return [Call(run, (options,))]
 
 
-def release_origin(args: argparse.Namespace) -> Steps:
-    """`status`, and `upload`: the bundles and the scripts, or the Windows
-    installer alone."""
-    verb = args.action if args.action == "status" else args.what or "extras"
-    options = OriginOptions(
-        verb,
-        dry_run=switched(args, DRY),
-        yes=switched(args, YES),
-    )
-    return [Call(verbs.run, (options,))]
-
-
-def release_check(args: argparse.Namespace) -> Steps:
-    misplaced(
-        args,
-        {args.what},
-        {
-            "dist": ("distros",),
-            "distro": ("distros",),
-            "arch": ("distros",),
-            "only": ("downloads",),
-            "doc": ("downloads",),
-        },
-    )
-    if args.what == "downloads":
-        options = ReleasedGuiOptions(only=tuple(args.only or ()), doc=args.doc)
-        return [Call(released_gui.run, (options,))]
-    matrix_options = MatrixOptions(
-        dist=path_given(args, DIST),
-        distros=listed(args, DISTROS),
-        arches=listed(args, ARCHES),
-    )
-    return [Call(matrix.run, (matrix_options,))]
+def release_status(_args: argparse.Namespace) -> Steps:
+    return [Call(status.status, (REPO,))]
 
 
 def on_(args: argparse.Namespace) -> Steps:
@@ -925,52 +855,64 @@ def add_container(groups: Groups) -> None:
         p.set_defaults(action=verb)
 
 
-WIDEST = max(map(len, PHASES))
-PHASE_LIST = "\n".join(f"  {name:<{WIDEST}}  {what}" for name, what in PHASES.items())
+def phase_list(phases: dict[str, str]) -> str:
+    widest = max(map(len, phases))
+    return "\n".join(f"  {name:<{widest}}  {what}" for name, what in phases.items())
 
 
 def add_release(groups: Groups) -> None:
     g = groups.group(
         "release",
-        "a release: built on the builders, published, read back",
-        "`ship` is the whole release; the others are its parts, and the checks.\n"
-        "The builders are build/builders.toml.\n\n"
+        "a release: built and tested on every platform, then published",
+        "`check` builds the release and installs it as users will, publishing\n"
+        "nothing: run it at any commit, as often as wanted. `publish` is the one\n"
+        "that cannot be undone. `make ship` runs both. The builders are\n"
+        "build/builders.toml.\n\n"
         + examples(
+            "release check",
+            "release check components --only macos-arm64",
+            "release publish",
             "release status",
-            "release plan",
-            "release ship",
-            "release ship components bundles --only linux-arm64",
         ),
     )
-    for name, summary, func in (
-        ("ship", "the phases, in order: all of them unless named", release_ship),
-        ("plan", "what ship would do, running nothing", release_plan),
+    for verb, summary in (
+        ("check", "build and test the release on every platform; publishes nothing"),
+        ("publish", "the checked release to PyPI and the CDN, then read back (asks)"),
     ):
         p = g.command(
-            name,
+            verb,
             summary,
-            func,
-            epilog=f"phases, always run in this order:\n{PHASE_LIST}\n\n"
+            release_run,
+            epilog=f"phases, always run in this order:\n{phase_list(VERBS[verb])}\n\n"
             + examples(
-                f"release {name}",
-                f"release {name} update native build components bundles wheel stage",
-                f"release {name} build bundles --only linux-arm64",
+                f"release {verb}",
+                f"release {verb} --dry-run",
+                *(
+                    ("release check components bundles --only linux-x86_64",)
+                    if verb == "check"
+                    else ()
+                ),
             ),
         )
+        p.set_defaults(verb=verb)
+        # No `choices`: the refusal that names the other verb is plan's.
         p.add_argument(
             "phases",
             nargs="*",
-            choices=[*PHASES, []],
             metavar="PHASE",
             help="the phases to run, listed below (default: all of them)",
         )
         p.add_argument(
-            "--only",
-            action="append",
-            metavar="PLATFORM",
-            help="one builder, by its platform in build/builders.toml; repeatable",
+            "--dry-run", action="store_true", help="say what would run, run nothing"
         )
-        if name == "ship":
+        if verb == "check":
+            p.add_argument(
+                "--only",
+                action="append",
+                metavar="PLATFORM",
+                help="one builder, by its platform in build/builders.toml; repeatable",
+            )
+        else:
             # The flag alone, not the YES knob: its variable, set for a tidy,
             # would skip the one question PyPI's no-undo is worth asking.
             p.add_argument(
@@ -988,55 +930,11 @@ def add_release(groups: Groups) -> None:
         metavar="VERSION",
         help="the new version, digits and dots, or a pre-release",
     )
-
-    p = g.command(
+    g.command(
         "status",
         "where this release has got to, here and on PyPI (read-only)",
-        release_origin,
+        release_status,
     )
-    p.set_defaults(action="status")
-    p = g.command(
-        "upload",
-        "the Flatpak bundles and the install scripts to the CDN, or the installer",
-        release_origin,
-        DRY,
-        YES,
-        epilog="With no argument, the Flatpak bundles, install.sh and install.ps1;\n"
-        "`windows`, the Windows installer alone, once `ship bundles` fetched it.\n"
-        "`ship`'s publish uploads both itself.\n\n"
-        + examples("release upload --dry-run", "release upload windows"),
-    )
-    p.add_argument("what", nargs="?", choices=("windows",), metavar="windows")
-    p.set_defaults(action="upload")
-    p = g.command(
-        "check",
-        "the staged converter in each Linux distribution, or what users download",
-        release_check,
-        DIST,
-        DISTROS,
-        ARCHES,
-        epilog="distros runs the staged libera-core wheels in a clean container of\n"
-        "each distribution the install page names. downloads installs the\n"
-        "*published* Flatpak and Windows installer on the builders, opens a\n"
-        "window from each and screenshots it.\n\n"
-        + examples(
-            "release check distros",
-            "release check distros --arch arm64",
-            "release check distros --distro docker.io/library/debian:13",
-            "release check downloads --only linux-arm64",
-        ),
-    )
-    p.add_argument(
-        "what", choices=("distros", "downloads"), metavar="distros|downloads"
-    )
-    p.add_argument(
-        "--only",
-        action="append",
-        metavar="PLATFORM",
-        help="downloads: one builder, by its platform in build/builders.toml; "
-        "repeatable (default: every Linux and Windows builder)",
-    )
-    p.add_argument("--doc", metavar="FILE", help="downloads: the document to open")
 
 
 def add_components(groups: Groups) -> None:
@@ -1067,7 +965,7 @@ def add_others(groups: Groups) -> None:
         + examples(
             "on linux-x86_64 app test flatpak",
             "on linux-arm64 --update linux lint",
-            "on linux-x86_64 release check distros",
+            "on linux-x86_64 components build",
         ),
     )
     p.usage = "lb on [-h] [--update] PLATFORM COMMAND ..."
@@ -1103,10 +1001,8 @@ what is usually run:
 
   a release:
   lb release bump X.Y.Z           the version, in all six places
-  lb release plan                 what ship would do, running nothing
-  lb release ship update components bundles wheel stage
-                                  built and installed everywhere, nothing published
-  lb release ship publish verify  the staged files to PyPI and the CDN (asks first)
+  lb release check                built and installed everywhere, nothing published
+  lb release publish              the checked files to PyPI and the CDN (asks first)
 
   lb help GROUP [COMMAND]         a group's commands, or one command's options"""
 
@@ -1172,7 +1068,7 @@ def plan(argv: list[str]) -> Steps:
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
-    # `lb` and `lb help release ship` are `lb --help` and `lb release ship --help`.
+    # `lb` and `lb help release check` are `lb --help` and `lb release check --help`.
     if not argv or argv[0] == "help":
         argv = [*argv[1:], "--help"]
     try:

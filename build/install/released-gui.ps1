@@ -1,5 +1,5 @@
 # Open a real window from the *released* Libera Suite on Windows, and prove
-# something was drawn. The Windows half of `lb release check downloads`.
+# something was drawn. The Windows half of `lb release publish`'s downloads.
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File released-gui.ps1 [-Out FILE] [-Doc FILE]
 #   ... -Installer Libera-Suite-Setup-X.Y.Z.exe       one not published yet (`stage`)

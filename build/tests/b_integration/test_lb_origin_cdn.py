@@ -164,7 +164,7 @@ def test_a_bundle_goes_up_with_a_signature_only_of_it(
 ):
     origin, _, store = cdn
     monkeypatch.setenv("CDN_TOKEN", "t")
-    publish.extras(checkout, origin, dry=False)
+    publish.extras(checkout, origin, dry=False, bundles=run_bundles(checkout))
     up = store / "bundles" / "libera-0.4.0-amd64.flatpak"
     signature = f"{up}.asc"
     done = gpg("--status-fd", "1", "--verify", signature, str(up))
@@ -178,7 +178,7 @@ def test_no_key_here_sends_nothing(cdn, checkout, signing_key, monkeypatch):
     monkeypatch.setenv("CDN_TOKEN", "t")
     monkeypatch.setattr(publish, "SIGNING_KEY", "0" * 40)
     with pytest.raises(RefusedError, match="no secret key"):
-        publish.extras(checkout, origin, dry=False)
+        publish.extras(checkout, origin, dry=False, bundles=run_bundles(checkout))
     assert not list(store.iterdir())
 
 
@@ -193,7 +193,7 @@ def test_a_signature_that_is_not_made_sends_nothing(
     subkey = [r.split(":")[9] for r in rows if r.startswith("fpr:")][1]
     assert gpg("--delete-secret-keys", f"{subkey}!").returncode == 0
     with pytest.raises(RefusedError, match="no good signature"):
-        publish.extras(checkout, origin, dry=False)
+        publish.extras(checkout, origin, dry=False, bundles=run_bundles(checkout))
     assert not list(store.iterdir())
 
 
@@ -201,7 +201,7 @@ def test_a_dry_run_signs_nothing(cdn, checkout, monkeypatch, capsys):
     """No passphrase asked for a run that sends nothing."""
     origin, _, store = cdn
     monkeypatch.delenv("CDN_TOKEN", raising=False)
-    publish.extras(checkout, origin, dry=True)
+    publish.extras(checkout, origin, dry=True, bundles=run_bundles(checkout))
     assert "would PUT bundles/libera-0.4.0-amd64.flatpak" in capsys.readouterr().out
     bundles = run_bundles(checkout)
     assert not list(bundles.glob("*.asc"))
@@ -238,15 +238,17 @@ def test_extras_refuses_while_no_windows_installer_is_named(cdn, tmp_path, monke
     monkeypatch.setenv("CDN_TOKEN", "t")
     root = make_checkout(tmp_path, flatpak=False, setup=False)
     with pytest.raises(RefusedError, match="names no installer"):
-        publish.extras(root, origin, dry=False)
+        publish.extras(root, origin, dry=False, bundles=run_bundles(root))
     assert not list(store.iterdir())
     (store / "bundles").mkdir()
     (store / "bundles" / "latest-windows").write_text("0.3.3\n")
     with pytest.raises(RefusedError, match="names no installer"):
-        publish.extras(root, origin, dry=False)  # named, but not there
+        publish.extras(
+            root, origin, dry=False, bundles=run_bundles(root)
+        )  # named, but not there
     assert not (store / "install.ps1").exists()
     (store / "bundles" / "Libera-Suite-Setup-0.3.3.exe").write_bytes(b"MZ")
-    publish.extras(root, origin, dry=False)
+    publish.extras(root, origin, dry=False, bundles=run_bundles(root))
     assert (store / "install.ps1").is_file()
 
 
@@ -260,7 +262,7 @@ def test_extras_with_an_installer_here_moves_the_pointers_after_their_files(
     origin, handler, store = cdn
     monkeypatch.setenv("CDN_TOKEN", "t")
     root = make_checkout(tmp_path, flatpak=False)
-    publish.extras(root, origin, dry=False)
+    publish.extras(root, origin, dry=False, bundles=run_bundles(root))
     assert (store / "bundles" / "latest-windows").read_text() == "0.4.0\n"
     keys = handler.keys
     assert keys.index("bundles/latest-windows") > keys.index(
@@ -278,30 +280,7 @@ def test_an_installer_its_hash_does_not_describe_sends_nothing(
     sha = run_bundles(checkout) / "Libera-Suite-Setup-0.4.0.exe.sha256"
     sha.write_text("0" * 64 + "  Libera-Suite-Setup-0.4.0.exe\n")
     with pytest.raises(RefusedError, match="does not describe"):
-        publish.extras(checkout, origin, dry=False)
-    with pytest.raises(RefusedError, match="does not describe"):
-        publish.windows(checkout, origin, dry=False)
-    assert not list(store.iterdir())
-
-
-def test_the_installer_alone_goes_up_with_its_pointer_last(cdn, tmp_path, monkeypatch):
-    origin, handler, store = cdn
-    monkeypatch.setenv("CDN_TOKEN", "t")
-    publish.windows(make_checkout(tmp_path, flatpak=False), origin, dry=False)
-    assert handler.keys == [
-        "bundles/Libera-Suite-Setup-0.4.0.exe",
-        "bundles/Libera-Suite-Setup-0.4.0.exe.sha256",
-        "bundles/Libera-Suite-Setup.exe",
-        "bundles/latest-windows",
-    ]
-    assert not (store / "bundles" / "latest").exists()
-
-
-def test_the_installer_alone_refuses_when_it_is_not_here(cdn, tmp_path, monkeypatch):
-    origin, _, store = cdn
-    monkeypatch.setenv("CDN_TOKEN", "t")
-    with pytest.raises(RefusedError, match="ship bundles --only windows"):
-        publish.windows(make_checkout(tmp_path, setup=False), origin, dry=False)
+        publish.extras(checkout, origin, dry=False, bundles=run_bundles(checkout))
     assert not list(store.iterdir())
 
 
@@ -318,7 +297,7 @@ def test_a_good_signature_already_there_is_kept(
     rows = gpg("--list-secret-keys", "--with-colons").stdout.splitlines()
     for fpr in [r.split(":")[9] for r in rows if r.startswith("fpr:")]:
         gpg("--delete-secret-keys", f"{fpr}!")
-    publish.extras(checkout, origin, dry=False)
+    publish.extras(checkout, origin, dry=False, bundles=run_bundles(checkout))
     assert (store / "bundles" / "libera-0.4.0-amd64.flatpak.asc").read_bytes() == signed
 
 
@@ -333,7 +312,7 @@ def test_a_pre_release_goes_up_under_its_own_names_and_moves_nothing(
         publish, "sign", lambda b: publish.signature_of(b).write_text("signed")
     )
     root = make_checkout(tmp_path, version="0.4.0rc1")
-    publish.extras(root, origin, dry=False)
+    publish.extras(root, origin, dry=False, bundles=run_bundles(root))
     up = sorted(p.name for p in (store / "bundles").iterdir())
     assert up == [
         "Libera-Suite-Setup-0.4.0rc1.exe",

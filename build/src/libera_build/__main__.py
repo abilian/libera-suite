@@ -1,7 +1,7 @@
 """`python3 -m libera_build`: the same as `lb`, for where it is not installed.
 
 The builders run the tooling with their own python3, outside any virtualenv,
-so the `lb` console script is not there; `lb release ship` runs this instead, with
+so the `lb` console script is not there; `lb release check` runs this instead, with
 build/src and src on PYTHONPATH.
 """
 

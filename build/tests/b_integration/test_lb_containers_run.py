@@ -8,7 +8,7 @@ Skips where there is no engine running, or no test image built yet
 from __future__ import annotations
 
 import subprocess
-import tarfile
+import zipfile
 
 import pytest
 from libera_build import matrix
@@ -67,16 +67,16 @@ def test_a_read_only_mount_is_read_only(engine_and_image, tmp_path):
 
 
 def test_the_sample_is_made_from_the_payloads_own_blank(tmp_path):
-    """make_sample needs nothing but the artifacts: the blank comes out of
-    editors.tar.gz, as on a builder that keeps no sources outside its build."""
+    """make_sample needs nothing but the staged files: the blank comes out of
+    the libera-web wheel."""
     try:
         blank = payload.resolve().root / "empty" / "new.docx"
     except payload.PayloadError:
         pytest.skip("no payload here")
     dist = tmp_path / "dist"
     dist.mkdir()
-    with tarfile.open(dist / "editors.tar.gz", "w:gz") as tar:
-        tar.add(blank, arcname="empty/new.docx")
+    with zipfile.ZipFile(dist / "libera_web-9.9.9-py3-none-any.whl", "w") as wheel:
+        wheel.write(blank, "libera_web/empty/new.docx")
     work = tmp_path / "work"
     work.mkdir()
     sample = matrix.make_sample(dist, work)

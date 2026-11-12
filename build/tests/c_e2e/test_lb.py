@@ -58,9 +58,9 @@ def test_lb_alone_and_lb_help_are_lb_dash_dash_help(argv):
 
 
 def test_help_takes_a_command_too():
-    done = lb("help", "release", "ship")
+    done = lb("help", "release", "check")
     assert done.returncode == 0, done.stderr
-    assert done.stdout.startswith("usage: lb release ship")
+    assert done.stdout.startswith("usage: lb release check")
 
 
 def test_a_mistyped_command_says_so_and_runs_nothing():
@@ -102,11 +102,11 @@ def test_patches_still_apply_to_the_pins():
     assert done.stdout.count("  ok   ") >= 2, done.stdout
 
 
-def test_release_plan_names_every_builder():
+def test_a_dry_run_names_every_builder():
     builders = cli.REPO / "build" / "builders.toml"
     if not builders.is_file():
         pytest.skip("no build/builders.toml here")
-    done = lb("release", "plan")
+    done = lb("release", "check", "--dry-run")
     assert done.returncode == 0, done.stdout + done.stderr
     assert "phases   update, components, bundles" in done.stdout
     platforms = [
@@ -121,7 +121,7 @@ def test_release_plan_names_every_builder():
 def test_a_refusal_is_a_sentence_and_a_failure():
     if not (cli.REPO / "build" / "builders.toml").is_file():
         pytest.skip("no build/builders.toml here")
-    done = lb("release", "ship", "--only", "linux-riscv")
+    done = lb("release", "check", "--only", "linux-riscv")
     assert done.returncode == 1
     assert "FATAL: no such builder: linux-riscv" in done.stderr
     assert "Traceback" not in done.stderr
@@ -182,3 +182,11 @@ def test_the_build_container_says_what_it_is_pinned_to():
     done = lb("container", "versions", "payload", "--arch", arch)
     assert done.returncode == 0, done.stdout + done.stderr
     assert "base:" in done.stdout
+
+
+def test_a_check_refuses_a_publishing_phase_saying_where_it_is():
+    if not (cli.REPO / "build" / "builders.toml").is_file():
+        pytest.skip("no build/builders.toml here")
+    done = lb("release", "check", "publish")
+    assert done.returncode == 1
+    assert "a phase of `lb release publish`" in done.stderr
