@@ -95,10 +95,10 @@ def test_diagnose_must_say_a_window_and_a_bundled_payload():
 
 def test_the_window_is_checked_on_remote_linux_and_windows_builders():
     builders = [
-        Builder("macos-arm64", "local", None, True, "~/r"),
-        Builder("linux-x86_64", "fedora.zt", None, False, "~/r"),
-        Builder("linux-arm64", "local", None, False, "~/r"),
-        Builder("windows-x86_64", "builder-windows", "C:/b/out/dist", False, "~/r"),
+        Builder("macos-arm64", "local", "~/r"),
+        Builder("linux-x86_64", "fedora.zt", "~/r"),
+        Builder("linux-arm64", "local", "~/r"),
+        Builder("windows-x86_64", "builder-windows", "~/r"),
     ]
     assert [b.target for b in inventory.gui_remotes(builders)] == [
         "fedora.zt",

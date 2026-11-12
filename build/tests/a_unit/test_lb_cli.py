@@ -112,7 +112,7 @@ def test_ship_is_called_here_with_its_phases_and_options():
     (call,) = cli.plan([
         "release",
         "ship",
-        "build",
+        "components",
         "bundles",
         "--only",
         "linux-arm64",
@@ -120,13 +120,17 @@ def test_ship_is_called_here_with_its_phases_and_options():
     ])
     assert call == cli.Call(
         ship,
-        (ShipOptions(phases=("build", "bundles"), only=("linux-arm64",), yes=True),),
+        (
+            ShipOptions(
+                phases=("components", "bundles"), only=("linux-arm64",), yes=True
+            ),
+        ),
     )
 
 
 def test_plan_is_ship_dry():
-    (call,) = cli.plan(["release", "plan", "build"])
-    assert call == cli.Call(ship, (ShipOptions(phases=("build",), dry_run=True),))
+    (call,) = cli.plan(["release", "plan", "bundles"])
+    assert call == cli.Call(ship, (ShipOptions(phases=("bundles",), dry_run=True),))
 
 
 def test_an_unknown_phase_is_refused():

@@ -2,7 +2,7 @@
 
 A release is one set of artifacts that agree with each other. No single machine can produce all of them.
 
-**`make ship` is how a release is cut now.** One command drives eight phases: the Linux and Windows cores, both Flatpak bundles and the Windows installer are built on their builders in parallel, the macOS components and the wheel here; then every file of the release is staged and installed on every platform, and only then published, to PyPI and the CDN. `lb release plan` prints the plan and runs nothing. See [`make ship`](#make-ship) below.
+**`make ship` is how a release is cut now.** One command drives seven phases: the Linux and Windows components, both Flatpak bundles and the Windows installer are built on their builders in parallel, the macOS components and the wheel here; then every file of the release is staged and installed on every platform, and only then published, to PyPI and the CDN. `lb release plan` prints the plan and runs nothing. See [`make ship`](#make-ship) below.
 
 Read [Build the payload](build.md) first if you have never built one. This page assumes you have.
 
@@ -31,7 +31,7 @@ lb payload check                  # the queue still applies to the pinned SHAs
 **3. Build and stage it, publishing nothing.**
 
 ```sh
-lb release ship update build components bundles wheel stage
+lb release ship update components bundles wheel stage
 lb on linux-x86_64 linux test --gui                           # the gui tier, WebKitGTK
 lb on windows-x86_64 app test windows                   # the gui tier, WebView2
 make test-gui                                               # the gui tier, here
@@ -47,7 +47,7 @@ lb release ship publish verify      # the staged files, as they are (asks on the
 lb release status                   # after any pause: where the release has got to
 ```
 
-`publish` is the step with no undo, and it uploads the staged directory and nothing else: it refuses a stage from another commit, or one a file was added to, removed from or changed in since. Tag before staging if the tag is to be the commit the stage names. `make ship` runs all eight phases in one go; the table in *The runbook, by hand* says what each one does.
+`publish` is the step with no undo, and it uploads the staged directory and nothing else: it refuses a stage from another commit, or one a file was added to, removed from or changed in since. Tag before staging if the tag is to be the commit the stage names. `make ship` runs all seven phases in one go; the table in *The runbook, by hand* says what each one does.
 
 **5. Check what users get.**
 
@@ -70,9 +70,9 @@ On a machine that has never had Libera Suite: `curl -fsSL https://cdn.abilian.co
 ```sh
 lb release bump X.Y.Z                                  # the version, for the three packages
 lb release plan                                        # the plan, running nothing
-make ship                                              # all eight phases
+make ship                                              # all seven phases
 lb release ship stage                                  # some of them
-lb release ship --only linux-arm64                     # one builder: update, build, components, bundles
+lb release ship --only linux-arm64                     # one builder: update, components, bundles
 ```
 
 `make ship` is `lb release ship`; `lb release --help` lists the rest.
@@ -87,7 +87,7 @@ The order is forced. `stage` follows everything that makes a file; `publish` upl
 
 Every phase checks what the machine printed, because over ssh an exit status describes the shell, including its logout scripts. Per-host logs land in `tmp/remote/`.
 
-**A builder's job outlives the connection.** `build`, `components` and `bundles` start their job detached on the builder, in `~/.lb/runs/<platform> <command>/` there, which holds its script, its log, its pid and, once it has ended, its exit status, and poll it every 15 seconds with a connection of their own. A builder that does not answer is a poll that missed: the watch says how long it has been silent, and gives up after 45 minutes, saying the job may still be running. The same phase, run again, finds the job still running and watches it rather than starting a second build on the same tree. On Windows the job is started through PowerShell's `Start-Process`: one put in the background from Git Bash holds the ssh session open until it ends. The precheck asks each builder four times, a poll apart, before calling it unreachable. All of it measured on 2026-11-01, when builder-windows dropped off the network four times in an afternoon.
+**A builder's job outlives the connection.** `components` and `bundles` start their job detached on the builder, in `~/.lb/runs/<platform> <command>/` there, which holds its script, its log, its pid and, once it has ended, its exit status, and poll it every 15 seconds with a connection of their own. A builder that does not answer is a poll that missed: the watch says how long it has been silent, and gives up after 45 minutes, saying the job may still be running. The same phase, run again, finds the job still running and watches it rather than starting a second build on the same tree. On Windows the job is started through PowerShell's `Start-Process`: one put in the background from Git Bash holds the ssh session open until it ends. The precheck asks each builder four times, a poll apart, before calling it unreachable. All of it measured on 2026-11-01, when builder-windows dropped off the network four times in an afternoon.
 
 `build/builders.toml` lists the builders. It is gitignored because it is an inventory of machines, so copy `builders.toml.example` once. `lb` is its only reader (`libera_build.inventory`), so there is one list.
 
@@ -122,8 +122,7 @@ step you are on and does not ask you to remember.
 | :--- | :--- | :--- |
 | | `git tag -a X.Y.Z && git push --tags` (no `v`: the tags are `0.3.0`, `0.3.3`), before building, so the manifest records a revision other people can fetch. `ship` does not do this. | anywhere |
 | `update` | Send the commit you are at to each builder over ssh and check it out there, detached; refuse a dirty builder. Any branch, pushed or not: only `publish` wants the commit on a remote, because the manifest names it. | the driving machine |
-| `build` | The Linux and Windows cores, on their own machines, in parallel. Hours. | the Linux and Windows builders |
-| `components` | `lb components build` on each builder: its platform's `libera-core` wheel, built from the core's sdist on the tree `build` has just brought to the pin, and, here, the macOS wheel, that sdist and `libera-web`'s wheel, in a build root of their own (below). All of them land in `pypi/` in the run directory (below). | each builder, and **the Mac** |
+| `components` | `lb components build` on each builder: its platform's `libera-core` wheel, built from the core's sdist at the pins, in parallel; hours the first time, when its build tree, a compile cache, is empty. And here, the macOS wheel, that sdist and `libera-web`'s wheel, in a build root of their own (below). All of them land in `pypi/` in the run directory (below). | each builder, and **the Mac** |
 | `bundles` | The two `.flatpak` bundles (neither can be cross-built) and the Windows installer, each brought to `bundles/` in the run directory. | a machine of each platform |
 | `wheel` | `make verify`, then the wheel and sdist, into `pypi/` in the run directory. | anywhere |
 | `stage` | Every file `publish` uploads, copied to `staged/` in the run directory; installed on every platform from there, and a window opened from each bundle; then stamped with each file's hash. See [Stage](#stage). | the driving machine and each builder |

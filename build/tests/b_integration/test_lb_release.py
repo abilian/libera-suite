@@ -106,7 +106,7 @@ def home(tmp_path) -> Path:
 
 # Named for this machine's own architecture, which precheck asks the builder
 # for: a linux-arm64 stand-in failed it on every x86_64 machine.
-ARM = Builder(linux_platform(host_arch()), "arm", None, False, "~/checkout")
+ARM = Builder(linux_platform(host_arch()), "arm", "~/checkout")
 
 
 def context(driver: Path, home: Path, phases: list[str]) -> Context:
@@ -147,8 +147,11 @@ def test_a_dirty_builder_is_refused_before_anything_starts(driver, home):
 
 
 def test_a_builder_with_no_checkout_is_fine_only_if_update_will_make_one(driver, home):
-    assert precheck.check_builder(context(driver, home, ["update", "build"]), ARM) == []
-    (problem,) = precheck.check_builder(context(driver, home, ["build"]), ARM)
+    assert (
+        precheck.check_builder(context(driver, home, ["update", "components"]), ARM)
+        == []
+    )
+    (problem,) = precheck.check_builder(context(driver, home, ["components"]), ARM)
     assert "no checkout at ~/checkout" in problem
 
 
@@ -159,7 +162,7 @@ def test_a_missing_checkout_names_the_checkouts_that_are_there(driver, home):
     other = home / "elsewhere" / "src" / "libera" / "payload"
     other.mkdir(parents=True)
     (other / "payload.version").write_text('version = "9.9"\n')
-    (problem,) = precheck.check_builder(context(driver, home, ["build"]), ARM)
+    (problem,) = precheck.check_builder(context(driver, home, ["components"]), ARM)
     assert "checkouts on that machine" in problem
     assert f"{home}/elsewhere/" in problem
 
@@ -169,7 +172,7 @@ def believe(_builder, _host) -> None:
 
 
 def ran(driver: Path, home: Path, command: str, verify=believe) -> str | None:
-    ctx = context(driver, home, ["update", "build"])
+    ctx = context(driver, home, ["update", "components"])
     update.run(ctx)
     return builds.build_one(ctx, ARM, command, verify)
 
@@ -240,7 +243,7 @@ def test_an_artifact_under_its_floor_fails_the_build(driver, home):
 def test_bundles_makes_the_installer_on_windows_and_brings_it_here(driver, home):
     """The whole phase against a Windows builder: `lb app build windows` run there,
     the installer looked for there, then it and its SHA-256 fetched here."""
-    win = Builder("windows-x86_64", "win", "C:/b/out/dist", False, "~/checkout")
+    win = Builder("windows-x86_64", "win", "~/checkout")
     ctx = replace(context(driver, home, ["update", "bundles"]), builders=[win])
     update.run(ctx)
     made = home / "checkout" / "build" / "out" / "bundles"
@@ -258,7 +261,7 @@ def test_bundles_makes_the_installer_on_windows_and_brings_it_here(driver, home)
 
 
 def test_bundles_fails_when_the_installer_was_not_made(driver, home):
-    win = Builder("windows-x86_64", "win", "C:/b/out/dist", False, "~/checkout")
+    win = Builder("windows-x86_64", "win", "~/checkout")
     ctx = replace(context(driver, home, ["update", "bundles"]), builders=[win])
     update.run(ctx)
     with pytest.raises(RefusedError, match="1 of 1 builder"):
@@ -419,7 +422,9 @@ def test_a_build_outlives_polls_that_go_unanswered(driver, home):
     """A dropped connection ended the phase that streamed a build, while the
     build went on there; now it is a poll that missed."""
     host = Flaky(home, misses=5)
-    ctx = replace(context(driver, home, ["update", "build"]), host_for=lambda _: host)
+    ctx = replace(
+        context(driver, home, ["update", "components"]), host_for=lambda _: host
+    )
     update.run(ctx)
 
     assert builds.build_one(ctx, ARM, "slow", believe) is None
@@ -433,7 +438,7 @@ def test_a_build_still_running_is_watched_not_started_again(driver, home):
     """The driver died, or gave up on an unreachable builder: the same phase,
     run again, watches the job there rather than starting a second build on
     the same tree."""
-    ctx = context(driver, home, ["update", "build"])
+    ctx = context(driver, home, ["update", "components"])
     update.run(ctx)
     name = f"{ARM.platform} slow"
     script = f"cd ~/checkout && {builds.LB} slow && echo {builds.MARK}=ok"
@@ -449,7 +454,7 @@ def test_a_build_still_running_is_watched_not_started_again(driver, home):
 def test_a_builder_silent_too_long_ends_the_watch_saying_so(driver, home):
     host = Flaky(home, misses=10**6)
     ctx = replace(
-        context(driver, home, ["update", "build"]),
+        context(driver, home, ["update", "components"]),
         host_for=lambda _: host,
         unreachable_seconds=0.3,
     )
@@ -480,21 +485,25 @@ class Silent:
 def test_a_builder_that_answers_on_its_third_try_is_checked(driver, home):
     """One unanswered question refused the beta's whole run, twice."""
     host = Silent(home, misses=2)
-    ctx = replace(context(driver, home, ["update", "build"]), host_for=lambda _: host)
+    ctx = replace(
+        context(driver, home, ["update", "components"]), host_for=lambda _: host
+    )
 
     assert precheck.check_builder(ctx, ARM) == []
 
 
 def test_a_builder_that_never_answers_is_refused_after_its_tries(driver, home):
     host = Silent(home, misses=10**6)
-    ctx = replace(context(driver, home, ["update", "build"]), host_for=lambda _: host)
+    ctx = replace(
+        context(driver, home, ["update", "components"]), host_for=lambda _: host
+    )
 
     (problem,) = precheck.check_builder(ctx, ARM)
 
     assert f"in {precheck.ANSWER_TRIES} tries" in problem
 
 
-WIN = Builder("windows-x86_64", "win", "C:/b/out/dist", False, "~/checkout")
+WIN = Builder("windows-x86_64", "win", "~/checkout")
 
 
 def test_the_components_phase_brings_each_builders_core_wheel_here(driver, home):

@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 # by `components`, into libera-core's wheel: there is no tarball of it to make.
 PHASES = {
     "update": "send this commit to each builder and check it out there",
-    "build": "the Linux and Windows cores, each on its builder, in parallel (hours)",
-    "components": "libera-core's wheel on each builder, libera-web here, for PyPI",
+    "components": "libera-core's wheel on each builder, in parallel, and libera-web"
+    " here, for PyPI: built from the pins (hours the first time)",
     "bundles": "the Flatpaks and the Windows installer, each on its builder",
     "wheel": "make verify, then the wheel",
     "stage": "every file publish uploads, gathered and installed on every platform",
@@ -36,7 +36,7 @@ PHASES = {
 # What `--only` can narrow. The rest act on every builder at once, so a run
 # narrowed to one platform that went on to them would publish what nobody had
 # rebuilt.
-PER_BUILDER = ("update", "build", "components", "bundles")
+PER_BUILDER = ("update", "components", "bundles")
 
 # `publish` is the one phase that reaches outside the builders, and the one
 # that cannot be taken back: PyPI refuses a version it has already seen, so a

@@ -108,7 +108,7 @@ def test_release_plan_names_every_builder():
         pytest.skip("no build/builders.toml here")
     done = lb("release", "plan")
     assert done.returncode == 0, done.stdout + done.stderr
-    assert "phases   update, native, build" in done.stdout
+    assert "phases   update, components, bundles" in done.stdout
     platforms = [
         line.split('"')[1]
         for line in builders.read_text(encoding="utf-8").splitlines()

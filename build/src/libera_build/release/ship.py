@@ -45,7 +45,6 @@ class ShipOptions:
 
 ACTIONS: dict[str, Callable[[Context], None]] = {
     "update": update.run,
-    "build": builders.build,
     "components": components.run,
     "bundles": builders.bundles,
     "wheel": here.wheel,
@@ -105,6 +104,6 @@ def show_plan(ctx: Context) -> None:
     say(f"    here     {repo.branch(ctx.root)} at {repo.head(ctx.root)[:9]}")
     for b in ctx.builders:
         where = f"{b.target}:{b.repo}" if b.remote else "local"
-        say(f"    {b.platform:<14} {where}{'  neutral' if b.neutral else ''}")
+        say(f"    {b.platform:<14} {where}")
     if "publish" in ctx.phases:
         say("    note     publish cannot be undone")

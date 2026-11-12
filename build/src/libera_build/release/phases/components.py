@@ -8,10 +8,10 @@ without them, `libera` alone, and nothing could install it: `make publish`
 uploaded the wheel `make build` made, and no phase knew of the others.
 
 So each builder runs `lb components build`, which builds its core wheel from
-the core's source, reusing the build tree `build` has just brought to the pin,
-and the editors' wheel. Every platform's wheel, the Mac's source and the Mac's
-editors' wheel are then brought to one folder here, the run's `pypi/`
-(artifacts.run_pypi), which `stage` gathers from.
+the core's source at the pins, its build tree kept as a compile cache (hours
+the first time), and the editors' wheel. Every platform's wheel, the Mac's
+source and the Mac's editors' wheel are then brought to one folder here, the
+run's `pypi/` (artifacts.run_pypi), which `stage` gathers from.
 """
 
 from __future__ import annotations

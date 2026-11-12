@@ -71,9 +71,9 @@ def test_each_builder_stages_the_bundle_its_users_download(tmp_path, monkeypatch
     ctx = Context(
         root=tmp_path,
         builders=[
-            Builder("macos-arm64", "local", None, True, "~/r"),
-            Builder("linux-x86_64", "x", None, False, "~/r"),
-            Builder("windows-x86_64", "w", "C:/b", False, "~/r"),
+            Builder("macos-arm64", "local", "~/r"),
+            Builder("linux-x86_64", "x", "~/r"),
+            Builder("windows-x86_64", "w", "~/r"),
         ],
         phases=["stage"],
     )
@@ -252,6 +252,6 @@ def test_a_platform_passes_the_stage_only_installed_converted_and_drawn(
             "libera-9.9.9.dist-info/METADATA",
             "Requires-Dist: libera-core==9.9.9\nRequires-Dist: libera-web==9.9.9\n",
         )
-    b = Builder(platform, "x", None, False, "~/r")
+    b = Builder(platform, "x", "~/r")
     found = staging.installs(Answering(said), b, tmp_path, "9.9.9", [])
     assert (found == []) is passes, found

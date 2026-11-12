@@ -939,7 +939,7 @@ def add_release(groups: Groups) -> None:
             "release status",
             "release plan",
             "release ship",
-            "release ship build bundles --only linux-arm64",
+            "release ship components bundles --only linux-arm64",
         ),
     )
     for name, summary, func in (
@@ -1104,7 +1104,7 @@ what is usually run:
   a release:
   lb release bump X.Y.Z           the version, in all six places
   lb release plan                 what ship would do, running nothing
-  lb release ship update build components bundles wheel stage
+  lb release ship update components bundles wheel stage
                                   built and installed everywhere, nothing published
   lb release ship publish verify  the staged files to PyPI and the CDN (asks first)
 

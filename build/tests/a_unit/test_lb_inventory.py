@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from libera_build import inventory
 from libera_build.hosts import remote_path
@@ -17,12 +15,10 @@ repo = "~/muchado"
 [[builders]]
 platform = "macos-arm64"
 target = "local"
-neutral = true
 
 [[builders]]
 platform = "linux-x86_64"
 target = "fedora.zt"
-dist = "~/b/out/dist"
 
 [[builders]]
 platform = "linux-arm64"
@@ -33,10 +29,8 @@ repo = "~/elsewhere"
 
 def test_a_good_file_gives_every_builder_with_its_defaults():
     mac, x86, arm = inventory.parse(GOOD, "builders.toml")
-    assert mac == Builder("macos-arm64", "local", None, True, "~/muchado")
-    assert x86 == Builder(
-        "linux-x86_64", "fedora.zt", "~/b/out/dist", False, "~/muchado"
-    )
+    assert mac == Builder("macos-arm64", "local", "~/muchado")
+    assert x86 == Builder("linux-x86_64", "fedora.zt", "~/muchado")
     assert arm.repo == "~/elsewhere"
     assert not mac.remote
     assert x86.remote
@@ -56,12 +50,10 @@ def test_the_architecture_comes_from_the_platform():
             "[[builders]]\nplatform = 'x'\ntarget = 'y'\nbranch = 'main'\n",
             "unknown key(s) ['branch']",
         ),
+        # Read until the release stopped collecting core tarballs.
         (
-            (
-                "[[builders]]\nplatform = 'linux-arm64'\ntarget = 'x'\nneutral = true\n"
-                "[[builders]]\nplatform = 'macos-arm64'\ntarget = 'y'\nneutral = true\n"
-            ),
-            "2 builders marked neutral",
+            "[[builders]]\nplatform = 'linux-arm64'\ntarget = 'x'\ndist = '~/d'\n",
+            "unknown key(s) ['dist']",
         ),
         ("[[builders]\n", "builders.toml:"),
         # A typo once read as no architecture, which skipped the check that a
@@ -96,23 +88,7 @@ def test_only_narrows_and_refuses_a_builder_that_is_not_there():
     assert "no such builder: linux-riscv" in str(e.value)
 
 
-def test_a_builder_with_no_dist_is_read_where_its_build_writes(monkeypatch):
-    """`container run payload` on Linux, `payload build` elsewhere, each under that
-    system's default BUILD_ROOT; this machine's own, here. `build` checked
-    one directory and `collect` fetched from another."""
-    monkeypatch.setenv("BUILD_ROOT", "/here")
-    mac, x86, arm = inventory.parse(GOOD, "builders.toml")
-    assert inventory.dist_of(mac) == str(Path("/here") / "out" / "dist")
-    assert inventory.dist_of(x86) == "~/b/out/dist"
-    assert inventory.dist_of(arm) == "~/euro-office-build/linux-arm64/out/dist"
-    windows = Builder("windows-x86_64", "win", None, False, "~/r")
-    assert inventory.dist_of(windows) == "C:/b/out/dist"
-    remote_mac = Builder("macos-x86_64", "mac", None, False, "~/r")
-    assert inventory.dist_of(remote_mac).startswith("/Volumes/")
-
-
-def test_a_builders_dist_reaches_its_shell_with_the_tilde_expandable():
-    _, _, arm = inventory.parse(GOOD, "builders.toml")
-    assert remote_path(f"{inventory.dist_of(arm)}/0.4") == (
+def test_a_path_on_a_builder_reaches_its_shell_with_the_tilde_expandable():
+    assert remote_path("~/euro-office-build/linux-arm64/out/dist/0.4") == (
         '"$HOME/euro-office-build/linux-arm64/out/dist/0.4"'
     )

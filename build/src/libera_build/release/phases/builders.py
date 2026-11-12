@@ -1,10 +1,13 @@
-"""`build` and `bundles`: `lb` on the remote builders, in parallel.
+"""`bundles`: what users download, made by `lb` on the remote builders, in
+parallel.
 
-Every remote builder alike: each is told what its platform builds, each result
-is looked for there and then brought here. A Linux builder builds its core in
-the container and bundles a Flatpak; the Windows one builds with its own
-toolchain and makes the installer. Windows used to be built and published by
-hand, from the Windows machine, as a release of its own.
+Every remote builder alike: each is told what its platform makes, each result
+is looked for there and then brought here. A Linux builder bundles a Flatpak,
+the Windows one makes the installer. Each builds the components it ships from
+the pins as it goes (the Flatpak through `lb components`, the installer
+through `uv sync`), so neither reads a core an earlier run left there. Windows
+used to be built and published by hand, from the Windows machine, as a release
+of its own.
 """
 
 from __future__ import annotations
@@ -16,14 +19,11 @@ from libera_build import versions
 from libera_build.artifacts import (
     BUNDLES_DIR,
     MIN_BUNDLE_BYTES,
-    MIN_CORE_BYTES,
     bundle_name,
-    core_name,
     installer_name,
     run_bundles,
 )
 from libera_build.hosts import remote_path
-from libera_build.inventory import dist_of
 from libera_build.release.builds import check_remote_file, run_builds
 from libera_build.report import problems, say, step
 
@@ -35,16 +35,6 @@ if TYPE_CHECKING:
 
 def arch_suffix(b: Builder) -> str:
     return f" --arch {b.arch}"
-
-
-def build_command(b: Builder) -> str:
-    """What a builder runs to leave its core, and the shared pair, in its dist
-    directory. On Linux, the container, whose glibc decides the oldest
-    distribution the core loads on. Elsewhere, the machine's own toolchain,
-    which `payload build` checks before its hours of building."""
-    if b.os == "linux":
-        return f"container run payload{arch_suffix(b)}"
-    return "payload build"
 
 
 @dataclass(frozen=True)
@@ -69,20 +59,6 @@ def bundle_of(b: Builder, app: str) -> Bundle | None:
         setup = f"{BUNDLES_DIR}/{installer_name(app)}"
         return Bundle("app build windows", (setup, f"{setup}.sha256"))
     return None
-
-
-def build(ctx: Context) -> None:
-    """Every remote builder's core, each on its own machine."""
-    if not ctx.remotes:
-        say("    no remote builders; nothing to do")
-        return
-    version = versions.payload_version(ctx.root)
-
-    def verify_core(b: Builder, host: Host) -> str | None:
-        path = remote_path(f"{dist_of(b)}/{version}/{core_name(b.platform)}")
-        return check_remote_file(b, host, path, MIN_CORE_BYTES)
-
-    run_builds(ctx, ctx.remotes, build_command, verify_core, "building")
 
 
 def bundles(ctx: Context) -> None:

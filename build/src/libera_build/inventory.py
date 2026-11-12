@@ -13,14 +13,13 @@ from typing import TYPE_CHECKING
 
 import tomllib
 
-from libera_build import repo
 from libera_build.containers import DOCKER_ARCH
 from libera_build.report import RefusedError
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-KNOWN_KEYS = frozenset({"platform", "target", "dist", "neutral", "repo"})
+KNOWN_KEYS = frozenset({"platform", "target", "repo"})
 DEFAULT_REPO = "~/liberasuite"
 
 # A platform's first half, as `platform.system()` says it on that machine.
@@ -29,10 +28,8 @@ SYSTEMS = {"macos": "Darwin", "linux": "Linux", "windows": "Windows"}
 
 @dataclass(frozen=True)
 class Builder:
-    platform: str  # core-<platform>.tar.gz, e.g. linux-x86_64
+    platform: str  # what it builds for, e.g. linux-x86_64
     target: str  # an ssh target, or "local"
-    dist: str | None  # the parent of the per-version directories
-    neutral: bool  # the one that supplies editors.tar.gz and fonts-core.tar.gz
     repo: str  # the checkout on that machine
 
     @property
@@ -114,20 +111,9 @@ def parse(text: str, source: str) -> list[Builder]:
             Builder(
                 platform=entry["platform"],
                 target=entry["target"],
-                dist=entry.get("dist"),
-                neutral=bool(entry.get("neutral", False)),
                 repo=entry.get("repo", defaults.get("repo", DEFAULT_REPO)),
             )
         )
-
-    if len(neutrals := [b.platform for b in out if b.neutral]) > 1:
-        msg = (
-            f"{source}: {len(neutrals)} builders marked neutral "
-            f"({', '.join(neutrals)}).\n"
-            "  editors.tar.gz and fonts-core.tar.gz are not byte-identical\n"
-            "  between machines, so exactly one builder supplies them."
-        )
-        raise RefusedError(msg)
     return out
 
 
@@ -148,22 +134,3 @@ def narrow(builders: list[Builder], only: list[str]) -> list[Builder]:
         )
         raise RefusedError(msg)
     return [b for b in builders if b.platform in only]
-
-
-def dist_of(b: Builder) -> str:
-    """The parent of the per-version directories on that builder, `~` left for
-    whoever reaches it to expand: its `dist`, else where its build writes them.
-
-    `ship` builds a Linux core with `container run payload`, into
-    $BUILD_ROOT/linux-<arch> there, and anything else with `payload build`, into
-    $BUILD_ROOT. A remote builder's $BUILD_ROOT is taken to be its system's
-    default; this machine's is whatever it is here.
-    """
-    if b.dist:
-        return b.dist
-    if not b.remote:
-        return str(repo.build_root() / "out" / "dist")
-    root = repo.default_build_root(SYSTEMS[b.os])
-    if b.os == "linux":
-        return f"{root}/linux-{b.arch}/out/dist"
-    return f"{root}/out/dist"

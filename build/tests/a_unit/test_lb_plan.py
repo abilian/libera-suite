@@ -8,7 +8,7 @@ from libera_build.release import plan, ship
 from libera_build.release.phases import builders
 from libera_build.report import RefusedError
 
-ARM = Builder("linux-arm64", "arm", None, False, "~/r")
+ARM = Builder("linux-arm64", "arm", "~/r")
 
 
 def test_phases_run_in_their_order_whatever_order_they_are_asked_in():
@@ -25,7 +25,7 @@ def test_no_phase_means_all_of_them_or_those_that_narrow():
 
 def test_only_refuses_the_phases_that_span_every_builder():
     with pytest.raises(RefusedError) as e:
-        plan.choose_phases(["build", "wheel"], narrowed=True)
+        plan.choose_phases(["components", "wheel"], narrowed=True)
     assert "not wheel" in str(e.value)
 
 
@@ -37,7 +37,7 @@ def test_an_unknown_phase_is_refused():
 def test_uploading_wants_a_token():
     assert plan.token_problems(["publish"], have_token=False)
     assert not plan.token_problems(["publish"], have_token=True)
-    assert not plan.token_problems(["build"], have_token=False)
+    assert not plan.token_problems(["bundles"], have_token=False)
 
 
 def test_publishing_wants_the_signing_key():
@@ -47,7 +47,7 @@ def test_publishing_wants_the_signing_key():
 
 
 def test_a_dirty_tree_stops_only_what_stamps_the_manifest():
-    assert not plan.dirty_problems(["build"], dirty=3, allow_dirty=False)
+    assert not plan.dirty_problems(["bundles"], dirty=3, allow_dirty=False)
     assert plan.dirty_problems(["publish"], dirty=3, allow_dirty=False)
     assert not plan.dirty_problems(["publish"], dirty=3, allow_dirty=True)
     assert not plan.dirty_problems(["publish"], dirty=0, allow_dirty=False)
@@ -58,7 +58,7 @@ def test_uploading_wants_the_commit_somewhere_else_too():
     assert "aaaaaaaaa" in problem
     assert "push it first" in problem
     assert not plan.unpushed_problems(["publish"], on_a_remote=True, head="a" * 40)
-    assert not plan.unpushed_problems(["build"], on_a_remote=False, head="a" * 40)
+    assert not plan.unpushed_problems(["bundles"], on_a_remote=False, head="a" * 40)
 
 
 def test_a_builder_of_the_wrong_architecture_or_dirty_is_refused():
@@ -85,14 +85,8 @@ def test_a_build_is_believed_only_when_it_says_ok():
     assert "lb x failed (2)" in plan.build_problem("p", "lb x failed (2)", "0m01s")
 
 
-WINDOWS = Builder("windows-x86_64", "win", "C:/b/out/dist", False, "~/r")
-MAC = Builder("macos-x86_64", "mac", None, False, "~/r")
-
-
-def test_each_platform_builds_its_core_its_own_way():
-    assert builders.build_command(ARM) == "container run payload --arch arm64"
-    assert builders.build_command(WINDOWS) == "payload build"
-    assert builders.build_command(MAC) == "payload build"
+WINDOWS = Builder("windows-x86_64", "win", "~/r")
+MAC = Builder("macos-x86_64", "mac", "~/r")
 
 
 def test_each_platform_bundles_what_its_users_download():
@@ -107,10 +101,10 @@ def test_each_platform_bundles_what_its_users_download():
     assert builders.bundle_of(MAC, "0.4.0") is None
 
 
-def test_the_components_are_built_after_the_cores_and_before_the_wheel():
-    """They are built from the trees `build` has just brought to the pin."""
+def test_every_file_is_made_before_the_stage():
     order = list(plan.PHASES)
-    assert order.index("build") < order.index("components") < order.index("wheel")
+    makers = ("components", "bundles", "wheel")
+    assert all(order.index(m) < order.index("stage") for m in makers)
     assert "components" in plan.PER_BUILDER
 
 
