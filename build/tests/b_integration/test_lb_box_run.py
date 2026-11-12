@@ -15,13 +15,13 @@ from libera_build.repo import REPO
 from libera_build.report import RefusedError
 
 
-def test_tidy_lists_then_removes(tmp_path, capsys):
+def test_tidy_lists_on_a_dry_run_then_removes(tmp_path, capsys):
     root = tmp_path / "repo"
     (root / "build" / "out").mkdir(parents=True)
     (root / "build" / "out" / "big").write_bytes(b"x" * 4096)
     build_root = tmp_path / "build-root"
     (build_root / "src").mkdir(parents=True)
-    tidy.tidy(root, build_root, yes=False)
+    tidy.tidy(root, build_root, dry_run=True)
     assert "nothing removed" in capsys.readouterr().out
     assert (root / "build" / "out").exists()
     tidy.tidy(root, build_root, yes=True)

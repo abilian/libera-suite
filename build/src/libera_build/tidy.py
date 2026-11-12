@@ -10,9 +10,9 @@ pinned SHAs, so a build input rather than a build -- but it lives in the build
 area, `lb payload fetch` recreates it, and leaving 6.5 GB behind after a
 command called tidy would be its own surprise.
 
-**Dry by default.** Not a guard against the person who typed it: they asked.
-It is that this deletes a day of V8, ICU and container builds, and seeing the
-list first costs one extra word: --yes.
+**It lists, then asks.** Not a guard against the person who typed it: they
+asked. It is that this deletes a day of V8, ICU and container builds, and the
+list is worth seeing first. --yes does not ask; --dry-run lists and stops.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ import shutil
 import subprocess
 from typing import TYPE_CHECKING
 
+from libera_build import report
 from libera_build.report import say
 
 if TYPE_CHECKING:
@@ -63,7 +64,9 @@ def found(root: Path, build_root: Path) -> list[Path]:
     return [p for p in paths if p.exists()]
 
 
-def tidy(root: Path, build_root: Path, *, yes: bool) -> int:
+def tidy(
+    root: Path, build_root: Path, *, yes: bool = False, dry_run: bool = False
+) -> int:
     present = found(root, build_root)
     if not present:
         say("    nothing to tidy")
@@ -75,9 +78,11 @@ def tidy(root: Path, build_root: Path, *, yes: bool) -> int:
         shown = path.relative_to(root) if path.is_relative_to(root) else path
         say(f"    {size / 1e9:7.1f} GB  {shown}")
     say(f"\n    {total / 1e9:.1f} GB in total")
-    if not yes:
-        say("\n    nothing removed. To do it:  lb tidy --yes")
+    if dry_run:
+        say("\n    nothing removed (--dry-run)")
         return 0
+    if not yes:
+        report.confirm("remove all of it?", "nothing was removed.")
     for path in present:
         if path.is_dir() and not path.is_symlink():
             shutil.rmtree(path)

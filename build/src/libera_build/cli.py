@@ -1,8 +1,8 @@
 """Build, check and release Libera Suite: everything the Makefile does not.
 
-    lb --help                  the groups, and every command
-    lb payload --help          the commands in one group
-    lb payload core --help     one command: its options and examples
+    lb                         every command, and what is usually run
+    lb help payload            the commands in one group (lb payload --help)
+    lb help payload core       one command: its options and examples
 
 The scripts in build/ do the work, and each command says which one it runs
 before running it. What this adds is a name for every knob: each script takes
@@ -18,6 +18,7 @@ doing it.
 from __future__ import annotations
 
 import argparse
+import functools
 import os
 import shlex
 import subprocess
@@ -162,7 +163,7 @@ CORE_JOBS = Knob(
 DIST = Knob(
     "--dist",
     "DIST",
-    "the built artifacts to use (default: the payload version's)",
+    "the built artifacts to use (default: build/out/release/<version>)",
     "DIR",
 )
 MEMORY = Knob(
@@ -196,10 +197,10 @@ LINUX_LANG = Knob(
 VOLUME = Knob(
     "--volume", "VOLUME", "a named Docker volume instead of --build-dir", "NAME"
 )
-DRY = Knob("--dry-run", "DRY", "say, change nothing", switch=True)
+DRY = Knob("--dry-run", "DRY", "say what it would do, and do nothing", switch=True)
 DISTROS = Knob("--distros", "DISTROS", "images to try", '"IMAGE ..."')
 ARCHES = Knob("--arches", "ARCHES", "architectures to try", '"x86_64 arm64"')
-YES = Knob("--yes", "YES", "delete; without it, a dry run", switch=True)
+YES = Knob("--yes", "YES", "do not ask first", switch=True)
 OUT = Knob(
     "--out",
     "OUT",
@@ -328,7 +329,7 @@ def payload_status(_args: argparse.Namespace) -> Steps:
 
 
 def toolchain(args: argparse.Namespace) -> Steps:
-    return toolchain_steps(args.action, sys.platform, dry=args.dry_run)
+    return toolchain_steps(args.action, sys.platform, dry=switched(args, DRY))
 
 
 def toolchain_steps(action: str, platform: str, *, dry: bool = False) -> Steps:
@@ -408,8 +409,8 @@ def release_ship(args: argparse.Namespace) -> Steps:
     options = ShipOptions(
         phases=tuple(args.phases),
         only=tuple(args.only or ()),
-        yes=args.yes,
-        dry_run=args.dry_run,
+        yes=getattr(args, "yes", False),
+        dry_run=getattr(args, "dry_run", False),
     )
     return [Call(ship, (options,))]
 
@@ -427,6 +428,7 @@ def release_origin(args: argparse.Namespace) -> Steps:
     options = OriginOptions(
         args.action,
         dry_run=switched(args, DRY),
+        yes=switched(args, YES),
     )
     return [Call(verbs.run, (options,))]
 
@@ -446,9 +448,6 @@ def release_released_gui(args: argparse.Namespace) -> Steps:
 
 
 def on_(args: argparse.Namespace) -> Steps:
-    if not args.rest:
-        msg = "lb on PLATFORM COMMAND: which lb command to run there?"
-        raise SystemExit(msg)
     options = OnOptions(args.platform, tuple(args.rest), update=args.update)
     return [Call(on, (options,))]
 
@@ -461,7 +460,8 @@ def components_wheels(args: argparse.Namespace) -> Steps:
 
 def tidy_(args: argparse.Namespace) -> Steps:
     root = path_given(args, BUILD_ROOT) or build_root()
-    return [Call(tidy.tidy, (REPO, root), {"yes": switched(args, YES)})]
+    yes, dry = switched(args, YES), switched(args, DRY)
+    return [Call(tidy.tidy, (REPO, root), {"yes": yes, "dry_run": dry})]
 
 
 def bench(args: argparse.Namespace) -> Steps:
@@ -487,7 +487,11 @@ class Groups:
     """
 
     def __init__(self, parser: argparse.ArgumentParser) -> None:
-        self._top = parser.add_subparsers(dest="group", metavar="GROUP", required=True)
+        # No help: argparse would list the groups above our list of every
+        # command, which says the same and more.
+        self._top = parser.add_subparsers(
+            dest="group", metavar="GROUP", required=True, help=argparse.SUPPRESS
+        )
         self.listing: list[tuple[str, str]] = []
 
     def group(self, name: str, summary: str, epilog: str = "") -> Group:
@@ -514,6 +518,15 @@ class Groups:
         """A command with no group above it."""
         self.listing.append((name, summary))
         return add_command(self._top, name, summary, func, *knobs, epilog=epilog)
+
+    def passthrough(
+        self, name: str, summary: str, func: Callable[[argparse.Namespace], Steps]
+    ) -> None:
+        """A command with its own parser: everything after its name, --help
+        included, is passed on to it."""
+        self.listing.append((name, summary))
+        p = self._top.add_parser(name, help=summary, add_help=False)
+        p.set_defaults(func=func, knobs=(), passes_on=True)
 
 
 class Group:
@@ -603,7 +616,7 @@ def add_payload(groups: Groups) -> None:
     )
     p = g.command(
         "dist",
-        "the tarballs and the manifest a release is made of",
+        "the tarballs and the manifest, which the components are built from",
         payload_dist,
         BUILD_ROOT,
         epilog=examples(
@@ -611,7 +624,11 @@ def add_payload(groups: Groups) -> None:
         ),
     )
     p.add_argument(
-        "--fonts", choices=("core", "full"), default="core", help="default: core"
+        "--fonts",
+        choices=("core", "full"),
+        default="core",
+        help="the font set: core, what ships, or full, all of core-fonts; "
+        "default: core",
     )
     p.add_argument(
         "--manifest-only", action="store_true", help="the manifest, over what is there"
@@ -655,7 +672,7 @@ def add_payload(groups: Groups) -> None:
         p.add_argument(flag, action="store_true", help=what)
     g.command(
         "export",
-        "copy the container build's artifacts here, and print where",
+        "the container build's artifacts, copied here, and where they went",
         payload_export,
         ARCH,
         BUILD_ROOT,
@@ -670,7 +687,7 @@ def add_payload(groups: Groups) -> None:
     )
     g.command(
         "patches",
-        "does the patch queue still apply to the pinned SHAs? (~20 s)",
+        "whether the patch queue still applies to the pinned SHAs (~20 s)",
         payload_patches,
     )
     g.command(
@@ -687,16 +704,12 @@ def add_toolchain(groups: Groups) -> None:
     for action, summary in (
         ("check", "what is missing, in a second rather than an hour into a build"),
         ("list", "the packages this distribution needs, installing nothing"),
-        ("install", "install them"),
+        ("install", "the packages this distribution needs, installed"),
     ):
-        p = g.command(action, summary, toolchain)
-        p.set_defaults(action=action, dry_run=False)
-        if action == "install":
-            p.add_argument(
-                "--dry-run",
-                action="store_true",
-                help="say what would be installed, and install nothing",
-            )
+        p = g.command(
+            action, summary, toolchain, *((DRY,) if action == "install" else ())
+        )
+        p.set_defaults(action=action)
 
 
 def add_app(groups: Groups) -> None:
@@ -707,7 +720,7 @@ def add_app(groups: Groups) -> None:
             "app macos --standalone", "app flatpak --arch arm64", "app flatpak-check"
         ),
     )
-    p = g.command("macos", "Libera.app, unsigned", app_macos)
+    p = g.command("macos", "Libera.app, unsigned, in build/out/", app_macos)
     p.add_argument(
         "--standalone",
         action="store_true",
@@ -715,17 +728,29 @@ def add_app(groups: Groups) -> None:
     )
     g.command(
         "macos-launcher",
-        "rebuild src/libera/macos/: the bundle's executable and icon, committed",
+        "src/libera/macos/, rebuilt: the .app's executable and icon, committed",
         app_macos_launcher,
     )
     for name, action, summary in (
-        ("flatpak", "build", "wheels, then the bundle, then the check"),
-        ("flatpak-wheels", "wheels", "the offline wheel set on its own"),
-        ("flatpak-check", "check", "install the built bundle and run --diagnose in it"),
-        ("flatpak-smoke", "smoke", "and have it convert a document"),
-        ("flatpak-clean", "clean", "drop the runtime volume (~4 GB per architecture)"),
-        ("flatpak-shell", "shell", "a shell in the builder container"),
-        ("flatpak-versions", "versions", "what the builder image is pinned to"),
+        ("flatpak", "build", "the Flatpak bundle: its wheels, the bundle, its check"),
+        ("flatpak-wheels", "wheels", "the Flatpak's offline wheel set on its own"),
+        (
+            "flatpak-check",
+            "check",
+            "the built Flatpak installed, and --diagnose run in it",
+        ),
+        (
+            "flatpak-smoke",
+            "smoke",
+            "the built Flatpak installed, converting a document",
+        ),
+        (
+            "flatpak-clean",
+            "clean",
+            "the Flatpak builder's runtime volume, dropped (~4 GB)",
+        ),
+        ("flatpak-shell", "shell", "a shell in the Flatpak builder container"),
+        ("flatpak-versions", "versions", "what the Flatpak builder image is pinned to"),
     ):
         p = g.command(name, summary, app_flatpak, ARCH_HERE)
         p.set_defaults(action=action)
@@ -750,21 +775,28 @@ def add_linux(groups: Groups) -> None:
             "linux gui --lang fr_FR.UTF-8",
         ),
     )
-    for action, summary in (
-        ("test", "the suite; anything after it goes to pytest"),
-        ("lint", "the type checkers, where the Linux branches are live"),
-        ("gui", "a real GTK window under Xvfb, screenshotted"),
-        ("gui-test", "the same window, as the suite's gui tier (tests/d_gui)"),
-        ("dialog", "the GTK question the host asks, answered"),
-        ("versions", "what the test image is pinned to"),
-        ("shell", "a shell in the test container"),
-        ("image", "build, or rebuild, the test image"),
+    # The suite and the windows install the components; the rest do not.
+    runs_libera = (WHEELS, PAYLOAD, LINUX_LANG)
+    for action, summary, knobs in (
+        ("test", "the suite; anything after it goes to pytest", runs_libera),
+        ("lint", "the type checkers, where the Linux branches are live", ()),
+        ("gui", "a real GTK window under Xvfb, screenshotted", runs_libera),
+        (
+            "gui-test",
+            "a real GTK window, as the suite's gui tier (tests/d_gui)",
+            runs_libera,
+        ),
+        ("dialog", "the GTK question the host asks, answered", runs_libera),
+        ("versions", "what the test image is pinned to", ()),
+        ("shell", "a shell in the test container", (LINUX_LANG,)),
+        ("image", "the test image, built or rebuilt", ()),
     ):
-        p = g.command(action, summary, linux_, ARCH_HERE, WHEELS, PAYLOAD, LINUX_LANG)
+        p = g.command(action, summary, linux_, ARCH_HERE, *knobs)
         p.set_defaults(action=action, passes_on=action == "test")
 
 
-PHASE_LIST = "\n".join(f"  {name:<9} {what}" for name, what in PHASES.items())
+WIDEST = max(map(len, PHASES))
+PHASE_LIST = "\n".join(f"  {name:<{WIDEST}}  {what}" for name, what in PHASES.items())
 
 
 def add_release(groups: Groups) -> None:
@@ -790,7 +822,9 @@ def add_release(groups: Groups) -> None:
             func,
             epilog=f"phases, always run in this order:\n{PHASE_LIST}\n\n"
             + examples(
-                f"release {name}", f"release {name} build bundles --only linux-arm64"
+                f"release {name}",
+                f"release {name} update native build components bundles wheel stage",
+                f"release {name} build bundles --only linux-arm64",
             ),
         )
         p.add_argument(
@@ -808,9 +842,8 @@ def add_release(groups: Groups) -> None:
         )
         if name == "ship":
             p.add_argument(
-                "--yes", action="store_true", help="do not stop to confirm PyPI"
+                "--yes", action="store_true", help="do not ask before publishing"
             )
-            p.add_argument("--dry-run", action="store_true", help="the same as `plan`")
 
     p = g.command(
         "bump",
@@ -818,20 +851,24 @@ def add_release(groups: Groups) -> None:
         release_bump,
         epilog=examples("release bump 0.7.2", "release bump 0.8.0rc1"),
     )
-    p.add_argument("version", help="the new version, digits and dots, or a pre-release")
+    p.add_argument(
+        "version",
+        metavar="VERSION",
+        help="the new version, digits and dots, or a pre-release",
+    )
 
     for action, summary in (
         ("status", "where this release has got to, here and on PyPI (read-only)"),
-        ("extras", "upload the Flatpak bundles, install.sh and install.ps1"),
-        ("windows", "upload the Windows installer alone, once bundles fetched it"),
+        ("extras", "the Flatpak bundles, install.sh and install.ps1, to the CDN"),
+        ("windows", "the Windows installer alone, to the CDN, once bundles fetched it"),
     ):
-        knobs = {"status": ()}.get(action, (DRY,))
-        p = g.command(action, summary, release_origin, BUILD_ROOT, *knobs)
+        knobs = {"status": ()}.get(action, (DRY, YES))
+        p = g.command(action, summary, release_origin, *knobs)
         p.set_defaults(action=action)
 
     g.command(
         "matrix",
-        "the Linux cores, converting in each distribution the install page names",
+        "the staged Linux converter, run in each distribution the install page names",
         release_matrix,
         DIST,
         DISTROS,
@@ -860,7 +897,7 @@ def add_components(groups: Groups) -> None:
     )
     g.command(
         "wheels",
-        "this machine's core wheel, from the core's sdist, and the editors'",
+        "libera-core's wheel for this machine, from its sdist, and libera-web's",
         components_wheels,
         OUT,
         epilog=examples("components wheels", "components wheels --out /tmp/wheels"),
@@ -881,52 +918,56 @@ def add_others(groups: Groups) -> None:
             "on linux-x86_64 release matrix",
         ),
     )
+    p.usage = "lb on [-h] [--update] PLATFORM COMMAND ..."
     p.add_argument("platform", metavar="PLATFORM", help="as in build/builders.toml")
     p.add_argument("--update", action="store_true", help="send this commit there first")
-    p.set_defaults(passes_on=True)
+    p.set_defaults(passes_on=True, needs_rest="which lb command to run there?")
     groups.leaf(
         "tidy",
-        "remove every build on this machine: a list, unless --yes",
+        "every build on this machine, listed, then removed once you say yes",
         tidy_,
         BUILD_ROOT,
         YES,
-        epilog=examples("tidy", "tidy --yes"),
+        DRY,
+        epilog=examples("tidy", "tidy --dry-run", "tidy --yes"),
     )
-    p = groups.leaf(
-        "bench",
-        "a document to the screen, stage by stage (libera_build/bench.py)",
-        bench,
-        epilog=examples(
-            "bench",
-            "bench DOC.docx --runs 5",
-            "bench DOC.docx --idle 20",
-            "bench --app Libera.app",
-        ),
-    )
-    p.set_defaults(passes_on=True)
-    p = groups.leaf(
+    # Each has a parser of its own, which `lb bench --help` reaches: the
+    # options are listed once, where they are read.
+    groups.passthrough("bench", "a document to the screen, timed stage by stage", bench)
+    groups.passthrough(
         "fidelity",
-        "the same pages from the same build twice, and scored against references"
-        " (libera_build/fidelity.py)",
+        "the same pages rendered twice, and scored against references",
         fidelity,
-        epilog=examples(
-            "fidelity", "fidelity DOC.docx --runs 3", "fidelity --ref refs/word-web"
-        ),
     )
-    p.set_defaults(passes_on=True)
 
 
+USUAL = """\
+what is usually run:
+  lb payload patches              whether the patch queue still applies (~20 s)
+  lb payload all                  this machine's payload, from a checkout (hours)
+  lb payload smoke                whether that payload converts documents
+  lb linux test                   the suite on Linux, in a container (lint: linux lint)
+  lb on linux-x86_64 COMMAND      any of these, on a builder (--update first)
+
+  a release:
+  lb release bump X.Y.Z           the version, in all six places
+  lb release plan                 what ship would do, running nothing
+  lb release ship update native build components bundles wheel stage
+                                  built and installed everywhere, nothing published
+  lb release ship publish verify  the staged files to PyPI and the CDN (asks first)
+
+  lb help GROUP [COMMAND]         a group's commands, or one command's options"""
+
+
+@functools.cache
 def make_parser() -> argparse.ArgumentParser:
+    """Built once: a parse leaves it as it was, and building it is ~85 ms,
+    half of it argparse asking gettext for each string's translation."""
     parser = argparse.ArgumentParser(
         prog="lb",
+        usage="lb [-h] GROUP [COMMAND] ...",
         description=__doc__.split("\n\n")[0],
-        epilog=examples(
-            "payload all",
-            "payload container --arch arm64",
-            "linux lint",
-            "release plan",
-            "release ship",
-        ),
+        epilog=USUAL,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     groups = Groups(parser)
@@ -939,7 +980,7 @@ def make_parser() -> argparse.ArgumentParser:
     add_others(groups)
     commands = "\n".join(f"  {name:<24} {what}" for name, what in groups.listing)
     parser.epilog = (
-        f"commands (each takes --help: its options, and examples):\n"
+        f"commands (lb help GROUP COMMAND: its options, and examples):\n"
         f"{commands}\n\n{parser.epilog}"
     )
     return parser
@@ -957,6 +998,8 @@ def plan(argv: list[str]) -> Steps:
     args, rest = parser.parse_known_args(argv)
     if rest and not getattr(args, "passes_on", False):
         parser.error(f"unrecognized arguments: {' '.join(rest)}")
+    if not rest and (missing := getattr(args, "needs_rest", None)):
+        parser.error(f"{args.group}: {missing}")
     args.rest = rest
     # Here and not in each command, so that no call done in this process can
     # be planned without the environment its options ask for.
@@ -968,4 +1011,8 @@ def plan(argv: list[str]) -> Steps:
 
 
 def main(argv: list[str] | None = None) -> int:
-    return run_steps(plan(sys.argv[1:] if argv is None else argv))
+    argv = sys.argv[1:] if argv is None else argv
+    # `lb` and `lb help release ship` are `lb --help` and `lb release ship --help`.
+    if not argv or argv[0] == "help":
+        argv = [*argv[1:], "--help"]
+    return run_steps(plan(argv))

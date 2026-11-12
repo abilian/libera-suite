@@ -273,9 +273,23 @@ def show(name: str, runs: list[dict[str, float]], stages: tuple[str, ...]) -> No
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("documents", nargs="*", type=Path)
-    parser.add_argument("--runs", type=int, default=3)
+    parser = argparse.ArgumentParser(
+        prog="lb bench",
+        description=__doc__.split("\n\n")[0],
+        epilog="examples:\n  lb bench\n  lb bench DOC.docx --runs 5\n"
+        "  lb bench DOC.docx --idle 20\n  lb bench --app Libera.app",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "documents",
+        nargs="*",
+        type=Path,
+        metavar="DOC",
+        help="the documents to open (default: a few made for it)",
+    )
+    parser.add_argument(
+        "--runs", type=int, default=3, metavar="N", help="runs per document (3)"
+    )
     parser.add_argument("--app", type=Path, help="a built Libera.app")
     parser.add_argument(
         "--idle",

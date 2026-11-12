@@ -25,10 +25,10 @@ There is one directory per kind of thing:
 
 ## Commands
 
-    lb --help                 the groups, and every command
-                              (uv run lb, outside the virtualenv)
-    lb payload --help         the commands in one
-    lb payload core --help    one command: its options, and examples
+    lb                        every command, and what is usually run
+                              (uv run lb, outside the virtualenv; also lb help)
+    lb help payload           the commands in one group (lb payload --help)
+    lb help payload core      one command: its options, and examples
 
 Each command says which script it runs before running it, so the scripts stay usable on their own for an argument `lb` does not pass. `lb on PLATFORM COMMAND…` runs any of them on a builder from `builders.toml`. The Makefile has only the standard jobs, plus `make payload` (`lb payload all`) and `make ship` (`lb release ship`). The builders, which have nothing installed, run it as `python3 -m libera_build` with `build/src` and `src` on `PYTHONPATH`.
 

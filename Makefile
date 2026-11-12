@@ -25,7 +25,7 @@ help: ## list these targets
 		/^[a-z][a-z0-9-]*:.*## / { printf "  %-18s %s\n", $$1, $$2 }' \
 		$(MAKEFILE_LIST)
 	@echo
-	@echo "  lb --help            building, packaging, releasing (uv run lb, outside the venv)"
+	@echo "  lb help              building, packaging, releasing (uv run lb, outside the venv)"
 
 all: lint test ## lint, then the whole test suite
 

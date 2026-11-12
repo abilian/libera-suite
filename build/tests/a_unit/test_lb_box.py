@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from libera_build import buildbox, flatpak, inventory, released_gui, tidy
 from libera_build.buildbox import BoxOptions
 from libera_build.inventory import Builder
+from libera_build.report import RefusedError
 
 
 def test_an_image_on_another_base_is_stale():
@@ -127,3 +129,29 @@ def test_tidy_finds_only_what_is_there(tmp_path):
         Path("build/out"),
         Path("build/flatpak/libera-1-amd64.flatpak"),
     ]
+
+
+def test_tidy_removes_nothing_unless_told_yes(tmp_path, monkeypatch):
+    root = tmp_path / "repo"
+    (root / "build" / "out").mkdir(parents=True)
+    build_root = tmp_path / "build-root"
+    build_root.mkdir()
+    asked = []
+
+    def refuse(question, refused):
+        asked.append(question)
+        raise RefusedError(refused)
+
+    monkeypatch.setattr(tidy.report, "confirm", refuse)
+    tidy.tidy(root, build_root, dry_run=True)
+    assert not asked
+    with pytest.raises(RefusedError, match="nothing was removed"):
+        tidy.tidy(root, build_root)
+    assert asked
+    assert (root / "build" / "out").is_dir()
+    assert build_root.is_dir()
+    asked.clear()
+    tidy.tidy(root, build_root, yes=True)
+    assert not asked
+    assert not (root / "build" / "out").exists()
+    assert not build_root.exists()

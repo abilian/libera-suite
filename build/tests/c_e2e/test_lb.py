@@ -16,10 +16,8 @@ import urllib.request
 from pathlib import Path
 
 import pytest
-from libera_build import cli, repo, versions
+from libera_build import cli
 from libera_build.containers import Engine, host_arch
-
-from libera.manifest import Manifest
 
 
 def find_lb() -> str:
@@ -59,6 +57,19 @@ def test_help_lists_every_command():
         assert f"  {name} " in done.stdout, name
 
 
+@pytest.mark.parametrize("argv", [(), ("help",), ("--help",)])
+def test_lb_alone_and_lb_help_are_lb_dash_dash_help(argv):
+    done = lb(*argv)
+    assert done.returncode == 0, done.stderr
+    assert "what is usually run:" in done.stdout
+
+
+def test_help_takes_a_command_too():
+    done = lb("help", "release", "ship")
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.startswith("usage: lb release ship")
+
+
 def test_a_mistyped_command_says_so_and_runs_nothing():
     done = lb("payload", "biuld")
     assert done.returncode == 2
@@ -69,7 +80,7 @@ def test_a_mistyped_command_says_so_and_runs_nothing():
 def test_tidy_lists_without_deleting(tmp_path):
     """Against an empty BUILD_ROOT: the real one is millions of files, which du
     took more than the timeout to sum on the Windows builder."""
-    done = lb("tidy", env={"BUILD_ROOT": str(tmp_path / "build-root")})
+    done = lb("tidy", "--dry-run", env={"BUILD_ROOT": str(tmp_path / "build-root")})
     assert done.returncode == 0, done.stderr
     assert "nothing removed" in done.stdout or "nothing to tidy" in done.stdout
 
@@ -140,26 +151,6 @@ def test_linux_versions_runs_the_test_image():
     assert done.returncode == 0, done.stdout + done.stderr
     assert "==> versions, on Linux" in done.stdout
     assert "uv" in done.stdout
-
-
-def test_push_dry_lists_every_upload_and_needs_no_token(monkeypatch):
-    stamped = cli.REPO / "src" / "libera" / "manifest.json"
-    if not stamped.is_file():
-        pytest.skip("no manifest stamped in this checkout")
-    version = versions.payload_version(cli.REPO)
-    if Manifest.read(stamped).payload_version != version:
-        pytest.skip(f"payload {version} is not collected yet")
-    collected = repo.dist(version)
-    if not (collected / "manifest.json").is_file():
-        pytest.skip(f"nothing collected to push in {collected}")
-    monkeypatch.delenv("CDN_TOKEN", raising=False)
-    done = lb("release", "push", "--dry-run")
-    if "dirty tree" in done.stderr:
-        pytest.skip("the stamped manifest is from a dirty tree; push refuses it first")
-    assert done.returncode == 0, done.stdout + done.stderr
-    puts = [line for line in done.stdout.splitlines() if "would PUT" in line]
-    assert puts
-    assert "manifest.json" in puts[-1], "the manifest goes last"
 
 
 def origin_reachable() -> bool:

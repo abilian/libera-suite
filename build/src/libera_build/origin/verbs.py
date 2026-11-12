@@ -1,4 +1,9 @@
-"""The three verbs, as `lb release <verb>` and `ship`'s phases call them."""
+"""`lb release status`, `extras` and `windows`.
+
+The two that upload ask first, on the terminal, unless --yes or --dry-run.
+`ship`'s publish calls `publish` directly, and asks once, for the whole
+release.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from libera_build.origin import place, publish, status
 from libera_build.repo import REPO
-from libera_build.report import RefusedError
+from libera_build.report import RefusedError, confirm
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -17,12 +22,15 @@ if TYPE_CHECKING:
 class OriginOptions:
     verb: str
     dry_run: bool = False
+    yes: bool = False
     root: Path = REPO
 
 
 def run(options: OriginOptions) -> int:
     root, dry = options.root, options.dry_run
     where = place.here(root)
+    if options.verb != "status" and not (dry or options.yes):
+        confirm(f"upload {options.verb} to the CDN?", "nothing was uploaded.")
     if options.verb == "status":
         status.status(root)
     elif options.verb == "extras":

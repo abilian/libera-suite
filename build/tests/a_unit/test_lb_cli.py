@@ -238,8 +238,7 @@ def no_knobs(monkeypatch):
     [
         ["payload", "export"],
         ["payload", "container", "--versions"],
-        ["release", "status"],
-        ["release", "extras"],
+        ["tidy"],
     ],
 )
 def test_build_root_reaches_a_command_done_in_this_process(argv, no_knobs):
@@ -247,6 +246,23 @@ def test_build_root_reaches_a_command_done_in_this_process(argv, no_knobs):
     where the scripts they replaced did, and dropped the option."""
     (call,) = cli.plan([*argv, "--build-root", "/x"])
     assert call.env["BUILD_ROOT"] == "/x"
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["release", "status"],
+        ["release", "extras"],
+        ["linux", "lint"],
+        ["linux", "image"],
+    ],
+)
+def test_a_command_offers_only_the_options_it_reads(argv, no_knobs):
+    """The release's CDN verbs never read $BUILD_ROOT, and the Linux commands
+    that start no libera install no components."""
+    for option in ("--build-root", "--wheels", "--payload"):
+        with pytest.raises(SystemExit):
+            cli.plan([*argv, option, "/x"])
 
 
 def test_the_container_builds_what_payload_all_builds():
@@ -284,22 +300,24 @@ def test_released_gui_is_every_builder_unless_one_is_named():
     assert call.args[0].on is None
 
 
-def test_tidy_is_a_list_unless_yes(no_knobs):
+def test_tidy_asks_unless_yes_and_lists_on_a_dry_run(no_knobs):
     (call,) = cli.plan(["tidy", "--yes", "--build-root", "/b"])
     assert call == cli.Call(
         tidy.tidy,
         (cli.REPO, Path("/b")),
-        {"yes": True},
+        {"yes": True, "dry_run": False},
         env={"YES": "1", "BUILD_ROOT": "/b"},
     )
     (call,) = cli.plan(["tidy"])
-    assert call.kwargs == {"yes": False}
+    assert call.kwargs == {"yes": False, "dry_run": False}
+    (call,) = cli.plan(["tidy", "--dry-run"])
+    assert call.kwargs == {"yes": False, "dry_run": True}
 
 
 def test_yes_still_works_as_an_environment_variable(no_knobs, monkeypatch):
     monkeypatch.setenv("YES", "1")
     (call,) = cli.plan(["tidy"])
-    assert call.kwargs == {"yes": True}
+    assert call.kwargs == {"yes": True, "dry_run": False}
 
 
 def test_every_call_matches_the_signature_it_calls(no_knobs):

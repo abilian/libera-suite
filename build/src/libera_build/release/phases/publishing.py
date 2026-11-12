@@ -6,16 +6,15 @@ import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from libera_build import versions
+from libera_build import report, versions
 from libera_build.artifacts import core_sdist_name, core_wheel_name, web_wheel_name
 from libera_build.components import TAGS
 from libera_build.hosts import LocalHost, facts_from
 from libera_build.origin import place, publish as cdn
-from libera_build.origin.verbs import OriginOptions, run
 from libera_build.process import run_here
 from libera_build.release import plan
 from libera_build.release.phases import components
-from libera_build.report import RefusedError, problems, say, step
+from libera_build.report import problems, say, step
 
 # PyPI's simple index: `uv publish --check-url` reads it to skip a file
 # already up, and the install check installs from it and nothing else.
@@ -26,10 +25,6 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from libera_build.release.context import Context
-
-
-def origin(ctx: Context, verb: str) -> None:
-    run(OriginOptions(verb, root=ctx.root))
 
 
 def publish(ctx: Context, staged: list[Path]) -> None:
@@ -108,17 +103,7 @@ def requires_of(wheel: Path) -> list[str]:
 def confirm(app: str) -> None:
     say("    PyPI accepts a version once. There is no undo, and a yank")
     say("    does not free the number.")
-    try:
-        with Path("/dev/tty").open(encoding="utf-8") as tty:
-            say("")
-            print(f"    publish {app} to PyPI? [y/N] ", end="", flush=True)
-            answer = tty.readline().strip().lower()
-    except OSError as e:
-        msg = "no terminal to ask on. Re-run with --yes when you mean it."
-        raise RefusedError(msg) from e
-    if answer not in {"y", "yes"}:
-        msg = "nothing was published."
-        raise RefusedError(msg)
+    report.confirm(f"publish {app} to PyPI?", "nothing was published.")
 
 
 def verify(ctx: Context) -> None:

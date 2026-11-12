@@ -57,3 +57,13 @@ label = "integration"
 name = "c_e2e"
 root = "tests/c_e2e"
 label = "e2e"
+
+[tool.pytest.ini_options]
+# Run from build/, pytest would otherwise take the root's configuration and
+# collect everything under build/, build/out/ included.
+testpaths = ["tests"]
+markers = [
+    "unit: fast and isolated",
+    "integration: real processes, git, http.server",
+    "e2e: the installed `lb`, running real scripts",
+]
