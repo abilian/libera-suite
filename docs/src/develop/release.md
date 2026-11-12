@@ -37,7 +37,7 @@ lb on windows-x86_64 app windows-gui-test                   # the gui tier, WebV
 make test-gui                                               # the gui tier, here
 ```
 
-`stage` gathers every file the release publishes into `build/out/release/X.Y.Z/` and installs it on every platform, as users will (see [Stage](#stage)). Nothing leaves the machines. The staged files are the ones to test by hand: on each platform, on each platform: open a `.docx`, a `.xlsx` and a `.pptx`; type, save, Save As in another format; close with unsaved changes; open a document LibreOffice has open; drop a file on a window; print; Help. Once with `ui_language` set to each translated language. On Linux the desktop is the VNC session described in `notes/15-builders.md`; on Windows, Windows App to the builder. For testers outside, a pre-release (below) does the same through the real channels without moving any of them.
+`stage` gathers every file the release publishes into `build/out/release/X.Y.Z/` and installs it on every platform, as users will (see [Stage](#stage)). Nothing leaves the machines. The staged files are the ones to test by hand: on each platform: open a `.docx`, a `.xlsx` and a `.pptx`; type, save, Save As in another format; close with unsaved changes; open a document LibreOffice has open; drop a file on a window; print; Help. Once with `ui_language` set to each translated language. On Linux the desktop is the VNC session described in `notes/15-builders.md`; on Windows, Windows App to the builder. For testers outside, a pre-release (below) does the same through the real channels without moving any of them.
 
 **4. Tag, then publish what was staged.**
 

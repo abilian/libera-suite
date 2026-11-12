@@ -1,14 +1,15 @@
 """`lb release matrix`: does the Linux converter about to be published run
 where we say it runs?
 
-For each architecture and each image, it unpacks that architecture's core into
-a clean container and has x2t convert a docx to odt, the way the host runs it,
-then looks for the document's text in what came out. `lb release check` proves
-the bytes arrived; this proves they are usable. The glibc floor was wrong once
-already: the x86_64 core built on noble needed GLIBC 2.38 and would not load on
-Ubuntu 22.04 or Debian 12 (notes/13). Its first run found the install page
-claiming Fedora 35 and RHEL 9, where glibc 2.34 cannot load a core that needs
-2.35.
+For each architecture and each image, it unpacks that architecture's
+libera-core wheel, as `stage` left it in build/out/release/<version>/, into a
+clean container and has x2t convert a docx to odt, the way the host runs it,
+then looks for the document's text in what came out. On a builder, which has
+no stage, it takes the core tarball its own container build left. The glibc
+floor was wrong once already: the x86_64 core built on noble needed GLIBC 2.38
+and would not load on Ubuntu 22.04 or Debian 12 (notes/13). Its first run
+found the install page claiming Fedora 35 and RHEL 9, where glibc 2.34 cannot
+load a core that needs 2.35.
 
 The Flatpak is not what this checks. It carries its own runtime and does not
 care what the distribution is; this is the payload the wheel installs.
@@ -26,11 +27,11 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from libera_build import repo, versions
 from libera_build.artifacts import core_name
 from libera_build.buildbox import exported_dist
 from libera_build.containers import Engine, Mount, Run, host_arch, linux_platform
 from libera_build.process import run_quietly
+from libera_build.release.phases import staging
 from libera_build.repo import REPO
 from libera_build.report import RefusedError, say, step
 
@@ -70,10 +71,10 @@ def holds_text(odt: Path, needle: str) -> bool:
 def choose(options: MatrixOptions) -> tuple[Path, tuple[str, ...]]:
     """The artifacts, and the architectures to try.
 
-    The release's collected directory, with both architectures; on a builder,
-    which has none, its own container build, and its own architecture.
+    The staged release, with both architectures; on a builder, which has
+    none, its own container build, and its own architecture.
     """
-    dist = options.dist or repo.dist(versions.payload_version(REPO))
+    dist = options.dist or staging.folder(REPO)
     if dist.is_dir():
         return dist, options.arches or ARCHES
     own = host_arch()
@@ -87,20 +88,52 @@ def choose(options: MatrixOptions) -> tuple[Path, tuple[str, ...]]:
 def make_sample(dist: Path, work: Path) -> Path:
     """The sample docx, built on the blank the payload itself ships, so that
     nothing but the artifacts is needed: a builder keeps its sources inside
-    the container build."""
+    the container build. libera-web's wheel has it, or editors.tar.gz."""
+    blank = work / "new.docx"
+    webs = sorted(dist.glob("libera_web-*.whl"))
     editors = dist / "editors.tar.gz"
-    if not editors.is_file():
-        msg = f"no {editors}"
+    if webs:
+        blank.write_bytes(zipfile.ZipFile(webs[-1]).read("libera_web/empty/new.docx"))
+    elif editors.is_file():
+        with tarfile.open(editors) as tar:
+            tar.extract("empty/new.docx", work, filter="data")
+        blank = work / "empty" / "new.docx"
+    else:
+        msg = f"no libera-web wheel and no {editors.name} in {dist}"
         raise RefusedError(msg)
-    with tarfile.open(editors) as tar:
-        tar.extract("empty/new.docx", work, filter="data")
     sample = work / "in.docx"
     run_quietly(
         [sys.executable, str(REPO / "tests/support/make_sample_docx.py"), str(sample)],
         "the sample document",
-        env={**os.environ, "LIBERA_BLANK": str(work / "empty" / "new.docx")},
+        env={**os.environ, "LIBERA_BLANK": str(blank)},
     )
     return sample
+
+
+def core_of(dist: Path, arch: str) -> Path:
+    """That architecture's libera-core wheel, else its core tarball."""
+    machine = "aarch64" if linux_platform(arch).endswith("arm64") else "x86_64"
+    wheels = sorted(dist.glob(f"libera_core-*-manylinux_*_{machine}.whl"))
+    found = wheels[-1] if wheels else dist / core_name(linux_platform(arch))
+    if not found.is_file():
+        msg = f"no libera-core wheel for {machine} and no {found.name} in {dist}"
+        raise RefusedError(msg)
+    return found
+
+
+def unpack(archive: Path, into: Path) -> Path:
+    """A wheel or a core tarball, unpacked: the directory holding its bin/.
+    zipfile drops the modes, which pip restores from the entries, so does this."""
+    if archive.suffix != ".whl":
+        with tarfile.open(archive) as tar:
+            tar.extractall(into, filter="data")
+        return into
+    with zipfile.ZipFile(archive) as whl:
+        for entry in whl.infolist():
+            whl.extract(entry, into)
+            if mode := entry.external_attr >> 16 & 0o777:
+                (into / entry.filename).chmod(mode)
+    return into / "libera_core"
 
 
 def convert_in(
@@ -137,15 +170,9 @@ def run(options: MatrixOptions, engine: Engine | None = None) -> int:
         work = Path(scratch)
         make_sample(dist, work)
         for arch in arches:
-            tarball = dist / core_name(linux_platform(arch))
-            if not tarball.is_file():
-                msg = f"no {tarball}"
-                raise RefusedError(msg)
-            core = work / f"core-{arch}"
-            core.mkdir()
-            with tarfile.open(tarball) as tar:
-                tar.extractall(core, filter="data")
-            step(f"{arch}, from {tarball}")
+            archive = core_of(dist, arch)
+            core = unpack(archive, work / f"core-{arch}")
+            step(f"{arch}, from {archive}")
             for image in distros:
                 said = convert_in(engine, image, arch, core, work)
                 name = image.rsplit("/", 1)[-1]

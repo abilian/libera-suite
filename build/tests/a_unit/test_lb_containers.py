@@ -164,6 +164,19 @@ def test_a_conversion_is_believed_by_its_text(tmp_path):
     assert not matrix.holds_text(tmp_path / "c.odt", "x")
 
 
+def test_the_matrix_runs_the_staged_wheel_with_its_modes(tmp_path):
+    whl = tmp_path / "libera_core-9.9.9-py3-none-manylinux_2_34_aarch64.whl"
+    with zipfile.ZipFile(whl, "w") as z:
+        x2t = zipfile.ZipInfo("libera_core/bin/x2t")
+        x2t.external_attr = 0o755 << 16
+        z.writestr(x2t, "elf")
+    assert matrix.core_of(tmp_path, "arm64") == whl
+    with pytest.raises(RefusedError, match="x86_64"):
+        matrix.core_of(tmp_path, "amd64")
+    core = matrix.unpack(whl, tmp_path / "core")
+    assert (core / "bin" / "x2t").stat().st_mode & 0o777 == 0o755
+
+
 def answer(endpoint: str):
     def run(*_args, **_kwargs):
         return subprocess.CompletedProcess([], 0, stdout=f"{endpoint}\n")
