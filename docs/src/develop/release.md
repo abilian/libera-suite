@@ -243,7 +243,7 @@ On a small machine the build is tight on memory before it is slow. `build/engine
 
 ```sh
 lb release check downloads                           # every Linux and Windows builder in builders.toml
-lb release check downloads --on fedora.zt            # one of them
+lb release check downloads --only linux-x86_64       # one of them
 ```
 
 It copies a script to each machine over ssh, and the script installs what the CDN serves now, the way a user would get it. **It never tests what happens to be installed there**: 0.7.0 was once declared to draw a window by a 0.5.0 left on the builder.

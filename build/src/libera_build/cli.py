@@ -136,6 +136,8 @@ class Knob(NamedTuple):
     metavar: str | None = None
     choices: tuple[str, ...] | None = None
     switch: bool = False
+    # Repeatable; its variable is the values separated by spaces.
+    many: bool = False
 
     @property
     def dest(self) -> str:
@@ -165,7 +167,7 @@ CORE_JOBS = Knob(
 DIST = Knob(
     "--dist",
     "DIST",
-    "the built artifacts to use (default: build/out/release/<version>)",
+    "distros: the staged files to use (default: build/out/release/<version>)",
     "DIR",
 )
 MEMORY = Knob(
@@ -200,8 +202,20 @@ VOLUME = Knob(
     "--volume", "VOLUME", "a named Docker volume instead of --build-dir", "NAME"
 )
 DRY = Knob("--dry-run", "DRY", "say what it would do, and do nothing", switch=True)
-DISTROS = Knob("--distros", "DISTROS", "images to try", '"IMAGE ..."')
-ARCHES = Knob("--arches", "ARCHES", "architectures to try", '"x86_64 arm64"')
+DISTROS = Knob(
+    "--distro",
+    "DISTROS",
+    "distros: an image to try; repeatable (default: the install page's)",
+    "IMAGE",
+    many=True,
+)
+ARCHES = Knob(
+    "--arch",
+    "ARCHES",
+    "distros: amd64 or arm64; repeatable (default: both)",
+    choices=("amd64", "arm64"),
+    many=True,
+)
 YES = Knob("--yes", "YES", "do not ask first", switch=True)
 OUT = Knob(
     "--out",
@@ -224,6 +238,7 @@ def add_knobs(parser: argparse.ArgumentParser, *knobs: Knob) -> None:
                 dest=knob.dest,
                 metavar=knob.metavar,
                 choices=knob.choices,
+                action="append" if knob.many else "store",
                 help=help_,
             )
     parser.set_defaults(knobs=knobs)
@@ -233,7 +248,7 @@ def env_of(args: argparse.Namespace) -> dict[str, str]:
     """The environment the options given ask for."""
     values = {k: getattr(args, k.dest) for k in args.knobs}
     return {
-        k.env: "1" if k.switch else str(v)
+        k.env: "1" if k.switch else " ".join(v) if k.many else str(v)
         for k, v in values.items()
         if v is not None and v is not False
     }
@@ -411,6 +426,11 @@ def given(args: argparse.Namespace, knob: Knob) -> str | None:
     return getattr(args, knob.dest, None) or os.environ.get(knob.env) or None
 
 
+def listed(args: argparse.Namespace, knob: Knob) -> tuple[str, ...]:
+    """A repeatable knob's values: the options, else its variable's words."""
+    return tuple(getattr(args, knob.dest, None) or os.environ.get(knob.env, "").split())
+
+
 def path_given(args: argparse.Namespace, knob: Knob) -> Path | None:
     value = given(args, knob)
     return Path(value).expanduser() if value else None
@@ -516,19 +536,19 @@ def release_check(args: argparse.Namespace) -> Steps:
         {args.what},
         {
             "dist": ("distros",),
-            "distros": ("distros",),
-            "arches": ("distros",),
-            "on": ("downloads",),
+            "distro": ("distros",),
+            "arch": ("distros",),
+            "only": ("downloads",),
             "doc": ("downloads",),
         },
     )
     if args.what == "downloads":
-        options = ReleasedGuiOptions(on=args.on, doc=args.doc)
+        options = ReleasedGuiOptions(only=tuple(args.only or ()), doc=args.doc)
         return [Call(released_gui.run, (options,))]
     matrix_options = MatrixOptions(
         dist=path_given(args, DIST),
-        distros=tuple((given(args, DISTROS) or "").split()),
-        arches=tuple((given(args, ARCHES) or "").split()),
+        distros=listed(args, DISTROS),
+        arches=listed(args, ARCHES),
     )
     return [Call(matrix.run, (matrix_options,))]
 
@@ -995,17 +1015,20 @@ def add_release(groups: Groups) -> None:
         "window from each and screenshots it.\n\n"
         + examples(
             "release check distros",
-            "release check distros --arches arm64",
-            "release check downloads --on fedora.zt",
+            "release check distros --arch arm64",
+            "release check distros --distro docker.io/library/debian:13",
+            "release check downloads --only linux-arm64",
         ),
     )
     p.add_argument(
         "what", choices=("distros", "downloads"), metavar="distros|downloads"
     )
     p.add_argument(
-        "--on",
-        metavar="HOST",
-        help="downloads: one machine; default: every Linux and Windows builder",
+        "--only",
+        action="append",
+        metavar="PLATFORM",
+        help="downloads: one builder, by its platform in build/builders.toml; "
+        "repeatable (default: every Linux and Windows builder)",
     )
     p.add_argument("--doc", metavar="FILE", help="downloads: the document to open")
 

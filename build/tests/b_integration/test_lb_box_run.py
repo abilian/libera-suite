@@ -110,8 +110,14 @@ def test_a_machine_without_the_tools_says_which_and_is_no_pass(tmp_path, capsys)
     no flatpak, and the script must say so rather than pass."""
     if shutil.which("xvfb-run") and shutil.which("flatpak"):
         pytest.skip("this machine could actually draw the window")
+    # A checkout of its own, with the real script and one builder: this one.
+    root = tmp_path / "repo"
+    shutil.copytree(REPO / "build" / "install", root / "build" / "install")
+    (root / "build" / "builders.toml").write_text(
+        '[[builders]]\nplatform = "linux-x86_64"\ntarget = "here"\n'
+    )
     options = released_gui.ReleasedGuiOptions(
-        on="here", host_for=lambda _: LocalHost(tmp_path)
+        root=root, host_for=lambda _: LocalHost(tmp_path)
     )
     assert not released_gui.on_host(LocalHost(tmp_path), "here", options)
     out = capsys.readouterr().out

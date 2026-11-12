@@ -105,7 +105,7 @@ def run(ctx: Context) -> None:
         found += installs(host, b, dest, app, deps)
     remote_guis = [b for b in ctx.remotes if not b.platform.startswith("macos-")]
     for b in remote_guis:
-        options = ReleasedGuiOptions(on=b.target, staged=dest, root=ctx.root)
+        options = ReleasedGuiOptions(staged=dest, root=ctx.root)
         if not released_gui.on_host(ctx.host_for(b), b.platform, options):
             found.append(f"{b.platform}: the staged bundle did not draw a window")
     problems(found, "nothing was stamped, and publish will refuse.")

@@ -99,8 +99,8 @@ def test_a_command_line_runs_its_scripts(argv, steps):
         ["app", "build", "flatpak", "--standalone"],
         ["app", "build", "macos", "--arch", "arm64"],
         ["app", "test", "windows", "--arch", "arm64"],
-        ["release", "check", "distros", "--on", "h"],
-        ["release", "check", "downloads", "--distros", "a"],
+        ["release", "check", "distros", "--only", "linux-arm64"],
+        ["release", "check", "downloads", "--distro", "a"],
     ],
 )
 def test_an_option_for_a_stage_or_target_not_run_is_refused(argv):
@@ -232,9 +232,11 @@ def test_matrix_takes_its_lists_as_words(monkeypatch):
         "release",
         "check",
         "distros",
-        "--distros",
-        "a:1 b:2",
-        "--arches",
+        "--distro",
+        "a:1",
+        "--distro",
+        "b:2",
+        "--arch",
         "arm64",
     ])
     assert call == cli.Call(
@@ -242,6 +244,9 @@ def test_matrix_takes_its_lists_as_words(monkeypatch):
         (MatrixOptions(distros=("a:1", "b:2"), arches=("arm64",)),),
         env={"DISTROS": "a:1 b:2", "ARCHES": "arm64"},
     )
+    monkeypatch.setenv("DISTROS", "c:3 d:4")
+    (call,) = cli.plan(["release", "check", "distros"])
+    assert call.args[0].distros == ("c:3", "d:4")
 
 
 @pytest.mark.parametrize(
@@ -358,10 +363,10 @@ def test_the_flatpak_defaults_to_this_machines_architecture(no_knobs):
 
 
 def test_released_gui_is_every_builder_unless_one_is_named():
-    (call,) = cli.plan(["release", "check", "downloads", "--on", "h"])
-    assert call.args[0].on == "h"
+    (call,) = cli.plan(["release", "check", "downloads", "--only", "linux-arm64"])
+    assert call.args[0].only == ("linux-arm64",)
     (call,) = cli.plan(["release", "check", "downloads"])
-    assert call.args[0].on is None
+    assert call.args[0].only == ()
 
 
 def test_tidy_asks_unless_yes_and_lists_on_a_dry_run(no_knobs):

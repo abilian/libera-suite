@@ -43,7 +43,7 @@ WINDOWS_RUN = (
 
 @dataclass(frozen=True)
 class ReleasedGuiOptions:
-    on: str | None = None  # one ssh target; default every remote Linux builder
+    only: tuple[str, ...] = ()  # platforms in builders.toml; default all of them
     doc: str | None = None  # a document on that machine, instead of the payload's blank
     # A release's staged files here (`stage`), sent to each machine and
     # installed from there, instead of what the CDN serves.
@@ -140,14 +140,12 @@ def send_staged(
 
 
 def run(options: ReleasedGuiOptions) -> int:
-    if options.on:
-        targets = [(options.on, options.on)]
-    else:
-        builders = inventory.read(options.root / repo.BUILDERS)
-        targets = [(b.platform, b.target) for b in inventory.gui_remotes(builders)]
-        if not targets:
-            msg = "no remote Linux or Windows builders in build/builders.toml"
-            raise RefusedError(msg)
+    builders = inventory.read(options.root / repo.BUILDERS)
+    remotes = inventory.narrow(inventory.gui_remotes(builders), list(options.only))
+    targets = [(b.platform, b.target) for b in remotes]
+    if not targets:
+        msg = "no remote Linux or Windows builders in build/builders.toml"
+        raise RefusedError(msg)
     passes = sum(
         on_host(options.host_for(target), name, options) for name, target in targets
     )
