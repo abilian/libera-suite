@@ -12,7 +12,7 @@ Standard library only, Python 3.11+.
 
 # A standalone script, not a package module (INP001), that runs `git` from PATH
 # with fixed arguments (S404, S603, S607).
-# ruff: file-ignore[INP001, S404, S603, S607]
+# ruff: file-ignore[start-process-with-partial-path]
 
 from __future__ import annotations
 
