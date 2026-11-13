@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import zipfile
+from typing import TYPE_CHECKING
 
 import pytest
 from libera_build.artifacts import run_pypi
@@ -11,6 +12,9 @@ from libera_build.inventory import Builder
 from libera_build.release.context import Context
 from libera_build.release.phases import publishing, staging
 from libera_build.report import RefusedError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 HEAD = "c" * 40
 
@@ -257,16 +261,83 @@ def test_a_platform_passes_the_stage_only_installed_converted_and_drawn(
     assert (found == []) is passes, found
 
 
-def test_distros_tries_a_stamped_stage_on_each_linux_builders_arch(stage, monkeypatch):
-    tried = []
-    monkeypatch.setattr(staging.matrix, "run", lambda d, a: tried.append((d, a)))
+class Recording(Answering):
+    """A builder that answers every script with `said`, and keeps what it was
+    sent and asked."""
+
+    def __init__(self, said: str) -> None:
+        super().__init__(said)
+        self.sent: list[str] = []
+        self.scripts: list[str] = []
+
+    def send(self, local, _there):
+        self.sent.append(local.name)
+        return 0, ""
+
+    def capture(self, script):
+        self.scripts.append(script)
+        return self.said
+
+
+def restamp(stage: Path, *names: str) -> None:
+    """`names` added to the staged files, and the stage stamped again."""
+    dest = staging.folder(stage)
+    for name in names:
+        (dest / name).write_bytes(name.encode())
+    files = {
+        f.name: staging.hash_file(f) for f in dest.iterdir() if f.suffix != ".json"
+    }
+    (dest / staging.STAMP).write_text(json.dumps({"commit": HEAD, "files": files}))
+
+
+@pytest.mark.parametrize(
+    ("said", "problem"),
+    [
+        ("    fedora:45     ok\n\nPASS\n", None),
+        ("    fedora:45     FAIL: GLIBC_2.38 not found\nTraceback\n", "did not pass"),
+        # A checkout from before matrix ran as a module: it said nothing.
+        ("", "said nothing there"),
+    ],
+)
+def test_distros_runs_the_matrix_on_each_linux_builder(
+    stage, monkeypatch, capsys, said, problem
+):
+    """There, natively and with the builder's own engine; this Mac's docker
+    was a daemon over ssh, which cannot mount the stage."""
+    restamp(
+        stage,
+        "libera_core-9.9.9-py3-none-manylinux_2_34_x86_64.whl",
+        "libera_core-9.9.9-py3-none-manylinux_2_34_aarch64.whl",
+        "libera_web-9.9.9-py3-none-any.whl",
+    )
+    hosts = {"x": Recording(said), "y": Recording(said)}
+    monkeypatch.setattr(staging.matrix, "run", lambda *_: pytest.fail("ran here"))
     builders = [
         Builder("macos-arm64", "local", "~/r"),
         Builder("linux-x86_64", "x", "~/r"),
         Builder("linux-arm64", "y", "~/r"),
     ]
-    staging.distros(Context(root=stage, builders=builders, phases=["distros"]))
-    assert tried == [(staging.folder(stage), ("x86_64", "arm64"))]
+    ctx = Context(
+        root=stage,
+        builders=builders,
+        phases=["distros"],
+        host_for=lambda b: hosts[b.target],
+    )
+    if problem is None:
+        staging.distros(ctx)
+    else:
+        with pytest.raises(RefusedError, match="did not pass every distribution"):
+            staging.distros(ctx)
+        assert f"linux-x86_64: the matrix {problem}" in capsys.readouterr().out
+    assert hosts["x"].sent == [
+        "libera_core-9.9.9-py3-none-manylinux_2_34_x86_64.whl",
+        "libera_web-9.9.9-py3-none-any.whl",
+    ]
+    assert hosts["y"].sent[0].endswith("_aarch64.whl")
+    assert (
+        'libera_build.matrix "$HOME/libera-stage/9.9.9" x86_64'
+        in hosts["x"].scripts[-1]
+    )
 
 
 def test_distros_refuses_a_stage_that_was_never_stamped(stage, monkeypatch):

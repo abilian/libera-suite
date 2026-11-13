@@ -29,15 +29,18 @@ from libera_build.process import run_quietly
 from libera_build.repo import REPO
 from libera_build.report import RefusedError, say, step
 
-# The floor of every family docs/src/main/install.md names, and the newest
-# Ubuntu LTS. Fully qualified: podman otherwise resolves short names through an
-# alias table and says so on stderr, which is where the loader's error goes too.
+# The floor of every family docs/src/main/install.md names, then the newest
+# Ubuntu LTS and Fedora, which users are likelier to have. Fully qualified:
+# podman otherwise resolves short names through an alias table and says so on
+# stderr, which is where the loader's error goes too.
 DISTROS = (
     "docker.io/library/ubuntu:22.04",
     "docker.io/library/debian:12",
     "docker.io/library/fedora:36",
     "docker.io/library/almalinux:9",
     "docker.io/library/ubuntu:24.04",
+    "docker.io/library/ubuntu:26.04",
+    "docker.io/library/fedora:45",
 )
 # What the sample document says, so what a conversion must still say.
 NEEDLE = "Second paragraph"
@@ -143,3 +146,9 @@ def run(dist: Path, arches: tuple[str, ...], engine: Engine | None = None) -> No
         msg = f"{failed} combination(s) could not convert"
         raise RefusedError(msg)
     say("PASS")
+
+
+if __name__ == "__main__":
+    # On a Linux builder, which `distros` sends the staged wheels:
+    # python3 -m libera_build.matrix DIR ARCH...
+    run(Path(sys.argv[1]), tuple(sys.argv[2:]))

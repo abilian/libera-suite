@@ -39,7 +39,7 @@ from libera_build.artifacts import (
     web_wheel_name,
 )
 from libera_build.components import TAGS
-from libera_build.hosts import LocalHost, facts_from
+from libera_build.hosts import LB, LocalHost, facts_from, remote_path
 from libera_build.release.phases import publishing
 from libera_build.released_gui import ReleasedGuiOptions
 from libera_build.report import RefusedError, problems, say, step
@@ -123,17 +123,57 @@ def run(ctx: Context) -> None:
 def distros(ctx: Context) -> None:
     """The staged libera-core wheel of each Linux builder's architecture, in a
     clean container of every distribution the install page names (matrix):
-    the builders are not where the pip path's users are. Only a stamped
-    stage: a stage that failed leaves its directory behind, half checked."""
-    arches = tuple(
-        b.platform.rpartition("-")[2] for b in ctx.builders if b.os == "linux"
-    )
-    if not arches:
+    the builders are not where the pip path's users are. On each Linux
+    builder, natively and with its own container engine: this Mac's engine
+    may be a daemon over ssh, which cannot mount the stage, or not running.
+    Only a stamped stage: a stage that failed leaves its directory behind,
+    half checked."""
+    linux = [b for b in ctx.builders if b.os == "linux"]
+    if not linux:
         say("    no Linux builder; nothing to check")
         return
     problems(stamp_problems(ctx.root), "no distribution was tried.")
+    dest = folder(ctx.root)
+    stage = remote_stage(versions.app_version(ctx.root))
     step(f"the staged converter in {len(matrix.DISTROS)} distributions")
-    matrix.run(folder(ctx.root), arches)
+    found = []
+    for b in linux:
+        host = ctx.host_for(b) if b.remote else LocalHost(Path.home())
+        checkout = remote_path(b.repo) if b.remote else str(ctx.root)
+        found += distros_on(host, b, dest, stage, checkout)
+    problems(found, "the staged converter did not pass every distribution.")
+
+
+def distros_on(
+    host: Host, b: Builder, dest: Path, stage: str, checkout: str
+) -> list[str]:
+    """The matrix on one builder, from its architecture's staged core and the
+    editors' wheel, whose blank the sample is made from; a problem, or
+    nothing. The verdict is the PASS it prints last, not an exit status: a
+    checkout from before matrix could run as a module imports it, does
+    nothing and exits 0."""
+    arch = b.platform.rpartition("-")[2]
+    sent = [matrix.core_of(dest, arch), *sorted(dest.glob("libera_web-*.whl"))]
+    host.capture(f'mkdir -p "$HOME/{stage}"')
+    for f in sent:
+        there = f"{stage}/{f.name}" if b.remote else f"~/{stage}/{f.name}"
+        if host.send(f, there)[0]:
+            return [f"{b.platform}: could not copy {f.name} there"]
+    out = host.capture(f'cd {checkout} && {LB}.matrix "$HOME/{stage}" {arch}')
+    lines = [line for line in out.splitlines() if line.strip()]
+    for line in lines:
+        say(f"    {b.platform:<14} {line}")
+    if not lines:
+        stale = "is its checkout at this commit? (lb release check update)"
+        return [f"{b.platform}: the matrix said nothing there; {stale}"]
+    if lines[-1] != "PASS":
+        return [f"{b.platform}: the matrix did not pass there"]
+    return []
+
+
+def remote_stage(app: str) -> str:
+    """Where a builder is sent the staged files, under its home directory."""
+    return f"libera-stage/{app}"
 
 
 def installs(
@@ -144,7 +184,7 @@ def installs(
     pins, which is `app` unless an exception was made by hand."""
     pins = publishing.requires_of(dest / app_wheel_name(app))
     components = {r.split("==")[0]: r.split("==")[1] for r in pins if "==" in r}
-    stage = f"libera-stage/{app}"
+    stage = remote_stage(app)
     wanted = [
         app_wheel_name(app),
         core_wheel_name(components["libera-core"], TAGS[b.platform]),
