@@ -32,7 +32,7 @@ CHECK = {
     "wheel": "make verify, then the wheel",
     "stage": "every file publish uploads, gathered and installed on every platform",
     "distros": "the staged Linux converter in a clean container of each"
-    " distribution the install page names",
+    " distribution the install page names, on each Linux builder",
 }
 PUBLISH = {
     "publish": "the staged files: the packages to PyPI, the bundles to the CDN",

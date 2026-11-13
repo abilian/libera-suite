@@ -132,7 +132,7 @@ lb container export payload                           # where the artifacts are;
 lb container shell payload                  # poke around inside
 ```
 
-`export` writes the artifacts' location to stdout and everything else to stderr, so `payload install` can read it. The default build tree is already on this disk, so that is `$BUILD_ROOT/linux-<arch>/out/dist/<version>`. With `--volume` it copies them out first, into `$BUILD_ROOT/out/dist/<version>`, through a tar pipe, so extraction runs as you and nothing lands owned by root. The copy is extracted into a fresh directory and checked there, on both ends' exit statuses, since a pipeline's own is only tar's, and on content: an earlier export's files in the destination would otherwise pass for this one's. Either way it checks that the manifest and at least one tarball are there.
+`export` writes the artifacts' location to stdout and everything else to stderr, so a script can capture it. The default build tree is already on this disk, so that is `$BUILD_ROOT/linux-<arch>/out/dist/<version>`. With `--volume` it copies them out first, into `$BUILD_ROOT/out/dist/<version>`, through a tar pipe, so extraction runs as you and nothing lands owned by root. The copy is extracted into a fresh directory and checked there, on both ends' exit statuses, since a pipeline's own is only tar's, and on content: an earlier export's files in the destination would otherwise pass for this one's. Either way it checks that the manifest and at least one tarball are there.
 
 Three things are pinned, as `ARG`s at the top of `build/docker/Dockerfile`, because each drifts on its own schedule. Moving the toolchain means bumping one of them by hand; nothing else in the file decides what gets installed.
 

@@ -2,7 +2,7 @@
 
 A release is one set of artifacts that agree with each other. No single machine can produce all of them.
 
-**A release is two commands, and `make ship` runs both.** `lb release check` builds it and installs it as users will, publishing nothing; `lb release publish` is the part with no undo. Between them, seven phases: the Linux and Windows components, both Flatpak bundles and the Windows installer are built on their builders in parallel, the macOS components and the wheel here; then every file of the release is staged and installed on every platform, and only then published, to PyPI and the CDN. `lb release plan` prints the plan and runs nothing. See [`make ship`](#make-ship) below.
+**A release is two commands, and `make ship` runs both.** `lb release check` builds it and installs it as users will, publishing nothing; `lb release publish` is the part with no undo. `check` has six phases: the Linux and Windows components, both Flatpak bundles and the Windows installer are built on their builders in parallel, the macOS components and the wheel here; then every file of the release is staged and installed on every platform, and the Linux converter tried in a clean container of each distribution. `publish` has three: the upload to PyPI and the CDN, then two that read back what users get. `lb release check --dry-run` prints the plan and runs nothing. See [`make ship`](#make-ship) below.
 
 Read [Build the payload](build.md) first if you have never built one. This page assumes you have.
 
@@ -101,19 +101,13 @@ A tester on a pre-release is told when the release comes out: the update check s
 
 ## The runbook, by hand
 
-What `make ship` does, phase by phase, for when part of a release has to be
-redone or driven from somewhere else.
+What `make ship` does, phase by phase, for when part of a release has to be redone or driven from somewhere else.
 
-**One phase needs a Mac.** `components` builds `libera-core`'s macOS wheel,
-which nothing else can. Everything below it runs wherever you are sitting, so long as that
-machine has `build/builders.toml` and ssh to the builders. The Mac is one of
-three builders.
+**One phase needs a Mac.** `components` builds `libera-core`'s macOS wheel, which nothing else can. Everything else runs wherever you are sitting, so long as that machine has `build/builders.toml` and ssh to the builders. The Mac is one of three builders.
 
 **Set the version first**, with `lb release bump X.Y.Z`. The three packages share it, and every release rebuilds and uploads the components, even unchanged: one number is worth that. Two numbers that moved apart are how 0.7.0 went out pinning components 0.7.1. A deliberate exception is made by hand, and `test_the_release_has_one_version_and_libera_pins_it` then says where the numbers differ.
 
-**`lb release status`** measures where a release has got to, against the
-tree, the release's files on this disk and PyPI. A release runs over days and several machines, so it measures which
-step you are on and does not ask you to remember.
+**`lb release status`** measures where a release has got to, against the tree, the release's files on this disk and PyPI. A release runs over days and several machines, so it measures which step you are on and does not ask you to remember.
 
 | phase | what it does | where it runs |
 | :--- | :--- | :--- |
@@ -129,8 +123,7 @@ step you are on and does not ask you to remember.
 | `verify` | On every platform, `libera` installed from PyPI alone into a new environment and a document converted: what `stage` checked, now against what PyPI serves. | the driving machine and each builder |
 | `downloads` | The published Flatpak and Windows installer installed on each Linux and Windows builder, a window opened and photographed (see [released-gui](#after-it-is-published-released-gui)). None for a pre-release, which moves no pointer. | each Linux and Windows builder |
 
-Two things are left that no command covers. The mirrors go up, and somebody
-installs the release on a machine that has never built it and opens a document.
+Two things are left that no command covers. The mirrors go up, and somebody installs the release on a machine that has never built it and opens a document.
 
 Any one phase runs on its own, which is what makes a partial redo cheap. `update` to `distros` belong to `check`, `publish` to `downloads` to `publish`, and each command refuses the other's. `--only`, on `check`, narrows the phases that run per builder and refuses the rest: wheel, stage and distros work on every builder at once. `publish` checks the stage's stamp before anything long starts:
 
@@ -151,7 +144,7 @@ lb release check bundles --only linux-arm64
 | `Libera-Suite-Setup-X.Y.Z.exe` and its `.sha256` | the CDN | the Windows machine, **payload included** |
 | `install.sh`, `install.ps1`, `bundles/latest*` | the CDN | this repository |
 
-The CDN is for what does not come from PyPI: the bundles and the install scripts. Since 0.7 nothing downloads a payload from it. The core tarballs go to `$BUILD_ROOT/out/dist/<version>` on each machine, and the components and the bundles are made from them there; `src/libera/payload/payload.version` holds the version for the build scripts.
+The CDN is for what does not come from PyPI: the bundles and the install scripts. Since 0.7 nothing downloads a payload from it. No phase reads a core an earlier build left: `components` builds each machine's core from the pins, its build tree only a compile cache, and the Flatpak and the Windows installer are made from components built the same way. `src/libera/payload/payload.version` holds the payload's version for the build scripts.
 
 ## Which machine can make what, and why
 
@@ -182,15 +175,9 @@ Which leaves the division of labour:
 | `*-arm64.flatpak` | yes | no | yes |
 | `*-amd64.flatpak` | no | **only here** | no |
 
-That table is what each machine *can* do. It is not how a release is built.
-`make ship` sends the Linux cores to the Linux builders, which is faster than a
-Mac emulating amd64 and is the only way to get the amd64 bundle at all, and the
-Windows core and installer to the Windows machine. The Mac
-then does one thing nothing else can, `core-macos-arm64`, and the machine you
-type the command on stages and publishes.
+That table is what each machine *can* do. It is not how a release is built. `make ship` sends the Linux cores to the Linux builders, which is faster than a Mac emulating amd64 and is the only way to get the amd64 bundle at all, and the Windows core and installer to the Windows machine. The Mac then does one thing nothing else can, `core-macos-arm64`, and the machine you type the command on stages and publishes.
 
-An arm64 Linux box has a second job: it is the only place the suite runs on
-real arm64 hardware outside a container. Run it there before you ship.
+An arm64 Linux box has a second job: it is the only place the suite runs on real arm64 hardware outside a container. Run it there before you ship.
 
 `core-macos-x86_64` has no machine and is deferred: Intel Macs are not a target for this beta.
 
@@ -230,7 +217,7 @@ On a small machine the build is tight on memory before it is slow. `build/engine
 
 `lb app build flatpak` ends by installing the bundle and running `libera --diagnose` inside the sandbox, which is as far as a container goes, since there is no display in one. It proves three things: the GNOME runtime supplies GTK and WebKit, the application imports, `--diagnose` says the payload is bundled. `lb app test flatpak` goes one further and converts a document with it.
 
-**Check what else is in `build/out` first.** Nothing cleans it. Every build writes a new filename, so bundles from earlier versions, including from before the product was renamed, sit there indefinitely. Delete them, so they are not in the way at upload time.
+**`build/out` keeps what every build left**, since each writes a new filename: bundles from earlier versions, and the run directories of earlier commits. None of it can be published, since `publish` uploads the stage of this commit and nothing else, but it takes room: `lb tidy` lists it and removes it.
 
 ## After it is published: released-gui
 
@@ -248,7 +235,7 @@ This is the one check that exercises the GNOME runtime's WebKit, which is a diff
 
 ## The run directory
 
-Everything a release gathers on the driving machine goes under `build/out/release/<commit>/`, named by the full commit: `pypi/` (the components from every builder, `libera`'s wheel and sdist), `bundles/` (the Flatpaks and the Windows installer) and `staged/`. No phase reads another commit's directory, so a wheel or a bundle an earlier run left cannot be staged as this one's: a phase not run at this commit is a file missing, and `stage` says which phase makes it. `lb release upload` and `lb release status` read the same directory. A commit, even one touching only the docs, means running the phases again; `lb tidy` removes the directories old commits left.
+Everything a release gathers on the driving machine goes under `build/out/release/<commit>/`, named by the full commit: `pypi/` (the components from every builder, `libera`'s wheel and sdist), `bundles/` (the Flatpaks and the Windows installer) and `staged/`. No phase reads another commit's directory, so a wheel or a bundle an earlier run left cannot be staged as this one's: a phase not run at this commit is a file missing, and `stage` says which phase makes it. `lb release publish` and `lb release status` read the same directory. A commit, even one touching only the docs, means running the phases again; `lb tidy` removes the directories old commits left. A commit made *during* a run stops it after the phase that saw HEAD move, naming both commits: what that phase made is filed under the commit it started from.
 
 ## Stage
 
@@ -302,7 +289,6 @@ The last word belongs to the application, on a machine that never built it: `ver
 | `FATAL: heap out of memory` in a webpack | V8 sizes its heap from the cgroup limit, ignoring the work: a *smaller* container aims lower and dies sooner. `build/engine/payload.sh` sets a floor below 6 GB; see [Build the payload](build.md). |
 | A patch no longer applies | News, and something to investigate. `lb payload check` names it; read the upstream change before rebasing. |
 | The build ran the JS pipeline unpatched | The source tree was fetched before the patch existed. `git -C $BUILD_ROOT/src/<repo> log --oneline` answers it in one line. |
-| `INCOMPLETE: no editors.tar.gz` | A Linux-only run whose architectures were all already built, so nothing produced the platform-neutral half. The command to fix it is printed with the message. |
 | `FATAL: artwork in the payload that is not ours` | `dist.sh` found a logo-shaped file it does not recognise. Look at it before deciding: if it is upstream's it wants removing in `build/upstream/patches/web-apps/` or writing over in `payload.sh`; if it is ours, its name goes in `OURS` in `dist.sh`. |
 
 [Build the payload](build.md) has the reasoning behind the rest: why the container is pinned the way it is, why arm64 needs clang 13 exactly, what each silent failure cost.

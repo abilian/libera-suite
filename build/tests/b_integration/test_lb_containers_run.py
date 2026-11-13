@@ -2,7 +2,7 @@
 engine here accepts, mounts and environment included.
 
 Skips where there is no engine running, or no test image built yet
-(`lb linux image`), and says which.
+(`lb container image linux`), and says which.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ def engine_and_image():
         pytest.skip(f"{engine.name} is not running")
     image = engine.image(f"libera-test-linux-{host_arch()}")
     if not engine.has_image(image):
-        pytest.skip(f"no {image}: lb linux image")
+        pytest.skip(f"no {image}: lb container image linux")
     return engine, image
 
 

@@ -59,7 +59,7 @@ def test_a_step_gets_its_environment_on_top_of_ours(tmp_path):
 
 
 def run_as_a_builder(*args: str) -> subprocess.CompletedProcess:
-    """`python3 -m libera_build` the way `lb release ship` runs it on a builder: no
+    """`python3 -m libera_build` the way `lb release check` runs it on a builder: no
     site-packages (-S), so nothing installed is visible, and the two source
     trees on PYTHONPATH."""
     return subprocess.run(

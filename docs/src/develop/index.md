@@ -64,7 +64,7 @@ make help             # the standard jobs: lint, test, docs, the wheel
 lb help               # building, packaging, releasing
 ```
 
-The Makefile holds what any Python project has, plus `make payload` and `make ship`. Everything else is `lb` (`uv run lb` outside the virtualenv), a group per job (`payload`, `toolchain`, `app`, `linux`, `release`), and `--help` at every level lists the options with examples, each naming the environment variable it sets. The steps of `make payload` are each a command, to resume a build that failed in the middle: `lb payload --help`.
+The Makefile holds what any Python project has, plus `make payload` and `make ship`. Everything else is `lb` (`uv run lb` outside the virtualenv), a group per job (`payload`, `toolchain`, `app`, `linux`, `release`, `components`, `container`), plus `on`, `tidy`, `bench` and `fidelity`, and `--help` at every level lists the options with examples, each naming the environment variable it sets. The steps of `make payload` are each a command, to resume a build that failed in the middle: `lb payload --help`.
 
 `lb tidy` removes every build on this machine: the repository's (mostly the Flatpak's builddir, ostree store and cache, 1.4 GB on the laptop this was written on) and `$BUILD_ROOT`, which holds the sources, the payload and the native core (44 GB there), so the next payload build starts from the fetch. It lists them with their sizes and asks before removing anything; `--dry-run` lists and stops, `--yes` does not ask.
 
