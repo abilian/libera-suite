@@ -341,13 +341,16 @@ def test_on_says_why_a_command_never_ran(driver, home):
 # --- sources: is a tree its pin plus the queue ------------------------------
 
 
-def sources(tmp_path: Path, patches: int) -> tuple[Path, Path, list[str]]:
+def sources(
+    tmp_path: Path, patches: int, *exported: str
+) -> tuple[Path, Path, list[str]]:
     """A checkout whose queue holds `patches` patches against one pinned repo,
     and a $BUILD_ROOT/src with that repo cloned at the pin, nothing applied.
-    The queue is made the way it is maintained, with format-patch."""
+    The queue is made the way it is maintained, with format-patch, given
+    `exported` as options."""
     upstream = tmp_path / "upstream"
     subprocess.run([*GIT, "init", "-q", str(upstream)], check=True)
-    (upstream / "a.txt").write_text("pinned\n")
+    (upstream / "a.txt").write_text("".join(f"line {n}\n" for n in range(20)))
     git(upstream, "add", ".")
     git(upstream, "commit", "-qm", "pinned")
     pin = git(upstream, "rev-parse", "HEAD")
@@ -356,10 +359,11 @@ def sources(tmp_path: Path, patches: int) -> tuple[Path, Path, list[str]]:
     queue.mkdir(parents=True)
     (root / "build" / "upstream" / "pins.toml").write_text(f'[repos]\ncore = "{pin}"\n')
     for n in range(patches):
-        (upstream / f"p{n}.txt").write_text(f"patch {n}\n")
+        a = upstream / "a.txt"
+        a.write_text(a.read_text().replace(f"line {n * 5}\n", f"patch {n}\n"))
         git(upstream, "add", ".")
         git(upstream, "commit", "-qm", f"patch {n}")
-    git(upstream, "format-patch", "-q", "-o", str(queue), f"{pin}..HEAD")
+    git(upstream, "format-patch", "-q", *exported, "-o", str(queue), f"{pin}..HEAD")
     src = tmp_path / "src"
     subprocess.run([*GIT, "clone", "-q", str(upstream), str(src / "core")], check=True)
     git(src / "core", "checkout", "-q", "--detach", pin)
@@ -372,12 +376,21 @@ def test_a_tree_at_its_pin_plus_the_queue_passes(tmp_path):
     assert source_problems(root, src) == []
 
 
+def test_a_queue_written_with_other_diff_options_still_passes(tmp_path):
+    """The Windows builder's git, on another diff algorithm, wrote a commit's
+    hunks otherwise than the queue had them, and a check that compared the
+    diffs' text sent every core build there to fetch and recompile. Less
+    context than the commits' own diffs is the same change, written otherwise."""
+    root, src, queue = sources(tmp_path, 2, "-U1")
+    git(src / "core", "am", "-q", *queue)
+    assert source_problems(root, src) == []
+
+
 def test_a_tree_fetched_before_a_patch_was_added_is_refused(tmp_path):
     root, src, queue = sources(tmp_path, 2)
     git(src / "core", "am", "-q", queue[0])
     (problem,) = source_problems(root, src)
-    assert "carries 1 commit(s) on its pin" in problem
-    assert "the 2 patch(es) in the queue" in problem
+    assert "is not its pin plus the 2 patch(es) in the queue" in problem
 
 
 def test_a_patch_that_changed_since_it_was_applied_is_refused(tmp_path):
@@ -387,7 +400,7 @@ def test_a_patch_that_changed_since_it_was_applied_is_refused(tmp_path):
     text = edited.read_text(encoding="utf-8")
     edited.write_text(text.replace("+patch 0", "+patch zero"), encoding="utf-8")
     (problem,) = source_problems(root, src)
-    assert "not the 1 patch(es)" in problem
+    assert "plus the 1 patch(es)" in problem
 
 
 def test_a_tree_off_its_pin_or_missing_is_refused(tmp_path):

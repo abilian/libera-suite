@@ -6,7 +6,10 @@ Read by the components' build hooks, which fetch a tree that is not.
 
 from __future__ import annotations
 
+import os
 import subprocess
+import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import tomllib
@@ -16,7 +19,6 @@ from libera_build.report import RefusedError
 
 if TYPE_CHECKING:
     from collections.abc import Collection
-    from pathlib import Path
 
 
 def pinned(root: Path) -> dict[str, str]:
@@ -31,11 +33,14 @@ def source_problems(
 
     The manifest stamps the pins from pins.toml, not from what was compiled,
     and nothing in re-tarring a core fetches: a patch added since the trees
-    were last fetched would ship as a release that claims it. Patches are
-    compared by `git patch-id`, which reads the change rather than the subject
-    line, so a patch refreshed in place counts as a different one. Not their
-    order: a tree fetched before a patch was renumbered holds the same changes
-    in another order, as this Mac's core did when this was written.
+    were last fetched would ship as a release that claims it. What is compared
+    is the result, HEAD's tree against the tree the queue makes of the pin in
+    a scratch index, so a patch refreshed in place counts, and neither the
+    patches' order nor how their diffs were written does. It compared each
+    commit's `git patch-id` once, which hashes the diff's text: the Windows
+    builder's git, on its default diff algorithm, wrote one of 113 commits
+    with its hunks split otherwise than the queue's histogram had, and every
+    build there fetched again and recompiled the whole core.
     """
     found = []
     for name, pin in pinned(root).items():
@@ -54,27 +59,40 @@ def source_problems(
             found.append(f"{name}: {tree} is not on its pin, {pin[:9]}")
             continue
         queue = sorted((root / repo.PATCHES / name).glob("*.patch"))
-        want = patch_ids(b"".join(p.read_bytes() for p in queue), tree)
-        applied = git_out(tree, "format-patch", "--stdout", f"{pin}..HEAD")
-        if sorted(have := patch_ids(applied, tree)) != sorted(want):
+        head = git_out(tree, "rev-parse", "HEAD^{tree}")
+        if queued_tree(tree, pin, queue) != head:
             found.append(
-                f"{name}: {tree} carries {len(have)} commit(s) on its pin, and "
-                f"they are not the {len(want)} patch(es) in the queue"
+                f"{name}: {tree} is not its pin plus the {len(queue)} patch(es)"
+                " in the queue"
             )
     return found
 
 
-def patch_ids(patches: bytes, tree: Path) -> list[str]:
-    """The `git patch-id` of each patch in a series, in order."""
-    out = git_out(tree, "patch-id", "--stable", stdin=patches)
-    return [line.split()[0] for line in out.decode().splitlines()]
+def queued_tree(tree: Path, pin: str, queue: list[Path]) -> bytes | None:
+    """The tree the queue makes of the pin, built in a scratch index and
+    leaving the working tree alone; None if the queue does not apply, which
+    the fetch that follows then says patch by patch."""
+    with tempfile.TemporaryDirectory() as scratch:
+        env = os.environ | {"GIT_INDEX_FILE": str(Path(scratch, "index"))}
+        git_out(tree, "read-tree", pin, env=env)
+        if queue:
+            applied = subprocess.run(
+                ["git", "-C", str(tree), "apply", "--cached", "--whitespace=nowarn"],
+                input=b"".join(p.read_bytes() for p in queue),
+                env=env,
+                capture_output=True,
+                check=False,
+            )
+            if applied.returncode != 0:
+                return None
+        return git_out(tree, "write-tree", env=env)
 
 
-def git_out(tree: Path, *args: str, stdin: bytes = b"") -> bytes:
-    """What git printed, as bytes, since a patch need not be UTF-8; or a
-    refusal carrying what git said instead."""
+def git_out(tree: Path, *args: str, env: dict[str, str] | None = None) -> bytes:
+    """What git printed, as bytes; or a refusal carrying what git said
+    instead."""
     done = subprocess.run(
-        ["git", "-C", str(tree), *args], input=stdin, capture_output=True, check=False
+        ["git", "-C", str(tree), *args], env=env, capture_output=True, check=False
     )
     if done.returncode != 0:
         said = done.stderr.decode(errors="replace").strip()
