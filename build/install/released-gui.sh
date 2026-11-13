@@ -2,14 +2,14 @@
 # Open a real window from a *released* Libera Suite, and prove something was drawn.
 #
 #   sh released-gui.sh                    the Flatpak the CDN serves now
-#   sh released-gui.sh --bundle FILE      a bundle not published yet (`stage`)
+#   LIBERA_ORIGIN=URL sh released-gui.sh  another origin's (`stage`'s, on localhost)
 #   sh released-gui.sh --installed        the Flatpak installed here
 #   sh released-gui.sh --pypi libera      a libera on $PATH
 #
-# By default it downloads the bundle bundles/latest names, as install.sh does,
+# By default it runs install.sh from the origin, as the install page says,
 # into a Flatpak installation of its own under ~/.cache, so the machine's own
-# Libera Suite stays as it is, and refuses one whose --version is not that
-# release. Testing whatever was installed is how 0.7.0 was declared to draw a
+# Libera Suite stays as it is, and refuses one whose --version is not the
+# release bundles/latest names, or LIBERA_VERSION, which install.sh reads too. Testing whatever was installed is how 0.7.0 was declared to draw a
 # window by a 0.5.0 that happened to be on the builder. From a Mac, which can run
 # none of this itself, `lb release publish`'s downloads copies it to every Linux
 # builder (or --on one), runs it, and fetches the screenshots into build/out/.
@@ -52,7 +52,6 @@ ORIGIN="${LIBERA_ORIGIN:-https://cdn.abilian.com/libera}"
 MODE=release
 LAUNCH=
 WANT=
-BUNDLE=
 DOC=
 OUT=
 
@@ -70,7 +69,6 @@ die()  {
 while [ $# -gt 0 ]; do
     case "$1" in
     --installed) MODE=flatpak ;;
-    --bundle)  BUNDLE="${2:?--bundle wants a .flatpak}"; shift ;;
     --pypi)    MODE=pypi; LAUNCH="${2:?--pypi wants the libera to run}"; shift ;;
     --doc)     DOC="${2:?--doc wants a file}"; shift ;;
     --out)     OUT="${2:?--out wants a path}"; shift ;;
@@ -97,33 +95,23 @@ done
 case "$MODE" in
 release)
     command -v flatpak >/dev/null 2>&1 || die "this machine has no flatpak"
-    case "$(uname -m)" in
-    x86_64) arch=amd64 ;;
-    aarch64 | arm64) arch=arm64 ;;
-    *) die "no Flatpak bundle is built for $(uname -m)" ;;
-    esac
-    # Its own installation: the runtime downloads once into it, and stays.
-    export FLATPAK_USER_DIR="$HOME/.cache/libera-released-gui/flatpak"
+    # Its own installation: install.sh installs --user, which is
+    # FLATPAK_USER_DIR, and copies the menu entry into XDG_DATA_HOME. The
+    # runtime downloads once into it, and stays.
+    export XDG_DATA_HOME="$HOME/.cache/libera-released-gui"
+    export FLATPAK_USER_DIR="$XDG_DATA_HOME/flatpak"
     mkdir -p "$FLATPAK_USER_DIR"
-    if [ -n "$BUNDLE" ]; then
-        [ -f "$BUNDLE" ] || die "no such bundle: $BUNDLE"
-        bundle=$BUNDLE
-        WANT=$(basename "$BUNDLE" | sed -n "s/^libera-\(.*\)-$arch\.flatpak$/\1/p")
-        [ -n "$WANT" ] || die "$BUNDLE is not named libera-VERSION-$arch.flatpak"
-        step "installing the staged $WANT, apart from this machine's own"
-    else
+    WANT="${LIBERA_VERSION:-}"
+    if [ -z "$WANT" ]; then
         WANT=$(curl -fsSL "$ORIGIN/bundles/latest" | tr -d ' \n\r') \
             || die "could not read $ORIGIN/bundles/latest"
-        bundle="$FLATPAK_USER_DIR/../libera-$WANT-$arch.flatpak"
-        step "installing the published $WANT, apart from this machine's own"
-        curl -fsSL -o "$bundle" "$ORIGIN/bundles/libera-$WANT-$arch.flatpak" \
-            || die "$ORIGIN serves no libera-$WANT-$arch.flatpak"
     fi
-    flatpak remote-add --user --if-not-exists flathub \
-        https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null \
-        || die "could not add Flathub, where the runtime comes from"
-    flatpak install --user -y --noninteractive --reinstall "$bundle" >/dev/null 2>&1 \
-        || die "flatpak could not install $bundle"
+    step "installing $WANT from $ORIGIN with install.sh, apart from this machine's own"
+    # The install page's command. It reads LIBERA_ORIGIN and LIBERA_VERSION
+    # itself; a failed download pipes nothing into sh, which the version
+    # check below then catches.
+    export LIBERA_ORIGIN="$ORIGIN"
+    curl -fsSL "$ORIGIN/install.sh" | sh || die "install.sh failed"
     set -- flatpak run --user "$APP_ID"
     ask="flatpak run --user --command=sh $APP_ID -c"
     ;;

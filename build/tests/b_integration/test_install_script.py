@@ -56,7 +56,7 @@ case "$1" in --help) echo --payload-status ;; esac
 
 def run(tmp_path: Path, machine: str, *args: str, installs: bool = False) -> list[str]:
     fake = tmp_path / "bin"
-    fake.mkdir()
+    fake.mkdir(parents=True)
     for name, text in (
         ("uname", FAKE_UNAME),
         ("curl", FAKE_CURL),
@@ -113,3 +113,21 @@ def test_only_the_release_before_the_component_packages_fetches_them(
     asked = run(tmp_path, machine, "--channel", "pip", installs=True)
     assert ("--payload-install" in asked) is fetches
     assert "--help" in asked, "the command ran"
+
+
+@pytest.mark.parametrize(
+    ("machine", "arch"), [("aarch64", "arm64"), ("x86_64", "amd64")]
+)
+def test_a_version_asked_for_is_the_one_installed_whatever_latest_says(
+    tmp_path, machine, arch
+):
+    """`lb release check` installs a pre-release this way, which
+    bundles/latest never names."""
+    (flatpak,) = run(tmp_path / "f", machine, "--version", "0.8.0rc1")
+    assert flatpak.endswith(f"/bundles/libera-0.8.0rc1-{arch}.flatpak")
+    pip = run(tmp_path / "p", machine, "--channel", "pip", "--version", "0.8.0rc1")
+    assert pip == ["pip", "libera==0.8.0rc1"]
+
+
+def test_a_version_that_is_not_one_is_refused(tmp_path):
+    assert run(tmp_path, "x86_64", "--version", "latest; rm -rf ~") == []

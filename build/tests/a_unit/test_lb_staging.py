@@ -7,8 +7,10 @@ import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
+from libera_build import released_gui
 from libera_build.artifacts import run_pypi
 from libera_build.inventory import Builder
+from libera_build.origin import staged as origin
 from libera_build.release.context import Context
 from libera_build.release.phases import publishing, staging
 from libera_build.report import RefusedError
@@ -97,13 +99,30 @@ def test_a_staged_install_takes_libera_and_its_components_from_there_alone():
     assert '--no-index --find-links "$dir"' in script
     assert '"libera==9.9.9"' in script
     assert "WINDOW=" not in script
-    assert "WINDOW=" in publishing.install_script("9.9.9", staged="s", window=True)
+
+
+def test_the_mac_installs_with_install_sh_from_the_staged_origin(tmp_path):
+    """The install page's command, LIBERA_ORIGIN aside, in a home of its own;
+    then a window, and Libera.app taken out of LaunchServices again."""
+    script = publishing.origin_install_script("9.9.9", tmp_path / "my zone")
+    assert f"served=$(cd '{tmp_path}/my zone' &&" in script
+    assert 'curl -fsSL "$LIBERA_ORIGIN/install.sh" | sh -s --' in script
+    assert 'PIP_FIND_LINKS="$LIBERA_ORIGIN/pypi/"' in script
+    assert 'export HOME="$T/home"' in script
+    assert "WINDOW=" in script
+    assert script.rstrip().endswith("--launcher-remove > /dev/null 2>&1")
+    assert "LIBERA_VERSION" not in script
+    rc = publishing.origin_install_script("9.9.9rc1", tmp_path)
+    assert "export LIBERA_VERSION=9.9.9rc1" in rc
 
 
 def release_tree(root):
     """A 9.9.9 with every file stage gathers for no builder: the components,
     and libera's wheel and sdist."""
     (root / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
+    (root / "build" / "install").mkdir(parents=True)
+    for script in ("install.sh", "install.ps1"):
+        (root / "build" / "install" / script).write_text(script)
     payload = root / "src" / "libera" / "payload"
     payload.mkdir(parents=True)
     (payload / "payload.version").write_text('version = "9.9.9"\n')
@@ -257,7 +276,7 @@ def test_a_platform_passes_the_stage_only_installed_converted_and_drawn(
             "Requires-Dist: libera-core==9.9.9\nRequires-Dist: libera-web==9.9.9\n",
         )
     b = Builder(platform, "x", "~/r")
-    found = staging.installs(Answering(said), b, tmp_path, "9.9.9", [])
+    found = staging.installs(Answering(said), b, tmp_path, "9.9.9", tmp_path)
     assert (found == []) is passes, found
 
 
@@ -348,3 +367,95 @@ def test_distros_refuses_a_stage_that_was_never_stamped(stage, monkeypatch):
     )
     with pytest.raises(RefusedError, match="no distribution was tried"):
         staging.distros(ctx)
+
+
+def test_the_staged_origin_is_laid_out_as_the_cdn_zone(tmp_path):
+    root = tmp_path / "repo"
+    (root / "build" / "install").mkdir(parents=True)
+    for script in ("install.sh", "install.ps1"):
+        (root / "build" / "install" / script).write_text(script)
+    stage = tmp_path / "staged"
+    stage.mkdir()
+    for name in (*STAGED, "Libera-Suite-Setup-9.9.9.exe"):
+        (stage / name).write_bytes(name.encode())
+    zone = origin.lay_out(sorted(stage.iterdir()), tmp_path / "zone", "9.9.9", root)
+    files = sorted(
+        p.relative_to(zone).as_posix() for p in zone.rglob("*") if p.is_file()
+    )
+    assert files == [
+        "bundles/Libera-Suite-Setup-9.9.9.exe",
+        "bundles/latest",
+        "bundles/latest-windows",
+        "bundles/libera-9.9.9-amd64.flatpak",
+        "install.ps1",
+        "install.sh",
+        "pypi/libera-9.9.9-py3-none-any.whl",
+        "pypi/libera-9.9.9.tar.gz",
+        "pypi/libera_core-9.9.9-py3-none-macosx_11_0_arm64.whl",
+        "pypi/libera_core-9.9.9.tar.gz",
+        "pypi/libera_web-9.9.9-py3-none-any.whl",
+    ]
+    assert (zone / "bundles" / "latest").read_text() == "9.9.9\n"
+    # Links: the stage is the files publish uploads, and these are those.
+    assert (zone / "bundles/libera-9.9.9-amd64.flatpak").samefile(
+        stage / "libera-9.9.9-amd64.flatpak"
+    )
+
+
+@pytest.mark.parametrize(
+    ("platform", "sent"),
+    [
+        (
+            "linux-x86_64",
+            ["install.sh", "bundles/latest", "bundles/libera-9.9.9-amd64.flatpak"],
+        ),
+        (
+            "windows-x86_64",
+            [
+                "install.ps1",
+                "bundles/latest-windows",
+                "bundles/Libera-Suite-Setup-9.9.9.exe",
+                "bundles/Libera-Suite-Setup-9.9.9.exe.sha256",
+            ],
+        ),
+    ],
+)
+def test_each_machine_is_sent_its_part_of_the_origin_and_serves_it(
+    tmp_path, platform, sent
+):
+    for path in sent:
+        (tmp_path / "zone" / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / "zone" / path).write_text(path)
+    (tmp_path / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
+    host = Shipping("uname: Linux\n__LIBERA__=ok\n")
+    options = released_gui.ReleasedGuiOptions(
+        origin=tmp_path / "zone", root=tmp_path, host_for=lambda _: host
+    )
+    released_gui.on_host(host, platform, options)
+    assert [t for _, t in host.sent if t.startswith("libera-stage/")] == [
+        f"libera-stage/9.9.9/origin/{path}" for path in sent
+    ]
+    run = host.scripts[-1]
+    assert run.index("export LIBERA_ORIGIN=") < run.index("released-gui")
+    assert 'cd "$HOME/libera-stage/9.9.9/origin"' in run
+
+
+class Shipping(Answering):
+    """A builder that keeps where each file was sent and what it was asked."""
+
+    def __init__(self, said: str) -> None:
+        super().__init__(said)
+        self.sent: list[tuple[str, str]] = []
+        self.scripts: list[str] = []
+
+    def send(self, local, there):
+        self.sent.append((local.name, there))
+        return 0, ""
+
+    def capture(self, script):
+        self.scripts.append(script)
+        return "reachable\n" + self.said
+
+    @staticmethod
+    def fetch(_there, _local):
+        return 1, "no screenshot here"

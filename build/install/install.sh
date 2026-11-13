@@ -40,6 +40,7 @@ APP_ID=eu.liberasuite.Libera
 ORIGIN="${LIBERA_ORIGIN:-https://cdn.abilian.com/libera}"
 PREFIX="${LIBERA_PREFIX:-$HOME/.local}"
 CHANNEL="${LIBERA_CHANNEL:-}"
+VERSION="${LIBERA_VERSION:-}"
 
 say()  { printf '%s\n' "$*"; }
 step() { printf '\n==> %s\n' "$*"; }
@@ -64,10 +65,12 @@ With options:
     --channel flatpak   on Linux, the bundle: its own GTK and WebKit (default)
     --channel pip       the Python package instead, against the system GTK
     --origin URL        somewhere other than the public origin
+    --version VERSION   that release rather than the latest; a pre-release too
     --help
 
 The environment variables those replace still work, so an older one-liner
-keeps running: LIBERA_PREFIX, LIBERA_CHANNEL, LIBERA_ORIGIN. An option wins
+keeps running: LIBERA_PREFIX, LIBERA_CHANNEL, LIBERA_ORIGIN, LIBERA_VERSION.
+An option wins
 over the variable.
 
 It writes to $PREFIX/bin/libera and $PREFIX/share/libera and nowhere else,
@@ -89,6 +92,7 @@ while [ $# -gt 0 ]; do
     --prefix)  PREFIX="${2:?--prefix wants a directory}"; shift ;;
     --channel) CHANNEL="${2:?--channel wants flatpak or pip}"; shift ;;
     --origin)  ORIGIN="${2:?--origin wants a URL}"; shift ;;
+    --version) VERSION="${2:?--version wants a version}"; shift ;;
     # Nothing to skip since 0.7, whose components come with it; accepted so
     # that an older one-liner still runs.
     --no-payload) ;;
@@ -104,6 +108,11 @@ case "$CHANNEL" in
 "" | flatpak | pip) ;;
 *) die "--channel takes flatpak or pip, not $CHANNEL" ;;
 esac
+# The shape install.ps1 accepts for LIBERA_VERSION: digits and dots, then
+# perhaps a pre-release suffix, which bundles/latest never names.
+if [ -n "$VERSION" ] && ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+(\.[0-9]+)*((a|b|rc)[0-9]+)?$'; then
+    die "--version is not a version number: $VERSION"
+fi
 
 BIN="$PREFIX/bin"
 # A directory of its own, inside $PREFIX/share/libera and not that directory
@@ -170,10 +179,12 @@ say "Libera Suite, on $os/$arch."
 # that version there instead of the latest; the wheel's installer names it
 # too (installer.LAST_RELEASE_FOR). Empty once a release builds arm64 again.
 PINNED=""
-if [ "$os" = linux ] && [ "$arch" = arm64 ]; then
+if [ "$os" = linux ] && [ "$arch" = arm64 ] && [ -z "$VERSION" ]; then
     PINNED=0.4.1
     say "Linux arm64 stays on $PINNED: later releases have no arm64 build yet."
 fi
+# A version asked for is installed as such; otherwise the pin, if any.
+WANTED="${VERSION:-$PINNED}"
 
 # --- Linux gets the Flatpak, because the Python package cannot bring GTK -------
 #
@@ -248,12 +259,14 @@ mirror_desktop_entry() {
 
 install_flatpak() {
     step "fetching the bundle"
-    version="$(curl -fsSL "$ORIGIN/bundles/latest" 2>/dev/null | tr -d ' \n\r')" \
-        || die "cannot reach $ORIGIN"
-    case "$version" in
-    "" | *[!0-9.]*) die "$ORIGIN/bundles/latest does not name a version ($version)" ;;
-    esac
-    [ -z "$PINNED" ] || version="$PINNED"
+    version="$WANTED"
+    if [ -z "$version" ]; then
+        version="$(curl -fsSL "$ORIGIN/bundles/latest" 2>/dev/null | tr -d ' \n\r')" \
+            || die "cannot reach $ORIGIN"
+        case "$version" in
+        "" | *[!0-9.]*) die "$ORIGIN/bundles/latest does not name a version ($version)" ;;
+        esac
+    fi
 
     bundle="${TMPDIR:-/tmp}/libera-$version-$arch.flatpak"
     url="$ORIGIN/bundles/libera-$version-$arch.flatpak"
@@ -370,7 +383,7 @@ install_pip() {
     [ -x "$VENV/bin/python" ] || die "$VENV/bin/python is not there after venv"
 
     "$VENV/bin/python" -m pip install --quiet --upgrade pip >/dev/null 2>&1 || :
-    spec="libera${PINNED:+==$PINNED}"
+    spec="libera${WANTED:+==$WANTED}"
     "$VENV/bin/python" -m pip install --quiet "$spec" || die "pip install $spec failed"
 
     [ -x "$VENV/bin/libera" ] || die \

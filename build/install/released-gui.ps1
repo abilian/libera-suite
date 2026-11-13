@@ -2,13 +2,12 @@
 # something was drawn. The Windows half of `lb release publish`'s downloads.
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File released-gui.ps1 [-Out FILE] [-Doc FILE]
-#   ... -Installer Libera-Suite-Setup-X.Y.Z.exe       one not published yet (`stage`)
+#   ... -Origin http://127.0.0.1:PORT       another origin (`stage`'s, on localhost)
 #
 # It installs Libera Suite the way a user does, `irm .../install.ps1 | iex`,
 # which replaces this account's own; refuses a --version that is not the one
-# bundles/latest-windows names. Given -Installer, it checks that file against
-# the .sha256 beside it and runs it as install.ps1 runs the one it downloads,
-# and the version is the one in its name. Then it converts a document to docx and back to text
+# bundles/latest-windows names, or $env:LIBERA_VERSION, which install.ps1
+# reads too. Then it converts a document to docx and back to text
 # and looks for its words; then opens the document in a window and counts the
 # colours of a screenshot, as released-gui.sh does under Xvfb.
 #
@@ -25,7 +24,6 @@
 param(
     [string]$Out = "$HOME\released-gui.png",
     [string]$Doc = "",
-    [string]$Installer = "",
     [string]$Origin = $(if ($env:LIBERA_ORIGIN) { $env:LIBERA_ORIGIN } else { 'https://cdn.abilian.com/libera' })
 )
 $ErrorActionPreference = 'Stop'
@@ -53,28 +51,15 @@ New-Item -ItemType Directory -Force $work | Out-Null
 
 # --- install what users get ---------------------------------------------------
 
-if ($Installer) {
-    if (-not (Test-Path $Installer)) { Die "no such installer: $Installer" }
-    $name = [IO.Path]::GetFileName($Installer)
-    if ($name -notmatch '^Libera-Suite-Setup-(.+)\.exe$') { Die "$name is not named Libera-Suite-Setup-VERSION.exe" }
-    $want = $Matches[1]
-    Step "installing the staged $want"
-    if (-not (Test-Path "$Installer.sha256")) { Die "no $name.sha256 beside it" }
-    $expected = (Get-Content "$Installer.sha256" -Raw).Trim().Split(' ')[0].ToLower()
-    $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $Installer).Hash.ToLower()
-    if ($actual -ne $expected) { Die "$name does not match its .sha256" }
-    # The arguments install.ps1 gives the one it downloads.
-    $log = Join-Path $work 'setup.log'
-    $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=desktopicon', "/LOG=`"$log`"")
-    $process = Start-Process -FilePath $Installer -ArgumentList $arguments -Wait -PassThru
-    if ($process.ExitCode -ne 0) { Die "the installer stopped with code $($process.ExitCode); its log: $log" }
-} else {
+$env:LIBERA_ORIGIN = $Origin
+$want = $env:LIBERA_VERSION
+if (-not $want) {
     try { $want = ([string](Invoke-RestMethod "$Origin/bundles/latest-windows")).Trim() }
     catch { Die "could not read $Origin/bundles/latest-windows" }
-    Step "installing the published $want with install.ps1"
-    try { Invoke-RestMethod "$Origin/install.ps1" | Invoke-Expression }
-    catch { Die "install.ps1 failed: $_" }
 }
+Step "installing $want from $Origin with install.ps1"
+try { Invoke-RestMethod "$Origin/install.ps1" | Invoke-Expression }
+catch { Die "install.ps1 failed: $_" }
 
 Step 'what is installed here'
 if (-not (Test-Path $cli)) { Die "no $cli after install.ps1" }

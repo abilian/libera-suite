@@ -169,7 +169,9 @@ class LocalHost:
         return {**os.environ, "HOME": str(self.home)}
 
     def _path(self, path: str) -> Path:
-        return self.home / path[2:] if path.startswith("~/") else Path(path)
+        """As scp reads one: from the home directory unless absolute."""
+        given = Path(path)
+        return given if given.is_absolute() else self.home / path.removeprefix("~/")
 
     def capture(self, script: str) -> str:
         _, out = capture_input(["bash", "-s"], script, env=self._env())

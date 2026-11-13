@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shlex
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,7 +17,7 @@ from libera_build.artifacts import (
 )
 from libera_build.components import TAGS
 from libera_build.hosts import LocalHost, facts_from
-from libera_build.origin import place, publish as cdn
+from libera_build.origin import place, publish as cdn, staged as staged_origin
 from libera_build.process import run_here
 from libera_build.release import plan
 from libera_build.released_gui import ReleasedGuiOptions
@@ -172,9 +173,7 @@ echo "WINDOW=${size:-0}"
 """
 
 
-def install_script(
-    app: str, *, staged: str = "", deps: Sequence[str] = (), window: bool = False
-) -> str:
+def install_script(app: str, *, staged: str = "", deps: Sequence[str] = ()) -> str:
     """bash, the same on every builder, that installs `app` into a new
     environment and converts a line of text to a .docx.
 
@@ -198,13 +197,46 @@ for try in $(seq 10); do
     fi
     echo "try $try: not installable yet"; sleep 30
 done"""
-    return f"""
+    return (
+        f"""
 T=$(mktemp -d); cd "$T" || exit
 uv venv -q -p 3.12 v || exit
 bin=v/bin; [ -d "$bin" ] || bin=v/Scripts
 installed=0
 {install}
-# What uv said is the reason, and the last thing a refusal shows.
+"""
+        + CHECK
+    )
+
+
+def origin_install_script(app: str, zone: Path) -> str:
+    """bash for this Mac: the staged origin `zone` served here, and the
+    install page's command run against it, in a home of its own, so that
+    Libera.app and pip's cache are not the user's. pip takes the three
+    packages from the zone's pypi/ and the rest from PyPI, as it will; then
+    a document converted, and opened in a window, which --launcher-remove
+    takes out of LaunchServices again."""
+    return (
+        'T=$(mktemp -d); cd "$T" || exit\n'
+        + staged_origin.serve(shlex.quote(str(zone)), app)
+        + """
+export HOME="$T/home" PIP_FIND_LINKS="$LIBERA_ORIGIN/pypi/"
+mkdir -p "$HOME"
+installed=0
+curl -fsSL "$LIBERA_ORIGIN/install.sh" | sh -s -- --prefix "$T/p" > pip.log 2>&1 &&
+    installed=1
+bin="$T/p/share/libera/venv/bin"
+"""
+        + CHECK
+        + WINDOW
+        + '"$bin/libera" --launcher-remove > /dev/null 2>&1\n'
+    )
+
+
+# After an install that set $bin and $installed: what is installed, and a
+# line of text converted to a .docx and read back.
+CHECK = f"""
+# What the installer said is the reason, and the last thing a refusal shows.
 [ "$installed" = 1 ] || {{ cat pip.log; echo "INSTALLED=none"; exit; }}
 cat > check.py <<'{CHECK_END}'
 import importlib.metadata, sys, zipfile
@@ -216,4 +248,4 @@ printf 'Libera Suite, installed as a user installs it\\n' > note.txt
 "$bin/libera" --convert note.txt -t docx -o note.docx -q
 "$bin/python" check.py note.docx
 echo "VERSION=$("$bin/libera" -V)"
-""" + (WINDOW if window else "")
+"""

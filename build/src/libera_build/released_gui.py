@@ -19,8 +19,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from libera_build import inventory, repo, versions
-from libera_build.artifacts import bundle_name, installer_name
 from libera_build.hosts import MARK, SshHost, facts_from
+from libera_build.origin import staged
 from libera_build.repo import REPO
 from libera_build.report import RefusedError, say, step
 
@@ -44,9 +44,9 @@ WINDOWS_RUN = (
 
 @dataclass(frozen=True)
 class ReleasedGuiOptions:
-    # A release's staged files here (`stage`), sent to each machine and
-    # installed from there, instead of what the CDN serves.
-    staged: Path | None = None
+    # A release's staged origin here (`stage`, origin.staged): each machine is
+    # sent its part and serves it to itself, instead of what the CDN serves.
+    origin: Path | None = None
     root: Path = REPO
     host_for: Callable[[str], Host] = field(default=SshHost)
 
@@ -81,15 +81,11 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
     else:
         script, shot_there = SCRIPT, SHOT
         command = f"sh {SCRIPT} --out {SHOT}"
-    if options.staged:
-        sent = send_staged(host, name, options.staged, options.root, windows=windows)
-        if sent is None:
+    if options.origin:
+        app = versions.app_version(options.root)
+        if not send_origin(host, name, options.origin, app):
             return False
-        command += (
-            f' -Installer "$(cygpath -w "$HOME/{sent}")"'
-            if windows
-            else f' --bundle "$HOME/{sent}"'
-        )
+        command = staged.serve(f'"$HOME/{staged.remote(app)}"', app) + command
     if host.send(install / script.removeprefix("~/"), script)[0]:
         say("    could not copy the script there")
         return False
@@ -107,30 +103,19 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
     return True
 
 
-def staged_files(staged: Path, platform: str, app: str) -> list[Path]:
-    """What a machine of `platform` installs from the staged release of `app`:
-    its Flatpak bundle, or the Windows installer and its checksum."""
-    if platform.startswith("windows-"):
-        setup = staged / installer_name(app)
-        return [setup, setup.with_name(setup.name + ".sha256")]
-    return [staged / bundle_name(app, inventory.arch_of(platform))]
-
-
-def send_staged(
-    host: Host, platform: str, staged: Path, root: Path, *, windows: bool
-) -> str | None:
-    """Copy this machine's staged file there; its path from home, or None."""
-    files = staged_files(staged, platform, versions.app_version(root))
-    if not all(f.is_file() for f in files):
-        say(f"    nothing staged for {platform} in {staged}")
-        return None
-    for f in files:
+def send_origin(host: Host, platform: str, zone: Path, app: str) -> bool:
+    """This machine's part of the staged origin, copied there."""
+    there = staged.remote(app)
+    host.capture(f'mkdir -p "$HOME/{there}/bundles"')
+    for path in staged.for_platform(platform, app):
+        if not (zone / path).is_file():
+            say(f"    nothing staged for {platform}: no {path} in {zone}")
+            return False
         # scp's relative paths are the home directory, on Windows too.
-        there = f.name if windows else f"~/{f.name}"
-        if host.send(f, there)[0]:
-            say(f"    could not copy {f.name} there")
-            return None
-    return files[0].name
+        if host.send(zone / path, f"{there}/{path}")[0]:
+            say(f"    could not copy {path} there")
+            return False
+    return True
 
 
 def run(options: ReleasedGuiOptions) -> int:
