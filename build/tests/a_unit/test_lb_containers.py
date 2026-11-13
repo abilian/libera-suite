@@ -164,6 +164,27 @@ def test_a_conversion_is_believed_by_its_text(tmp_path):
     assert not matrix.holds_text(tmp_path / "c.odt", "x")
 
 
+@pytest.mark.parametrize(
+    ("python", "said", "converted", "verdict"),
+    [
+        ("312", "==> done", True, (True, "installed and converted, on Python 3.12")),
+        ("314", "pip install libera failed", False, (False, "installed nothing")),
+        # Debian 12: what install.sh must do there is refuse, saying why.
+        ("311", "FATAL: no Python 3.12 or newer", False, (True, "refused")),
+        ("311", "==> done", False, (False, "Python 3.11 was not refused")),
+        (None, "", False, (False, "no python3 to try")),
+    ],
+)
+def test_install_sh_is_believed_by_what_the_distributions_python_calls_for(
+    tmp_path, python, said, converted, verdict
+):
+    out = odt(tmp_path / "pip.odt", "Second paragraph" if converted else "")
+    output = f"PYTHON={python}\n" if python else "E: Unable to locate package\n"
+    passed, did = matrix.pip_verdict(output, said, out)
+    assert passed is verdict[0]
+    assert verdict[1] in did
+
+
 def test_the_matrix_runs_the_staged_wheel_with_its_modes(tmp_path):
     whl = tmp_path / "libera_core-9.9.9-py3-none-manylinux_2_34_aarch64.whl"
     with zipfile.ZipFile(whl, "w") as z:

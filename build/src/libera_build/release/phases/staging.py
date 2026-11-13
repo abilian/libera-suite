@@ -127,44 +127,50 @@ def run(ctx: Context) -> None:
 
 
 def distros(ctx: Context) -> None:
-    """The staged libera-core wheel of each Linux builder's architecture, in a
-    clean container of every distribution the install page names (matrix):
-    the builders are not where the pip path's users are. On each Linux
-    builder, natively and with its own container engine: this Mac's engine
-    may be a daemon over ssh, which cannot mount the stage, or not running.
-    Only a stamped stage: a stage that failed leaves its directory behind,
-    half checked."""
+    """The staged libera-core wheel of each Linux builder's architecture, then
+    install.sh's pip path from the staged origin, in a clean container of
+    every distribution the install page names (matrix): the builders are not
+    where the pip path's users are. On each Linux builder, natively and with
+    its own container engine: this Mac's engine may be a daemon over ssh,
+    which cannot mount the stage, or not running. Only a stamped stage: a
+    stage that failed leaves its directory behind, half checked."""
     linux = [b for b in ctx.builders if b.os == "linux"]
     if not linux:
         say("    no Linux builder; nothing to check")
         return
     problems(stamp_problems(ctx.root), "no distribution was tried.")
-    dest = folder(ctx.root)
-    stage = remote_stage(versions.app_version(ctx.root))
-    step(f"the staged converter in {len(matrix.DISTROS)} distributions")
+    app = versions.app_version(ctx.root)
+    step(f"the staged release in {len(matrix.DISTROS)} distributions")
     found = []
     for b in linux:
         host = ctx.host_for(b) if b.remote else LocalHost(Path.home())
         checkout = remote_path(b.repo) if b.remote else str(ctx.root)
-        found += distros_on(host, b, dest, stage, checkout)
-    problems(found, "the staged converter did not pass every distribution.")
+        found += distros_on(host, b, origin_folder(ctx.root), app, checkout)
+    problems(found, "the staged release did not pass every distribution.")
 
 
 def distros_on(
-    host: Host, b: Builder, dest: Path, stage: str, checkout: str
+    host: Host, b: Builder, zone: Path, app: str, checkout: str
 ) -> list[str]:
-    """The matrix on one builder, from its architecture's staged core and the
-    editors' wheel, whose blank the sample is made from; a problem, or
-    nothing. The verdict is the PASS it prints last, not an exit status: a
-    checkout from before matrix could run as a module imports it, does
-    nothing and exits 0."""
+    """The matrix on one builder, sent install.sh and the three packages for
+    its architecture, laid out as the origin; a problem, or nothing. The
+    verdict is the PASS it prints last, not an exit status: a checkout from
+    before matrix could run as a module imports it, does nothing and exits 0."""
     arch = b.platform.rpartition("-")[2]
-    sent = [matrix.core_of(dest, arch), *sorted(dest.glob("libera_web-*.whl"))]
-    host.capture(f'mkdir -p "$HOME/{stage}"')
-    for f in sent:
-        if host.send(f, f"{stage}/{f.name}")[0]:
-            return [f"{b.platform}: could not copy {f.name} there"]
-    out = host.capture(f'cd {checkout} && {LB}.matrix "$HOME/{stage}" {arch}')
+    pypi = zone / origin.PYPI
+    packages = [
+        pypi / app_wheel_name(app),
+        matrix.core_of(pypi, arch),
+        *sorted(pypi.glob("libera_web-*.whl")),
+    ]
+    there = origin.remote(app)
+    host.capture(f'mkdir -p "$HOME/{there}/{origin.PYPI}"')
+    for f in [zone / "install.sh", *packages]:
+        path = f.relative_to(zone).as_posix()
+        if host.send(f, f"{there}/{path}")[0]:
+            return [f"{b.platform}: could not copy {path} there"]
+    version = f"LIBERA_VERSION={app} " if versions.is_prerelease(app) else ""
+    out = host.capture(f'cd {checkout} && {version}{LB}.matrix "$HOME/{there}" {arch}')
     lines = [line for line in out.splitlines() if line.strip()]
     for line in lines:
         say(f"    {b.platform:<14} {line}")

@@ -10,19 +10,30 @@ and would not load on Ubuntu 22.04 or Debian 12 (notes/13). Its first run
 found the install page claiming Fedora 35 and RHEL 9, where glibc 2.34 cannot
 load a core that needs 2.35.
 
+Then, in another clean container of each, install.sh's pip path, the one a
+user without Flatpak takes, from the staged origin (origin.staged), served on
+the builder's loopback and reached over the host's network: where the
+distribution's Python is 3.12 or newer it must install libera and convert a
+document with it, and where it is older it must refuse, saying so.
+
 The Flatpak is not what this checks. It carries its own runtime and does not
 care what the distribution is; this is the payload the wheel installs.
 """
 
 from __future__ import annotations
 
+import functools
+import http.server
 import os
 import re
 import subprocess
 import sys
 import tempfile
+import threading
 import zipfile
+from contextlib import contextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, override
 
 from libera_build.containers import Engine, Mount, Run, linux_platform
 from libera_build.process import run_quietly
@@ -44,6 +55,27 @@ DISTROS = (
 )
 # What the sample document says, so what a conversion must still say.
 NEEDLE = "Second paragraph"
+# The oldest Python install.sh's pip path accepts, as major * 100 + minor.
+PYTHON_FLOOR = 312
+REFUSAL = "no Python 3.12 or newer"
+
+# A user's desktop has python3 and curl, and the image has neither; venv too,
+# which install.sh names when it is missing. Then the install page's command,
+# with the pip channel, and a document converted by what it installed.
+PIP_PATH = """
+if command -v apt-get > /dev/null; then
+    apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \\
+        python3 python3-venv curl ca-certificates > /dev/null
+else
+    dnf install -y -q python3 $(command -v curl > /dev/null || echo curl) > /dev/null
+fi
+python3 -c 'import sys; print("PYTHON=%d%02d" % sys.version_info[:2])'
+curl -fsSL "$LIBERA_ORIGIN/install.sh" | sh -s -- --channel pip > "/w/$LOG" 2>&1
+"$HOME/.local/bin/libera" --convert /w/note.txt -t odt -o "/w/$OUT" -q
+"""
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 def holds_text(odt: Path, needle: str) -> bool:
@@ -120,27 +152,103 @@ def convert_in(
     return lines[0] if lines else "no output"
 
 
-def run(dist: Path, arches: tuple[str, ...], engine: Engine | None = None) -> None:
+def pip_path_in(
+    engine: Engine, image: str, arch: str, origin: str, work: Path
+) -> tuple[bool, str]:
+    """install.sh's pip path in one clean container: whether it did what the
+    distribution's Python calls for, and what it did."""
+    name = image.rsplit("/", 1)[-1].replace(":", "-")
+    log, out = f"install-{arch}-{name}.log", f"pip-{arch}-{name}.odt"
+    env = {
+        "LIBERA_ORIGIN": origin,
+        "PIP_FIND_LINKS": f"{origin}/pypi/",
+        "LOG": log,
+        "OUT": out,
+    }
+    if version := os.environ.get("LIBERA_VERSION"):
+        env["LIBERA_VERSION"] = version
+    run_ = Run(
+        image,
+        ("sh", "-c", PIP_PATH),
+        arch,
+        mounts=(Mount(work, "/w"),),
+        env=env,
+        extra=("--quiet", "--network", "host"),
+    )
+    done = subprocess.run(
+        engine.run_argv(run_), capture_output=True, text=True, check=False
+    )
+    said = (work / log).read_text(errors="replace") if (work / log).is_file() else ""
+    return pip_verdict(done.stdout + done.stderr, said, work / out)
+
+
+def pip_verdict(output: str, said: str, odt: Path) -> tuple[bool, str]:
+    """Whether install.sh's pip path did right, and what it did, from what
+    the container printed, what install.sh said and what it converted:
+    installed and converted where Python is 3.12 or newer, refused with a
+    reason where it is older."""
+    found = re.search(r"^PYTHON=(\d)(\d\d)$", output, re.MULTILINE)
+    if not found:
+        lines = output.strip().splitlines()
+        return False, f"no python3 to try: {lines[-1] if lines else 'no output'}"
+    python = f"Python {found.group(1)}.{int(found.group(2))}"
+    if int(found.group(1) + found.group(2)) < PYTHON_FLOOR:
+        if REFUSAL in said:
+            return True, f"refused, as it should on {python}"
+        return False, f"{python} was not refused"
+    if holds_text(odt, NEEDLE):
+        return True, f"installed and converted, on {python}"
+    tail = said.strip().splitlines()[-3:]
+    return False, f"installed nothing that converts, on {python}: " + " / ".join(tail)
+
+
+class Quiet(http.server.SimpleHTTPRequestHandler):
+    """A file server that does not log each request to stderr."""
+
+    @override
+    def log_message(self, format: str, *args: Any) -> None:
+        pass
+
+
+@contextmanager
+def served(zone: Path) -> Generator[str]:
+    """`zone` over HTTP on this machine's loopback, for as long as needed."""
+    handler = functools.partial(Quiet, directory=str(zone))
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}"
+    finally:
+        server.shutdown()
+
+
+def run(zone: Path, arches: tuple[str, ...], engine: Engine | None = None) -> None:
     """Every architecture in `arches` (x86_64, arm64) against every image in
-    DISTROS, from the libera-core and libera-web wheels in `dist`."""
+    DISTROS, from the staged origin `zone`: the converter alone, from the
+    libera-core wheel in its pypi/, then install.sh's pip path."""
     engine = engine or Engine.here()
     engine.refuse_remote()
+    dist = zone / "pypi"
     failed = 0
-    with tempfile.TemporaryDirectory(prefix="libera-matrix-") as scratch:
+    with (
+        tempfile.TemporaryDirectory(prefix="libera-matrix-") as scratch,
+        served(zone) as origin,
+    ):
         work = Path(scratch)
         make_sample(dist, work)
+        (work / "note.txt").write_text(f"First paragraph\n\n{NEEDLE}\n")
         for arch in arches:
             archive = core_of(dist, arch)
             core = unpack(archive, work / f"core-{arch}")
             step(f"{arch}, from {archive}")
             for image in DISTROS:
-                said = convert_in(engine, image, arch, core, work)
                 name = image.rsplit("/", 1)[-1]
-                if said is None:
-                    say(f"    {name:<16} ok")
-                else:
-                    failed += 1
-                    say(f"    {name:<16} FAIL: {said}")
+                said = convert_in(engine, image, arch, core, work)
+                x2t = "ok" if said is None else f"FAIL: {said}"
+                say(f"    {name:<16} x2t         {x2t}")
+                passed, did = pip_path_in(engine, image, arch, origin, work)
+                say(f"    {name:<16} install.sh  {'' if passed else 'FAIL: '}{did}")
+                failed += (said is not None) + (not passed)
     say()
     if failed:
         msg = f"{failed} combination(s) could not convert"
@@ -149,6 +257,6 @@ def run(dist: Path, arches: tuple[str, ...], engine: Engine | None = None) -> No
 
 
 if __name__ == "__main__":
-    # On a Linux builder, which `distros` sends the staged wheels:
-    # python3 -m libera_build.matrix DIR ARCH...
+    # On a Linux builder, which `distros` sends its part of the staged origin:
+    # python3 -m libera_build.matrix ZONE ARCH...
     run(Path(sys.argv[1]), tuple(sys.argv[2:]))

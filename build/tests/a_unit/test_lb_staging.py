@@ -329,6 +329,11 @@ def test_distros_runs_the_matrix_on_each_linux_builder(
         "libera_core-9.9.9-py3-none-manylinux_2_34_aarch64.whl",
         "libera_web-9.9.9-py3-none-any.whl",
     )
+    zone = staging.origin_folder(stage)
+    (zone / "pypi").mkdir(parents=True)
+    (zone / "install.sh").write_text("install")
+    for f in staging.folder(stage).glob("*.whl"):
+        (zone / "pypi" / f.name).write_bytes(f.read_bytes())
     hosts = {"x": Recording(said), "y": Recording(said)}
     monkeypatch.setattr(staging.matrix, "run", lambda *_: pytest.fail("ran here"))
     builders = [
@@ -349,12 +354,14 @@ def test_distros_runs_the_matrix_on_each_linux_builder(
             staging.distros(ctx)
         assert f"linux-x86_64: the matrix {problem}" in capsys.readouterr().out
     assert hosts["x"].sent == [
+        "install.sh",
+        "libera-9.9.9-py3-none-any.whl",
         "libera_core-9.9.9-py3-none-manylinux_2_34_x86_64.whl",
         "libera_web-9.9.9-py3-none-any.whl",
     ]
-    assert hosts["y"].sent[0].endswith("_aarch64.whl")
+    assert hosts["y"].sent[2].endswith("_aarch64.whl")
     assert (
-        'libera_build.matrix "$HOME/libera-stage/9.9.9" x86_64'
+        'libera_build.matrix "$HOME/libera-stage/9.9.9/origin" x86_64'
         in hosts["x"].scripts[-1]
     )
 
