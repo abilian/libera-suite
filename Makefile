@@ -32,8 +32,8 @@ all: lint test ## lint, then the whole test suite
 # Everything, in the order that fails fastest. Needs an installed payload, a
 # browser, and a built core for the last two.
 verify: lint test docs ## everything: lint, tests, docs links, patch queue, converter
-	$(LB) payload patches
-	$(LB) payload smoke
+	$(LB) payload check
+	$(LB) payload test
 
 # The editors in every language they ship, not test's sample: about 9 minutes
 # more (tests/c_e2e/host/test_languages.py). Prerequisites see it too.
@@ -173,7 +173,7 @@ publish: build ## the wheel, to PyPI, once PyPI has the components it pins
 
 # The payload for this machine, from a clean checkout: hours the first time.
 payload: ## build the editor payload here (lb payload --help for the steps)
-	$(LB) payload all
+	$(LB) payload build
 
 # The release, on the builders. Phases and --only: lb release --help.
 ship: ## the whole release: lb release check, then lb release publish

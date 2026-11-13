@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from libera_build import cli
 from libera_build.inventory import Builder
@@ -174,5 +176,16 @@ def test_every_lb_command_a_release_runs_is_one_lb_has():
         bundle = builders.bundle_of(b, "9.9.9")
         assert bundle is not None
         commands.append(bundle.command)
+    for command in commands:
+        cli.plan(command.split())
+
+
+def test_every_lb_command_the_makefile_runs_is_one_lb_has():
+    """`make verify` ran `lb payload patches` and `lb payload smoke` for a day
+    after they were renamed, found by the wheel phase of a release, which runs
+    `make verify` after half an hour of tests."""
+    makefile = (cli.REPO / "Makefile").read_text(encoding="utf-8")
+    commands = re.findall(r"^\t@?\$\(LB\) (.+)$", makefile, re.MULTILINE)
+    assert commands, "no $(LB) recipe line in the Makefile"
     for command in commands:
         cli.plan(command.split())

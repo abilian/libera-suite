@@ -1,6 +1,6 @@
 # The converter: x2t, allfontsgen and their libraries, one wheel per platform,
 # made by hatch_build.py, and an sdist that builds it where there is no wheel;
-# `lb components wheels` builds both on each platform.
+# `lb components build` builds both on each platform.
 [project]
 name = "libera-core"
 # The payload version, which libera pins exactly; a test holds the three equal.
