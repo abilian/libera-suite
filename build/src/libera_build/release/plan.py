@@ -39,6 +39,8 @@ PUBLISH = {
     "verify": "libera installed from PyPI alone on each platform, a document converted",
     "downloads": "the published Flatpak and Windows installer, installed on the"
     " builders, a window opened from each",
+    "tap": "the Homebrew formula moved to the release, committed and pushed",
+    "docs": "the documentation site deployed, and read back",
 }
 VERBS = {"check": CHECK, "publish": PUBLISH}
 PHASES = {**CHECK, **PUBLISH}

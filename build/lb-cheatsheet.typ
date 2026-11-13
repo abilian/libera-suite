@@ -137,7 +137,7 @@ Each command prints the script it runs before running it; the scripts stay usabl
   inset: (x: 0pt, y: 1.4pt),
   column-gutter: 0.6em,
   [*check*], raw("update  components  bundles  wheel  stage  distros"),
-  [*publish*], raw("publish  verify  downloads"),
+  [*publish*], raw("publish  verify  downloads  tap  docs"),
 )
 #note[
   *Run directory* `build/out/release/<commit>/`: `pypi/`, `bundles/`, `staged/` with `STAGED.json`. A new commit is a new, empty run: run the phases again. *Don't commit during a run*: it stops after the phase that saw HEAD move.

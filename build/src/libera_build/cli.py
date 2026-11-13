@@ -44,6 +44,7 @@ from libera_build.containers import host_arch
 from libera_build.flatpak import FlatpakOptions
 from libera_build.linux import LinuxOptions
 from libera_build.origin import status
+from libera_build.release.context import DEFAULT_TAP
 from libera_build.release.on import OnOptions, on
 from libera_build.release.plan import VERBS
 from libera_build.release.run import RunOptions, run
@@ -189,6 +190,13 @@ VOLUME = Knob(
     "--volume", "VOLUME", "a named Docker volume instead of --build-dir", "NAME"
 )
 DRY = Knob("--dry-run", "DRY", "say what it would do, and do nothing", switch=True)
+TAP = Knob(
+    "--tap",
+    "TAP",
+    "the clone of abilian/homebrew-tap that the tap phase updates;"
+    " default ~/projects/homebrew-tap",
+    "DIR",
+)
 YES = Knob("--yes", "YES", "do not ask first", switch=True)
 OUT = Knob(
     "--out",
@@ -480,6 +488,7 @@ def release_run(args: argparse.Namespace) -> Steps:
         only=tuple(getattr(args, "only", None) or ()),
         yes=getattr(args, "yes", False),
         dry_run=args.dry_run,
+        tap=path_given(args, TAP) or DEFAULT_TAP,
     )
     return [Call(run, (options,))]
 
@@ -883,6 +892,7 @@ def add_release(groups: Groups) -> None:
             verb,
             summary,
             release_run,
+            *((TAP,) if verb == "publish" else ()),
             epilog=f"phases, always run in this order:\n{phase_list(VERBS[verb])}\n\n"
             + examples(
                 f"release {verb}",

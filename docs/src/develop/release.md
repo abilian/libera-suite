@@ -2,7 +2,7 @@
 
 A release is one set of artifacts that agree with each other. No single machine can produce all of them.
 
-**A release is two commands, and `make ship` runs both.** `lb release check` builds it and installs it as users will, publishing nothing; `lb release publish` is the part with no undo. `check` has six phases: the Linux and Windows components, both Flatpak bundles and the Windows installer are built on their builders in parallel, the macOS components and the wheel here; then every file of the release is staged and installed on every platform, and the Linux converter and `install.sh`'s pip path tried in a clean container of each distribution. `publish` has three: the upload to PyPI and the CDN, then two that read back what users get. `lb release check --dry-run` prints the plan and runs nothing. See [`make ship`](#make-ship) below.
+**A release is two commands, and `make ship` runs both.** `lb release check` builds it and installs it as users will, publishing nothing; `lb release publish` is the part with no undo. `check` has six phases: the Linux and Windows components, both Flatpak bundles and the Windows installer are built on their builders in parallel, the macOS components and the wheel here; then every file of the release is staged and installed on every platform, and the Linux converter and `install.sh`'s pip path tried in a clean container of each distribution. `publish` has five: the upload to PyPI and the CDN, two that read back what users get, then the Homebrew tap and the documentation site. `lb release check --dry-run` prints the plan and runs nothing. See [`make ship`](#make-ship) below.
 
 Read [Build the payload](build.md) first if you have never built one. This page assumes you have.
 
@@ -51,11 +51,7 @@ lb release status                   # after any pause: where the release has got
 
 **5. Check what users get.** `publish` ends by installing the published Flatpak and Windows installer on the builders and screenshotting a window from each (its `downloads` phase; see [released-gui](#after-it-is-published-released-gui)). On a machine that has never had Libera Suite: `curl -fsSL https://cdn.abilian.com/libera/install.sh | sh` on Linux and macOS, `irm https://cdn.abilian.com/libera/install.ps1 | iex` on Windows, then open a document. `libera --payload-status` names the new payload.
 
-**6. The channels `make ship` does not move.**
-
-- Homebrew: `cd ~/projects/homebrew-tap && make update FORMULA=libera`, read the diff, then commit and push there. Brew's users see nothing until the push.
-- The public mirror and the upstream mirrors, at the same moment as the binaries (see *Publish* below).
-- The site: `make docs-publish`, which deploys `docs.liberasuite.eu` with the news post and the pages from step 2.
+**6. The channels that follow.** `publish`'s last two phases move the Homebrew tap (`tap`: the tap's generator, `make update FORMULA=libera` in its clone, then a commit and a push to the branch brew reads) and deploy the site with the news post and the pages from step 2 (`docs`: `make -C docs publish`, then the site's `build.json` read back until it names this checkout's `docs/`). Both are refused before anything is published when they could not run: a tap clone with uncommitted changes or no upstream, no `hop3`. Neither runs for a pre-release. The tap's clone is `~/projects/homebrew-tap` unless `--tap DIR` (`TAP`) says otherwise. What `make ship` does not move is the public mirror and the upstream mirrors, at the same moment as the binaries (see *Publish* below).
 
 **7. Open the next cycle.** `pyproject.toml` goes to the next version on `devel`, `CHANGES.md` gets a new `Unreleased` section, and the release plan gets its outcome in a line, with what moved to the next one.
 
@@ -75,10 +71,10 @@ make ship                                              # check, then publish
 
 ```
 check:    update  components  bundles  wheel  stage  distros
-publish:  publish  verify  downloads
+publish:  publish  verify  downloads  tap  docs
 ```
 
-The order is forced. `stage` follows everything that makes a file; `publish` uploads what `stage` stamped; `verify` and `downloads` follow `publish`, because what they check is what users get. The phases run in that order whatever order they are typed in, so there is no way to get it wrong from the command line.
+The order is forced. `stage` follows everything that makes a file; `publish` uploads what `stage` stamped; `verify` and `downloads` follow `publish`, because what they check is what users get; `tap` and `docs` come last, because the tap's generator reads the release from PyPI and the site announces it. The phases run in that order whatever order they are typed in, so there is no way to get it wrong from the command line.
 
 `publish` is the one phase with no undo, since PyPI refuses a version it has already seen even after a yank. It stops and asks on `/dev/tty` unless `--yes` is given. Asking on the terminal matters here: this is usually run under tmux with its output redirected, where a prompt on stdin is a prompt no one can answer.
 
@@ -122,10 +118,12 @@ What `make ship` does, phase by phase, for when part of a release has to be redo
 | `publish` | The staged files, refused if the stamp no longer holds. Everything the CDN could refuse is refused first, the bundles signed and `bundles/latest-windows` checked, so a passphrase not given leaves the release where it was rather than half out. Then `libera-core` and `libera-web`, then `libera`, to PyPI; a file PyPI already has is skipped, so a publish that broke part way is run again. Then the bundles, with their signatures, `install.sh` and `install.ps1` to the CDN; then `bundles/latest`, which moves both install scripts to the new version. | anywhere with the credentials |
 | `verify` | On every platform, `libera` installed from PyPI alone into a new environment and a document converted: what `stage` checked, now against what PyPI serves. | the driving machine and each builder |
 | `downloads` | The published Flatpak and Windows installer installed on each Linux and Windows builder, a window opened and photographed (see [released-gui](#after-it-is-published-released-gui)). None for a pre-release, which moves no pointer. | each Linux and Windows builder |
+| `tap` | The Homebrew formula moved to the release by the tap's own generator, which reads it from PyPI, checked to name the version, committed and pushed (`release/phases/chores.py`). None for a pre-release. | the driving machine, with the tap's clone |
+| `docs` | The documentation site built and deployed (`make -C docs publish`, through `hop3`), then its `build.json` read back until it names this checkout's `docs/`. None for a pre-release. | the driving machine |
 
 Two things are left that no command covers. The mirrors go up, and somebody installs the release on a machine that has never built it and opens a document.
 
-Any one phase runs on its own, which is what makes a partial redo cheap. `update` to `distros` belong to `check`, `publish` to `downloads` to `publish`, and each command refuses the other's. `--only`, on `check`, narrows the phases that run per builder and refuses the rest: wheel, stage and distros work on every builder at once. `publish` checks the stage's stamp before anything long starts:
+Any one phase runs on its own, which is what makes a partial redo cheap. `update` to `distros` belong to `check`, `publish` to `docs` to `publish`, and each command refuses the other's. `--only`, on `check`, narrows the phases that run per builder and refuses the rest: wheel, stage and distros work on every builder at once. `publish` checks the stage's stamp before anything long starts:
 
 ```sh
 lb release check stage

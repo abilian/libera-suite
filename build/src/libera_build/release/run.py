@@ -15,9 +15,10 @@ from libera_build import artifacts, inventory, repo, versions
 from libera_build.hosts import ssh_host
 from libera_build.release import plan, precheck
 from libera_build.release.builds import mmss
-from libera_build.release.context import Context
+from libera_build.release.context import DEFAULT_TAP, Context
 from libera_build.release.phases import (
     builders,
+    chores,
     components,
     here,
     publishing,
@@ -41,6 +42,7 @@ class RunOptions:
     only: tuple[str, ...] = ()
     yes: bool = False
     dry_run: bool = False
+    tap: Path = DEFAULT_TAP
     root: Path = repo.REPO
     host_for: Callable[[Builder], Host] = field(default=ssh_host)
 
@@ -55,6 +57,8 @@ ACTIONS: dict[str, Callable[[Context], None]] = {
     "publish": staging.publish,
     "verify": publishing.verify,
     "downloads": publishing.downloads,
+    "tap": chores.tap,
+    "docs": chores.docs,
 }
 
 
@@ -73,6 +77,7 @@ def run(options: RunOptions) -> int:
         phases=phases,
         yes=options.yes,
         host_for=options.host_for,
+        tap=options.tap,
     )
     if options.dry_run:
         show_plan(ctx)
@@ -89,12 +94,12 @@ def run(options: RunOptions) -> int:
     if "publish" in phases and prerelease:
         say(f"    {app} is a pre-release: pip, the install scripts and the")
         say("    Homebrew tap stay on the last release.")
-    elif "publish" in phases:
-        # A separate repository, so nothing here can keep it in step. Naming
-        # the command is the difference between a tap that lags one release
-        # and a tap that lags five.
-        say("    the Homebrew tap is a separate repository and does not follow:")
-        say("        cd ~/projects/homebrew-tap && make update FORMULA=libera")
+    elif "publish" in phases and "tap" not in phases:
+        # A separate repository, so nothing here keeps it in step but the
+        # tap phase. Naming the command is the difference between a tap
+        # that lags one release and a tap that lags five.
+        say("    the Homebrew tap does not follow without its phase:")
+        say("        lb release publish tap")
         say("")
     if "publish" in phases or "verify" in phases:
         # verify installs from PyPI and converts; nothing here opens a window.

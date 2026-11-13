@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from libera_build.hosts import ssh_host
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
     from libera_build.hosts import Host
     from libera_build.inventory import Builder
+
+
+# Where the Homebrew tap is cloned, unless --tap (TAP) says otherwise.
+DEFAULT_TAP = Path.home() / "projects" / "homebrew-tap"
 
 
 @dataclass(frozen=True)
@@ -29,6 +33,8 @@ class Context:
     # build going on meanwhile.
     poll_seconds: float = 15
     unreachable_seconds: float = 45 * 60
+    # The Homebrew tap's clone, which the tap phase updates (phases.chores).
+    tap: Path = DEFAULT_TAP
 
     @property
     def logs(self) -> Path:

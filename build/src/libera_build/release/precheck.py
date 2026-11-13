@@ -14,7 +14,7 @@ from libera_build import repo, versions
 from libera_build.hosts import facts_from, remote_path
 from libera_build.origin import publish
 from libera_build.release import plan
-from libera_build.release.phases import staging
+from libera_build.release.phases import chores, staging
 from libera_build.report import problems, say, step
 
 if TYPE_CHECKING:
@@ -54,6 +54,14 @@ def run(ctx: Context) -> None:
         found += plan.unpushed_problems(
             ctx.phases, on_a_remote=repo.on_a_remote(ctx.root), head=head
         )
+    # The chores after PyPI, refused now rather than after it, which has no
+    # undo: a release up with its tap or its site left behind is the state
+    # these phases exist to end. Not for a pre-release, which skips both.
+    if not versions.is_prerelease(versions.app_version(ctx.root)):
+        if "tap" in ctx.phases:
+            found += chores.tap_problems(ctx.tap)
+        if "docs" in ctx.phases:
+            found += chores.docs_problems()
 
     for b in ctx.builders:
         if b.remote:
