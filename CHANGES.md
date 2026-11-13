@@ -6,10 +6,14 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 ## [Unreleased]
 
+### Added
+
+- **`install.sh --version VERSION`** (or `LIBERA_VERSION`) installs that release rather than the latest, a pre-release included, as `install.ps1` already did.
+
 ### Fixed
 
 - **A document converted from Markdown or HTML no longer offers styles called "text-5" and "text-3"** in the style gallery, beside Normal. The converter named a style after each CSS rule it read and listed every one there. A core patch, so the payload moves on from 0.7.1.
-- **The release tooling.** `make publish` refuses a `libera` whose `libera-core` and `libera-web` are not on PyPI yet: 0.7.0b1 and 0.7.0 both went up before them, and `uvx libera` installed 0.6.0 without a word. `lb release released-gui` installs what the CDN serves before it opens a window, on Linux in a Flatpak installation of its own, and now on Windows too, with `install.ps1`: it had tested whatever was installed on the builder, and passed 0.7.0 on a 0.5.0. And a release is now installed on every platform, from its own files and nothing else, before any of it is published (`lb release ship stage`); `publish` uploads exactly those files.
+- **The release tooling.** `make publish` refuses a `libera` whose `libera-core` and `libera-web` are not on PyPI yet: 0.7.0b1 and 0.7.0 both went up before them, and `uvx libera` installed 0.6.0 without a word. `lb release publish`'s `downloads` phase installs what the CDN serves before it opens a window, with `install.sh` on Linux and `install.ps1` on Windows: it had tested whatever was installed on the builder, and passed 0.7.0 on a 0.5.0. And a release is now installed on every platform before any of it is published (`lb release check`): each machine serves the release's own files to itself as the CDN would and runs the install page's command against it, then opens, edits, saves and reopens a document in each editor; `install.sh`'s pip path is tried in seven distributions. `lb release publish` uploads exactly those files, then moves the Homebrew tap and deploys the documentation site.
 - **The documentation.** A certified PDF cannot be saved even when its certification permits comments, and the save fails with a general message: the pages said only a PDF certified against any change failed, and that the save said why.
 
 ## [0.7.0] - 2026-11-10

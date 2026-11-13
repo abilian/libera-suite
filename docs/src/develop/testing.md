@@ -45,7 +45,7 @@ uv run pytest -m e2e          # 83, the editor in headless Chromium
 uv run pytest -m gui          # 3, the application in a real window
 ```
 
-Each level sits in its own directory, which also supplies the marker on every test it holds. `build/tests/` holds another 216 for the build and release tooling, which need no payload. The whole run takes about five minutes.
+Each level sits in its own directory, which also supplies the marker on every test it holds. `build/tests/` holds another 316 for the build and release tooling, which need no payload. The whole run takes about five minutes.
 
 The `gui` tier runs in the engine a user has. It launches the shipped CLI on two documents of different types and lets it open real windows. Each window's own page then photographs its canvas and posts it to the host: `libera --shot FILE` arms that in a window as well as under `--serve`, each window posting to a name of its own. The ink measurement below therefore runs against WKWebView, WebKitGTK or WebView2, with no screenshot utility and no screen-recording permission anywhere.
 
@@ -68,9 +68,9 @@ make lint-linux    # the same type checkers in the Linux container
 
 The suite tests this checkout. These read what a user downloads:
 
-- `lb release check` installs every file of the release on every platform before any of it is published: `libera` and its components from the staged files alone, the Flatpak, the Windows installer, and a window on the Mac.
-- Its `distros` phase converts a document with the staged Linux `libera-core` wheels, in a clean container of each distribution the install page names, and looks for the text in the output. Its first run found the page claiming Fedora 35 and RHEL 9, where glibc 2.34 cannot load a core that needs 2.35.
-- `lb release publish`'s `downloads` phase installs the *published* Flatpak on each Linux builder and runs it under Xvfb, and installs the published Windows installer on the Windows builder and opens a window in its desktop session, and screenshots both. It is the only check that exercises the GNOME runtime's WebKit, which is not the distribution's.
+- `lb release check` installs every file of the release on every platform before any of it is published. Each machine serves the staged release to itself as the CDN would, and runs the install page's own command against it: `install.sh` on the Mac and on Linux (the Flatpak), `install.ps1` on Windows. Then, in Words, Tables and Slides, a blank is opened in a real window, a line entered and saved, found in the file, and the file opened again and photographed: the gui tier's driver, run in the installed application's own Python, or from outside over WebView2's DevTools port on Windows, whose application is frozen.
+- Its `distros` phase converts a document with the staged Linux `libera-core` wheels, in a clean container of each distribution the install page names, and looks for the text in the output; then runs `install.sh --channel pip` there, which must install and convert where the distribution's Python is 3.12 or newer and refuse where it is older. Its first run found the page claiming Fedora 35 and RHEL 9, where glibc 2.34 cannot load a core that needs 2.35.
+- `lb release publish`'s `downloads` phase does the same against the *published* release: `install.sh` from the CDN on each Linux builder and `install.ps1` on the Windows builder, a window and the five minutes in each editor. It is the only check of the GNOME runtime's WebKit, which is not the distribution's, as users download it.
 
 Each release phase verifies its own artifact too, after the bundle phase once found a core tarball an earlier build had left behind and reported a pass for a bundle it never produced.
 
