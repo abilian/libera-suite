@@ -38,6 +38,11 @@ FIVE = "~/five-minutes.sh"
 FIVE_DRIVER = "~/released-gui-driver.py"
 DRIVER = ("tests", "d_gui", "driver.py")
 FIVE_WORK = "~/.cache/libera-released-gui/five"
+WINDOWS_FIVE = "five-minutes-windows.py"
+WINDOWS_FIVE_DRIVER = "released-gui-driver.py"
+# released-gui.ps1's $env:TEMP\libera-released-gui\five, as scp reads a path:
+# from the home directory.
+WINDOWS_FIVE_WORK = "AppData/Local/Temp/libera-released-gui/five"
 # scp's relative paths are the home directory on both systems, and Windows'
 # own programs are handed theirs in its own spelling.
 WINDOWS_SCRIPT = "released-gui.ps1"
@@ -104,22 +109,28 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
         say("    it passed and the screenshot did not come back")
         return False
     say(f"    {shot}")
-    if not windows:
-        fetch_five(host, options.root / "build" / "out" / "five-minutes", name)
+    fetch_five(
+        host,
+        WINDOWS_FIVE_WORK if windows else FIVE_WORK,
+        options.root / "build" / "out" / "five-minutes",
+        name,
+    )
     return True
 
 
 def send_scripts(host: Host, root: Path, script: str, *, windows: bool) -> bool:
-    """The script there, and off Windows what its five minutes in each editor
-    need. Not on Windows: the frozen installer has no Python to run the
-    driver with."""
+    """The script there, and beside it what its five minutes in each editor
+    need: the gui tier's driver, and the script that runs it, which on
+    Windows drives the frozen application from outside."""
     install = root / "build" / "install"
-    sent = [(install / script.removeprefix("~/"), script)]
-    if not windows:
-        sent += [
-            (install / "five-minutes.sh", FIVE),
-            (root.joinpath(*DRIVER), FIVE_DRIVER),
-        ]
+    five, driver = (
+        (WINDOWS_FIVE, WINDOWS_FIVE_DRIVER) if windows else (FIVE, FIVE_DRIVER)
+    )
+    sent = [
+        (install / script.removeprefix("~/"), script),
+        (install / five.removeprefix("~/"), five),
+        (root.joinpath(*DRIVER), driver),
+    ]
     for local, there in sent:
         if host.send(local, there)[0]:
             say(f"    could not copy {local.name} there")
@@ -127,13 +138,13 @@ def send_scripts(host: Host, root: Path, script: str, *, windows: bool) -> bool:
     return True
 
 
-def fetch_five(host: Host, into: Path, name: str) -> None:
+def fetch_five(host: Host, there: str, into: Path, name: str) -> None:
     """The pictures of the documents reopened, for a person to look at: the
     script has checked what can be checked without eyes."""
     into.mkdir(parents=True, exist_ok=True)
     for ext in ("docx", "xlsx", "pptx"):
         picture = into / f"{name}-{ext}.png"
-        if host.fetch(f"{FIVE_WORK}/five-{ext}.png", picture)[0]:
+        if host.fetch(f"{there}/five-{ext}.png", picture)[0]:
             say(f"    no picture of the .{ext} came back")
         else:
             say(f"    {picture}")

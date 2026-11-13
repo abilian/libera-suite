@@ -184,6 +184,31 @@ if ($r[0] -lt $a[0] - $slack -or $r[1] -lt $a[1] - $slack -or $r[2] -gt $a[2] + 
 Copy-Item $shot $Out -Force
 Say "    $Out"
 
+# --- five minutes in each editor ----------------------------------------------
+#
+# five-minutes-windows.py, beside this script with the gui tier's driver, which
+# `lb` sends: a blank in each editor typed into, saved and opened again, driven
+# from outside through WebView2's debugging port, since the installed
+# application is frozen and has no Python to run the driver in. uv brings the
+# one thing it needs that is not the standard library, a websocket client.
+
+$five = Join-Path $PSScriptRoot 'five-minutes-windows.py'
+$driver = Join-Path $PSScriptRoot 'released-gui-driver.py'
+if (-not ((Test-Path $five) -and (Test-Path $driver))) {
+    Die "no five-minutes-windows.py and released-gui-driver.py beside $PSCommandPath"
+}
+Step 'five minutes in each editor'
+$fiveWork = Join-Path $work 'five'
+Remove-Item $fiveWork -Recurse -Force -ErrorAction SilentlyContinue
+$said = & uv run -q --no-project --with websocket-client python $five $driver $fiveWork 2>&1 | Out-String
+foreach ($line in ($said.Trim() -split "`r?`n")) { Say "    $line" }
+foreach ($editor in 'DOCX', 'XLSX', 'PPTX') {
+    if ($said -notmatch "(?m)^FIVE_$editor=ok\s*$") {
+        $why = if ($said -match "(?m)^FIVE_$editor=(.*)$") { $Matches[1] } else { 'not run' }
+        Die "five minutes in a .$($editor.ToLower()): $why"
+    }
+}
+
 Step 'PASS'
 Say "    $want, installed as a user installs it, converted a document and drew it in a window."
 Say '__LIBERA__=ok'

@@ -111,6 +111,16 @@ lint.extend-ignore = [
     "S404",  # subprocess import
     "S603",  # subprocess call -- argv form, no shell, this interpreter's playwright
 ]
+# five-minutes-windows.py drives the installed Windows application on a
+# builder, from outside, through WebView2's debugging port: run by path with
+# uv, beside the gui tier's driver, which it loads by path.
+"build/install/five-minutes-windows.py" = [
+    "INP001", # no package: uv runs it by path on the builder
+    "S404",   # subprocess import -- schtasks, taskkill and libera-cli are the job
+    "S603",   # subprocess call -- argv form, no shell
+    "S607",   # schtasks and taskkill are Windows', by name
+    "S310",   # urlopen -- the DevTools list on the loopback port it chose
+]
 # gui-smoke.py opens a real window under Xvfb and screenshots it.
 "build/test-linux/gui-smoke.py" = [
     "S404",   # subprocess import
