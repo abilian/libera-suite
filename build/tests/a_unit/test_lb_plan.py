@@ -180,6 +180,17 @@ def test_every_lb_command_a_release_runs_is_one_lb_has():
         cli.plan(command.split())
 
 
+def test_every_command_on_the_cheat_sheet_is_one_lb_has():
+    """build/lb-cheatsheet.typ is printed and pinned to walls, where a renamed
+    command lives on long after the rename."""
+    sheet = (cli.REPO / "build" / "lb-cheatsheet.typ").read_text(encoding="utf-8")
+    lines = re.findall(r'cmd\("lb ?([^"]*)"', sheet)
+    assert len(lines) > 40, "the cheat sheet's commands were not found"
+    for line in lines:
+        if line and not line.startswith("help "):
+            cli.plan(line.split())
+
+
 def test_every_lb_command_the_makefile_runs_is_one_lb_has():
     """`make verify` ran `lb payload patches` and `lb payload smoke` for a day
     after they were renamed, found by the wheel phase of a release, which runs

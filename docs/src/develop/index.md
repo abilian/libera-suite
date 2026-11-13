@@ -9,6 +9,8 @@ Libera Suite is a Python host around upstream editors. Most of the work is in th
 - [Cutting a release](release.md): which machine makes what, and in what order.
 - [Roadmap](roadmap.md): what is next and what we have decided against.
 
+The `lb` command, which builds, packages and releases, is on [one page to print](../pdf/lb-cheatsheet.pdf) (PDF).
+
 ## In six slides
 
 <div class="deck" data-pdf="../pdf/Libera%20Suite%20for%20developers.pdf"><a href="../pdf/Libera%20Suite%20for%20developers.pdf">Libera Suite for developers, in six slides (PDF)</a></div>

@@ -30,6 +30,8 @@ There is one directory per kind of thing:
     lb help payload           the commands in one group (lb payload --help)
     lb help payload build     one command: its options, and examples
 
+On one page, to print: [`lb-cheatsheet.typ`](lb-cheatsheet.typ), published on the developer docs as `docs/src/pdf/lb-cheatsheet.pdf`. After changing it, run `typst compile build/lb-cheatsheet.typ docs/src/pdf/lb-cheatsheet.pdf` and commit both. A test parses every command on it, so a rename that misses it fails.
+
 Each command says which script it runs before running it, so the scripts stay usable on their own for an argument `lb` does not pass. `lb on PLATFORM COMMAND…` runs any of them on a builder from `builders.toml`. The Makefile has only the standard jobs, plus `make payload` (`lb payload build`) and `make ship` (`lb release check`, then `lb release publish`). The builders, which have nothing installed, run it as `python3 -m libera_build` with `build/src` and `src` on `PYTHONPATH`.
 
 Environment knobs, all with working defaults. The ones a command takes are also its options (`--build-root`, `--mirror`, `--v8-jobs`, `--core-jobs`, `--memory`, `--arch`, `--build-dir`, `--volume`, `--dist`), and its `--help` names the variable:
