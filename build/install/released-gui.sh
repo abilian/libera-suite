@@ -114,6 +114,7 @@ release)
     curl -fsSL "$ORIGIN/install.sh" | sh || die "install.sh failed"
     set -- flatpak run --user "$APP_ID"
     ask="flatpak run --user --command=sh $APP_ID -c"
+    python="flatpak run --user --command=python3 $APP_ID"
     ;;
 flatpak)
     flatpak info "$APP_ID" >/dev/null 2>&1 || die \
@@ -121,12 +122,14 @@ flatpak)
        curl -fsSL https://cdn.abilian.com/libera/install.sh | sh"
     set -- flatpak run "$APP_ID"
     ask="flatpak run --command=sh $APP_ID -c"
+    python="flatpak run --command=python3 $APP_ID"
     ;;
 pypi)
     command -v "$LAUNCH" >/dev/null 2>&1 || [ -x "$LAUNCH" ] || die \
         "no such command: $LAUNCH"
     set -- "$LAUNCH"
     ask="sh -c"
+    python=
     ;;
 esac
 LAUNCHER="$*"
@@ -233,6 +236,33 @@ say "    $OUT"
 [ "$colours" -ge "$MIN_COLOURS" ] || die \
     "only $colours colours -- the window opened empty.
        The editor did not load in it. Look at $OUT."
+
+# --- five minutes in each editor ------------------------------------------------
+#
+# five-minutes.sh, beside this script with the gui tier's driver, which `lb`
+# sends: a blank in each editor typed into, saved, and opened again, run with
+# the Flatpak's own Python, so its WebKit and its payload. Not for --pypi,
+# whose Python is whatever was on $PATH.
+
+if [ -n "$python" ]; then
+    here=$(dirname "$0")
+    [ -f "$here/five-minutes.sh" ] && [ -f "$here/released-gui-driver.py" ] \
+        || die "no five-minutes.sh and released-gui-driver.py beside $0"
+    step "five minutes in each editor, under Xvfb"
+    five="$HOME/.cache/libera-released-gui/five"
+    rm -rf "$five"
+    # shellcheck disable=SC2086  # $python is a command of several words
+    said=$(xvfb-run -a --server-args='-screen 0 1600x1000x24' \
+        env WEBKIT_DISABLE_COMPOSITING_MODE=1 LIBGL_ALWAYS_SOFTWARE=1 \
+        sh "$here/five-minutes.sh" "$here/released-gui-driver.py" "$five" $python)
+    printf '%s\n' "$said" | sed 's/^/    /'
+    for editor in DOCX XLSX PPTX; do
+        case "$said" in
+        *"FIVE_$editor=ok"*) ;;
+        *) die "five minutes in a .$(printf '%s' "$editor" | tr '[:upper:]' '[:lower:]'): $(printf '%s\n' "$said" | sed -n "s/^FIVE_$editor=//p")" ;;
+        esac
+    done
+fi
 
 step "PASS"
 say "    a released $LAUNCHER opened $(basename "$DOC") and drew it."

@@ -209,13 +209,18 @@ installed=0
     )
 
 
-def origin_install_script(app: str, zone: Path) -> str:
+def origin_install_script(app: str, zone: Path, root: Path, platform: str) -> str:
     """bash for this Mac: the staged origin `zone` served here, and the
     install page's command run against it, in a home of its own, so that
     Libera.app and pip's cache are not the user's. pip takes the three
     packages from the zone's pypi/ and the rest from PyPI, as it will; then
-    a document converted, and opened in a window, which --launcher-remove
-    takes out of LaunchServices again."""
+    a document converted, and opened in a window; then five minutes in each
+    editor (build/install/five-minutes.sh), with the installed Python, their
+    pictures left in build/out/five-minutes/; then --launcher-remove takes
+    Libera.app out of LaunchServices again."""
+    five = shlex.quote(str(root / "build" / "install" / "five-minutes.sh"))
+    driver = shlex.quote(str(root / "tests" / "d_gui" / "driver.py"))
+    pictures = shlex.quote(str(root / "build" / "out" / "five-minutes"))
     return (
         'T=$(mktemp -d); cd "$T" || exit\n'
         + staged_origin.serve(shlex.quote(str(zone)), app)
@@ -229,6 +234,13 @@ bin="$T/p/share/libera/venv/bin"
 """
         + CHECK
         + WINDOW
+        + f"""
+sh {five} {driver} "$T/five" "$bin/python"
+mkdir -p {pictures}
+for ext in docx xlsx pptx; do
+    cp "$T/five/five-$ext.png" {pictures}/{platform}-$ext.png 2>/dev/null
+done
+"""
         + '"$bin/libera" --launcher-remove > /dev/null 2>&1\n'
     )
 

@@ -32,6 +32,12 @@ if TYPE_CHECKING:
 
 SCRIPT = "~/released-gui.sh"
 SHOT = "~/released-gui.png"
+# Beside the script, for its five minutes in each editor; the driver is the
+# gui tier's, which runs a window in the installed application's Python.
+FIVE = "~/five-minutes.sh"
+FIVE_DRIVER = "~/released-gui-driver.py"
+DRIVER = ("tests", "d_gui", "driver.py")
+FIVE_WORK = "~/.cache/libera-released-gui/five"
 # scp's relative paths are the home directory on both systems, and Windows'
 # own programs are handed theirs in its own spelling.
 WINDOWS_SCRIPT = "released-gui.ps1"
@@ -73,7 +79,6 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
     if "reachable" not in uname:
         say("    unreachable")
         return False
-    install = options.root / "build" / "install"
     windows = is_windows(uname)
     if windows:
         script, shot_there = WINDOWS_SCRIPT, WINDOWS_SHOT
@@ -86,8 +91,7 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
         if not send_origin(host, name, options.origin, app):
             return False
         command = staged.serve(f'"$HOME/{staged.remote(app)}"', app) + command
-    if host.send(install / script.removeprefix("~/"), script)[0]:
-        say("    could not copy the script there")
+    if not send_scripts(host, options.root, script, windows=windows):
         return False
     out = host.capture(command)
     for line in out.splitlines():
@@ -100,7 +104,39 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
         say("    it passed and the screenshot did not come back")
         return False
     say(f"    {shot}")
+    if not windows:
+        fetch_five(host, options.root / "build" / "out" / "five-minutes", name)
     return True
+
+
+def send_scripts(host: Host, root: Path, script: str, *, windows: bool) -> bool:
+    """The script there, and off Windows what its five minutes in each editor
+    need. Not on Windows: the frozen installer has no Python to run the
+    driver with."""
+    install = root / "build" / "install"
+    sent = [(install / script.removeprefix("~/"), script)]
+    if not windows:
+        sent += [
+            (install / "five-minutes.sh", FIVE),
+            (root.joinpath(*DRIVER), FIVE_DRIVER),
+        ]
+    for local, there in sent:
+        if host.send(local, there)[0]:
+            say(f"    could not copy {local.name} there")
+            return False
+    return True
+
+
+def fetch_five(host: Host, into: Path, name: str) -> None:
+    """The pictures of the documents reopened, for a person to look at: the
+    script has checked what can be checked without eyes."""
+    into.mkdir(parents=True, exist_ok=True)
+    for ext in ("docx", "xlsx", "pptx"):
+        picture = into / f"{name}-{ext}.png"
+        if host.fetch(f"{FIVE_WORK}/five-{ext}.png", picture)[0]:
+            say(f"    no picture of the .{ext} came back")
+        else:
+            say(f"    {picture}")
 
 
 def send_origin(host: Host, platform: str, zone: Path, app: str) -> bool:

@@ -111,6 +111,8 @@ def test_a_machine_without_the_tools_says_which_and_is_no_pass(tmp_path, capsys)
     # A checkout of its own, with the real script and one builder: this one.
     root = tmp_path / "repo"
     shutil.copytree(REPO / "build" / "install", root / "build" / "install")
+    (root / "tests" / "d_gui").mkdir(parents=True)
+    shutil.copy(REPO / "tests" / "d_gui" / "driver.py", root / "tests" / "d_gui")
     (root / "build" / "builders.toml").write_text(
         '[[builders]]\nplatform = "linux-x86_64"\ntarget = "here"\n'
     )

@@ -109,7 +109,7 @@ def run(ctx: Context) -> None:
     found = []
     for b in ctx.builders:
         host = ctx.host_for(b) if b.remote else LocalHost(Path.home())
-        found += installs(host, b, dest, app, zone)
+        found += installs(host, b, ctx.root, app)
     for b in inventory.gui_remotes(ctx.builders):
         options = ReleasedGuiOptions(origin=zone, root=ctx.root)
         if not released_gui.on_host(ctx.host_for(b), b.platform, options):
@@ -187,15 +187,18 @@ def remote_stage(app: str) -> str:
     return f"libera-stage/{app}"
 
 
-def installs(host: Host, b: Builder, dest: Path, app: str, zone: Path) -> list[str]:
+def installs(host: Host, b: Builder, root: Path, app: str) -> list[str]:
     """libera and this platform's components, sent there and installed from
     there alone; a problem, or nothing. The components are the version libera
     pins, which is `app` unless an exception was made by hand. On the Mac,
-    which no builder stands for, by install.sh from the staged origin, and a
-    window opened too."""
+    which no builder stands for, by install.sh from the staged origin, then a
+    window, and five minutes in each editor."""
+    dest = folder(root)
     window = b.os == "macos"
     if window:
-        script = publishing.origin_install_script(app, zone)
+        script = publishing.origin_install_script(
+            app, origin_folder(root), root, b.platform
+        )
     else:
         stage = remote_stage(app)
         if problem := send_wheels(host, b, dest, app, stage):
@@ -209,14 +212,31 @@ def installs(host: Host, b: Builder, dest: Path, app: str, zone: Path) -> list[s
     out = host.capture(script)
     facts = facts_from(out)
     drawn = not window or int(facts.get("WINDOW", "0")) >= MIN_SHOT_BYTES
+    editors = [] if not window else five_problems(facts)
     if facts.get("INSTALLED") == app and facts.get("CONVERTED") == "1" and drawn:
+        if editors:
+            return [f"{b.platform}: {problem}" for problem in editors]
         version = facts.get("VERSION", "?")
         kb = int(facts.get("WINDOW", "0")) // 1000
-        shown = f", and a window drew it ({kb} KB)" if window else ""
+        shown = (
+            f", a window drew it ({kb} KB), and each editor typed, saved and reopened"
+            if window
+            else ""
+        )
         say(f"    {b.platform:<14} {version}, installed from the stage{shown}")
         return []
     tail = "\n".join(f"       | {line}" for line in out.splitlines()[-12:])
     return [f"{b.platform}: libera {app} did not install from the stage\n{tail}"]
+
+
+def five_problems(facts: dict[str, str]) -> list[str]:
+    """What five-minutes.sh said went wrong in each editor, or nothing: every
+    editor must say ok, and one that said nothing failed."""
+    return [
+        f"five minutes in a .{ext}: {facts.get(f'FIVE_{ext.upper()}', 'not run')}"
+        for ext in ("docx", "xlsx", "pptx")
+        if facts.get(f"FIVE_{ext.upper()}") != "ok"
+    ]
 
 
 def send_wheels(host: Host, b: Builder, dest: Path, app: str, stage: str) -> str:

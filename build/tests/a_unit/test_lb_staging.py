@@ -104,7 +104,9 @@ def test_a_staged_install_takes_libera_and_its_components_from_there_alone():
 def test_the_mac_installs_with_install_sh_from_the_staged_origin(tmp_path):
     """The install page's command, LIBERA_ORIGIN aside, in a home of its own;
     then a window, and Libera.app taken out of LaunchServices again."""
-    script = publishing.origin_install_script("9.9.9", tmp_path / "my zone")
+    script = publishing.origin_install_script(
+        "9.9.9", tmp_path / "my zone", tmp_path, "macos-arm64"
+    )
     assert f"served=$(cd '{tmp_path}/my zone' &&" in script
     assert 'curl -fsSL "$LIBERA_ORIGIN/install.sh" | sh -s --' in script
     assert 'PIP_FIND_LINKS="$LIBERA_ORIGIN/pypi/"' in script
@@ -112,7 +114,9 @@ def test_the_mac_installs_with_install_sh_from_the_staged_origin(tmp_path):
     assert "WINDOW=" in script
     assert script.rstrip().endswith("--launcher-remove > /dev/null 2>&1")
     assert "LIBERA_VERSION" not in script
-    rc = publishing.origin_install_script("9.9.9rc1", tmp_path)
+    assert "five-minutes.sh" in script
+    assert "macos-arm64-$ext.png" in script
+    rc = publishing.origin_install_script("9.9.9rc1", tmp_path, tmp_path, "m")
     assert "export LIBERA_VERSION=9.9.9rc1" in rc
 
 
@@ -252,6 +256,7 @@ class Answering:
 
 
 GOOD = "INSTALLED=9.9.9\nCONVERTED=1\nVERSION=libera 9.9.9\n"
+FIVE = "FIVE_DOCX=ok\nFIVE_XLSX=ok\nFIVE_PPTX=ok\n"
 
 
 @pytest.mark.parametrize(
@@ -262,21 +267,31 @@ GOOD = "INSTALLED=9.9.9\nCONVERTED=1\nVERSION=libera 9.9.9\n"
         ("linux-x86_64", GOOD.replace("INSTALLED=9.9.9", "INSTALLED=9.9.8"), False),
         ("linux-x86_64", "uv: no solution\nINSTALLED=none\n", False),
         # The Mac opens a window too, and an empty canvas is a few kilobytes.
-        ("macos-arm64", GOOD + "WINDOW=4000\n", False),
-        ("macos-arm64", GOOD + "WINDOW=90000\n", True),
-        ("macos-arm64", GOOD, False),
+        ("macos-arm64", GOOD + "WINDOW=4000\n" + FIVE, False),
+        ("macos-arm64", GOOD + "WINDOW=90000\n" + FIVE, True),
+        ("macos-arm64", GOOD + FIVE, False),
+        # And it spends five minutes in each editor.
+        ("macos-arm64", GOOD + "WINDOW=90000\n", False),
+        (
+            "macos-arm64",
+            GOOD + "WINDOW=90000\n" + FIVE.replace("XLSX=ok", "XLSX=the window died"),
+            False,
+        ),
     ],
 )
 def test_a_platform_passes_the_stage_only_installed_converted_and_drawn(
-    tmp_path, platform, said, passes
+    tmp_path, monkeypatch, platform, said, passes
 ):
-    with zipfile.ZipFile(tmp_path / "libera-9.9.9-py3-none-any.whl", "w") as wheel:
+    monkeypatch.setattr(staging.repo, "head", lambda _root: HEAD)
+    staging.folder(tmp_path).mkdir(parents=True)
+    wheel_path = staging.folder(tmp_path) / "libera-9.9.9-py3-none-any.whl"
+    with zipfile.ZipFile(wheel_path, "w") as wheel:
         wheel.writestr(
             "libera-9.9.9.dist-info/METADATA",
             "Requires-Dist: libera-core==9.9.9\nRequires-Dist: libera-web==9.9.9\n",
         )
     b = Builder(platform, "x", "~/r")
-    found = staging.installs(Answering(said), b, tmp_path, "9.9.9", tmp_path)
+    found = staging.installs(Answering(said), b, tmp_path, "9.9.9")
     assert (found == []) is passes, found
 
 

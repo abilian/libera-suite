@@ -310,6 +310,16 @@ def do_remove_signature(page: Page, _document, _value: str, _key: str) -> None:
     assert not page.editor("isRestrictionSignatures()"), "still read-only"
 
 
+def do_photographed(page: Page, _document, shot: str, _key: str) -> None:
+    """Until the page has posted its picture (`shot` in the plan), which it
+    does a moment after the document is ready."""
+    picture = pathlib.Path(shot)
+    deadline = time.monotonic() + SAVED
+    while not (picture.is_file() and picture.stat().st_size):
+        assert time.monotonic() < deadline, "the page posted no picture"
+        time.sleep(0.25)
+
+
 STEPS: dict[str, Callable] = {
     "protect": do_protect,
     "unprotect": do_unprotect,
@@ -317,6 +327,7 @@ STEPS: dict[str, Callable] = {
     "sign": do_sign,
     "shows-signature": do_shows_signature,
     "remove-signature": do_remove_signature,
+    "photographed": do_photographed,
 }
 
 
@@ -375,6 +386,7 @@ def run_window(plan: dict) -> None:
         locate.resolve().root,
         pathlib.Path(plan["home"]) / "sessions",
         [document],
+        shot=pathlib.Path(plan["shot"]) if plan.get("shot") else None,
     )
     # Off a Mac the last window's closing ends `run`, before `steps` has said so.
     driver.join()
