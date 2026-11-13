@@ -11,7 +11,7 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from libera_build import inventory, repo, versions
+from libera_build import artifacts, inventory, repo, versions
 from libera_build.hosts import ssh_host
 from libera_build.release import plan, precheck
 from libera_build.release.builds import mmss
@@ -24,7 +24,7 @@ from libera_build.release.phases import (
     staging,
     update,
 )
-from libera_build.report import say, step
+from libera_build.report import RefusedError, say, step
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -79,8 +79,10 @@ def run(options: RunOptions) -> int:
         return 0
     precheck.run(ctx)
     started = time.monotonic()
+    head = repo.head(options.root)
     for phase in ctx.phases:
         ACTIONS[phase](ctx)
+        moved_problem(options.root, head, phase)
     step(f"done in {mmss(time.monotonic() - started)}")
     app = versions.app_version(options.root)
     prerelease = versions.is_prerelease(app)
@@ -100,6 +102,21 @@ def run(options: RunOptions) -> int:
         say("    the last word is a window, on a machine that never built it:")
         say(f"        pipx install {pre}libera=={app} && libera")
     return 0
+
+
+def moved_problem(root: Path, head: str, phase: str) -> None:
+    """Refused, if a commit was made here while `phase` ran. The run directory
+    is named by the commit, read again by each phase: a commit made during a
+    Mac's hours-long components build once sent its final check to another
+    commit's directory, which reported every wheel missing."""
+    if (now := repo.head(root)) != head:
+        msg = (
+            f"this checkout moved from {head[:9]} to {now[:9]} during {phase}.\n"
+            f"  What the run made so far is in {artifacts.RELEASE_DIR}/{head[:9]}…, and"
+            " the next phase would\n  look for it under the new commit. Start"
+            " again at this one: lb release check"
+        )
+        raise RefusedError(msg)
 
 
 def show_plan(ctx: Context) -> None:

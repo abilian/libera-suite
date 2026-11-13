@@ -42,6 +42,8 @@ RELEASE_ROOT = "release"
 COMMAND = "components build"
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from libera_build.hosts import Host
     from libera_build.inventory import Builder
     from libera_build.release.context import Context
@@ -51,6 +53,9 @@ def run(ctx: Context) -> None:
     """Every selected builder's core wheel; the Mac's source and editors."""
     payload = versions.payload_version(ctx.root)
     out = f"{PYPI_DIR}/{payload}"
+    # Read once, at the commit the builds start from: one made during them
+    # would send what they made to another commit's directory.
+    dest = run_pypi(ctx.root)
     if ctx.remotes:
 
         def verify(b: Builder, host: Host) -> str | None:
@@ -65,15 +70,14 @@ def run(ctx: Context) -> None:
             verify,
             "building the components",
         )
-        fetch(ctx, payload, out)
+        fetch(ctx, payload, out, dest)
     if [b for b in ctx.builders if not b.remote]:
         step("the components, here")
-        dest = run_pypi(ctx.root)
         argv = ["uv", "run", "--no-sync", "lb", *COMMAND.split(), "--out", str(dest)]
         run_here(argv, "components", cwd=ctx.root, env=release_env())
-    problems(missing(ctx, payload), "the components are not all here.")
-    for name in sorted(p.name for p in run_pypi(ctx.root).glob("libera_*")):
-        size = (run_pypi(ctx.root) / name).stat().st_size // 1048576
+    problems(missing(ctx, payload, dest), "the components are not all here.")
+    for name in sorted(p.name for p in dest.glob("libera_*")):
+        size = (dest / name).stat().st_size // 1048576
         say(f"    {name}  {size} MB")
 
 
@@ -97,11 +101,10 @@ def release_env() -> dict[str, str]:
     }
 
 
-def fetch(ctx: Context, payload: str, out: str) -> None:
+def fetch(ctx: Context, payload: str, out: str, dest: Path) -> None:
     """Each remote builder's core wheel, here. Not its source or editors'
     wheel: one of each goes up, the Mac's."""
     step("collecting the components")
-    dest = run_pypi(ctx.root)
     dest.mkdir(parents=True, exist_ok=True)
     found = []
     for b in ctx.remotes:
@@ -119,9 +122,8 @@ def fetch(ctx: Context, payload: str, out: str) -> None:
     problems(found, "the components are not all here.")
 
 
-def missing(ctx: Context, payload: str) -> list[str]:
-    """What the selected builders should have left here and did not."""
-    dest = run_pypi(ctx.root)
+def missing(ctx: Context, payload: str, dest: Path) -> list[str]:
+    """What the selected builders should have left in `dest` and did not."""
     wanted = [core_wheel_name(payload, TAGS[b.platform]) for b in ctx.builders]
     if [b for b in ctx.builders if not b.remote]:
         wanted += [core_sdist_name(payload), web_wheel_name(payload)]

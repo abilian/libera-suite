@@ -26,7 +26,7 @@ from libera_build.artifacts import (
 from libera_build.containers import host_arch, linux_platform
 from libera_build.hosts import LocalHost
 from libera_build.inventory import Builder
-from libera_build.release import builds, precheck
+from libera_build.release import builds, precheck, run as release_run
 from libera_build.release.context import Context
 from libera_build.release.on import OnOptions, on
 from libera_build.release.phases import (
@@ -284,6 +284,23 @@ def test_publish_refuses_a_tree_it_cannot_vouch_for(driver, home, capsys, monkey
     with pytest.raises(RefusedError, match="nothing was started"):
         run(options)
     assert "would stamp a commit" in capsys.readouterr().out
+
+
+def test_a_commit_made_during_a_run_stops_it(driver, home, monkeypatch):
+    """The run directory is named by the commit: one made while the Mac's
+    components built sent the phase's final check to another directory."""
+    builders_toml(driver)
+
+    def commits(_ctx: Context) -> None:
+        git(driver, "commit", "-q", "--allow-empty", "-m", "during")
+
+    monkeypatch.setitem(release_run.ACTIONS, "wheel", commits)
+    monkeypatch.setattr(precheck, "run", lambda _ctx: None)
+    options = RunOptions(
+        "check", ("wheel", "stage"), root=driver, host_for=lambda _: LocalHost(home)
+    )
+    with pytest.raises(RefusedError, match=r"moved from .* during wheel"):
+        run(options)
 
 
 def test_a_dry_run_names_the_builders_and_runs_nothing(driver, home, capsys):

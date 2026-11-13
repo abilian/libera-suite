@@ -28,6 +28,8 @@ from libera_build.release.builds import check_remote_file, run_builds
 from libera_build.report import problems, say, step
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from libera_build.hosts import Host
     from libera_build.inventory import Builder
     from libera_build.release.context import Context
@@ -77,15 +79,16 @@ def bundles(ctx: Context) -> None:
         path = f"{remote_path(b.repo)}/{made[b].files[0]}"
         return check_remote_file(b, host, path, MIN_BUNDLE_BYTES)
 
+    # Read once, at the commit the builds start from, as components does.
+    dest = run_bundles(ctx.root)
     run_builds(ctx, list(made), lambda b: made[b].command, verify_bundle, "bundling")
-    fetch_bundles(ctx, made)
+    fetch_bundles(ctx, made, dest)
 
 
-def fetch_bundles(ctx: Context, made: dict[Builder, Bundle]) -> None:
+def fetch_bundles(ctx: Context, made: dict[Builder, Bundle], dest: Path) -> None:
     """Bring every bundle here, into the run's directory, where `stage`
     gathers the whole release."""
     step("collecting the bundles")
-    dest = run_bundles(ctx.root)
     dest.mkdir(parents=True, exist_ok=True)
     found = []
     for b, bundle in made.items():
