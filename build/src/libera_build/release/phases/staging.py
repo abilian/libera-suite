@@ -64,7 +64,13 @@ def folder(root: Path) -> Path:
 
 def origin_folder(root: Path) -> Path:
     """The stage as the CDN zone holds it, beside it: links, not copies."""
-    return run_dir(root) / "origin"
+    return origin_of(folder(root))
+
+
+def origin_of(staged: Path) -> Path:
+    """The zone beside a stage, found from the stage rather than the commit:
+    a phase reads the run directory once, at its start."""
+    return staged.with_name("origin")
 
 
 def bundle_files(ctx: Context) -> list[Path]:
@@ -103,13 +109,13 @@ def run(ctx: Context) -> None:
         shutil.copy2(f, dest / f.name)
         say(f"    {f.name:56} {f.stat().st_size / 1e6:6.1f} MB")
     zone = origin.lay_out(
-        [dest / f.name for f in files], origin_folder(ctx.root), app, ctx.root
+        [dest / f.name for f in files], origin_of(dest), app, ctx.root
     )
 
     found = []
     for b in ctx.builders:
         host = ctx.host_for(b) if b.remote else LocalHost(Path.home())
-        found += installs(host, b, ctx.root, app)
+        found += installs(host, b, dest, app, ctx.root)
     for b in inventory.gui_remotes(ctx.builders):
         options = ReleasedGuiOptions(origin=zone, root=ctx.root)
         if not released_gui.on_host(ctx.host_for(b), b.platform, options):
@@ -140,12 +146,13 @@ def distros(ctx: Context) -> None:
         return
     problems(stamp_problems(ctx.root), "no distribution was tried.")
     app = versions.app_version(ctx.root)
+    zone = origin_folder(ctx.root)
     step(f"the staged release in {len(matrix.DISTROS)} distributions")
     found = []
     for b in linux:
         host = ctx.host_for(b) if b.remote else LocalHost(Path.home())
         checkout = remote_path(b.repo) if b.remote else str(ctx.root)
-        found += distros_on(host, b, origin_folder(ctx.root), app, checkout)
+        found += distros_on(host, b, zone, app, checkout)
     problems(found, "the staged release did not pass every distribution.")
 
 
@@ -187,17 +194,16 @@ def remote_stage(app: str) -> str:
     return f"libera-stage/{app}"
 
 
-def installs(host: Host, b: Builder, root: Path, app: str) -> list[str]:
+def installs(host: Host, b: Builder, dest: Path, app: str, root: Path) -> list[str]:
     """libera and this platform's components, sent there and installed from
     there alone; a problem, or nothing. The components are the version libera
     pins, which is `app` unless an exception was made by hand. On the Mac,
     which no builder stands for, by install.sh from the staged origin, then a
     window, and five minutes in each editor."""
-    dest = folder(root)
     window = b.os == "macos"
     if window:
         script = publishing.origin_install_script(
-            app, origin_folder(root), root, b.platform
+            app, origin_of(dest), root, b.platform
         )
     else:
         stage = remote_stage(app)

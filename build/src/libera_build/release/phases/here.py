@@ -19,8 +19,10 @@ def wheel(ctx: Context) -> None:
     has exercised.
     """
     step("the suite, then the wheel")
-    run_here(["make", "verify"], "wheel", cwd=ctx.root)
+    # Named by the commit, so read now: a commit made during the half hour
+    # of `make verify` sent the wheel to the next commit's directory.
     dist = run_pypi(ctx.root)
+    run_here(["make", "verify"], "wheel", cwd=ctx.root)
     run_here(["uv", "build", "--out-dir", str(dist)], "wheel", cwd=ctx.root)
     app = versions.app_version(ctx.root)
     wheels = sorted(dist.glob(f"libera-{app}-*.whl"))

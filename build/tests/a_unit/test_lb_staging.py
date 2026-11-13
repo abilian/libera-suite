@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import zipfile
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from libera_build import released_gui
@@ -12,11 +12,8 @@ from libera_build.artifacts import run_pypi
 from libera_build.inventory import Builder
 from libera_build.origin import staged as origin
 from libera_build.release.context import Context
-from libera_build.release.phases import publishing, staging
+from libera_build.release.phases import here, publishing, staging
 from libera_build.report import RefusedError
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 HEAD = "c" * 40
 
@@ -291,7 +288,9 @@ def test_a_platform_passes_the_stage_only_installed_converted_and_drawn(
             "Requires-Dist: libera-core==9.9.9\nRequires-Dist: libera-web==9.9.9\n",
         )
     b = Builder(platform, "x", "~/r")
-    found = staging.installs(Answering(said), b, tmp_path, "9.9.9")
+    found = staging.installs(
+        Answering(said), b, staging.folder(tmp_path), "9.9.9", tmp_path
+    )
     assert (found == []) is passes, found
 
 
@@ -481,3 +480,29 @@ class Shipping(Answering):
     @staticmethod
     def fetch(_there, _local):
         return 1, "no screenshot here"
+
+
+def test_a_commit_made_during_make_verify_does_not_move_the_wheel(
+    tmp_path, monkeypatch
+):
+    """The wheel phase named its directory after `make verify`, half an hour
+    in, and a commit made meanwhile sent the wheel to the next commit's."""
+    heads = iter(["a" * 40, "b" * 40])
+    head = next(heads)
+    monkeypatch.setattr(staging.repo, "head", lambda _root: head)
+    (tmp_path / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
+    out = []
+
+    def run_here(argv, *_args, **_kwargs):
+        nonlocal head
+        if argv[:2] == ["make", "verify"]:
+            head = next(heads)
+        else:
+            dist = Path(argv[argv.index("--out-dir") + 1])
+            dist.mkdir(parents=True)
+            (dist / "libera-9.9.9-py3-none-any.whl").write_bytes(b"w")
+            out.append(dist)
+
+    monkeypatch.setattr(here, "run_here", run_here)
+    here.wheel(Context(root=tmp_path, builders=[], phases=["wheel"]))
+    assert out == [tmp_path / "build" / "out" / "release" / ("a" * 40) / "pypi"]
