@@ -39,11 +39,25 @@ class Shortcut:
     def as_json(self) -> dict:
         return {"key": self.key, "shift": self.shift}
 
+    @property
+    def label(self) -> str:
+        """As Windows writes it beside a menu item: Ctrl+Shift+S."""
+        return "Ctrl+" + ("Shift+" if self.shift else "") + self.key.upper()
+
 
 NEW = Shortcut("n")
 OPEN = Shortcut("o")
 CLOSE = Shortcut("w")
 QUIT = Shortcut("q")
+SAVE = Shortcut("s")
+SAVE_AS = Shortcut("s", shift=True)
+PRINT = Shortcut("p")
+UNDO = Shortcut("z")
+
+# The keys the editor keeps, which a menu may show but must not bind. Bound,
+# Ctrl-Z would be taken from the editor's text fields too, the find box and a
+# cell being edited among them, where it undoes the field and not the document.
+EDITOR_KEEPS: tuple[Shortcut, ...] = (UNDO,)
 
 # Key equivalents the page must not act on, because AppKit already does.
 #
@@ -69,11 +83,11 @@ PAGE_YIELDS: tuple[Shortcut, ...] = (NEW, CLOSE, QUIT)
 
 # On Windows, the keys the page runs itself, by the name of what it runs.
 #
-# No menu bar fires them there: the WinForms bar has no accelerators. The GTK
-# bar does, for these three (menu/gtk.py). The editor handles none of them
-# either -- measured in the Linux container, Ctrl-N reached the editor and no
-# request followed. So the page does what the editor's own File tab does for
-# each.
+# No menu bar fires them there: the WinForms bar has no accelerators, and
+# only writes the keys beside its items. The GTK bar has them (menu/gtk.py).
+# The editor handles none of them either -- measured in the Linux container,
+# Ctrl-N reached the editor and no request followed. So the page does what the
+# editor's own File tab does for each.
 #
 # Ctrl-Shift-S is not here because the editor already handles it: offline, its
 # shortcut runs asc_DownloadAs, which is the menu's Save As.

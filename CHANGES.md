@@ -10,6 +10,10 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 - **`install.sh --version VERSION`** (or `LIBERA_VERSION`) installs that release rather than the latest, a pre-release included, as `install.ps1` already did.
 
+### Changed
+
+- **The menus show their keys on Linux and Windows.** New, Open, Save, Save As, Print and Close show Ctrl-N, Ctrl-O, Ctrl-S, Ctrl-Shift-S, Ctrl-P and Ctrl-W, and on Windows Undo shows Ctrl-Z. On Linux only New, Open and Close showed theirs, and on Windows nothing did. On Linux, Ctrl-S, Ctrl-Shift-S and Ctrl-P are now the menu's, as on a Mac; Ctrl-Z stays the document's, which is why Undo shows no key there.
+
 ### Fixed
 
 - **A document converted from Markdown or HTML no longer offers styles called "text-5" and "text-3"** in the style gallery, beside Normal. The converter named a style after each CSS rule it read and listed every one there. A core patch, so the payload moves on from 0.7.1.

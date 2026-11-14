@@ -320,6 +320,113 @@ def do_photographed(page: Page, _document, shot: str, _key: str) -> None:
         time.sleep(0.25)
 
 
+def read_menu_keys(window) -> dict[str, frozenset[str]]:
+    """Each item of the window's bar that shows a key, by its title, and the
+    key as the bar writes it, in parts: Ctrl+Shift+S on Windows and
+    Shift+Ctrl+S in GTK are the same key."""
+    read = read_winforms_keys if sys.platform == "win32" else read_gtk_keys
+    return {title: frozenset(key.split("+")) for title, key in read(window).items()}
+
+
+def read_winforms_keys(window) -> dict[str, str]:
+    from System import Action
+    from System.Windows.Forms import MenuStrip, ToolStripMenuItem
+
+    found: dict[str, str] = {}
+    form = window.native
+
+    def walk(items) -> None:
+        for item in items:
+            if isinstance(item, ToolStripMenuItem):
+                if item.ShortcutKeyDisplayString:
+                    found[item.Text] = item.ShortcutKeyDisplayString
+                walk(item.DropDownItems)
+
+    def bars() -> None:
+        for control in form.Controls:
+            if isinstance(control, MenuStrip):
+                walk(control.Items)
+
+    form.Invoke(Action(bars))
+    return found
+
+
+def read_gtk_keys(window) -> dict[str, str]:
+    from gi.repository import Gtk
+
+    found: dict[str, str] = {}
+
+    def walk(widget) -> None:
+        if isinstance(widget, Gtk.MenuItem) and widget.get_submenu():
+            walk(widget.get_submenu())
+        if isinstance(widget, Gtk.AccelLabel):
+            key, mods = widget.get_accel()
+            if key:
+                found[widget.get_text()] = Gtk.accelerator_get_label(key, mods)
+        if isinstance(widget, Gtk.Container):
+            for child in widget.get_children():
+                walk(child)
+
+    on_gtk_thread(lambda: walk(window.native))
+    return found
+
+
+def on_gtk_thread(work: Callable[[], object]) -> None:
+    """`work`, on the GUI thread, waited for."""
+    from gi.repository import GLib
+
+    done = threading.Event()
+
+    def run() -> bool:
+        work()
+        done.set()
+        return False
+
+    GLib.idle_add(run)
+    assert done.wait(10), "the GUI thread did not run it"
+
+
+def press_ctrl(window, key: str) -> None:
+    """Ctrl and `key`, pressed in the window, as GTK hands a keystroke over."""
+    from gi.repository import Gdk, Gtk
+
+    form = window.native
+
+    def press() -> None:
+        keyval = Gdk.keyval_from_name(key)
+        event = Gdk.Event.new(Gdk.EventType.KEY_PRESS)
+        event.key.window = form.get_window()
+        event.key.keyval = keyval
+        event.key.state = Gdk.ModifierType.CONTROL_MASK
+        _, keys = Gdk.Keymap.get_for_display(form.get_display()).get_entries_for_keyval(
+            keyval
+        )
+        event.key.hardware_keycode = keys[0].keycode
+        event.set_device(form.get_display().get_default_seat().get_keyboard())
+        Gtk.main_do_event(event)
+
+    on_gtk_thread(press)
+
+
+def do_menu_keys(page: Page, _document, expected: str, _key: str) -> None:
+    """The bar shows the keys `expected` names, and no other."""
+    want = {
+        title: frozenset(key.split("+")) for title, key in json.loads(expected).items()
+    }
+    found = read_menu_keys(page.window)
+    assert found == want, found
+
+
+def do_ctrl_s(page: Page, document: pathlib.Path, text: str, _key: str) -> None:
+    """Ctrl-S saves, through whatever has the key."""
+    before = document.stat().st_mtime_ns
+    page.editor_does("asc_MoveCursorToEndPos?.()")
+    page.enter_text(" " + text)
+    time.sleep(1)
+    press_ctrl(page.window, "s")
+    wait_until_changed(document, before)
+
+
 STEPS: dict[str, Callable] = {
     "protect": do_protect,
     "unprotect": do_unprotect,
@@ -328,6 +435,8 @@ STEPS: dict[str, Callable] = {
     "shows-signature": do_shows_signature,
     "remove-signature": do_remove_signature,
     "photographed": do_photographed,
+    "menu-keys": do_menu_keys,
+    "ctrl-s": do_ctrl_s,
 }
 
 

@@ -11,8 +11,8 @@ list of its own `Menu` objects handed to `start()` before the application
 runs. Neither shape holds up once made to look like the other.
 
 `native` is the one this platform uses, chosen here and nowhere else. Both
-answer `make_menubar()`, what to hand `webview.start`, and `install()`, what to do
-once the application runs.
+answer `make_menubar()`, what to hand `webview.start`, `install()`, what to do
+once the application runs, and `show_keys()`, what to do to each window's bar.
 
 The key equivalents and PAGE_YIELDS are in `host/shortcuts.py`: two modules
 on either side of this one need them, and `server` reaching up here for

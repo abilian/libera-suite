@@ -165,6 +165,11 @@ def _item(title, selector, key="", mask=COMMAND, *, target=TARGET):
     return item
 
 
+def show_keys(window: object, editor: apps.App | None) -> None:
+    """Nothing to write: AppKit's items show their own keys."""
+    del window, editor
+
+
 def install() -> None:
     """Add Libera Suite's menus to the one pywebview has already built.
 

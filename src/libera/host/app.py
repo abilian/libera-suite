@@ -106,6 +106,7 @@ def _show_session(
         server.make_editor_url(port, session, document.name),
     )
     session.window = window.uid
+    menu.native.show_keys(window, session.editor)
     window.events.closing += lambda: confirm_close(session.id)
     # A closed window's session is over, and so is its lock. Its directory
     # stays: it may hold edits that never reached the file, which are offered
@@ -123,6 +124,7 @@ def _open_start_window(port: int, title: str | None = None):
         tabs=False,
     )
     remember_start_window(window)
+    menu.native.show_keys(window, None)
     window.events.closed += lambda: forget_start_window(window)
     return window
 

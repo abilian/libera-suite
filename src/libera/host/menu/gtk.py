@@ -12,18 +12,22 @@ relying on it: `lb linux screenshot` screenshots File, Edit, View and Help acros
 the top of the window. So the whole bar is one list, handed to
 `webview.start(menu=...)` before the application starts.
 
-**Three key equivalents: Ctrl-N, Ctrl-O and Ctrl-W**, the keys the editor has
-no use for, as on the Mac. `webview.MenuAction` has no shortcut, but pywebview
+**Six key equivalents: Ctrl-N, Ctrl-O, Ctrl-W, Ctrl-S, Ctrl-Shift-S and
+Ctrl-P**, as on the Mac. `webview.MenuAction` has no shortcut, but pywebview
 names each item's `Gio.SimpleAction` after its menu path on its own
-`Gtk.Application`, so `install` gives those three actions accelerators, and
-GTK prints each beside its item. The key is then the menu's: a window runs its
+`Gtk.Application`, so `install` gives those actions accelerators, and GTK
+prints each beside its item. The key is then the menu's: a window runs its
 accelerators before WebKit sees the event (measured in the Linux container:
 Ctrl-N made one window, through the menu, and the page never saw it), so the
-page runs them on Windows only (`shortcuts.PAGE_RUNS`). Ctrl-N follows the
-front window, onto the New item of its kind, as AppKit's does. The editor's own
-keys, Ctrl-S, Ctrl-Z, Ctrl-F and the rest, get none: bound, they would be
-taken from its text fields too, the find box and a cell being edited among
-them, where Ctrl-Z undoes the field and not the document.
+page runs N, O and W on Windows only (`shortcuts.PAGE_RUNS`). Ctrl-N follows
+the front window, onto the New item of its kind, as AppKit's does. Ctrl-Z
+gets none, and shows none (`shortcuts.EDITOR_KEEPS`): GTK has no way to
+write a key beside an item without binding it, which the `accel` attribute
+of a `Gio.MenuItem` does too (measured, GTK 3.24).
+
+**On Windows the keys are written, not bound** (`show_keys`): WinForms
+draws a `ToolStripMenuItem`'s ShortcutKeyDisplayString and binds nothing, so
+Ctrl-Z is there too, and the page and the editor keep every key.
 
 **Built once, before the application runs**, because that is the only moment
 pywebview reads it. Open Recent therefore lists what was remembered at
@@ -49,14 +53,19 @@ absent one.
 
 from __future__ import annotations
 
+import sys
 from functools import partial
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import webview
 from webview.menu import Menu, MenuAction, MenuSeparator
 
 from libera.host import apps, language, shortcuts
 from libera.host.menu import actions
+
+if TYPE_CHECKING:
+    from webview import Window
 
 
 def make_menubar() -> list:
@@ -160,23 +169,80 @@ def accelerator(key: shortcuts.Shortcut) -> str:
     return ("<Control><Shift>" if key.shift else "<Control>") + key.key
 
 
-def list_owned_keys(front: apps.App) -> dict[str, list[str]]:
-    """Each File item's action, and the accelerators it gets with `front` the
-    kind of the window in front: Ctrl-N goes to that kind's New item alone."""
+def list_keys(front: apps.App) -> dict[tuple[str, ...], shortcuts.Shortcut | None]:
+    """Each item with a key, by its path in the bar, with `front` the kind of
+    the window in front: Ctrl-N goes to that kind's New item alone, and the
+    other kinds have None."""
     file_menu, new = language.translate("File"), language.translate("New")
-    owned = {
-        action_name(file_menu, new, language.translate(app.noun)): (
-            [accelerator(shortcuts.NEW)] if app is front else []
+    keys: dict[tuple[str, ...], shortcuts.Shortcut | None] = {
+        (file_menu, new, language.translate(app.noun)): (
+            shortcuts.NEW if app is front else None
         )
         for app in actions.list_creatable()
     }
-    owned[action_name(file_menu, language.translate("Open…"))] = [
-        accelerator(shortcuts.OPEN)
-    ]
-    owned[action_name(file_menu, language.translate("Close"))] = [
-        accelerator(shortcuts.CLOSE)
-    ]
-    return owned
+    for title, key in (
+        ("Open…", shortcuts.OPEN),
+        ("Save", shortcuts.SAVE),
+        ("Save As…", shortcuts.SAVE_AS),
+        ("Print…", shortcuts.PRINT),
+        ("Close", shortcuts.CLOSE),
+    ):
+        keys[file_menu, language.translate(title)] = key
+    keys[language.translate("Edit"), language.translate("Undo")] = shortcuts.UNDO
+    return keys
+
+
+def list_owned_keys(front: apps.App) -> dict[str, list[str]]:
+    """The accelerators GTK gets, by action: every key of `list_keys` but the
+    ones the editor keeps, and none for the New items that lost Ctrl-N."""
+    return {
+        action_name(*path): [accelerator(key)] if key else []
+        for path, key in list_keys(front).items()
+        if key not in shortcuts.EDITOR_KEEPS
+    }
+
+
+def show_keys(window: Window, editor: apps.App | None) -> None:
+    """On Windows, each key of `list_keys` written beside its item, in the
+    window's own bar, Ctrl-N on New's item of the kind it makes from `editor`
+    (None for the start window).
+
+    Written and not bound: ShortcutKeyDisplayString is text, and the keys stay
+    the page's and the editor's (`shortcuts.PAGE_RUNS`). Written once the page
+    has loaded, when the form and its bar exist for the first window as for
+    the others, and on the form's own thread.
+    """
+    if sys.platform != "win32":
+        return
+    labels = {
+        path: key.label
+        for path, key in list_keys(actions.choose_kind_for(editor)).items()
+        if key
+    }
+
+    window.events.loaded += lambda: _write_labels(window.native, labels)
+
+
+def _write_labels(form: Any, labels: dict[tuple[str, ...], str]) -> None:
+    """Each label beside the item at its path, in the form's bars."""
+    # Here, because pywebview has loaded the assembly by now.
+    from System import Action
+    from System.Windows.Forms import MenuStrip, ToolStripMenuItem
+
+    def label(items: Any, path: tuple[str, ...]) -> None:
+        for item in items:
+            if isinstance(item, ToolStripMenuItem):
+                here = (*path, item.Text)
+                if here in labels:
+                    item.ShortcutKeyDisplayString = labels[here]
+                label(item.DropDownItems, here)
+
+    def label_bars() -> None:
+        for control in form.Controls:
+            if isinstance(control, MenuStrip):
+                label(control.Items, ())
+
+    form.Invoke(Action(label_bars))
 
 
 def install() -> None:

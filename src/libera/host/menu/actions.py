@@ -135,7 +135,12 @@ def choose_new_kind() -> apps.App:
     created, which is Diagrams.
     """
     front = window.find_front_session()
-    editor = front.editor if front is not None else apps.WORDS
+    return choose_kind_for(front.editor if front is not None else None)
+
+
+def choose_kind_for(editor: apps.App | None) -> apps.App:
+    """The kind ⌘N makes from a window of `editor`'s, or from the start
+    window, which has none."""
     return editor if editor in list_creatable() else apps.WORDS
 
 

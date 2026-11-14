@@ -276,6 +276,9 @@ lint.extend-ignore = [
 "src/libera/host/window/win32.py" = [
     "PLC0415", # System.Windows.Forms, where a window is placed
 ]
+"src/libera/host/menu/gtk.py" = [
+    "PLC0415", # System.Windows.Forms, where a window's bar is labelled
+]
 # The menu package picks its platform's bar in __init__, once, so nothing that
 # uses the package tests the platform again.
 "src/libera/host/menu/__init__.py" = [

@@ -94,8 +94,46 @@ def test_ctrl_n_is_on_the_new_item_of_the_front_kind_alone():
         "_File_New_Spreadsheet": ["<Control>n"],
         "_File_New_Presentation": [],
         "_File_Open…": ["<Control>o"],
+        "_File_Save": ["<Control>s"],
+        "_File_Save_As…": ["<Control><Shift>s"],
+        "_File_Print…": ["<Control>p"],
         "_File_Close": ["<Control>w"],
     }
+
+
+def test_windows_writes_every_key_ctrl_z_included():
+    """GTK cannot show Ctrl-Z without taking it from the editor; WinForms
+    only writes it."""
+    labels = {path: key.label for path, key in gtk.list_keys(apps.WORDS).items() if key}
+    assert labels == {
+        ("File", "New", "Document"): "Ctrl+N",
+        ("File", "Open…"): "Ctrl+O",
+        ("File", "Save"): "Ctrl+S",
+        ("File", "Save As…"): "Ctrl+Shift+S",
+        ("File", "Print…"): "Ctrl+P",
+        ("File", "Close"): "Ctrl+W",
+        ("Edit", "Undo"): "Ctrl+Z",
+    }
+
+
+def test_every_key_is_on_an_item_the_bar_has():
+    """`list_keys` names items by their titles; a renamed item would keep its
+    key nowhere, silently."""
+
+    def paths(node, path=()):
+        if isinstance(node, Menu):
+            here = (*path, node.title)
+            return [p for item in node.items for p in paths(item, here)]
+        return [(*path, node.title)] if isinstance(node, MenuAction) else []
+
+    bar = [p for menu in gtk.make_menubar() for p in paths(menu)]
+    assert set(gtk.list_keys(apps.WORDS)) <= set(bar)
+
+
+def test_the_start_window_makes_a_document():
+    assert actions.choose_kind_for(None) is apps.WORDS
+    assert actions.choose_kind_for(apps.DIAGRAMS) is apps.WORDS
+    assert actions.choose_kind_for(apps.SLIDES) is apps.SLIDES
 
 
 class FakeApplication:
