@@ -911,6 +911,37 @@ def test_a_font_is_found_whatever_the_case_of_its_name(tmp_path):
     assert widths[0] < widths[1] < widths[2]
 
 
+def test_an_empty_paragraph_of_size_0_still_has_a_height(tmp_path):
+    """Word lays out a font size below half a point as half a point, and the
+    editor took w:sz="0" at its word: an empty paragraph whose mark has it had
+    no height, so a CV built on 43 of them, each the anchor of a block, had
+    everything drift up the page (ElixirOffice's #73, their fix, sdkjs 0009).
+    Twenty such paragraphs push the next line down; without them it starts at
+    the top."""
+    # No spacing before or after, as in the CV: the blank's Normal has some,
+    # which would move the next line whatever the font size.
+    empty = (
+        '<w:p><w:pPr><w:spacing w:before="0" w:after="0"/>'
+        '<w:rPr><w:sz w:val="0"/></w:rPr></w:pPr></w:p>'
+    )
+    after = "<w:p><w:r><w:t>After</w:t></w:r></w:p>"
+    blank = payload_mod.resolve().root / "empty" / apps.WORDS.blank
+    tops = []
+    for name, body in (("none", after), ("twenty", empty * 20 + after)):
+        document = tmp_path / f"{name}.docx"
+        write_docx_body(blank, document, body)
+        words = open_in(apps.WORDS, document, tmp_path / name)
+        pdf = tmp_path / f"{name}.pdf"
+        export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+        tops.append(
+            float(
+                re.findall(r'<word xMin="[\d.]+" yMin="([\d.]+)"', word_boxes(pdf))[0]
+            )
+        )
+
+    assert tops[1] - tops[0] > 5
+
+
 DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
 

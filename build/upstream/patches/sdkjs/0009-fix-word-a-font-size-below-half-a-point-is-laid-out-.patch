@@ -1,0 +1,38 @@
+From 6ba711388eb7cd9b2c705117c0330a47c5662e63 Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Sat, 14 Nov 2026 18:08:22 +0100
+Subject: [PATCH] fix(word): a font size below half a point is laid out as half
+ a point
+
+Word lays out a font size below 0.5 pt as 0.5 pt, for the line's
+metrics only, and the editor took w:sz="0" at its word: an empty
+paragraph whose mark has it had no height. A CV built on 43 such
+paragraphs, each the anchor of a block, had everything drift up the
+page. GetFontInfo now gives 0.5 pt for anything smaller; the stored
+size is left alone, so the document saves w:sz="0" as before.
+
+From ElixirOffice's sdkjs, commit de6ba67 (their 0.7.2), the part of it
+that answers their issue #73.
+---
+ word/Editor/Styles.js | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/word/Editor/Styles.js b/word/Editor/Styles.js
+index cec58671d1..7e31613458 100644
+--- a/word/Editor/Styles.js
++++ b/word/Editor/Styles.js
+@@ -15292,6 +15292,11 @@ CTextPr.prototype.GetFontInfo = function(nFontSlot)
+ 		}
+ 	}
+ 
++	// Word clamps a font size below 0.5 pt to 0.5 pt for layout/drawing metrics only
++	// (the stored FontSize value is left untouched, so w:sz="0" still saves as 0).
++	if (nFontSize < 0.5)
++		nFontSize = 0.5;
++
+ 	return new AscFonts.CTextFontInfo(sFontName, (isBold ? 1  : 0) | (isItalic ? 2 : 0), nFontSize);
+ };
+ 
+-- 
+2.55.0
+
