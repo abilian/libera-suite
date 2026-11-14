@@ -1,0 +1,121 @@
+From 0874f2ce85e8b45263d97566ee4f29272badb8c9 Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Sat, 14 Nov 2026 18:17:54 +0100
+Subject: [PATCH] OdfFile writer: an .ods keeps its page margins through a save
+
+In .xlsx the top and bottom margins run from the page's edge to the
+body, and the header and footer distances to the header and footer; in
+.ods the margins run to the header and footer, whose height is added to
+reach the body. The writer put the .xlsx margin in the .ods margin and
+the .xlsx distance in the height, so a round trip added the height
+again on every save: 2 cm became 2.75, then 4.75, then 7.5. With a
+header or footer, the margin is now its distance and its height the
+difference.
+
+From ElixirOffice's core, commit 595d67c (their 0.7.0), the part of it
+in XlsxConverter.
+---
+ OdfFile/Writer/Converter/XlsxConverter.cpp | 55 ++++++++++++++++------
+ OdfFile/Writer/Converter/XlsxConverter.h   |  2 +-
+ 2 files changed, 42 insertions(+), 15 deletions(-)
+
+diff --git a/OdfFile/Writer/Converter/XlsxConverter.cpp b/OdfFile/Writer/Converter/XlsxConverter.cpp
+index 9b60dcc673..a262cb7cc5 100644
+--- a/OdfFile/Writer/Converter/XlsxConverter.cpp
++++ b/OdfFile/Writer/Converter/XlsxConverter.cpp
+@@ -532,7 +532,13 @@ void XlsxConverter::convert(OOX::Spreadsheet::CWorksheet *oox_sheet)
+ /////////////////////////////////////////////////////////////////////////
+ 	convert(oox_sheet->m_oSheetViews.GetPointer());
+ 	convert(oox_sheet->m_oPageSetup.GetPointer());
+-	convert(oox_sheet->m_oPageMargins.GetPointer());
++	{
++		OOX::Spreadsheet::CHeaderFooter *hf = oox_sheet->m_oHeaderFooter.GetPointer();
++		bool has_even_first = hf && ((hf->m_oDifferentOddEven.IsInit() && hf->m_oDifferentOddEven->ToBool()) || (hf->m_oDifferentFirst.IsInit() && hf->m_oDifferentFirst->ToBool()));
++		bool has_header = hf && (has_even_first || hf->m_oOddHeader.IsInit() || hf->m_oEvenHeader.IsInit() || hf->m_oFirstHeader.IsInit());
++		bool has_footer = hf && (has_even_first || hf->m_oOddFooter.IsInit() || hf->m_oEvenFooter.IsInit() || hf->m_oFirstFooter.IsInit());
++		convert(oox_sheet->m_oPageMargins.GetPointer(), has_header, has_footer);
++	}
+ 	convert(oox_sheet->m_oPrintOptions.GetPointer());
+ 	convert(oox_sheet->m_oPicture.GetPointer());
+ 	convert(oox_sheet->m_oSheetProtection.GetPointer());
+@@ -2150,30 +2156,51 @@ void XlsxConverter::convert(OOX::Spreadsheet::CPageSetup *oox_page)
+ 	}
+ }
+ 
+-void XlsxConverter::convert(OOX::Spreadsheet::CPageMargins *oox_page)
++void XlsxConverter::convert(OOX::Spreadsheet::CPageMargins *oox_page, bool has_header, bool has_footer)
+ {
+ 	if (!oox_page) return;
+-	_CP_OPT(odf_types::length) top, left, right, bottom, other;
++	_CP_OPT(odf_types::length) top, left, right, bottom, header, footer;
+ 
+ 	if (oox_page->m_oTop.IsInit())		top		= odf_types::length(oox_page->m_oTop->GetValue(), odf_types::length::pt);
+ 	if (oox_page->m_oLeft.IsInit())		left	= odf_types::length(oox_page->m_oLeft->GetValue(), odf_types::length::pt);
+ 	if (oox_page->m_oRight.IsInit())	right	= odf_types::length(oox_page->m_oRight->GetValue(), odf_types::length::pt);
+ 	if (oox_page->m_oBottom.IsInit())	bottom	= odf_types::length(oox_page->m_oBottom->GetValue(), odf_types::length::pt);
++	if (oox_page->m_oHeader.IsInit())	header	= odf_types::length(oox_page->m_oHeader->GetValue(), odf_types::length::pt);
++	if (oox_page->m_oFooter.IsInit())	footer	= odf_types::length(oox_page->m_oFooter->GetValue(), odf_types::length::pt);
++
++	// In xlsx "top"/"bottom" are measured from the page edge to the body, "header"/"footer" from the page edge
++	// to the header/footer. In ods "margin-top"/"margin-bottom" are measured from the page edge to the header/footer
++	// and the header/footer height is added to reach the body (see the ods -> xlsx conversion in styles.cpp, where
++	// top = margin-top + header height, header = margin-top). When a header/footer is written, the margin must be
++	// the xlsx header/footer distance and the header/footer height the difference; writing "top"/"bottom" as the
++	// margin added the height again on every round trip (margin-bottom grew like a Fibonacci sequence).
++	_CP_OPT(odf_types::length) header_height, footer_height;
++	if (has_header && header && top)
++	{
++		double h = top->get_value_unit(odf_types::length::pt) - header->get_value_unit(odf_types::length::pt);
++		if (h > 0)
++		{
++			header_height = odf_types::length(h, odf_types::length::pt);
++			top = header;
++		}
++	}
++	if (has_footer && footer && bottom)
++	{
++		double h = bottom->get_value_unit(odf_types::length::pt) - footer->get_value_unit(odf_types::length::pt);
++		if (h > 0)
++		{
++			footer_height = odf_types::length(h, odf_types::length::pt);
++			bottom = footer;
++		}
++	}
+ 
+ 	ods_context->page_layout_context()->set_page_margin(top, left, bottom, right);
+ 	
+-	if (oox_page->m_oFooter.IsInit())
+-	{
+-		other = odf_types::length(oox_page->m_oFooter->GetValue(), odf_types::length::pt);
+-		ods_context->page_layout_context()->set_footer_size(other, other);
+-	}
++	if (footer_height)
++		ods_context->page_layout_context()->set_footer_size(footer_height, footer_height);
+ 	
+-	if (oox_page->m_oHeader.IsInit())
+-	{
+-		other = odf_types::length(oox_page->m_oHeader->GetValue(), odf_types::length::pt);
+-		ods_context->page_layout_context()->set_header_size(other, other);
+-	}
+-
++	if (header_height)
++		ods_context->page_layout_context()->set_header_size(header_height, header_height);
+ }
+ void XlsxConverter::convert(OOX::Spreadsheet::CSheetFormatPr *oox_sheet_format_pr)
+ {
+diff --git a/OdfFile/Writer/Converter/XlsxConverter.h b/OdfFile/Writer/Converter/XlsxConverter.h
+index 21af808b38..87f0e337bb 100644
+--- a/OdfFile/Writer/Converter/XlsxConverter.h
++++ b/OdfFile/Writer/Converter/XlsxConverter.h
+@@ -195,7 +195,7 @@ namespace Oox2Odf
+ 		void convert(OOX::Spreadsheet::CSheetPr				*oox_sheet_pr);
+ 		void convert(OOX::Spreadsheet::CSheetViews			*oox_sheet_views);
+ 		void convert(OOX::Spreadsheet::CPageSetup			*oox_page);
+-		void convert(OOX::Spreadsheet::CPageMargins			*oox_page);
++		void convert(OOX::Spreadsheet::CPageMargins		*oox_page, bool has_header = false, bool has_footer = false);
+ 		void convert(OOX::Spreadsheet::CPrintOptions		*oox_print_options);
+ 		void convert(OOX::Spreadsheet::CWorkbookView		*oox_book_views);
+ 		void convert(OOX::Spreadsheet::CExternalLink		*oox_external_link);
+-- 
+2.55.0
+

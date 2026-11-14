@@ -17,6 +17,7 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 ### Fixed
 
 - **A CSV value written in hexadecimal stays as it was.** Opening a CSV read `0x1234` as the number 4660 and an Ethereum address as 9.2233720368547758e+18, so saving the file lost them. A value starting with `0x` is now text, as in Excel and LibreOffice. A core patch, after ElixirOffice's fix for the same bug.
+- **An `.ods` keeps its page margins through a save.** On a page with a header or footer, each save added their height to the margins again: 2 cm became 2.75, then 4.75, then 7.5. A core patch from ElixirOffice.
 - **The underline of a superscript is drawn under the raised text**, as in Word, not on the line's baseline under nothing. An editor patch from ElixirOffice.
 - **An empty paragraph set in a font size of 0 keeps a height.** Word lays such a paragraph out at half a point; it had none, so in a document built on empty paragraphs, a CV for one, every block anchored to them drifted up the page. An editor patch from ElixirOffice.
 - **Character borders ("text in a box") are kept and drawn.** The box Word draws around a run with a border was not drawn, and saving the document, as `.docx` or `.odt`, dropped it. A core and an editor patch from ElixirOffice.

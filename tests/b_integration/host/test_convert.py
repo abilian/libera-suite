@@ -993,6 +993,80 @@ def test_a_superscript_s_underline_is_under_the_raised_text(tmp_path):
     assert underline < 2 * boxes["sup"][3]
 
 
+ODF = (
+    'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"'
+    ' xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0"'
+    ' xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0"'
+    ' xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"'
+    ' xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"'
+)
+
+
+def write_ods_with_a_footer(path: pathlib.Path) -> None:
+    """One sheet on a page with 2 cm margins and a header and footer 0.75 cm
+    high, as LibreOffice writes one."""
+    hf = '<style:header-footer-properties fo:min-height="0.75cm"/>'
+    styles = (
+        f'<?xml version="1.0" encoding="UTF-8"?><office:document-styles {ODF}'
+        ' office:version="1.3"><office:automatic-styles>'
+        '<style:page-layout style:name="pm1"><style:page-layout-properties'
+        ' fo:page-width="21cm" fo:page-height="29.7cm" fo:margin-top="2cm"'
+        ' fo:margin-bottom="2cm" fo:margin-left="2cm" fo:margin-right="2cm"/>'
+        f"<style:header-style>{hf}</style:header-style>"
+        f"<style:footer-style>{hf}</style:footer-style></style:page-layout>"
+        "</office:automatic-styles><office:master-styles>"
+        '<style:master-page style:name="Default" style:page-layout-name="pm1">'
+        "<style:header><text:p>Head</text:p></style:header><style:footer>"
+        "<text:p>Foot</text:p></style:footer></style:master-page>"
+        "</office:master-styles></office:document-styles>"
+    )
+    content = (
+        f'<?xml version="1.0" encoding="UTF-8"?><office:document-content {ODF}'
+        ' office:version="1.3"><office:automatic-styles><style:style'
+        ' style:name="ta1" style:family="table" style:master-page-name="Default"/>'
+        "</office:automatic-styles><office:body><office:spreadsheet>"
+        '<table:table table:name="Sheet1" table:style-name="ta1"><table:table-row>'
+        '<table:table-cell office:value-type="string"><text:p>A</text:p>'
+        "</table:table-cell></table:table-row></table:table></office:spreadsheet>"
+        "</office:body></office:document-content>"
+    )
+    entry = '<manifest:file-entry manifest:full-path="{}" manifest:media-type="{}"/>'
+    manifest = (
+        '<?xml version="1.0" encoding="UTF-8"?><manifest:manifest xmlns:manifest='
+        '"urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.3">'
+        + entry.format("/", "application/vnd.oasis.opendocument.spreadsheet")
+        + entry.format("content.xml", "text/xml")
+        + entry.format("styles.xml", "text/xml")
+        + "</manifest:manifest>"
+    )
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("mimetype", "application/vnd.oasis.opendocument.spreadsheet")
+        z.writestr("META-INF/manifest.xml", manifest)
+        z.writestr("content.xml", content)
+        z.writestr("styles.xml", styles)
+
+
+def test_an_ods_keeps_its_margins_through_saves(tmp_path):
+    """x2t wrote an .ods's page margins measured to the body, where ODF
+    measures them to the header and footer and adds their height: each save
+    added the height again, 2 cm becoming 2.75, then 4.75, then 7.5 (core 0202,
+    ElixirOffice's fix)."""
+    document = tmp_path / "sheet.ods"
+    write_ods_with_a_footer(document)
+
+    for n in range(2):
+        tables = open_in(apps.TABLES, document, tmp_path / f"session{n}")
+        export(tables, document, apps.TABLES.ids_by_ext["ods"], document)
+
+    layout = re.search(
+        r"<style:page-layout-properties[^>]*>",
+        zipfile.ZipFile(document).read("styles.xml").decode("utf-8"),
+    )
+    assert layout is not None
+    assert 'fo:margin-top="2cm"' in layout[0]
+    assert 'fo:margin-bottom="2cm"' in layout[0]
+
+
 DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
 
