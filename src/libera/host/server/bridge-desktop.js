@@ -1029,7 +1029,8 @@
     // The native host copies the picked file into the document's media folder
     // and hands back the name it stored it under; the caller then resolves that
     // through g_oDocumentUrls. Returning the input path unchanged would produce
-    // a URL nothing can serve.
+    // a URL nothing can serve. A picture pasted from the clipboard comes as a
+    // data: URL, which the host writes there too; a web address gets no name.
     LocalFileGetImageUrl: (path) =>
       answer(
         postToHostSync(

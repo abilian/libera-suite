@@ -208,19 +208,73 @@ def import_media(r: Request) -> Response:
     copied in, so a path of the page's choosing would let any script in our
     origin read any file the user can. The bridge reads a 403 as it reads
     a file that is not there: no name.
+
+    Or a picture the page already holds, as a data: URL: a picture pasted
+    from the clipboard reaches the host that way, and was lost. It reads
+    nothing on this machine; it is written only if it is a picture.
     """
-    src = pathlib.Path(r.read_field("path", str))
+    path = r.read_field("path", str)
+    if path.startswith("data:"):
+        return _import_data_url(r, path)
+    src = pathlib.Path(path)
     if src not in r.session.offered:
         logger.warning("media import refused, never offered: %s", src)
         raise Refused(403)
     if not src.is_file():
         return answer_json({"name": ""})
-    r.session.media.mkdir(parents=True, exist_ok=True)
-    name = src.name
-    n = 1
-    while (r.session.media / name).exists():
-        name = f"{src.stem}-{n}{src.suffix}"
-        n += 1
+    name = _free_media_name(r.session.media, src.stem, src.suffix)
     shutil.copyfile(src, r.session.media / name)
     logger.info("media import: %s -> media/%s", src, name)
     return answer_json({"name": name})
+
+
+# The pictures a pasted data: URL may hold, by their first bytes. Raster only:
+# an SVG served back from our origin could carry a script.
+PICTURE_SIGNATURES = {
+    b"\x89PNG\r\n\x1a\n": ".png",
+    b"\xff\xd8\xff": ".jpg",
+    b"GIF87a": ".gif",
+    b"GIF89a": ".gif",
+    b"BM": ".bmp",
+}
+# A screenshot of a 5K display as PNG is about 30 MB.
+MAX_PASTED_PICTURE = 64 * 1024 * 1024
+
+
+def _import_data_url(r: Request, url: str) -> Response:
+    """A data:image/...;base64 URL, written to the media folder if it holds a
+    picture. Anything else gets no name, as a file that is not there does."""
+    header, _, data = url.partition(",")
+    if not (header.startswith("data:image/") and header.endswith(";base64")):
+        return answer_json({"name": ""})
+    if len(data) > MAX_PASTED_PICTURE // 3 * 4 + 4:
+        logger.warning(
+            "media import refused, a picture over %d bytes", MAX_PASTED_PICTURE
+        )
+        return answer_json({"name": ""})
+    try:
+        picture = base64.b64decode(data, validate=True)
+    except ValueError:
+        return answer_json({"name": ""})
+    suffix = next(
+        (ext for magic, ext in PICTURE_SIGNATURES.items() if picture.startswith(magic)),
+        ".webp" if picture[:4] == b"RIFF" and picture[8:12] == b"WEBP" else None,
+    )
+    if suffix is None:
+        logger.warning("media import refused, not a picture: %s", header)
+        return answer_json({"name": ""})
+    name = _free_media_name(r.session.media, "pasted", suffix)
+    (r.session.media / name).write_bytes(picture)
+    logger.info("media import: a pasted %s picture -> media/%s", suffix, name)
+    return answer_json({"name": name})
+
+
+def _free_media_name(media: pathlib.Path, stem: str, suffix: str) -> str:
+    """`stem` + `suffix` in the media folder, numbered if that is taken."""
+    media.mkdir(parents=True, exist_ok=True)
+    name = f"{stem}{suffix}"
+    n = 1
+    while (media / name).exists():
+        name = f"{stem}-{n}{suffix}"
+        n += 1
+    return name

@@ -16,6 +16,7 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 ### Fixed
 
+- **A picture pasted from the clipboard is inserted**, a screenshot for one. The editor hands it to the application as a `data:` URL, which was refused like a file never chosen, and the picture was lost. Pictures pasted by their web address are still left out: fetching them would be a connection of its own.
 - **A CSV value written in hexadecimal stays as it was.** Opening a CSV read `0x1234` as the number 4660 and an Ethereum address as 9.2233720368547758e+18, so saving the file lost them. A value starting with `0x` is now text, as in Excel and LibreOffice. A core patch, after ElixirOffice's fix for the same bug.
 - **A list whose bullet is a picture keeps it.** It was drawn as a text bullet, and saving the document replaced it with one. A core and an editor patch from ElixirOffice.
 - **An `.ods` keeps its page margins through a save.** On a page with a header or footer, each save added their height to the margins again: 2 cm became 2.75, then 4.75, then 7.5. A core patch from ElixirOffice.

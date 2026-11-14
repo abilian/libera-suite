@@ -7,6 +7,7 @@ string, and the shapes the bridge parses on the other side.
 
 from __future__ import annotations
 
+import base64
 import json
 import shutil
 import sys
@@ -17,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from support import ScriptedShell
+from support.make_sample_docx import solid_png
 
 from libera.host import apps, convert, hooks, opening, recents, session as sessions
 from libera.host.server import BRIDGE_PARTS
@@ -218,6 +220,52 @@ def test_media_import_copies_only_what_the_dialog_handed_the_page(
     status, _ = live.post("media-import", json.dumps({"path": str(secret)}).encode())
     assert status == 403
     assert not (live.host.media / secret.name).exists()
+
+
+def data_url(kind: str, data: bytes) -> bytes:
+    url = f"data:{kind};base64," + base64.b64encode(data).decode()
+    return json.dumps({"path": url}).encode()
+
+
+def test_media_import_takes_a_picture_pasted_as_a_data_url(live: LiveHost):
+    """A picture pasted from the clipboard reaches the host as a data: URL,
+    which was refused like a path never offered, and the picture was lost."""
+    picture = solid_png(4, 4, (220, 0, 0))
+
+    _, first = live.post("media-import", data_url("image/png", picture))
+    _, second = live.post("media-import", data_url("image/png", picture))
+
+    names = [json.loads(first)["name"], json.loads(second)["name"]]
+    assert names == ["pasted.png", "pasted-1.png"]
+    assert live.get("media/pasted.png") == picture
+
+
+@pytest.mark.parametrize(
+    ("kind", "data"),
+    [
+        ("image/svg+xml", b'<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>'),
+        ("image/png", b"not a picture at all"),
+        ("text/html", solid_png(4, 4, (220, 0, 0))),
+    ],
+    ids=["svg", "not a picture", "not an image type"],
+)
+def test_media_import_writes_only_a_picture_from_a_data_url(
+    live: LiveHost, kind: str, data: bytes
+):
+    """Raster pictures only, known by their first bytes: an SVG served back
+    from our origin could run a script."""
+    _, answered = live.post("media-import", data_url(kind, data))
+
+    assert not json.loads(answered)["name"]
+    assert not live.host.media.exists() or not any(live.host.media.iterdir())
+
+
+def test_media_import_refuses_a_data_url_that_is_not_base64(live: LiveHost):
+    body = json.dumps({"path": "data:image/png;base64,***"}).encode()
+
+    _, answered = live.post("media-import", body)
+
+    assert not json.loads(answered)["name"]
 
 
 def test_media_with_a_space_in_its_name_is_served(live: LiveHost):
