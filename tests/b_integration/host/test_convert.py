@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from support import ScriptedShell, repo_root
-from support.pictures import thin_pen_wmf, wmf_docx
+from support.pictures import thin_pen_wmf, wmf_docx, write_pic_bullet_docx
 from support.protected import make_protected
 
 from libera import payload as payload_mod
@@ -1065,6 +1065,61 @@ def test_an_ods_keeps_its_margins_through_saves(tmp_path):
     assert layout is not None
     assert 'fo:margin-top="2cm"' in layout[0]
     assert 'fo:margin-bottom="2cm"' in layout[0]
+
+
+def test_a_picture_bullet_is_kept_through_a_save(tmp_path):
+    """A list whose bullet is a picture lost it on a save: the editor's binary
+    format had no place for w:numPicBullet, and the .docx came back with a
+    text bullet (ElixirOffice's #66, their fix, core 0203 and sdkjs 0011)."""
+    document = tmp_path / "bullets.docx"
+    write_pic_bullet_docx(payload_mod.resolve().root, document)
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    saved = tmp_path / "saved.docx"
+
+    export(words, saved, apps.WORDS.ids_by_ext["docx"], None)
+
+    with zipfile.ZipFile(saved) as z:
+        numbering = z.read("word/numbering.xml").decode("utf-8")
+        rels = z.read("word/_rels/numbering.xml.rels").decode("utf-8")
+        pictures = [z.read(n) for n in z.namelist() if n.startswith("word/media/")]
+    assert "<w:numPicBullet " in numbering
+    assert "<w:lvlPicBulletId " in numbering
+    assert "/image" in rels
+    assert pictures, "the bullet's picture was not kept"
+
+
+def red_pixels(pdf: pathlib.Path) -> int:
+    """How many pixels of the PDF's first page, drawn at 72 dpi, are red."""
+    pdftoppm = shutil.which("pdftoppm")
+    if pdftoppm is None:
+        pytest.skip("no pdftoppm to draw the PDF's page")
+    page = subprocess.run(
+        [pdftoppm, "-r", "72", "-f", "1", "-l", "1", str(pdf)],
+        capture_output=True,
+        check=True,
+    ).stdout
+    # P6, width, height, maximum value, then three bytes a pixel.
+    width, height = (int(v) for v in page.split(maxsplit=4)[1:3])
+    pixels = page[-width * height * 3 :]
+    return sum(
+        1
+        for i in range(0, len(pixels), 3)
+        if pixels[i] > 180 and pixels[i + 1] < 60 and pixels[i + 2] < 60
+    )
+
+
+def test_a_picture_bullet_is_drawn(tmp_path):
+    """The picture of a picture bullet was not drawn: the list showed a text
+    bullet. Three items with a 12 pt red square each: about 430 red pixels at
+    72 dpi."""
+    document = tmp_path / "bullets.docx"
+    write_pic_bullet_docx(payload_mod.resolve().root, document)
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    pdf = tmp_path / "bullets.pdf"
+
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    assert red_pixels(pdf) > 100
 
 
 DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")

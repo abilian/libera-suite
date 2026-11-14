@@ -10,6 +10,7 @@ import zipfile
 from typing import TYPE_CHECKING
 
 from libera.host import apps
+from support.make_sample_docx import solid_png
 
 if TYPE_CHECKING:
     import pathlib
@@ -102,3 +103,65 @@ def wmf_docx(payload: pathlib.Path, path: pathlib.Path, wmf: bytes) -> None:
         f'<Relationship Id="rIdWmf" Type="{IMAGE}" Target="media/drawing.wmf"/>',
         {"word/media/drawing.wmf": wmf},
     )
+
+
+PIC_BULLET_NUMBERING = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+    ' xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">'
+    '<w:numPicBullet w:numPicBulletId="0"><w:pict><v:shape id="_x0000_i1025"'
+    ' type="#_x0000_t75" style="width:12pt;height:12pt" o:bullet="t">'
+    '<v:imagedata r:id="rIdBullet" o:title=""/></v:shape></w:pict></w:numPicBullet>'
+    '<w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:start w:val="1"/>'
+    '<w:numFmt w:val="bullet"/><w:lvlText w:val=""/><w:lvlPicBulletId w:val="0"/>'
+    '<w:lvlJc w:val="left"/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr>'
+    '<w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol" w:hint="default"/></w:rPr>'
+    '</w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>'
+    "</w:numbering>"
+)
+RELATIONSHIPS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+
+def write_pic_bullet_docx(payload: pathlib.Path, path: pathlib.Path) -> None:
+    """Three list items whose bullet is a red square picture, as Word writes
+    one: w:numPicBullet with a VML picture, w:lvlPicBulletId on the level."""
+    blank = payload / "empty" / apps.WORDS.blank
+    item = (
+        '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>'
+        "</w:pPr><w:r><w:t>Item</w:t></w:r></w:p>"
+    )
+    with zipfile.ZipFile(blank) as src, zipfile.ZipFile(path, "w") as dst:
+        for entry in src.infolist():
+            data = src.read(entry)
+            if entry.filename == "word/document.xml":
+                data = re.sub(
+                    rb"<w:body>.*?(<w:sectPr)",
+                    b"<w:body>" + (item * 3).encode() + rb"\1",
+                    data,
+                    flags=re.DOTALL,
+                )
+            elif entry.filename == "word/_rels/document.xml.rels":
+                data = data.replace(
+                    b"</Relationships>",
+                    f'<Relationship Id="rIdNumbering" Type="{RELATIONSHIPS}/numbering"'
+                    ' Target="numbering.xml"/></Relationships>'.encode(),
+                )
+            elif entry.filename == "[Content_Types].xml":
+                data = data.replace(
+                    b"</Types>",
+                    b'<Default Extension="png" ContentType="image/png"/>'
+                    b'<Override PartName="/word/numbering.xml" ContentType="application/'
+                    b'vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>'
+                    b"</Types>",
+                )
+            dst.writestr(entry, data)
+        dst.writestr("word/numbering.xml", PIC_BULLET_NUMBERING)
+        dst.writestr(
+            "word/_rels/numbering.xml.rels",
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships'
+            ' xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            f'<Relationship Id="rIdBullet" Type="{RELATIONSHIPS}/image"'
+            ' Target="media/bullet.png"/></Relationships>',
+        )
+        dst.writestr("word/media/bullet.png", solid_png(16, 16, (220, 0, 0)))

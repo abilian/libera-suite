@@ -1,0 +1,548 @@
+From e298a1ce443cbf84c086a8b3564592574a319bb7 Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Sat, 14 Nov 2026 20:49:16 +0100
+Subject: [PATCH] feat(word): picture bullets are read, drawn and written back
+
+A list level can have a picture for a bullet: the numbering keeps a
+table of them, read from and written to the binary format (core 0203),
+the level its picture's id, and the bullet is drawn as the picture, at
+Word's size, where a text bullet was drawn.
+
+From ElixirOffice's sdkjs, commit de6ba67 (their 0.7.2), the part of it
+that answers their issue #66's picture bullets, with two changes of ours.
+A level's id goes in the change log after IsLgl, which was a byte of 0
+or 1 ending the level; its bit 1 now says an id follows, where theirs
+appended an id to every level, so that a change log written before,
+recovered by a newer build, still reads. And x2t's renderer, which
+prints and exports to PDF, has no image loader to ask for the picture:
+it draws it from its address, as it does every other picture.
+---
+ word/Editor/Numbering/Num.js          |  93 +++++++++++++++++++++++
+ word/Editor/Numbering/Numbering.js    |  91 +++++++++++++++++++++++
+ word/Editor/Numbering/NumberingLvl.js |  32 ++++++--
+ word/Editor/Serialize2.js             | 102 +++++++++++++++++++++++++-
+ word/fromToJSON.js                    |   6 ++
+ 5 files changed, 318 insertions(+), 6 deletions(-)
+
+diff --git a/word/Editor/Numbering/Num.js b/word/Editor/Numbering/Num.js
+index 0eb09a0cd1..88c3f0d8c3 100644
+--- a/word/Editor/Numbering/Num.js
++++ b/word/Editor/Numbering/Num.js
+@@ -520,6 +520,82 @@ CNum.prototype.private_GetNumberedLvlText = function(nLvl, nNumShift, isForceAra
+ 
+ 	return AscCommon.IntToNumberFormat(nNumShift, nFormat, {lang: oLangForTextNumbering});
+ };
++/**
++ * Get the picture of the bullet of the given level. Returns null (the text bullet must be used) if the level has no
++ * picture bullet or the picture is unknown or not loaded (yet)
++ * @param oLvl {CNumberingLvl}
++ * @returns {?{Url : string, Ratio : number}} Url is the key of the image in the image loader, Ratio is width / height
++ */
++CNum.prototype.private_GetPicBullet = function(oLvl)
++{
++	if (undefined === oLvl.PicBulletId || !this.Numbering || !this.Numbering.GetPicBullet)
++		return null;
++	
++	let picBullet = this.Numbering.GetPicBullet(oLvl.PicBulletId);
++	if (!picBullet || !picBullet.Image)
++		return null;
++	
++	let url = AscCommon.getFullImageSrc2(picBullet.Image);
++	
++	// x2t's renderer, which prints and exports to PDF, has no image loader to
++	// ask: it draws a picture from its address, as it does every other one,
++	// and the bullet takes its proportions from the numbering's size of it.
++	if (window["NATIVE_EDITOR_ENJINE"])
++	{
++		let ratio = picBullet.Width > 0 && picBullet.Height > 0 ? picBullet.Width / picBullet.Height : 1;
++		return {Url : url, Ratio : ratio, Entry : picBullet, ImageHeightPx : 0};
++	}
++	
++	let api = Asc.editor || editor;
++	if (!api || !api.ImageLoader || !api.ImageLoader.map_image_index)
++		return null;
++	
++	let img = api.ImageLoader.map_image_index[url];
++	if (!img || !img.Image || img.Status === AscFonts.ImageLoadStatus.Loading)
++		return null;
++	
++	let w = img.Image.width;
++	let h = img.Image.height;
++	if (!(w > 0 && h > 0))
++	{
++		// The size of the picture in the numbering definition is the fallback
++		w = picBullet.Width;
++		h = picBullet.Height;
++	}
++	
++	if (!(w > 0 && h > 0))
++		return null;
++	
++	return {Url : url, Ratio : w / h, Entry : picBullet, ImageHeightPx : img.Image.height > 0 ? img.Image.height : 0};
++};
++/**
++ * Height of the picture bullet in mm. Word draws the picture with the height
++ * (font size - 2) * shapeHeightPt / naturalHeightPt, where naturalHeightPt is the image pixel height * 0.75 (96 dpi)
++ * and shapeHeightPt is the height of the v:shape from the file; if the shape height or the image pixel height is
++ * missing or not positive the factor is 1. The height is never below 1 pt.
++ * @param oNumTextPr {CTextPr}
++ * @param dKoef {number}
++ * @param picBullet {{Entry : {Height : number}, ImageHeightPx : number}} result of private_GetPicBullet
++ * @returns {number}
++ */
++CNum.prototype.private_GetPicBulletHeight = function(oNumTextPr, dKoef, picBullet)
++{
++	var nBase = oNumTextPr.FontSize - 2;
++	if (!(nBase >= 1))
++		nBase = 1;
++	
++	var nShapeH = picBullet && picBullet.Entry ? picBullet.Entry.Height : 0;
++	var nImgH   = picBullet ? picBullet.ImageHeightPx : 0;
++	var nFactor = 1;
++	if (nShapeH > 0 && nImgH > 0)
++		nFactor = nShapeH / (nImgH * 0.75);
++	
++	var nHeightPt = nBase * nFactor;
++	if (!(nHeightPt >= 1))
++		nHeightPt = 1;
++	
++	return nHeightPt * dKoef * g_dKoef_pt_to_mm;
++};
+ /**
+  * Функция отрисовки заданного уровня нумерации в заданной позиции
+  * @param nX
+@@ -537,6 +613,14 @@ CNum.prototype.Draw = function(nX, nY, oContext, nLvl, oNumInfo, oNumTextPr, oTh
+ 	var arrText = oLvl.GetLvlText();
+ 	var dKoef   = oNumTextPr.VertAlign !== AscCommon.vertalign_Baseline ? AscCommon.vaKSize : 1;
+ 	
++	let picBullet = this.private_GetPicBullet(oLvl);
++	if (picBullet && oContext.drawImage && !(oContext.isTextDrawer && oContext.isTextDrawer()))
++	{
++		let picH = this.private_GetPicBulletHeight(oNumTextPr, dKoef, picBullet);
++		oContext.drawImage(picBullet.Url, nX, nY - picH, picH * picBullet.Ratio, picH);
++		return;
++	}
++	
+ 	oContext.SetTextPr(oNumTextPr, oTheme);
+ 	g_oTextMeasurer.SetTextPr(oNumTextPr, oTheme);
+ 	
+@@ -598,6 +682,15 @@ CNum.prototype.Measure = function(oContext, nLvl, oNumInfo, oNumTextPr, oTheme)
+ 	oContext.SetTextPr(oNumTextPr, oTheme);
+ 	oContext.SetFontSlot(AscWord.fontslot_ASCII, dKoef);
+ 	var nAscent = oContext.GetAscender();
++	
++	let picBullet = this.private_GetPicBullet(oLvl);
++	if (picBullet)
++	{
++		return {
++			Width  : this.private_GetPicBulletHeight(oNumTextPr, dKoef, picBullet) * picBullet.Ratio,
++			Ascent : nAscent
++		};
++	}
+ 
+ 	for (var nTextIndex = 0, nTextLen = arrText.length; nTextIndex < nTextLen; ++nTextIndex)
+ 	{
+diff --git a/word/Editor/Numbering/Numbering.js b/word/Editor/Numbering/Numbering.js
+index dd628d3a3c..420aae866a 100644
+--- a/word/Editor/Numbering/Numbering.js
++++ b/word/Editor/Numbering/Numbering.js
+@@ -37,7 +37,73 @@
+ 		this.Num         = {};
+ 		
+ 		this.AbstractNumByNsid = {};
++		
++		// Pictures used as bullets (w:numPicBullet): id -> {Image : string, Width : number (pt), Height : number (pt)}
++		// Image is the name of the media file as written in the binary document (e.g. "image1.png")
++		this.PicBullets = {};
+ 	}
++	
++	/**
++	 * Is there any picture bullet in the document
++	 * @returns {boolean}
++	 */
++	CNumbering.prototype.HasPicBullets = function()
++	{
++		for (let id in this.PicBullets)
++		{
++			if (this.PicBullets.hasOwnProperty(id))
++				return true;
++		}
++		return false;
++	};
++	/**
++	 * @returns {Object} id -> {Image, Width, Height}
++	 */
++	CNumbering.prototype.GetPicBullets = function()
++	{
++		return this.PicBullets;
++	};
++	/**
++	 * Get description of the picture bullet by its id
++	 * @param id {number}
++	 * @returns {?{Image : string, Width : number, Height : number}}
++	 */
++	CNumbering.prototype.GetPicBullet = function(id)
++	{
++		if (undefined === id || null === id || !this.PicBullets.hasOwnProperty(id))
++			return null;
++		
++		return this.PicBullets[id];
++	};
++	/**
++	 * Register a picture bullet. If the same picture is already registered, its id is returned. If the requested id
++	 * is occupied by another picture, a new id is chosen.
++	 * @param id {number} wanted id
++	 * @param image {string} name of the media file
++	 * @param width {number} pt, 0 if unknown
++	 * @param height {number} pt, 0 if unknown
++	 * @returns {number} the id to use
++	 */
++	CNumbering.prototype.AddPicBullet = function(id, image, width, height)
++	{
++		let maxId = -1;
++		for (let curId in this.PicBullets)
++		{
++			if (!this.PicBullets.hasOwnProperty(curId))
++				continue;
++			
++			if (this.PicBullets[curId].Image === image)
++				return parseInt(curId, 10);
++			
++			maxId = Math.max(maxId, parseInt(curId, 10));
++		}
++		
++		if (this.PicBullets.hasOwnProperty(id))
++			id = maxId + 1;
++		
++		this.PicBullets[id] = {Image : image, Width : width, Height : height};
++		return id;
++	};
+ 
+ 	/**
+ 	 * Копируем все нумерации и абстрактные нумерации. Возвращаем новые объекты с мапом из старых Id в новые
+@@ -82,6 +148,31 @@
+ 			oNewNums[sNewId] = oNewNum;
+ 			oNumMap[sOldId]  = sNewId;
+ 		}
++		
++		// The ids of the picture bullets belong to the numbering of the source document. The pictures are not
++		// transferred to another document, so the copies use their text bullets
++		if (oNumbering !== this && this.HasPicBullets())
++		{
++			for (var sNewAbstractId in oNewAbstractNums)
++			{
++				var arrLvls = oNewAbstractNums[sNewAbstractId].Lvl;
++				for (var nLvlIndex = 0; arrLvls && nLvlIndex < arrLvls.length; ++nLvlIndex)
++				{
++					if (arrLvls[nLvlIndex])
++						arrLvls[nLvlIndex].PicBulletId = undefined;
++				}
++			}
++			
++			for (var sNewNumId in oNewNums)
++			{
++				for (var nOverrideLvl = 0; nOverrideLvl < 9; ++nOverrideLvl)
++				{
++					var oOverride = oNewNums[sNewNumId].LvlOverride[nOverrideLvl];
++					if (oOverride && oOverride.NumberingLvl)
++						oOverride.NumberingLvl.PicBulletId = undefined;
++				}
++			}
++		}
+ 
+ 		return {
+ 			AbstractNum : oNewAbstractNums,
+diff --git a/word/Editor/Numbering/NumberingLvl.js b/word/Editor/Numbering/NumberingLvl.js
+index ff598b34e6..ec2723fa1d 100644
+--- a/word/Editor/Numbering/NumberingLvl.js
++++ b/word/Editor/Numbering/NumberingLvl.js
+@@ -38,6 +38,9 @@ function CNumberingLvl()
+ 	this.LvlText = [];
+ 	this.Legacy  = undefined;
+ 	this.IsLgl   = false;
++	
++	// Id of the picture bullet (see CNumbering.GetPicBullet), undefined if the bullet is a text
++	this.PicBulletId = undefined;
+ 
+ 	this.private_CheckSymbols();
+ }
+@@ -816,6 +819,8 @@ CNumberingLvl.prototype.Copy = function()
+ 		oLvl.Legacy = this.Legacy.Copy();
+ 
+ 	oLvl.IsLgl = this.IsLgl;
++	
++	oLvl.PicBulletId = this.PicBulletId;
+ 
+ 	return oLvl;
+ };
+@@ -828,6 +833,9 @@ CNumberingLvl.prototype.Copy = function()
+  */
+ CNumberingLvl.prototype.SetByType = function(nType, nLvl, sText, oTextPr)
+ {
++	// A new bullet type replaces the picture bullet
++	this.PicBulletId = undefined;
++	
+ 	switch (nType)
+ 	{
+ 		case c_oAscNumberingLevel.None:
+@@ -1070,6 +1078,7 @@ CNumberingLvl.prototype.GetPresetType = function()
+  */
+ CNumberingLvl.prototype.SetByFormat = function(nLvl, nType, sFormatText, nAlign)
+ {
++	this.PicBulletId = undefined;
+ 	this.Jc      = nAlign;
+ 	this.SetFormat(nType);
+ 	this.SetLvlTextFormat(nLvl, sFormatText);
+@@ -1213,7 +1222,8 @@ CNumberingLvl.prototype.IsEqual = function(numLvl)
+ 		&& this.TextPr.IsEqual(numLvl.TextPr)
+ 		&& this.ParaPr.IsEqual(numLvl.ParaPr)
+ 		&& this.Legacy === numLvl.Legacy
+-		&& this.IsLgl === numLvl.IsLgl);
++		&& this.IsLgl === numLvl.IsLgl
++		&& this.PicBulletId === numLvl.PicBulletId);
+ };
+ /**
+  * Заполняем специальный класс для работы с интерфейсом
+@@ -1255,6 +1265,9 @@ CNumberingLvl.prototype.FillToAscNumberingLvl = function(oAscLvl)
+  */
+ CNumberingLvl.prototype.FillFromAscNumberingLvl = function(oAscLvl)
+ {
++	if (undefined !== oAscLvl.get_Format() || undefined !== oAscLvl.get_Text())
++		this.PicBulletId = undefined;
++	
+ 	if (undefined !== oAscLvl.get_Format())
+ 		this.SetFormat(oAscLvl.get_Format());
+ 
+@@ -1458,7 +1471,8 @@ CNumberingLvl.prototype.WriteToBinary = function(oWriter)
+ 	// Array of variables : массив LvlText
+ 	// Bool               : true -> CNumberingLegacy
+ 	//                    : false -> Legacy = undefined
+-	// Bool               : IsLgl
++	// Byte               : IsLgl in bit 0; bit 1 set -> a Long PicBulletId follows
++	// Long               : PicBulletId, only if bit 1 is set
+ 
+ 	oWriter.WriteLong(this.Jc);
+ 	oWriter.WriteLong(this.Format);
+@@ -1488,7 +1502,12 @@ CNumberingLvl.prototype.WriteToBinary = function(oWriter)
+ 		oWriter.WriteBool(false);
+ 	}
+ 
+-	oWriter.WriteBool(this.IsLgl);
++	// IsLgl was a Bool, a byte of 0 or 1 that ended the level. Its bit 1 says a
++	// picture bullet follows, so a change log written before picture bullets,
++	// in a session recovered by a newer build, still reads as it did.
++	oWriter.WriteByte((this.IsLgl ? 1 : 0) | (undefined !== this.PicBulletId ? 2 : 0));
++	if (undefined !== this.PicBulletId)
++		oWriter.WriteLong(this.PicBulletId);
+ };
+ CNumberingLvl.prototype.ReadFromBinary = function(oReader)
+ {
+@@ -1504,7 +1523,8 @@ CNumberingLvl.prototype.ReadFromBinary = function(oReader)
+ 	// Array of variables : массив LvlText
+ 	// Bool               : true -> CNumberingLegacy
+ 	//                    : false -> Legacy = undefined
+-	// Bool               : IsLgl
++	// Byte               : IsLgl in bit 0; bit 1 set -> a Long PicBulletId follows
++	// Long               : PicBulletId, only if bit 1 is set
+ 
+ 
+ 	this.Jc     = oReader.GetLong();
+@@ -1538,7 +1558,9 @@ CNumberingLvl.prototype.ReadFromBinary = function(oReader)
+ 		this.Legacy.ReadFromBinary(oReader);
+ 	}
+ 
+-	this.IsLgl = oReader.GetBool();
++	let nLglByte = oReader.GetUChar();
++	this.IsLgl = !!(nLglByte & 1);
++	this.PicBulletId = (nLglByte & 2) ? oReader.GetLong() : undefined;
+ };
+ CNumberingLvl.prototype.private_ReadLvlTextFromBinary = function(oReader)
+ {
+diff --git a/word/Editor/Serialize2.js b/word/Editor/Serialize2.js
+index e29a2f1cc0..27754fbb5a 100644
+--- a/word/Editor/Serialize2.js
++++ b/word/Editor/Serialize2.js
+@@ -129,7 +129,15 @@ var c_oSerNumTypes = {
+ 	LegacyIndent: 35,
+ 	LegacySpace: 36,
+ 	lvl_Jc: 37,
+-	Nsid: 38
++	Nsid: 38,
++	// Picture bullets (w:lvlPicBulletId / w:numPicBullet). Numbers are shared with core BinReaderWriterDefines.h
++	lvl_PicBulletId: 39,
++	NumPicBullets: 40,
++	NumPicBullet: 41,
++	NumPicBullet_Id: 42,
++	NumPicBullet_Image: 43,
++	NumPicBullet_Width: 44,
++	NumPicBullet_Height: 45
+ };
+ var c_oSerOtherTableTypes = {
+     ImageMap:0,
+@@ -4972,12 +4980,47 @@ function BinaryNumberingTableWriter(memory, doc, oNumIdMap, oUsedNumIdMap, saveP
+         var oThis = this;
+         if(null != this.Document.Numbering)
+         {
++            //Picture bullets (written only when the document has some, so other documents keep the old binary form)
++            if (this.Document.Numbering.HasPicBullets && this.Document.Numbering.HasPicBullets())
++                this.bs.WriteItem(c_oSerNumTypes.NumPicBullets, function(){oThis.WriteNumPicBullets();});
+             //ANums
+             this.bs.WriteItem(c_oSerNumTypes.AbstractNums, function(){oThis.WriteAbstractNums();});
+             //Nums
+             this.bs.WriteItem(c_oSerNumTypes.Nums, function(){oThis.WriteNums();});
+         }
+     };
++    this.WriteNumPicBullets = function()
++    {
++        var oThis = this;
++        var picBullets = this.Document.Numbering.GetPicBullets();
++        for (var id in picBullets)
++        {
++            if (picBullets.hasOwnProperty(id))
++                this.bs.WriteItem(c_oSerNumTypes.NumPicBullet, function(){oThis.WriteNumPicBullet(parseInt(id, 10), picBullets[id]);});
++        }
++    };
++    this.WriteNumPicBullet = function(id, picBullet)
++    {
++        this.memory.WriteByte(c_oSerNumTypes.NumPicBullet_Id);
++        this.memory.WriteByte(c_oSerPropLenType.Long);
++        this.memory.WriteLong(id);
++        if (picBullet.Image)
++        {
++            this.memory.WriteByte(c_oSerNumTypes.NumPicBullet_Image);
++            this.memory.WriteByte(c_oSerPropLenType.Variable);
++            this.memory.WriteString2(picBullet.Image);
++        }
++        // size of the picture in twips (1/20 pt)
++        if (picBullet.Width > 0 && picBullet.Height > 0)
++        {
++            this.memory.WriteByte(c_oSerNumTypes.NumPicBullet_Width);
++            this.memory.WriteByte(c_oSerPropLenType.Long);
++            this.memory.WriteLong(Math.round(picBullet.Width * 20));
++            this.memory.WriteByte(c_oSerNumTypes.NumPicBullet_Height);
++            this.memory.WriteByte(c_oSerPropLenType.Long);
++            this.memory.WriteLong(Math.round(picBullet.Height * 20));
++        }
++    };
+     this.WriteNums = function()
+     {
+         var oThis = this;
+@@ -5182,6 +5225,13 @@ function BinaryNumberingTableWriter(memory, doc, oNumIdMap, oUsedNumIdMap, saveP
+ 			this.memory.WriteByte(c_oSerPropLenType.Long);
+ 			this.memory.WriteLong(ILvl);
+ 		}
++		// the id is written only if the picture is known (it is written to the NumPicBullets table)
++		if (undefined !== lvl.PicBulletId && this.Document.Numbering && this.Document.Numbering.GetPicBullet && this.Document.Numbering.GetPicBullet(lvl.PicBulletId))
++		{
++			this.memory.WriteByte(c_oSerNumTypes.lvl_PicBulletId);
++			this.memory.WriteByte(c_oSerPropLenType.Long);
++			this.memory.WriteLong(lvl.PicBulletId);
++		}
+ 		// if(null != lvl.Tentative)
+ 		// {
+ 		// 	this.memory.WriteByte(c_oSerNumTypes.Tentative);
+@@ -10972,6 +11022,7 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
+ 	this.oReadResult = oReadResult;
+     this.stream = stream;
+ 	this.m_oANums = {};
++	this.m_oPicBulletIds = {}; // id of the picture bullet in the file -> id in the document numbering
+     this.bcr = new Binary_CommonReader(this.stream);
+     this.brPrr = new Binary_rPrReader(this.Document, this.oReadResult, this.stream);
+     this.bpPrr = new Binary_pPrReader(this.Document, this.oReadResult, this.stream);
+@@ -10993,6 +11044,12 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
+                 return oThis.ReadAbstractNums(t, l);
+             });
+         }
++        else if ( c_oSerNumTypes.NumPicBullets === type )
++        {
++            res = this.bcr.Read1(length, function(t, l){
++                return oThis.ReadNumPicBullets(t, l);
++            });
++        }
+         else if ( c_oSerNumTypes.Nums === type )
+         {
+ 			var tmpNum = {NumId: null, Num: null};
+@@ -11004,6 +11061,44 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
+             res = c_oSerConstants.ReadUnknown;
+         return res;
+     },
++    this.ReadNumPicBullets = function(type, length)
++    {
++        var oThis = this;
++        var res = c_oSerConstants.ReadOk;
++        if ( c_oSerNumTypes.NumPicBullet === type )
++        {
++            var tmp = {Id: null, Image: null, Width: 0, Height: 0};
++            res = this.bcr.Read2(length, function(t, l){
++                return oThis.ReadNumPicBullet(t, l, tmp);
++            });
++            if (null !== tmp.Id && tmp.Image)
++            {
++                var oNumbering = this.oReadResult.logicDocument.GetNumbering();
++                // the id may already be used by another picture (paste from another document): remap it
++                this.m_oPicBulletIds[tmp.Id] = oNumbering.AddPicBullet(tmp.Id, tmp.Image, tmp.Width / 20, tmp.Height / 20);
++                if (AscCommon.pptx_content_loader && AscCommon.pptx_content_loader.ImageMapChecker)
++                    AscCommon.pptx_content_loader.ImageMapChecker[tmp.Image] = true;
++            }
++        }
++        else
++            res = c_oSerConstants.ReadUnknown;
++        return res;
++    };
++    this.ReadNumPicBullet = function(type, length, tmp)
++    {
++        var res = c_oSerConstants.ReadOk;
++        if ( c_oSerNumTypes.NumPicBullet_Id === type )
++            tmp.Id = this.stream.GetLongLE();
++        else if ( c_oSerNumTypes.NumPicBullet_Image === type )
++            tmp.Image = this.stream.GetString2LE(length);
++        else if ( c_oSerNumTypes.NumPicBullet_Width === type )
++            tmp.Width = this.stream.GetLongLE();
++        else if ( c_oSerNumTypes.NumPicBullet_Height === type )
++            tmp.Height = this.stream.GetLongLE();
++        else
++            res = c_oSerConstants.ReadUnknown;
++        return res;
++    };
+     this.ReadNums = function(type, length, tmpNum)
+     {
+         var oThis = this;
+@@ -11203,6 +11298,11 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
+ 		{
+ 			tmp.nLevelNum = this.stream.GetULongLE();
+ 		}
++		else if ( c_oSerNumTypes.lvl_PicBulletId === type )
++		{
++			var nPicBulletId = this.stream.GetLongLE();
++			oNewLvl.PicBulletId = undefined !== this.m_oPicBulletIds[nPicBulletId] ? this.m_oPicBulletIds[nPicBulletId] : nPicBulletId;
++		}
+ 		// else if ( c_oSerNumTypes.Tentative === type )
+ 		// {
+ 		// 	oNewLvl.Tentative = this.stream.GetBool();
+diff --git a/word/fromToJSON.js b/word/fromToJSON.js
+index e7512ea6e0..bc7adde9d1 100644
+--- a/word/fromToJSON.js
++++ b/word/fromToJSON.js
+@@ -16337,6 +16337,10 @@
+ 		if (undefined !== this.IsLgl && null !== this.IsLgl && false !== this.IsLgl)
+ 			oResult["isLgl"] = this.IsLgl;
+ 
++		// the id refers to the picture bullets table of the document numbering
++		if (undefined !== this.PicBulletId)
++			oResult["lvlPicBulletId"] = this.PicBulletId;
++
+ 		if (this.Legacy)
+ 		{
+ 			oResult["legacy"] = {};
+@@ -16413,6 +16417,8 @@
+ 		else
+ 			this.IsLgl = false;
+ 
++		this.PicBulletId = undefined !== oParsedJson["lvlPicBulletId"] ? oParsedJson["lvlPicBulletId"] : undefined;
++
+ 		if (undefined !== oParsedJson["legacy"])
+ 			this.Legacy = new CNumberingLvlLegacy(oParsedJson["legacy"]["legacy"], oParsedJson["legacy"]["legacyIndent"], oParsedJson["legacy"]["legacySpace"]);
+ 		else
+-- 
+2.55.0
+

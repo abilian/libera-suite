@@ -103,6 +103,26 @@ def unfilter(line: bytearray, prev: bytes, flt: int, channels: int) -> bytearray
     return line
 
 
+def red_pixels(path: str) -> int:
+    """How many pixels of the whole picture are a strong red."""
+    width, height, channels, raw = read_png(path)
+    stride = width * channels
+    prev = bytearray(stride)
+    count = pos = 0
+    for _ in range(height):
+        line = unfilter(
+            bytearray(raw[pos + 1 : pos + 1 + stride]), prev, raw[pos], channels
+        )
+        pos += 1 + stride
+        prev = line
+        count += sum(
+            1
+            for x in range(0, stride, channels)
+            if line[x] > 180 and line[x + 1] < 60 and line[x + 2] < 60
+        )
+    return count
+
+
 def ink_rows(path: str) -> list[int]:
     """Ink pixels per row, inside a MARGIN inset of the canvas."""
     width, height, channels, raw = read_png(path)
