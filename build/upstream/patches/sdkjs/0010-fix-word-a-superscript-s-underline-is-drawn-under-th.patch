@@ -1,0 +1,49 @@
+From db6f315b59af48b1fbc4fadd2ea6b1393d09ca84 Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Sat, 14 Nov 2026 18:13:31 +0100
+Subject: [PATCH] fix(word): a superscript's underline is drawn under the
+ raised text
+
+Word keeps the underline with the shifted text: lowered for a
+subscript, raised for a superscript, and as thick as the smaller font
+makes it. The editor lowered a subscript's underline and left a
+superscript's on the line's baseline, under nothing.
+
+From ElixirOffice's sdkjs, commit 3d55711 (their 0.7.0), the part of it
+that answers their issue #67.
+---
+ word/Editor/Paragraph/draw/line-draw-state.js | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/word/Editor/Paragraph/draw/line-draw-state.js b/word/Editor/Paragraph/draw/line-draw-state.js
+index 7df9b3d291..8c015a25c1 100644
+--- a/word/Editor/Paragraph/draw/line-draw-state.js
++++ b/word/Editor/Paragraph/draw/line-draw-state.js
+@@ -642,10 +642,23 @@
+ 		let strikeoutY = this.Baseline - this.yOffset - fontSizeMM * strikeoutShift;
+ 		let underlineY = this.Baseline - this.yOffset + this.UnderlineOffset;
+ 		
++		// Word keeps the underline attached to the shifted text: lowered for a
++		// subscript, raised for a superscript (the previous code left the
++		// superscript underline on the baseline), with the thickness of the
++		// reduced font size.
++		let lineFontSize = fontSize;
+ 		if (AscCommon.vertalign_SubScript === vertAlign)
++		{
+ 			underlineY -= AscCommon.vaKSub * fontSizeMM;
++			lineFontSize *= AscCommon.vaKSize;
++		}
++		else if (AscCommon.vertalign_SuperScript === vertAlign)
++		{
++			underlineY -= AscCommon.vaKSuper * fontSizeMM;
++			lineFontSize *= AscCommon.vaKSize;
++		}
+ 		
+-		let lineW = (fontSize / 18) * g_dKoef_pt_to_mm;
++		let lineW = (lineFontSize / 18) * g_dKoef_pt_to_mm;
+ 		
+ 		this.Strikeout.set(strikeoutY, lineW);
+ 		this.DStrikeout.set(strikeoutY, lineW);
+-- 
+2.55.0
+

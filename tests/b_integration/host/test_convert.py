@@ -942,6 +942,57 @@ def test_an_empty_paragraph_of_size_0_still_has_a_height(tmp_path):
     assert tops[1] - tops[0] > 5
 
 
+def test_a_superscript_s_underline_is_under_the_raised_text(tmp_path):
+    """Word draws a superscript's underline under the raised text, and the
+    editor drew it at the line's baseline, under nothing (ElixirOffice's #67,
+    their fix, sdkjs 0010). The underline's row, in the columns under "sup",
+    is found on the page and must lie within the raised text's own box."""
+    pdftoppm = shutil.which("pdftoppm")
+    if pdftoppm is None:
+        pytest.skip("no pdftoppm to draw the PDF's page")
+    document = tmp_path / "sup.docx"
+    write_docx_body(
+        payload_mod.resolve().root / "empty" / apps.WORDS.blank,
+        document,
+        '<w:p><w:r><w:rPr><w:sz w:val="48"/></w:rPr><w:t xml:space="preserve">'
+        'Base</w:t></w:r><w:r><w:rPr><w:u w:val="single"/>'
+        '<w:vertAlign w:val="superscript"/><w:sz w:val="48"/></w:rPr>'
+        "<w:t>sup</w:t></w:r></w:p>",
+    )
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    pdf = tmp_path / "sup.pdf"
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    boxes = {
+        word: tuple(float(v) for v in box)
+        for *box, word in re.findall(
+            r'<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">'
+            r"([^<]*)</word>",
+            word_boxes(pdf),
+        )
+    }
+    # At 144 dpi, two pixels a point. P5, width, height, maximum, then a byte
+    # a pixel.
+    page = subprocess.run(
+        [pdftoppm, "-r", "144", "-gray", "-f", "1", "-l", "1", str(pdf)],
+        capture_output=True,
+        check=True,
+    ).stdout
+    width, height = (int(v) for v in page.split(maxsplit=4)[1:3])
+    pixels = page[-width * height :]
+    left, top, right, _ = (round(2 * v) for v in boxes["sup"])
+    bottom = round(2 * boxes["Base"][3]) + 20
+    underline = next(
+        y
+        for y in range(top, bottom)
+        if sum(pixels[y * width + x] < 128 for x in range(left, right))
+        > 0.8 * (right - left)
+    )
+
+    # Measured: 72.5 pt with the fix, 80.5 pt without, the box's foot at 77.5.
+    assert underline < 2 * boxes["sup"][3]
+
+
 DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
 
