@@ -1122,6 +1122,50 @@ def test_a_picture_bullet_is_drawn(tmp_path):
     assert red_pixels(pdf) > 100
 
 
+def test_a_missing_font_is_drawn_in_its_alternate_name(tmp_path):
+    """Word draws a font that is not installed in the alternate name the
+    document's font table gives it, w:altName, when that one is; the editor
+    never saw the font table and drew an unknown font in Carlito (sdkjs 0012
+    and core 0204, ElixirOffice's: Marianne, alternate Times New Roman)."""
+    pdffonts = shutil.which("pdffonts")
+    if pdffonts is None:
+        pytest.skip("no pdffonts to list the PDF's fonts")
+    blank = payload_mod.resolve().root / "empty" / apps.WORDS.blank
+    document = tmp_path / "marianne.docx"
+    body = (
+        '<w:p><w:r><w:rPr><w:rFonts w:ascii="Marianne" w:hAnsi="Marianne"/></w:rPr>'
+        "<w:t>Marianne, as Word draws it</w:t></w:r></w:p>"
+    )
+    entry = (
+        '<w:font w:name="Marianne"><w:altName w:val="Liberation Serif"/>'
+        '<w:family w:val="roman"/></w:font>'
+    )
+    with zipfile.ZipFile(blank) as src, zipfile.ZipFile(document, "w") as dst:
+        for item in src.infolist():
+            data = src.read(item)
+            if item.filename == "word/document.xml":
+                data = re.sub(
+                    rb"<w:body>.*?(<w:sectPr)",
+                    b"<w:body>" + body.encode() + rb"\1",
+                    data,
+                    flags=re.DOTALL,
+                )
+            elif item.filename == "word/fontTable.xml":
+                data, n = re.subn(rb"(</w:fonts>)", entry.encode() + rb"\1", data)
+                assert n == 1
+            dst.writestr(item, data)
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    pdf = tmp_path / "marianne.pdf"
+
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    fonts = subprocess.run(
+        [pdffonts, str(pdf)], capture_output=True, text=True, check=True
+    ).stdout
+    assert "Liberation Serif" in fonts
+    assert "Carlito" not in fonts
+
+
 DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
 

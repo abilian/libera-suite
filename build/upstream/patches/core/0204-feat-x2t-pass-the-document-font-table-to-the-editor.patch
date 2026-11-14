@@ -1,0 +1,83 @@
+From e29d61750ab1fdf1b1b5b91c732b12a5382d3bf8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Ga=C3=ABl=20Duval?= <gael@murena.io>
+Date: Sun, 15 Nov 2026 00:23:50 +0100
+Subject: [PATCH] feat(x2t): pass the document font table to the editor
+
+Word replaces a font that is not installed by the alternate name
+recorded in word/fontTable.xml (w:altName) when that font is available;
+the editor never saw the font table, so such fonts fell back to an
+unrelated substitute: Marianne with altName Times New Roman was drawn
+in Carlito, where Word draws Times New Roman.
+
+Write a new binary table c_oSerTableTypes::FontTable (22) with, for each
+font of the docx font table, its name and alternate name. Readers that
+do not know the table skip it, x2t's own among them: a document read
+and saved again keeps its font table.
+
+From ElixirOffice's core, commit 385f96f29.
+---
+ .../BinWriter/BinReaderWriterDefines.h        |  9 ++++++-
+ .../Document/BinWriter/BinaryWriterD.cpp      | 27 +++++++++++++++++++
+ 2 files changed, 35 insertions(+), 1 deletion(-)
+
+diff --git a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
+index 4d9a73d61d..262ad1a069 100644
+--- a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
++++ b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
+@@ -105,7 +105,14 @@ extern int g_nCurFormatVersion;
+ 		CustomProperties = 18,
+ 		Glossary	= 19,
+ 		Customs		= 20,
+-		OForm		= 21
++		OForm		= 21,
++		FontTable	= 22
++	};}
++	namespace c_oSerFontTableTypes{enum c_oSerFontTableTypes
++	{
++		Font	= 0,
++		Name	= 1,
++		AltName	= 2
+ 	};}
+ 	namespace c_oSerSigTypes{enum c_oSerSigTypes
+ 	{
+diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
+index f009f0569c..32e3ab60ad 100644
+--- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
++++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
+@@ -10177,6 +10177,33 @@ void BinaryFileWriter::intoBindoc(const std::wstring& sSrcPath)
+ 			oBinaryCustomsTableWriter.Write(pDocument);
+ 		this->WriteTableEnd(nCurPos);
+ 	}
++	if (pDocx && pDocx->m_oMain.fontTable && !pDocx->m_oMain.fontTable->m_arrFonts.empty())
++	{
++		// Font table: names and alternate names (w:altName) of the document fonts. The editor uses the
++		// alternate name to replace a font that is not installed, as Word does.
++		nCurPos = this->WriteTableStart(BinDocxRW::c_oSerTableTypes::FontTable);
++		int nStart = m_oBcw.WriteItemWithLengthStart();
++		for (size_t i = 0; i < pDocx->m_oMain.fontTable->m_arrFonts.size(); ++i)
++		{
++			OOX::CFont* pFont = pDocx->m_oMain.fontTable->m_arrFonts[i];
++			if (!pFont || pFont->m_sName.empty())
++				continue;
++
++			int nFont = m_oBcw.WriteItemStart(BinDocxRW::c_oSerFontTableTypes::Font);
++			int nItem = m_oBcw.WriteItemStart(BinDocxRW::c_oSerFontTableTypes::Name);
++			m_oBcw.m_oStream.WriteStringW3(pFont->m_sName);
++			m_oBcw.WriteItemEnd(nItem);
++			if (pFont->m_oAltName.IsInit() && !pFont->m_oAltName->empty())
++			{
++				nItem = m_oBcw.WriteItemStart(BinDocxRW::c_oSerFontTableTypes::AltName);
++				m_oBcw.m_oStream.WriteStringW3(*pFont->m_oAltName);
++				m_oBcw.WriteItemEnd(nItem);
++			}
++			m_oBcw.WriteItemEnd(nFont);
++		}
++		m_oBcw.WriteItemWithLengthEnd(nStart);
++		this->WriteTableEnd(nCurPos);
++	}
+ 
+ 	if (pDocx && pDocx->m_oGlossary.document)
+ 	{
+-- 
+2.55.0
+

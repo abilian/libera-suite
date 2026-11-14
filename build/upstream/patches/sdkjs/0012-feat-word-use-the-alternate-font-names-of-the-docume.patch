@@ -1,0 +1,243 @@
+From 2261f9740fe3512d4c8416178fea59a5458f029d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Ga=C3=ABl=20Duval?= <gael@murena.io>
+Date: Sun, 15 Nov 2026 00:23:50 +0100
+Subject: [PATCH] feat(word): use the alternate font names of the document
+
+Read the FontTable table now written by x2t (core 0204: name and
+w:altName of each font of word/fontTable.xml) and give it to the font
+application (SetDocumentAltNames). GetSubstituteName uses the alternate
+name of a missing font when that font, or one of its listed
+substitutes, is installed: after the substitute table, before Word's
+default font rule. An alternate name that is itself unavailable is
+ignored, so the font keeps the dictionary data of its own name.
+
+From ElixirOffice's sdkjs, commit 340aed1dc, merged with sdkjs 0006:
+the search for a font name in any case moves into GetInstalledSubstitute,
+so an alternate name is found in any case too. Their test of a measured
+substitute used a font of their own table, not ours; it uses Calibri
+and Carlito instead.
+---
+ common/libfont/map.js                    | 62 ++++++++++++++++++------
+ tests/common/libfont/fontSubstitution.js | 23 +++++++++
+ word/Editor/Serialize2.js                | 48 +++++++++++++++++-
+ 3 files changed, 116 insertions(+), 17 deletions(-)
+
+diff --git a/common/libfont/map.js b/common/libfont/map.js
+index 999dbe4c16..289b36fd8b 100644
+--- a/common/libfont/map.js
++++ b/common/libfont/map.js
+@@ -2991,18 +2991,26 @@
+ 			}
+ 		};
+ 
+-		// Name to look for when "name" is not installed: first installed substitute of FD_Substitutes,
+-		// or Word's default font for a font unknown to the font dictionary. Returns "name" otherwise.
+-		this.GetSubstituteName = function(name)
++		// Alternate names of the fonts of the current document (w:altName of word/fontTable.xml).
++		this.DocumentAltNames = {};
++		this.SetDocumentAltNames = function(altNames)
+ 		{
+-			if (!name || undefined !== AscFonts.g_map_font_index[name])
++			this.DocumentAltNames = altNames || {};
++			this.FontPickerMap = {};
++		};
++
++		// Installed font for "name": the font itself, in any case, or the first installed font of
++		// FD_Substitutes; null if none.
++		this.GetInstalledSubstitute = function(name)
++		{
++			if (undefined !== AscFonts.g_map_font_index[name])
+ 				return name;
+ 
+ 			// The same name in another case. Word, like Windows, matches font
+ 			// names whatever their case, and a document set in "Open Sans
+ 			// SemiBold" was drawn in a substitute where "Open Sans Semibold" is
+-			// installed. The callers cache what this returns, so the loop runs
+-			// once for each name a document uses.
++			// installed. The callers cache what GetSubstituteName returns, so
++			// the loop runs a few times for each name a document uses.
+ 			var sLower = name.toLowerCase();
+ 			for (var sInstalled in AscFonts.g_map_font_index)
+ 			{
+@@ -3010,17 +3018,39 @@
+ 					return sInstalled;
+ 			}
+ 
+-			var oDictionary = this.g_fontDictionary;
+-			var aSubstitutes = oDictionary.FD_Substitutes[name];
+-			if (aSubstitutes)
++			var aSubstitutes = this.g_fontDictionary.FD_Substitutes[name];
++			for (var i = 0, nCount = aSubstitutes ? aSubstitutes.length : 0; i < nCount; ++i)
+ 			{
+-				for (var i = 0, nCount = aSubstitutes.length; i < nCount; ++i)
+-				{
+-					if (undefined !== AscFonts.g_map_font_index[aSubstitutes[i]])
+-						return aSubstitutes[i];
+-				}
+-				return name;
++				if (undefined !== AscFonts.g_map_font_index[aSubstitutes[i]])
++					return aSubstitutes[i];
+ 			}
++			return null;
++		};
++
++		// Name to look for when "name" is not installed: first installed substitute of FD_Substitutes,
++		// then the alternate name given by the document when it is installed (or has an installed substitute),
++		// as Word does, then Word's default font for a font unknown to the font dictionary. Returns "name"
++		// otherwise (selection by the dictionary data of "name").
++		this.GetSubstituteName = function(name)
++		{
++			if (!name)
++				return name;
++
++			var sInstalled = this.GetInstalledSubstitute(name);
++			if (sInstalled)
++				return sInstalled;
++
++			var sAltName = this.DocumentAltNames[name];
++			if (sAltName && sAltName !== name)
++			{
++				sInstalled = this.GetInstalledSubstitute(sAltName);
++				if (sInstalled)
++					return sInstalled;
++			}
++
++			var oDictionary = this.g_fontDictionary;
++			if (oDictionary.FD_Substitutes[name])
++				return name;
+ 
+ 			if (!/^[\x20-\x7E]+$/.test(name))
+ 				return name;
+@@ -3033,7 +3063,7 @@
+ 			var sDefault = oDictionary.FD_UnknownFontSubstitute;
+ 			if (!sDefault || sDefault === name)
+ 				return name;
+-			return this.GetSubstituteName(sDefault);
++			return this.GetInstalledSubstitute(sDefault) || sDefault;
+ 		};
+ 
+ 		this.GetFontFileWeb = function(name, lStyle)
+diff --git a/tests/common/libfont/fontSubstitution.js b/tests/common/libfont/fontSubstitution.js
+index 6a53fd972c..6530f2f319 100644
+--- a/tests/common/libfont/fontSubstitution.js
++++ b/tests/common/libfont/fontSubstitution.js
+@@ -101,6 +101,29 @@ $(function ()
+ 		});
+ 	});
+ 
++	QUnit.test("alternate name of the document font (w:altName), as Word", function (assert)
++	{
++		oApp.SetDocumentAltNames({"Marianne" : "Times New Roman", "Calibri" : "Courier New", "Loop A" : "Loop B", "Loop B" : "Loop A", "Bradley Hand ITC" : "Viner Hand ITC"});
++		try
++		{
++			withInstalled(["Carlito", "Liberation Serif", "Liberation Mono", "URW Gothic Ecole Metric"], function ()
++			{
++				assert.strictEqual(oApp.GetSubstituteName("Marianne"), "Liberation Serif", "alternate name, then its clone");
++				assert.strictEqual(oApp.GetSubstituteName("Calibri"), "Carlito", "measured substitute before the alternate name");
++				assert.strictEqual(oApp.GetSubstituteName("Bradley Hand ITC"), "Bradley Hand ITC", "alternate name not installed: the font keeps its own dictionary data");
++				assert.strictEqual(oApp.GetSubstituteName("Loop A"), "Carlito", "alternate names not installed: unknown font rule");
++			});
++			withInstalled(["Times New Roman", "Marianne"], function ()
++			{
++				assert.strictEqual(oApp.GetSubstituteName("Marianne"), "Marianne", "installed font wins");
++			});
++		}
++		finally
++		{
++			oApp.SetDocumentAltNames({});
++		}
++	});
++
+ 	QUnit.test("known but missing font without substitute keeps the dictionary matching", function (assert)
+ 	{
+ 		withInstalled(["Carlito", "Liberation Sans"], function ()
+diff --git a/word/Editor/Serialize2.js b/word/Editor/Serialize2.js
+index 27754fbb5a..d2dc810e61 100644
+--- a/word/Editor/Serialize2.js
++++ b/word/Editor/Serialize2.js
+@@ -75,7 +75,13 @@ var c_oSerTableTypes = {
+ 	CustomProperties: 18,
+ 	Glossary: 19,
+ 	Customs: 20,
+-	OForm: 21
++	OForm: 21,
++	FontTable: 22
++};
++var c_oSerFontTableTypes = {
++	Font: 0,
++	Name: 1,
++	AltName: 2
+ };
+ var c_oSerSigTypes = {
+     Version:0
+@@ -8140,6 +8146,10 @@ function BinaryFileReader(doc, openParams)
+ 					this.Document.CustomProperties.fromStream(fileStream);
+ 					this.stream.FromFileStream(fileStream);
+ 					break;
++				case c_oSerTableTypes.FontTable:
++					this.stream.Seek2(mtiOffBits);
++					res = (new Binary_FontTableReader(this.oReadResult, this.stream)).Read();
++					break;
+ 				case c_oSerTableTypes.Customs:
+ 					this.stream.Seek2(mtiOffBits);
+ 					res = (new AscCommon.BinaryCustomsTableReader(this.Document.getCustomXmlManager(), this.stream)).Read();
+@@ -8541,6 +8551,9 @@ function BinaryFileReader(doc, openParams)
+ 		if (this.oReadResult.DocumentContent.length > 0) {
+ 			this.Document.ReplaceContent(this.oReadResult.DocumentContent);
+ 		}
++		if (!this.oReadResult.bCopyPaste && AscFonts.g_fontApplication) {
++			AscFonts.g_fontApplication.SetDocumentAltNames(this.oReadResult.fontAltNames);
++		}
+ 		if(null !== this.oReadResult.defaultTabStop && this.oReadResult.defaultTabStop > 0) {
+ 			AscCommonWord.Default_Tab_Stop = this.oReadResult.defaultTabStop;
+ 		}
+@@ -16525,6 +16538,38 @@ function Binary_CommentsTableReader(doc, oReadResult, stream, oComments)
+         return res;
+     };
+ };
++/**
++ * Font table written by x2t (word/fontTable.xml): alternate names (w:altName) of the document fonts,
++ * stored in oReadResult.fontAltNames (font name => alternate name).
++ */
++function Binary_FontTableReader(oReadResult, stream)
++{
++	this.oReadResult = oReadResult;
++	this.stream      = stream;
++	this.bcr         = new Binary_CommonReader(this.stream);
++	this.Read = function()
++	{
++		let oThis = this;
++		return this.bcr.ReadTable(function(t, l){
++			if (c_oSerFontTableTypes.Font !== t)
++				return c_oSerConstants.ReadUnknown;
++
++			let font = {name : "", altName : ""};
++			let res = oThis.bcr.Read1(l, function(t, l){
++				if (c_oSerFontTableTypes.Name === t)
++					font.name = oThis.stream.GetString2LE(l);
++				else if (c_oSerFontTableTypes.AltName === t)
++					font.altName = oThis.stream.GetString2LE(l);
++				else
++					return c_oSerConstants.ReadUnknown;
++				return c_oSerConstants.ReadOk;
++			});
++			if (font.name && font.altName && font.name !== font.altName)
++				oThis.oReadResult.fontAltNames[font.name] = font.altName;
++			return res;
++		});
++	};
++}
+ function Binary_SettingsTableReader(doc, oReadResult, stream)
+ {
+     this.Document = doc;
+@@ -17561,6 +17606,7 @@ DocSaveParams.prototype.writeNestedReviewType = function(type, reviewInfo, fWrit
+ function DocReadResult(doc) {
+ 	this.logicDocument = doc;
+ 	this.ImageMap = {};
++	this.fontAltNames = {};
+ 	this.oComments = {};
+ 	this.oDocumentComments = {};
+ 	this.oCommentsPlaces = {};
+-- 
+2.55.0
+
