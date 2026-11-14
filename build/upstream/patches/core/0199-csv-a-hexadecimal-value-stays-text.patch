@@ -1,0 +1,49 @@
+From 77d70d56bf59b80362e1072571079314d431fa7b Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Sat, 14 Nov 2026 14:36:07 +0100
+Subject: [PATCH] csv: a hexadecimal value stays text
+
+ReadDigit took a cell for a number when wcstod could read it, and
+wcstod reads C99 hexadecimal as well: "0x1234" came in as 4660 and an
+Ethereum address as 9.2233720368547758e+18, so opening and saving a
+CSV lost them. Excel and LibreOffice keep both as text; a value whose
+digits start with 0x, after any blanks and sign, now does too.
+ElixirOffice found it (their #45) and fixed it in their converter build.
+---
+ .../Reader/CellFormatController/DigitReader.cpp     | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/OOXML/Binary/Sheets/Reader/CellFormatController/DigitReader.cpp b/OOXML/Binary/Sheets/Reader/CellFormatController/DigitReader.cpp
+index d9c2be5cb8..1a7af5ac13 100644
+--- a/OOXML/Binary/Sheets/Reader/CellFormatController/DigitReader.cpp
++++ b/OOXML/Binary/Sheets/Reader/CellFormatController/DigitReader.cpp
+@@ -27,6 +27,7 @@
+ #include "CurrencyReader.h"
+ 
+ #include <cmath>
++#include <cwctype>
+ #include <regex>
+ #include <sstream>
+ 
+@@ -36,6 +37,18 @@ const auto NonDigitcellLimit = 1000;
+ bool DigitReader::ReadDigit(const std::wstring &value, std::wstring &digit, std::wstring &format)
+ {
+     size_t length = value.length();
++
++	// wcstod also reads C99 hexadecimal, which no spreadsheet does: a CSV cell
++	// "0x1234" became 4660, and an Ethereum address the largest 64-bit
++	// integer. Excel and LibreOffice keep both as text, and so does this.
++	size_t start = 0;
++	while (start < length && iswspace(value[start]))
++		start++;
++	if (start < length && (value[start] == L'+' || value[start] == L'-'))
++		start++;
++	if (start + 1 < length && value[start] == L'0' && (value[start + 1] == L'x' || value[start + 1] == L'X'))
++		return false;
++
+     wchar_t *pEndPtr;
+ 	double dValue = wcstod(value.c_str(), &pEndPtr);
+ 
+-- 
+2.55.0
+

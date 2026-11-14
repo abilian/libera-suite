@@ -780,6 +780,19 @@ def test_x2t_reads_every_row_of_a_large_csv(tmp_path, case):
     assert rows_x2t_changes(document, tmp_path / "s") == []
 
 
+def test_a_hexadecimal_value_in_a_csv_stays_text(tmp_path):
+    """x2t read a cell as a number with wcstod, which reads C99 hexadecimal too:
+    0x1234 came back as 4660 and an Ethereum address as 9.2233720368547758e+18,
+    from an open and a save (core 0199)."""
+    document = tmp_path / "addresses.csv"
+    document.write_text(
+        "address\n0x52908400098527886E0F7030069857D2E4169EE7\n0x1234\n-0x10\n42\n",
+        encoding="utf-8",
+    )
+
+    assert rows_x2t_changes(document, tmp_path / "s") == []
+
+
 def test_a_saved_presentation_has_nothing_for_a_handout_master_it_lacks(tmp_path):
     """x2t wrote one's relationships and its theme, and not the master itself, in
     every presentation without one: Microsoft's code then refused a signature over
