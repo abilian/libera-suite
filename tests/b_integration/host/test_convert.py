@@ -797,6 +797,46 @@ def test_a_hexadecimal_value_in_a_csv_stays_text(tmp_path):
     assert rows_x2t_changes(document, tmp_path / "s") == []
 
 
+def test_a_font_is_found_whatever_the_case_of_its_name(tmp_path):
+    """Word, like Windows, matches font names whatever their case, and the
+    editor looked them up as spelt: "Open Sans SemiBold" and "Open Sans
+    ExtraBold" were drawn in a substitute, Carlito here and regular Open Sans
+    with more fonts installed, where the payload's faces are "Open Sans
+    Semibold" and "Open Sans Extrabold" (ElixirOffice's #65, sdkjs 0006). The
+    PDF names all three faces Open Sans, so this measures the word each one
+    draws: a heavier face draws it wider."""
+    pdftotext = shutil.which("pdftotext")
+    if pdftotext is None:
+        pytest.skip("no pdftotext to measure the PDF's words")
+    names = ("Open Sans", "Open Sans SemiBold", "Open Sans ExtraBold")
+    document = tmp_path / "weights.docx"
+    write_docx_body(
+        payload_mod.resolve().root / "empty" / apps.WORDS.blank,
+        document,
+        "".join(
+            f'<w:p><w:r><w:rPr><w:rFonts w:ascii="{name}" w:hAnsi="{name}"/>'
+            "</w:rPr><w:t>Hamburgefonstiv</w:t></w:r></w:p>"
+            for name in names
+        ),
+    )
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    pdf = tmp_path / "weights.pdf"
+
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    boxes = subprocess.run(
+        [pdftotext, "-bbox", str(pdf), "-"], capture_output=True, text=True, check=True
+    ).stdout
+    widths = [
+        float(right) - float(left)
+        for left, right in re.findall(
+            r'<word xMin="([\d.]+)" yMin="[\d.]+" xMax="([\d.]+)"', boxes
+        )
+    ]
+    assert len(widths) == len(names)
+    assert widths[0] < widths[1] < widths[2]
+
+
 def thin_pen_wmf() -> bytes:
     """A metafile drawn the way CAD exports are: a logical window 32,000 units
     wide, and a pen 1 unit wide, a fiftieth of a pixel once the window is

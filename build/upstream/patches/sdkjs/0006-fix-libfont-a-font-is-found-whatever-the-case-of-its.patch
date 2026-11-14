@@ -1,0 +1,67 @@
+From 35457b205d152ea1f39e5472de074bf0cb9bd529 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Sat, 14 Nov 2026 16:10:53 +0100
+Subject: [PATCH] fix(libfont): a font is found whatever the case of its name
+
+GetSubstituteName looked a document's font name up as it was spelt,
+and Word, like Windows, matches font names whatever their case. A
+document set in "Open Sans SemiBold" was drawn in Open Sans where the
+font installed is "Open Sans Semibold" (Google's static fonts have
+used both), and "liberation serif" in the default font's clone. A name
+missing as spelt is now looked for in any case before a substitute.
+---
+ common/libfont/map.js                    | 12 ++++++++++++
+ tests/common/libfont/fontSubstitution.js | 14 ++++++++++++++
+ 2 files changed, 26 insertions(+)
+
+diff --git a/common/libfont/map.js b/common/libfont/map.js
+index 4a22469b80..999dbe4c16 100644
+--- a/common/libfont/map.js
++++ b/common/libfont/map.js
+@@ -2998,6 +2998,18 @@
+ 			if (!name || undefined !== AscFonts.g_map_font_index[name])
+ 				return name;
+ 
++			// The same name in another case. Word, like Windows, matches font
++			// names whatever their case, and a document set in "Open Sans
++			// SemiBold" was drawn in a substitute where "Open Sans Semibold" is
++			// installed. The callers cache what this returns, so the loop runs
++			// once for each name a document uses.
++			var sLower = name.toLowerCase();
++			for (var sInstalled in AscFonts.g_map_font_index)
++			{
++				if (sInstalled.toLowerCase() === sLower)
++					return sInstalled;
++			}
++
+ 			var oDictionary = this.g_fontDictionary;
+ 			var aSubstitutes = oDictionary.FD_Substitutes[name];
+ 			if (aSubstitutes)
+diff --git a/tests/common/libfont/fontSubstitution.js b/tests/common/libfont/fontSubstitution.js
+index 5683fe1a4a..6a53fd972c 100644
+--- a/tests/common/libfont/fontSubstitution.js
++++ b/tests/common/libfont/fontSubstitution.js
+@@ -87,6 +87,20 @@ $(function ()
+ 		});
+ 	});
+ 
++	QUnit.test("installed font found whatever the case of its name", function (assert)
++	{
++		withInstalled(["Open Sans Semibold", "Liberation Serif", "Carlito"], function ()
++		{
++			assert.strictEqual(oApp.GetSubstituteName("Open Sans SemiBold"), "Open Sans Semibold");
++			assert.strictEqual(oApp.GetSubstituteName("liberation serif"), "Liberation Serif");
++			assert.strictEqual(oApp.GetSubstituteName("LIBERATION SERIF"), "Liberation Serif");
++		});
++		withInstalled(["Calibri", "Carlito"], function ()
++		{
++			assert.strictEqual(oApp.GetSubstituteName("calibri"), "Calibri", "the font itself, not its clone");
++		});
++	});
++
+ 	QUnit.test("known but missing font without substitute keeps the dictionary matching", function (assert)
+ 	{
+ 		withInstalled(["Carlito", "Liberation Sans"], function ()
+-- 
+2.55.0
+
