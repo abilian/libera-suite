@@ -8,19 +8,16 @@ fixture produced, which is the same thing a save does.
 from __future__ import annotations
 
 import csv
-import functools
 import io
-import operator
 import re
 import shutil
-import struct
 import subprocess
 import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
 from support import ScriptedShell, repo_root
-from support.pictures import IMAGE, picture_docx
+from support.pictures import thin_pen_wmf, wmf_docx
 from support.protected import make_protected
 
 from libera import payload as payload_mod
@@ -797,6 +794,23 @@ def test_a_hexadecimal_value_in_a_csv_stays_text(tmp_path):
     assert rows_x2t_changes(document, tmp_path / "s") == []
 
 
+def word_boxes(pdf: pathlib.Path) -> str:
+    """The PDF's words with their boxes, from Poppler's pdftotext -bbox. The
+    pdftotext Git for Windows ships is xpdf's, which has no -bbox."""
+    pdftotext = shutil.which("pdftotext")
+    if pdftotext is None:
+        pytest.skip("no pdftotext to measure the PDF's words")
+    # xpdf's exits 99 on -v, so its status says nothing.
+    version = subprocess.run(
+        [pdftotext, "-v"], capture_output=True, text=True, check=False
+    )
+    if "Poppler" not in version.stdout + version.stderr:
+        pytest.skip("pdftotext is not Poppler's, which alone has -bbox")
+    return subprocess.run(
+        [pdftotext, "-bbox", str(pdf), "-"], capture_output=True, text=True, check=True
+    ).stdout
+
+
 def test_a_font_is_found_whatever_the_case_of_its_name(tmp_path):
     """Word, like Windows, matches font names whatever their case, and the
     editor looked them up as spelt: "Open Sans SemiBold" and "Open Sans
@@ -805,9 +819,6 @@ def test_a_font_is_found_whatever_the_case_of_its_name(tmp_path):
     Semibold" and "Open Sans Extrabold" (ElixirOffice's #65, sdkjs 0006). The
     PDF names all three faces Open Sans, so this measures the word each one
     draws: a heavier face draws it wider."""
-    pdftotext = shutil.which("pdftotext")
-    if pdftotext is None:
-        pytest.skip("no pdftotext to measure the PDF's words")
     names = ("Open Sans", "Open Sans SemiBold", "Open Sans ExtraBold")
     document = tmp_path / "weights.docx"
     write_docx_body(
@@ -824,9 +835,7 @@ def test_a_font_is_found_whatever_the_case_of_its_name(tmp_path):
 
     export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
 
-    boxes = subprocess.run(
-        [pdftotext, "-bbox", str(pdf), "-"], capture_output=True, text=True, check=True
-    ).stdout
+    boxes = word_boxes(pdf)
     widths = [
         float(right) - float(left)
         for left, right in re.findall(
@@ -846,9 +855,6 @@ def test_an_autofit_column_has_room_for_the_first_line_indent(tmp_path):
     the editor counted the indent from Word 2013's mode only. A Word 2007
     calendar whose cells inherit an indent from Normal came out with "Su" over
     "n" and "2" over "3" (ElixirOffice's #66, their fix, sdkjs 0007)."""
-    pdftotext = shutil.which("pdftotext")
-    if pdftotext is None:
-        pytest.skip("no pdftotext to read the PDF's words")
 
     def row(words) -> str:
         return (
@@ -894,43 +900,9 @@ def test_an_autofit_column_has_room_for_the_first_line_indent(tmp_path):
 
     export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
 
-    text = subprocess.run(
-        [pdftotext, "-bbox", str(pdf), "-"], capture_output=True, text=True, check=True
-    ).stdout
+    text = word_boxes(pdf)
     drawn = re.findall(r"<word [^>]*>([^<]*)</word>", text)
     assert drawn == [*DAYS, *numbers]
-
-
-def thin_pen_wmf() -> bytes:
-    """A metafile drawn the way CAD exports are: a logical window 32,000 units
-    wide, and a pen 1 unit wide, a fiftieth of a pixel once the window is
-    scaled to the picture. Two lines."""
-
-    def record(function: int, *words: int) -> bytes:
-        return struct.pack("<IH", 3 + len(words), function) + struct.pack(
-            f"<{len(words)}h", *words
-        )
-
-    body = b"".join([
-        record(0x0103, 8),  # SETMAPMODE, MM_ANISOTROPIC
-        record(0x020B, 0, 0),  # SETWINDOWORG
-        record(0x020C, 14000, 32000),  # SETWINDOWEXT, y then x
-        record(0x02FA, 0, 1, 0, 0, 0),  # CREATEPENINDIRECT: solid, 1 wide, black
-        record(0x012D, 0),  # SELECTOBJECT
-        record(0x0214, 2000, 2000),  # MOVETO
-        record(0x0213, 2000, 30000),  # LINETO
-        record(0x0214, 2000, 16000),
-        record(0x0213, 12000, 16000),
-        record(0x0000),  # EOF
-    ])
-    header = struct.pack("<HHHIHIH", 1, 9, 0x0300, (len(body) + 18) // 2, 1, 8, 0)
-    # The placeable header: key, handle, bounds, units per inch, reserved, and
-    # the XOR of its ten words before this one.
-    placeable = struct.pack("<IHhhhhHI", 0x9AC6CDD7, 0, 0, 0, 32000, 14000, 4000, 0)
-    checksum = functools.reduce(
-        operator.xor, (w for (w,) in struct.iter_unpack("<H", placeable))
-    )
-    return placeable + struct.pack("<H", checksum) + header + body
 
 
 def test_a_metafile_s_thin_lines_are_drawn_a_pixel_wide(live_payload, tmp_path):
@@ -940,13 +912,7 @@ def test_a_metafile_s_thin_lines_are_drawn_a_pixel_wide(live_payload, tmp_path):
     (ElixirOffice's #61). GDI draws no line thinner than a pixel, and core 0200
     does the same."""
     document = tmp_path / "drawing.docx"
-    picture_docx(
-        live_payload,
-        document,
-        '<a:blip r:embed="rIdWmf"/>',
-        f'<Relationship Id="rIdWmf" Type="{IMAGE}" Target="media/drawing.wmf"/>',
-        {"word/media/drawing.wmf": thin_pen_wmf()},
-    )
+    wmf_docx(live_payload, document, thin_pen_wmf())
 
     words = open_in(apps.WORDS, document, tmp_path / "session")
 

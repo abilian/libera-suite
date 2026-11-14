@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import functools
+import operator
 import re
+import struct
 import zipfile
 from typing import TYPE_CHECKING
 
@@ -55,3 +58,47 @@ def picture_docx(
     with zipfile.ZipFile(path, "w") as z:
         for name, data in parts.items():
             z.writestr(name, data)
+
+
+def thin_pen_wmf(pen_width: int = 1) -> bytes:
+    """A metafile drawn the way CAD exports are: a logical window 32,000 units
+    wide, and a pen `pen_width` units wide, a fiftieth of a pixel once the
+    window is scaled to the picture for a width of 1. Two lines. A width of 0
+    is GDI's cosmetic pen, one pixel at any scale."""
+
+    def record(function: int, *words: int) -> bytes:
+        return struct.pack("<IH", 3 + len(words), function) + struct.pack(
+            f"<{len(words)}h", *words
+        )
+
+    body = b"".join([
+        record(0x0103, 8),  # SETMAPMODE, MM_ANISOTROPIC
+        record(0x020B, 0, 0),  # SETWINDOWORG
+        record(0x020C, 14000, 32000),  # SETWINDOWEXT, y then x
+        record(0x02FA, 0, pen_width, 0, 0, 0),  # CREATEPENINDIRECT: solid, black
+        record(0x012D, 0),  # SELECTOBJECT
+        record(0x0214, 2000, 2000),  # MOVETO
+        record(0x0213, 2000, 30000),  # LINETO
+        record(0x0214, 2000, 16000),
+        record(0x0213, 12000, 16000),
+        record(0x0000),  # EOF
+    ])
+    header = struct.pack("<HHHIHIH", 1, 9, 0x0300, (len(body) + 18) // 2, 1, 8, 0)
+    # The placeable header: key, handle, bounds, units per inch, reserved, and
+    # the XOR of its ten words before this one.
+    placeable = struct.pack("<IHhhhhHI", 0x9AC6CDD7, 0, 0, 0, 32000, 14000, 4000, 0)
+    checksum = functools.reduce(
+        operator.xor, (w for (w,) in struct.iter_unpack("<H", placeable))
+    )
+    return placeable + struct.pack("<H", checksum) + header + body
+
+
+def wmf_docx(payload: pathlib.Path, path: pathlib.Path, wmf: bytes) -> None:
+    """The blank with one picture, the metafile `wmf`."""
+    picture_docx(
+        payload,
+        path,
+        '<a:blip r:embed="rIdWmf"/>',
+        f'<Relationship Id="rIdWmf" Type="{IMAGE}" Target="media/drawing.wmf"/>',
+        {"word/media/drawing.wmf": wmf},
+    )
