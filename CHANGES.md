@@ -17,6 +17,7 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 ### Fixed
 
 - **A CSV value written in hexadecimal stays as it was.** Opening a CSV read `0x1234` as the number 4660 and an Ethereum address as 9.2233720368547758e+18, so saving the file lost them. A value starting with `0x` is now text, as in Excel and LibreOffice. A core patch, after ElixirOffice's fix for the same bug.
+- **Character borders ("text in a box") are kept and drawn.** The box Word draws around a run with a border was not drawn, and saving the document, as `.docx` or `.odt`, dropped it. A core and an editor patch from ElixirOffice.
 - **An autofit table leaves room for its paragraphs' first-line indent.** In a document from Word 2010 or earlier whose table cells inherit a first-line indent, short words and two-digit numbers wrapped inside their cells, a calendar's "Sun" over two lines. An editor patch from ElixirOffice.
 - **A font is found whatever the case of its name.** A document set in "Open Sans SemiBold" was drawn in another font where the font installed is called "Open Sans Semibold", as Google's fonts have spelt it in different years; Word, like Windows, ignores the case. An editor patch.
 - **Line drawings in WMF and EMF pictures are visible in the editor.** A drawing exported from CAD software draws with pens one unit wide on a very large canvas, and the editor drew those lines a fiftieth of a pixel wide, so the picture looked empty, though it printed. A line is now never thinner than a pixel, as in Word and LibreOffice. A core patch.

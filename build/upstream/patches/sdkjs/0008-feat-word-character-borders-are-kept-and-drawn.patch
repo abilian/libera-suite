@@ -1,0 +1,632 @@
+From 8ee3f9bd3e55c7165496c2684c6f7ddc2bcbd68e Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Sat, 14 Nov 2026 17:12:37 +0100
+Subject: [PATCH] feat(word): character borders are kept and drawn
+
+A run's border, w:bdr, now has a place in the text properties: read
+from and written to the binary format as run property 57 (core 0201),
+copied, merged and compared with the rest, kept in the change log, and
+drawn as one box around adjacent runs whose borders are equal, with its
+left edge where the stretch starts and its right edge where it ends,
+across lines. The change log's text properties had no flag bit left:
+the border follows the ligatures byte, marked in two of its bits that
+older data never sets, so older data reads as before.
+
+From ElixirOffice's sdkjs, commit 3d55711 (their 0.7.0), the part of it
+that keeps and draws character borders, with its QUnit test.
+---
+ tests/runAll.js                               |   1 +
+ .../document-calculation/char-border.html     |  36 +++++
+ .../paragraph/char-border.js                  | 136 ++++++++++++++++++
+ word/Editor/Paragraph.js                      |  38 +++++
+ word/Editor/Paragraph/draw/line-draw-state.js |  86 +++++++++++
+ word/Editor/Serialize2.js                     |  18 ++-
+ word/Editor/Styles.js                         |  62 +++++++-
+ 7 files changed, 373 insertions(+), 4 deletions(-)
+ create mode 100644 tests/word/document-calculation/char-border.html
+ create mode 100644 tests/word/document-calculation/paragraph/char-border.js
+
+diff --git a/tests/runAll.js b/tests/runAll.js
+index deb5af9da7..c27d5b4171 100644
+--- a/tests/runAll.js
++++ b/tests/runAll.js
+@@ -67,6 +67,7 @@ const allTests = [
+ 	'word/custom-xml/custom-xml.html',
+ 	'word/document-calculation/floating-position/drawing.html',
+ 	'word/document-calculation/paragraph.html',
++	'word/document-calculation/char-border.html',
+ 	'word/document-calculation/table/correctBadTable.html',
+ 	'word/document-calculation/table/flowTablePosition.html',
+ 	'word/document-calculation/table/pageBreak.html',
+diff --git a/tests/word/document-calculation/char-border.html b/tests/word/document-calculation/char-border.html
+new file mode 100644
+index 0000000000..2872d1d997
+--- /dev/null
++++ b/tests/word/document-calculation/char-border.html
+@@ -0,0 +1,36 @@
++<!DOCTYPE html>
++<html>
++	<head>
++		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
++
++		<title>Document calculation tests</title>
++
++		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
++		<link type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/qunit/2.16.0/qunit.css" rel="stylesheet" media="screen" />
++		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/qunit/2.16.0/qunit.js"></script>
++		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xregexp/3.2.0/xregexp-all.min.js"></script>
++
++
++		<script type="text/javascript" src="../../../develop/sdkjs/word/scripts.js"></script>
++		<script type="text/javascript">
++			window.sdk_scripts.forEach(function(item){
++				document.write('<script type="text/javascript" src="' + item + '"><\/script>');
++			});
++		</script>
++
++		<script type="text/javascript" src="../common/common.js"></script>
++		<script type="text/javascript" src="../common/editor.js"></script>
++		<script type="text/javascript" src="../common/document.js"></script>
++		<script type="text/javascript" src="../common/measurer.js"></script>
++
++		<script type="text/javascript" src="paragraph/char-border.js"></script>
++	</head>
++	<body>
++		<h1 id="qunit-header">Character borders</h1>
++		<h2 id="qunit-banner"></h2>
++		<div id="qunit-testrunner-toolbar"></div>
++		<h2 id="qunit-userAgent"></h2>
++		<ol id="qunit-tests"></ol>
++		<div id="qunit-fixture">test markup, will be hidden</div>
++	</body>
++</html>
+diff --git a/tests/word/document-calculation/paragraph/char-border.js b/tests/word/document-calculation/paragraph/char-border.js
+new file mode 100644
+index 0000000000..a3f3f5a72b
+--- /dev/null
++++ b/tests/word/document-calculation/paragraph/char-border.js
+@@ -0,0 +1,136 @@
++"use strict";
++
++// Character borders (w:bdr, GitHub #66): adjacent runs with an equal border are drawn as one box
++$(function () {
++	
++	let logicDocument = AscTest.CreateLogicDocument();
++	
++	const charWidth = AscTest.CharWidth * AscTest.FontSize;
++	
++	function initDocument(widthInChars)
++	{
++		AscTest.ClearDocument();
++		logicDocument.AddToContent(0, AscTest.CreateParagraph());
++		
++		let sectPr = AscTest.GetFinalSection();
++		sectPr.SetPageSize((widthInChars + 10) * charWidth, 1000);
++		sectPr.SetPageMargins(5 * charWidth, 50, 5 * charWidth, 50);
++	}
++	
++	function createBorder(size, space)
++	{
++		let border = new CDocumentBorder();
++		border.Value = border_Single;
++		border.Size  = size;
++		border.Space = space;
++		border.Color = new CDocumentColor(255, 0, 0, false);
++		return border;
++	}
++	
++	function addRun(p, text, border)
++	{
++		let run = AscTest.AddTextToParagraph(p, text);
++		if (border)
++		{
++			run.Pr.Border = border;
++			run.Recalc_CompiledPr(true);
++		}
++		return run;
++	}
++	
++	// Draws the paragraph into a recording graphics and returns the lines of the boxes
++	function drawBorders(p)
++	{
++		let calls = [];
++		let line  = -1;
++		let g = new Proxy({}, {
++			get : function(target, name)
++			{
++				if ("Start_Command" === name)
++					return function(cmd, l, curLine) { line = curLine; };
++				if ("drawHorLine" === name)
++					return function(rule, y, x0, x1, w) { calls.push({type : "hor", line : line, y : y, x0 : x0, x1 : x1, w : w}); };
++				if ("drawVerLine" === name)
++					return function(rule, x, y0, y1, w) { calls.push({type : "ver", line : line, x : x, y0 : y0, y1 : y1, w : w}); };
++				if ("string" !== typeof name || name.startsWith("m_") || "isPrintMode" === name || "IsThumbnail" === name || "then" === name)
++					return undefined;
++				return function() { return 0; };
++			}
++		});
++		
++		let drawState = new AscWord.ParagraphDrawState();
++		drawState.init(p, g);
++		p.drawRunContentLines(0, g, drawState);
++		return calls;
++	}
++	
++	QUnit.module("Test character borders", {
++		beforeEach : function()
++		{
++			initDocument(60);
++			AscTest.SetCompatibilityMode(AscCommon.document_compatibility_mode_Current);
++		}
++	});
++	
++	QUnit.test("Two adjacent runs with an equal border make one box", function(assert)
++	{
++		let p = logicDocument.GetElement(0);
++		let x0 = 5 * charWidth;
++		
++		addRun(p, "aaa", null);
++		addRun(p, "bbb", createBorder(0.5, 1));
++		addRun(p, "ccc", createBorder(0.5, 1));
++		addRun(p, "ddd", null);
++		AscTest.Recalculate();
++		
++		let calls = drawBorders(p);
++		let hor   = calls.filter(c => "hor" === c.type);
++		let ver   = calls.filter(c => "ver" === c.type);
++		
++		assert.strictEqual(hor.length, 2, "One top and one bottom line for the merged box");
++		assert.close(hor[0].x0, x0 + 3 * charWidth - 1, 0.001, "The box starts at the first bordered run (minus the space)");
++		assert.close(hor[0].x1, x0 + 9 * charWidth + 1, 0.001, "The box ends at the end of the second bordered run (plus the space)");
++		assert.strictEqual(ver.length, 2, "Only the outer edges are drawn, nothing between the runs");
++		assert.close(Math.min(ver[0].x, ver[1].x), x0 + 3 * charWidth - 1, 0.001, "Left edge at the first run");
++		assert.close(Math.max(ver[0].x, ver[1].x), x0 + 9 * charWidth + 1, 0.001, "Right edge at the last run");
++	});
++	
++	QUnit.test("Different borders make separate boxes", function(assert)
++	{
++		let p = logicDocument.GetElement(0);
++		
++		addRun(p, "aaa", createBorder(0.5, 0));
++		addRun(p, "bbb", createBorder(1.0, 0));
++		AscTest.Recalculate();
++		
++		let calls = drawBorders(p);
++		assert.strictEqual(calls.filter(c => "hor" === c.type).length, 4, "Two boxes: two horizontal lines each");
++		assert.strictEqual(calls.filter(c => "ver" === c.type).length, 4, "Two boxes: two vertical lines each");
++	});
++	
++	QUnit.test("A wrapped stretch has the left edge on the first line and the right edge on the last", function(assert)
++	{
++		initDocument(20);
++		let p = logicDocument.GetElement(0);
++		
++		addRun(p, "one ", null);
++		addRun(p, "two three four five ", createBorder(0.5, 0));
++		addRun(p, "six seven eight nine ten eleven", createBorder(0.5, 0));
++		addRun(p, " end", null);
++		AscTest.Recalculate();
++		
++		assert.ok(p.getLineCount() >= 3, "The text wraps to at least 3 lines");
++		
++		let calls = drawBorders(p);
++		let ver   = calls.filter(c => "ver" === c.type);
++		let lines = Array.from(new Set(calls.map(c => c.line))).sort();
++		let first = lines[0], last = lines[lines.length - 1];
++		
++		assert.strictEqual(lines.length, p.getLineCount(), "Every line has a box part");
++		assert.strictEqual(ver.filter(c => c.line === first).length, 1, "First line: left edge only");
++		assert.ok(ver.find(c => c.line === first).x < 5 * charWidth + 10 * charWidth, "It is the left edge");
++		assert.strictEqual(ver.filter(c => c.line === last).length, 1, "Last line: right edge only");
++		for (let l = first + 1; l < last; ++l)
++			assert.strictEqual(ver.filter(c => c.line === l).length, 0, "Middle line " + l + ": no vertical edges");
++	});
++});
+diff --git a/word/Editor/Paragraph.js b/word/Editor/Paragraph.js
+index 564e7a402e..1503b9ca2a 100644
+--- a/word/Editor/Paragraph.js
++++ b/word/Editor/Paragraph.js
+@@ -3226,6 +3226,32 @@ Paragraph.prototype.drawRunContentLines = function(CurPage, pGraphics, drawState
+ 		var aDUnderline = PDSL.DUnderline;
+ 		var aFormBorder = PDSL.FormBorder;
+ 
++		// Draw character borders (w:bdr): one box around a stretch of elements with equal borders,
++		// the left edge only where the stretch starts and the right one only where it ends
++		var oBorderEl = PDSL.Border.Get_Next();
++		while (null != oBorderEl)
++		{
++			var oCharBorder = oBorderEl.Additional.Border;
++			var nBorderW    = oBorderEl.w;
++			var nBorderGap  = oCharBorder.Space;
++			var nBX0        = oBorderEl.x0 - (oBorderEl.Additional.Left ? nBorderGap : 0);
++			var nBX1        = oBorderEl.x1 + (oBorderEl.Additional.Right ? nBorderGap : 0);
++			var nBY0        = oBorderEl.y0 - nBorderGap;
++			var nBY1        = oBorderEl.y1 + nBorderGap;
++
++			pGraphics.Start_Command(AscFormat.DRAW_COMMAND_LINE, Line, CurLine, AscFormat.CLineStructure_DrawType_Underlines);
++			pGraphics.p_color(oBorderEl.r, oBorderEl.g, oBorderEl.b, 255);
++			pGraphics.drawHorLine(c_oAscLineDrawingRule.Bottom, nBY0, nBX0, nBX1, nBorderW);
++			pGraphics.drawHorLine(c_oAscLineDrawingRule.Top, nBY1, nBX0, nBX1, nBorderW);
++			if (oBorderEl.Additional.Left)
++				pGraphics.drawVerLine(c_oAscLineDrawingRule.Right, nBX0, nBY0, nBY1, nBorderW);
++			if (oBorderEl.Additional.Right)
++				pGraphics.drawVerLine(c_oAscLineDrawingRule.Left, nBX1, nBY0, nBY1, nBorderW);
++			pGraphics.End_Command();
++
++			oBorderEl = PDSL.Border.Get_Next();
++		}
++
+ 		// Рисуем зачеркивание
+ 		pGraphics.Start_Command(AscFormat.DRAW_COMMAND_LINE, Line, CurLine, AscFormat.CLineStructure_DrawType_Strikeouts);
+ 		var Element = aStrikeout.Get_Next();
+@@ -19786,6 +19812,8 @@ CParaDrawingRangeLines.prototype =
+ 					Element.Intermediate.push(Element.x0);
+ 
+                 Element.x0 = PrevEl.x0;
++				if (Element.Additional && Element.Additional.Border && PrevEl.Additional)
++					Element.Additional.Left = PrevEl.Additional.Left;
+                 Count--;
+             }
+             else
+@@ -19847,6 +19875,16 @@ CParaDrawingRangeLines.prototype =
+ 			if (undefined === PrevEl.Additional || undefined === Element.Additional)
+ 				return false;
+ 
++			if (PrevEl.Additional.Border || Element.Additional.Border)
++			{
++				// Character borders: adjacent elements with equal borders form one box
++				return !!(PrevEl.Additional.Border
++					&& Element.Additional.Border
++					&& !PrevEl.Additional.Right
++					&& !Element.Additional.Left
++					&& PrevEl.Additional.Border.IsEqual(Element.Additional.Border));
++			}
++
+ 			if (undefined !== PrevEl.Additional.Active && PrevEl.Additional.Active === Element.Additional.Active)
+ 			{
+ 				if (!PrevEl.Additional.CommentId
+diff --git a/word/Editor/Paragraph/draw/line-draw-state.js b/word/Editor/Paragraph/draw/line-draw-state.js
+index 7034bf716f..7df9b3d291 100644
+--- a/word/Editor/Paragraph/draw/line-draw-state.js
++++ b/word/Editor/Paragraph/draw/line-draw-state.js
+@@ -58,8 +58,13 @@
+ 		this.RunReview   = new CParaDrawingRangeLines();
+ 		this.CollChange  = new CParaDrawingRangeLines();
+ 		this.FormBorder  = new CParaDrawingRangeLines();
++		this.Border      = new CParaDrawingRangeLines(); // character borders (w:bdr), one element per run element, merged on draw
+ 		this.CustomLines = {};
+ 		
++		this.border        = null; // border of the current run
++		this.borderPrev    = null; // border of the last element drawn, as long as the stretch is not interrupted
++		this.borderLastEl  = null; // last element added to this.Border in the current range
++		
+ 		this.Page  = 0;
+ 		this.Line  = 0;
+ 		this.Range = 0;
+@@ -130,6 +135,9 @@
+ 	{
+ 		this.Page = page;
+ 		
++		this.borderPrev   = null;
++		this.borderLastEl = null;
++		
+ 		this.VisitedHyperlink = false;
+ 		this.Hyperlink        = false;
+ 		
+@@ -155,6 +163,8 @@
+ 		this.CollChange.Clear();
+ 		this.DUnderline.Clear();
+ 		this.FormBorder.Clear();
++		this.Border.Clear();
++		this.borderLastEl = null;
+ 		
+ 		this.CustomLines = {};
+ 	};
+@@ -173,6 +183,77 @@
+ 	ParagraphLineDrawState.prototype.endRange = function()
+ 	{
+ 		this.bidiFlow.end();
++		
++		// The stretch of equal borders goes on only if this is the last range of the line
++		// and the next line starts with a run having the same border
++		if (this.borderLastEl)
++		{
++			let isLastRange = this.Range === this.Paragraph.Lines[this.Line].Ranges.length - 1;
++			let continued   = isLastRange && this.isBorderContinuedOnNextLine(this.borderLastEl.Additional.Border);
++			this.borderLastEl.Additional.Right = !continued;
++			if (!continued)
++				this.borderPrev = null;
++			this.borderLastEl = null;
++		}
++	};
++	ParagraphLineDrawState.prototype.isBorderContinuedOnNextLine = function(border)
++	{
++		let nextLine = this.Paragraph.Lines[this.Line + 1];
++		if (!nextLine || !nextLine.Ranges.length)
++			return false;
++		
++		let item = this.Paragraph.Content[nextLine.Ranges[0].StartPos];
++		while (item && para_Run !== item.Type && item.Content && item.Content.length)
++			item = item.Content[0];
++		
++		if (!item || para_Run !== item.Type)
++			return false;
++		
++		let nextBorder = item.getCompiledPr().Border;
++		return !!(nextBorder && !nextBorder.IsNone() && nextBorder.IsEqual(border));
++	};
++	/**
++	 * Collects the horizontal extent of a run element having a character border. Elements of one stretch of equal
++	 * borders are merged later (CParaDrawingRangeLines.Get_NextForward) into one box.
++	 */
++	ParagraphLineDrawState.prototype.handleCharBorder = function(element, startX, endX)
++	{
++		if (endX - startX < 0.001)
++			return;
++		
++		let border = para_End === element.Type ? null : this.border;
++		if (!border)
++		{
++			// A visible element without border finishes the current stretch
++			if (this.borderLastEl)
++			{
++				this.borderLastEl.Additional.Right = true;
++				this.borderLastEl = null;
++			}
++			this.borderPrev = null;
++			return;
++		}
++		
++		let isContinued = this.borderPrev && this.borderPrev.IsEqual(border);
++		if (this.borderLastEl && !isContinued)
++		{
++			// Another border starts right after: the previous stretch ends here
++			this.borderLastEl.Additional.Right = true;
++		}
++		
++		let color = (border.Color && border.Color.Auto && !border.Unifill) ? this.color : border.Get_Color(this.Paragraph);
++		
++		let additional = {
++			Border : border,
++			Left   : !isContinued,
++			Right  : false,
++			Y0     : this.LineY0,
++			Y1     : this.LineY1
++		};
++		
++		this.Border.Add(this.LineY0, this.LineY1, startX, endX, Math.max(border.Size, 0.1), color.r, color.g, color.b, additional);
++		this.borderLastEl = this.Border.Elements[this.Border.Elements.length - 1];
++		this.borderPrev   = border;
+ 	};
+ 	/**
+ 	 * @param element {AscWord.CRunElementBase}
+@@ -268,6 +349,8 @@
+ 				break;
+ 		}
+ 		
++		this.handleCharBorder(element, startX, endX);
++		
+ 		if (misspell)
+ 			this.Spelling.Add(startX, endX, AscWord.BLACK_COLOR);
+ 		
+@@ -475,6 +558,9 @@
+ 		this.collPrChangeColor = run.getCollPrChangeColor();
+ 		
+ 		this.textPr = textPr;
++		
++		let charBorder = textPr.Border;
++		this.border = (charBorder && !charBorder.IsNone()) ? charBorder : null;
+ 	};
+ 	ParagraphLineDrawState.prototype.handleFormBorder = function(item, run, inRunPos)
+ 	{
+diff --git a/word/Editor/Serialize2.js b/word/Editor/Serialize2.js
+index e23dc7f6dd..e29a2f1cc0 100644
+--- a/word/Editor/Serialize2.js
++++ b/word/Editor/Serialize2.js
+@@ -336,7 +336,9 @@ var c_oSerProp_rPrType = {
+ 	Reflection: 52,
+ 	Glow: 53,
+ 	Props3d: 54,
+-	Scene3d: 55
++	Scene3d: 55,
++	Kern: 56,
++	Border: 57 // must equal c_oSerProp_rPrType::Border in core BinReaderWriterDefines.h
+ };
+ var c_oSerProp_rowPrType = {
+     CantSplit:0,
+@@ -3350,6 +3352,12 @@ function Binary_rPrWriter(memory, saveParams)
+             this.memory.WriteByte(c_oSerPropLenType.Variable);
+             this.bs.WriteItemWithLength(function () { _this.bs.WriteShd(rPr.Shd); });
+ 		}
++		if (rPr.Border)
++		{
++			this.memory.WriteByte(c_oSerProp_rPrType.Border);
++			this.memory.WriteByte(c_oSerPropLenType.Variable);
++			this.bs.WriteItemWithLength(function () { _this.bs.WriteBorder(rPr.Border); });
++		}
+ 		if(null != rPr.Vanish)
+ 		{
+ 			this.memory.WriteByte(c_oSerProp_rPrType.Vanish);
+@@ -10280,6 +10288,14 @@ function Binary_rPrReader(doc, oReadResult, stream)
+                 rPr.Shd = new CDocumentShd();
+ 				ReadDocumentShd(length, this.bcr, rPr.Shd);
+                 break;
++			case c_oSerProp_rPrType.Border:
++				var bpPrrBorder = new Binary_pPrReader(this.Document, this.oReadResult, this.stream);
++				var oBorder = new CDocumentBorder();
++				res = this.bcr.Read2(length, function(t, l) {
++					return bpPrrBorder.ReadBorder(t, l, oBorder);
++				});
++				rPr.Border = oBorder;
++				break;
+ 			case c_oSerProp_rPrType.Vanish:
+                 rPr.Vanish = this.stream.GetBool();
+                 break;
+diff --git a/word/Editor/Styles.js b/word/Editor/Styles.js
+index c9d4495b81..cec58671d1 100644
+--- a/word/Editor/Styles.js
++++ b/word/Editor/Styles.js
+@@ -13022,6 +13022,7 @@ function CTextPr()
+     this.FontRef    = undefined;
+ 
+     this.Shd        = undefined;
++	this.Border     = undefined;
+     this.Vanish     = undefined;
+ 	this.Ligatures  = undefined;
+ 
+@@ -13064,6 +13065,7 @@ CTextPr.prototype.Clear = function()
+ 	this.Unifill        = undefined;
+ 	this.FontRef        = undefined;
+ 	this.Shd            = undefined;
++	this.Border         = undefined;
+ 	this.Vanish         = undefined;
+ 	this.Ligatures      = undefined;
+ 	this.TextOutline    = undefined;
+@@ -13126,6 +13128,9 @@ CTextPr.prototype.Copy = function(bCopyPrChange, oPr)
+ 
+ 	if (undefined !== this.Shd)
+ 		TextPr.Shd = this.Shd.Copy();
++
++	if (undefined !== this.Border)
++		TextPr.Border = this.Border.Copy();
+ 	if (undefined !== this.FontScale)
+ 		TextPr.FontScale = this.FontScale;
+ 
+@@ -13197,6 +13202,9 @@ CTextPr.prototype.createDuplicateForSmartArt = function(oPr)
+ 	if (undefined !== this.Shd)
+ 		TextPr.Shd = this.Shd.Copy();
+ 
++	if (undefined !== this.Border)
++		TextPr.Border = this.Border.Copy();
++
+ 	if (undefined !== this.FontScale)
+ 		TextPr.FontScale = this.FontScale;
+ 
+@@ -13317,6 +13325,9 @@ CTextPr.prototype.Merge = function(TextPr)
+ 	if (TextPr.Shd)
+ 		this.Shd = TextPr.Shd.Copy();
+ 
++	if (TextPr.Border)
++		this.Border = TextPr.Border.Copy();
++
+ 	if (undefined !== TextPr.Vanish && null !== TextPr.Vanish)
+ 		this.Vanish = TextPr.Vanish;
+ 
+@@ -13491,6 +13502,11 @@ CTextPr.prototype.Apply = function(textPr)
+ 		this.Shd = undefined;
+ 	else if (undefined !== textPr.Shd)
+ 		this.Shd = textPr.Shd.Copy();
++
++	if (null === textPr.Border)
++		this.Border = undefined;
++	else if (undefined !== textPr.Border)
++		this.Border = textPr.Border.Copy();
+ 	
+ 	if (null === textPr.Vanish)
+ 		this.Vanish = undefined;
+@@ -13537,6 +13553,7 @@ CTextPr.prototype.InitDefault = function(nCompatibilityMode)
+ 	this.Unifill = undefined;
+ 	this.FontRef = undefined;
+ 	this.Shd     = undefined;
++	this.Border  = undefined;
+ 	this.Vanish  = false;
+ 	this.Ligatures  = Asc.LigaturesType.None;
+ 
+@@ -13616,6 +13633,15 @@ CTextPr.prototype.Set_FromObject = function(TextPr, isUndefinedToNull)
+ 		this.Shd = isUndefinedToNull ? null : undefined;
+ 	}
+ 
++	if (undefined !== TextPr.Border)
++	{
++		this.Border = CDocumentBorder.FromObject(TextPr.Border);
++	}
++	else
++	{
++		this.Border = isUndefinedToNull ? null : undefined;
++	}
++
+ 	this.Vanish         = CheckUndefinedToNull(isUndefinedToNull, TextPr.Vanish);
+ 	this.Ligatures      = CheckUndefinedToNull(isUndefinedToNull, TextPr.Ligatures);
+ 	this.Unifill        = CheckUndefinedToNull(isUndefinedToNull, TextPr.Unifill);
+@@ -14112,9 +14138,19 @@ CTextPr.prototype.Write_ToBinary = function(Writer)
+ 		Flags |= 1073741824;
+ 	}
+ 
+-	if (undefined != this.Ligatures)
++	// All 32 flag bits are taken. Bit 31 keeps its old meaning (one byte follows) and without a border the byte is
++	// exactly the old Ligatures value (0..15). With a border the byte carries two extra markers old files never
++	// have (bit 6: Ligatures undefined, bit 7: the border follows), so old data reads identically.
++	if (undefined !== this.Ligatures || undefined !== this.Border)
+ 	{
+-		Writer.WriteByte(this.Ligatures);
++		var nLigByte = undefined !== this.Ligatures ? this.Ligatures : 0x40;
++		if (undefined !== this.Border)
++			nLigByte |= 0x80;
++
++		Writer.WriteByte(nLigByte);
++		if (undefined !== this.Border)
++			this.Border.Write_ToBinary(Writer);
++
+ 		Flags |= (1 << 31);
+ 	}
+ 
+@@ -14284,7 +14320,17 @@ CTextPr.prototype.Read_FromBinary = function(Reader)
+ 	}
+ 
+ 	if (Flags & (1 << 31))
+-		this.Ligatures = Reader.GetByte();
++	{
++		var nLigByte = Reader.GetByte();
++		if (!(nLigByte & 0x40))
++			this.Ligatures = nLigByte & 0x3F;
++
++		if (nLigByte & 0x80)
++		{
++			this.Border = new CDocumentBorder();
++			this.Border.Read_FromBinary(Reader);
++		}
++	}
+ };
+ CTextPr.prototype.Check_NeedRecalc = function()
+ {
+@@ -14346,6 +14392,9 @@ CTextPr.prototype.Check_NeedRecalc = function()
+ 	if (undefined != this.Shd)
+ 		return true;
+ 
++	if (undefined !== this.Border)
++		return true;
++
+ 	return false;
+ };
+ CTextPr.prototype.getFontCoef = function()
+@@ -14551,6 +14600,9 @@ CTextPr.prototype.Is_Equal = function(TextPr)
+ 
+ 	if (!IsEqualStyleObjects(this.Shd, TextPr.Shd))
+ 		return false;
++
++	if (!IsEqualStyleObjects(this.Border, TextPr.Border))
++		return false;
+ 	if (undefined != TextPr.AscLine)
+ 	{
+ 		return false;
+@@ -14597,6 +14649,7 @@ CTextPr.prototype.Is_Empty = function()
+ 		|| undefined !== this.Unifill
+ 		|| undefined !== this.FontRef
+ 		|| undefined !== this.Shd
++		|| undefined !== this.Border
+ 		|| undefined !== this.Vanish
+ 		|| undefined !== this.Ligatures
+ 		|| undefined !== this.TextOutline
+@@ -14715,6 +14768,9 @@ CTextPr.prototype.GetDiff = function(oTextPr)
+ 	if (this.Shd && !this.Shd.IsEqual(oTextPr.Shd))
+ 		oResultTextPr.Shd = this.Shd.Copy();
+ 
++	if (this.Border && !this.Border.IsEqual(oTextPr.Border))
++		oResultTextPr.Border = this.Border.Copy();
++
+ 	return oResultTextPr;
+ };
+ CTextPr.prototype.GetBold = function()
+-- 
+2.55.0
+

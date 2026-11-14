@@ -794,6 +794,71 @@ def test_a_hexadecimal_value_in_a_csv_stays_text(tmp_path):
     assert rows_x2t_changes(document, tmp_path / "s") == []
 
 
+BOXED = (
+    '<w:p><w:r><w:t xml:space="preserve">Before </w:t></w:r><w:r><w:rPr>{}</w:rPr>'
+    '<w:t>boxed</w:t></w:r><w:r><w:t xml:space="preserve"> after.</w:t></w:r></w:p>'
+)
+BORDER = '<w:bdr w:val="single" w:sz="8" w:space="0" w:color="000000"/>'
+
+
+def open_boxed(tmp_path: pathlib.Path, rpr: str) -> Session:
+    tmp_path.mkdir(exist_ok=True)
+    document = tmp_path / "boxed.docx"
+    write_docx_body(
+        payload_mod.resolve().root / "empty" / apps.WORDS.blank,
+        document,
+        BOXED.format(rpr),
+    )
+    return open_in(apps.WORDS, document, tmp_path / "session")
+
+
+def test_a_character_border_is_kept_through_a_save(tmp_path):
+    """A run's border, w:bdr, had no place in the editor's binary format: a
+    document read and written again lost it, in .docx and in .odt (ElixirOffice's
+    #66, their fix, core 0201 and sdkjs 0008)."""
+    words = open_boxed(tmp_path, BORDER)
+    docx, odt = tmp_path / "out.docx", tmp_path / "out.odt"
+
+    export(words, docx, apps.WORDS.ids_by_ext["docx"], None)
+    export(words, odt, apps.WORDS.ids_by_ext["odt"], None)
+
+    assert '<w:bdr w:val="single"' in zipfile.ZipFile(docx).read(
+        "word/document.xml"
+    ).decode("utf-8")
+    assert 'fo:border="' in zipfile.ZipFile(odt).read("content.xml").decode("utf-8")
+
+
+def dark_pixels(pdf: pathlib.Path) -> int:
+    """How many pixels of the PDF's first page, drawn at 72 dpi in grey, are
+    darker than mid-grey."""
+    pdftoppm = shutil.which("pdftoppm")
+    if pdftoppm is None:
+        pytest.skip("no pdftoppm to draw the PDF's page")
+    page = subprocess.run(
+        [pdftoppm, "-r", "72", "-gray", "-f", "1", "-l", "1", str(pdf)],
+        capture_output=True,
+        check=True,
+    ).stdout
+    # P5, width, height, maximum value, then a byte a pixel.
+    _, width, height, _ = page.split(maxsplit=4)[:4]
+    return sum(1 for b in page[-int(width) * int(height) :] if b < 128)
+
+
+def test_a_character_border_is_drawn(tmp_path):
+    """The box around a run with w:bdr was not drawn, in the editor or in what
+    it prints. The same text with and without one: the box is the difference,
+    its four sides about 140 pixels at 72 dpi."""
+    pdfs = []
+    for name, rpr in (("plain", ""), ("boxed", BORDER)):
+        words = open_boxed(tmp_path / name, rpr)
+        pdfs.append(tmp_path / f"{name}.pdf")
+        export(words, pdfs[-1], apps.WORDS.ids_by_ext["pdf"], None)
+
+    plain, boxed = (dark_pixels(pdf) for pdf in pdfs)
+
+    assert boxed - plain > 80
+
+
 def word_boxes(pdf: pathlib.Path) -> str:
     """The PDF's words with their boxes, from Poppler's pdftotext -bbox. The
     pdftotext Git for Windows ships is xpdf's, which has no -bbox."""

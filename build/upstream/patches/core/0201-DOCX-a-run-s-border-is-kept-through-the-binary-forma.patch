@@ -1,0 +1,212 @@
+From 55db2c04c52c3e00349987f39a8028ec7b043185 Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Sat, 14 Nov 2026 17:12:21 +0100
+Subject: [PATCH] DOCX: a run's border is kept through the binary format
+
+A run's border, w:bdr, had no run property in the binary format the
+editor reads and writes, so it was dropped on the way in: a document
+read and written again lost every character border, in .docx as in
+.odt, and the editor never had one to draw. Run property 57 carries it
+now, written from w:bdr and read back with the border reader that
+paragraph borders use, moved to Binary_CommonReader2 so that both can.
+A reader without it skips the property, as it skips any it does not
+know.
+
+From ElixirOffice's core, commit 595d67c (their 0.7.0), the part of it
+that carries character borders; sdkjs 0008 draws them.
+---
+ .../Document/BinReader/BinaryReaderD.cpp      | 115 ++++++++++--------
+ .../Binary/Document/BinReader/BinaryReaderD.h |   1 +
+ .../BinWriter/BinReaderWriterDefines.h        |   3 +-
+ .../Document/BinWriter/BinaryWriterD.cpp      |   9 ++
+ 4 files changed, 74 insertions(+), 54 deletions(-)
+
+diff --git a/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp b/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
+index ec23523869..49685cfd46 100644
+--- a/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
++++ b/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
+@@ -317,6 +317,62 @@ template<typename T> int Binary_CommonReader2::ReadTrackRevision2(long length, T
+ 	READ1_DEF(length, res, this->ReadTrackRevisionInner2, poResult);
+ 	return res;
+ }
++int Binary_CommonReader2::ReadBorder(BYTE type, long length, void* poResult)
++{
++	int res = c_oSerConstants::ReadOk;
++	ComplexTypes::Word::CBorder* pBorder = static_cast<ComplexTypes::Word::CBorder*>(poResult);
++	
++	if ( c_oSerBorderType::Color == type )
++	{
++		pBorder->m_oColor.Init();
++		pBorder->m_oColor->SetValue(SimpleTypes::hexcolorRGB);
++		
++		this->ReadHexColor(pBorder->m_oColor.GetPointer(), length);
++	}
++	else if ( c_oSerBorderType::Space == type )
++	{
++		pBorder->m_oSpace.Init();
++		pBorder->m_oSpace->SetValue(SerializeCommon::Round(g_dKoef_mm_to_pt * m_oBufferedStream.GetDouble()));
++	}
++	else if ( c_oSerBorderType::SpacePoint == type )
++	{
++		pBorder->m_oSpace.Init();
++		pBorder->m_oSpace->SetValue(m_oBufferedStream.GetLong());
++	}
++	else if ( c_oSerBorderType::Size == type )
++	{
++		pBorder->m_oSz.Init();
++		pBorder->m_oSz->SetValue(SerializeCommon::Round(g_dKoef_mm_to_eightpoint * m_oBufferedStream.GetDouble()));
++	}
++	else if ( c_oSerBorderType::Size8Point == type )
++	{
++		pBorder->m_oSz.Init();
++		pBorder->m_oSz->SetValue(m_oBufferedStream.GetLong());
++	}
++	else if ( c_oSerBorderType::Value == type )
++	{
++		pBorder->m_oVal.Init();
++
++		if (0 != m_oBufferedStream.GetUChar())
++			pBorder->m_oVal->SetValue(SimpleTypes::bordervalueSingle);
++		else
++			pBorder->m_oVal->SetValue(SimpleTypes::bordervalueNone);
++	}
++	else if (c_oSerBorderType::ValueType == type)
++	{
++		pBorder->m_oVal.Init();
++		pBorder->m_oVal->SetValue((SimpleTypes::EBorder)m_oBufferedStream.GetLong());
++	}
++	else if ( c_oSerBorderType::ColorTheme == type )
++	{
++		CThemeColor ThemeColor;
++		this->ReadThemeColor(length, ThemeColor);
++		ThemeColor.ToCThemeColor(pBorder->m_oColor, pBorder->m_oThemeColor, pBorder->m_oThemeTint, pBorder->m_oThemeShade);
++	}
++	else
++		res = c_oSerConstants::ReadUnknown;
++	return res;
++}
+ int Binary_CommonReader2::ReadShdComplexType(BYTE type, long length, void* poResult)
+ {
+ 	if (length < 0)
+@@ -641,6 +697,11 @@ int Binary_rPrReader::ReadContent(BYTE type, long length, void* poResult)
+ 			pRPr->m_oShd.Init();
+ 			READ2_DEF(length, res, oBinary_CommonReader2.ReadShdComplexType, pRPr->m_oShd.GetPointer());			
+ 		}break;
++		case c_oSerProp_rPrType::Border:
++		{
++			pRPr->m_oBdr.Init();
++			READ2_DEF(length, res, oBinary_CommonReader2.ReadBorder, pRPr->m_oBdr.GetPointer());
++		}break;
+ 		case c_oSerProp_rPrType::RStyle:
+ 		{
+ 			pRPr->m_oRStyle.Init();
+@@ -1331,59 +1392,7 @@ int Binary_pPrReader::ReadBorders(BYTE type, long length, void* poResult)
+ }
+ int Binary_pPrReader::ReadBorder(BYTE type, long length, void* poResult)
+ {
+-	int res = c_oSerConstants::ReadOk;
+-	ComplexTypes::Word::CBorder* pBorder = static_cast<ComplexTypes::Word::CBorder*>(poResult);
+-	
+-	if ( c_oSerBorderType::Color == type )
+-	{
+-		pBorder->m_oColor.Init();
+-		pBorder->m_oColor->SetValue(SimpleTypes::hexcolorRGB);
+-		
+-		oBinary_CommonReader2.ReadHexColor(pBorder->m_oColor.GetPointer(), length);
+-	}
+-	else if ( c_oSerBorderType::Space == type )
+-	{
+-		pBorder->m_oSpace.Init();
+-		pBorder->m_oSpace->SetValue(SerializeCommon::Round(g_dKoef_mm_to_pt * m_oBufferedStream.GetDouble()));
+-	}
+-	else if ( c_oSerBorderType::SpacePoint == type )
+-	{
+-		pBorder->m_oSpace.Init();
+-		pBorder->m_oSpace->SetValue(m_oBufferedStream.GetLong());
+-	}
+-	else if ( c_oSerBorderType::Size == type )
+-	{
+-		pBorder->m_oSz.Init();
+-		pBorder->m_oSz->SetValue(SerializeCommon::Round(g_dKoef_mm_to_eightpoint * m_oBufferedStream.GetDouble()));
+-	}
+-	else if ( c_oSerBorderType::Size8Point == type )
+-	{
+-		pBorder->m_oSz.Init();
+-		pBorder->m_oSz->SetValue(m_oBufferedStream.GetLong());
+-	}
+-	else if ( c_oSerBorderType::Value == type )
+-	{
+-		pBorder->m_oVal.Init();
+-
+-		if (0 != m_oBufferedStream.GetUChar())
+-			pBorder->m_oVal->SetValue(SimpleTypes::bordervalueSingle);
+-		else
+-			pBorder->m_oVal->SetValue(SimpleTypes::bordervalueNone);
+-	}
+-	else if (c_oSerBorderType::ValueType == type)
+-	{
+-		pBorder->m_oVal.Init();
+-		pBorder->m_oVal->SetValue((SimpleTypes::EBorder)m_oBufferedStream.GetLong());
+-	}
+-	else if ( c_oSerBorderType::ColorTheme == type )
+-	{
+-		CThemeColor ThemeColor;
+-		oBinary_CommonReader2.ReadThemeColor(length, ThemeColor);
+-		ThemeColor.ToCThemeColor(pBorder->m_oColor, pBorder->m_oThemeColor, pBorder->m_oThemeTint, pBorder->m_oThemeShade);
+-	}
+-	else
+-		res = c_oSerConstants::ReadUnknown;
+-	return res;
++	return oBinary_CommonReader2.ReadBorder(type, length, poResult);
+ }
+ int Binary_pPrReader::ReadFramePr(BYTE type, long length, void* poResult)
+ {
+diff --git a/OOXML/Binary/Document/BinReader/BinaryReaderD.h b/OOXML/Binary/Document/BinReader/BinaryReaderD.h
+index 204ba6be87..e46a338644 100644
+--- a/OOXML/Binary/Document/BinReader/BinaryReaderD.h
++++ b/OOXML/Binary/Document/BinReader/BinaryReaderD.h
+@@ -56,6 +56,7 @@ public:
+ 	template<typename T> int ReadTrackRevision(long length, T* poResult);
+ 	template<typename T> int ReadTrackRevision2(long length, T* poResult);
+ 	int ReadShdComplexType(BYTE type, long length, void* poResult);
++	int ReadBorder(BYTE type, long length, void* poResult);
+ private:
+ 	template<typename T> int ReadTrackRevisionInner(BYTE type, long length, T* poResult);
+ 	template<typename T> int ReadTrackRevisionInner2(BYTE type, long length, T* poResult);
+diff --git a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
+index 5b8f8a4a95..95384eb4c1 100644
+--- a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
++++ b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
+@@ -412,7 +412,8 @@ extern int g_nCurFormatVersion;
+ 		Glow = 53,
+ 		Props3d = 54,
+ 		Scene3d = 55,
+-		Kern = 56
++		Kern = 56,
++		Border = 57
+ 	};}
+ 	namespace c_oSerProp_rowPrType{enum c_oSerProp_rowPrType
+ 	{
+diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
+index 4bbdac7a2d..25a6c1103b 100644
+--- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
++++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
+@@ -658,6 +658,15 @@ void Binary_rPrWriter::Write_rPr(OOX::Logic::CRunProperty* rPr)
+ 		m_oBcw.WriteShd(rPr->m_oShd.get());
+ 		m_oBcw.WriteItemWithLengthEnd(nCurPos);
+ 	}
++	//Border (run properties are framed with a length type byte, like Shd)
++	if (rPr->m_oBdr.IsInit())
++	{
++		m_oBcw.m_oStream.WriteBYTE(c_oSerProp_rPrType::Border);
++		m_oBcw.m_oStream.WriteBYTE(c_oSerPropLenType::Variable);
++		nCurPos = m_oBcw.WriteItemWithLengthStart();
++		m_oBcw.WriteBorder(rPr->m_oBdr.get());
++		m_oBcw.WriteItemWithLengthEnd(nCurPos);
++	}
+ 	//RStyle
+ 	if ((false != rPr->m_oRStyle.IsInit()) && (rPr->m_oRStyle->m_sVal.IsInit()))
+ 	{
+-- 
+2.55.0
+
