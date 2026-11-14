@@ -1,0 +1,56 @@
+From 9c2dc5e8d799741573f82515389c3659298c1c94 Mon Sep 17 00:00:00 2001
+From: ElixirOffice contributors <noreply@elixiroffice.org>
+Date: Sat, 14 Nov 2026 16:41:03 +0100
+Subject: [PATCH] fix(word): an autofit column has room for the first line
+ indent
+
+Word sizes an autofit table's columns so that a word fits beside its
+paragraph's first line indent, whatever the document's compatibility
+mode; the minimum width counted the indent from Word 2013's mode only.
+A Word 2007 calendar whose cells inherit an indent from Normal came out
+with "Su" over "n" and "2" over "3". The indent now counts in an
+autofit table, or one nested in an autofit table, in every mode.
+
+From ElixirOffice's sdkjs, commit 3d55711 (their 0.7.0), the part of
+it that sizes autofit columns.
+---
+ word/Editor/Paragraph.js | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/word/Editor/Paragraph.js b/word/Editor/Paragraph.js
+index 8954529678..564e7a402e 100644
+--- a/word/Editor/Paragraph.js
++++ b/word/Editor/Paragraph.js
+@@ -2169,6 +2169,20 @@ Paragraph.prototype.GetCalculatedCurPosXY = function()
+ {
+ 	return this.Internal_Recalculate_CurPos(false, false, true);
+ };
++/**
++ * The paragraph lies in a cell of a table whose layout is autofit (also for the topmost table of a nested one)
++ * @returns {boolean}
++ */
++Paragraph.prototype.isInAutofitTableCell = function()
++{
++	let cell = this.IsTableCellContent(true);
++	let table = cell ? cell.GetTable() : null;
++	if (!table || tbllayout_AutoFit !== table.Get_CompiledPr(false).TablePr.TableLayout)
++		return false;
++
++	let topTable = table.Parent ? table.Parent.IsInTable(true) : null;
++	return !topTable || tbllayout_AutoFit === topTable.Get_CompiledPr(false).TablePr.TableLayout;
++};
+ Paragraph.prototype.RecalculateMinMaxContentWidth = function(isRotated)
+ {
+ 	var MinMax = new CParagraphMinMaxContentWidth();
+@@ -2187,6 +2201,8 @@ Paragraph.prototype.RecalculateMinMaxContentWidth = function(isRotated)
+ 
+ 	if (this.bFromDocument && this.LogicDocument && this.LogicDocument.GetCompatibilityMode() >= AscCommon.document_compatibility_mode_Word15)
+ 		MinInd += ParaPr.Ind.FirstLine;
++	else if (ParaPr.Ind.FirstLine > 0 && this.bFromDocument && this.isInAutofitTableCell())
++		MinInd += ParaPr.Ind.FirstLine; // Word sizes autofit columns so that a word fits next to the first line indent
+ 
+ 	if (MinMax.nMinWidth > 0.001 || MinMax.nMaxWidth > 0.001)
+ 	{
+-- 
+2.55.0
+

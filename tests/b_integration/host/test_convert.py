@@ -837,6 +837,70 @@ def test_a_font_is_found_whatever_the_case_of_its_name(tmp_path):
     assert widths[0] < widths[1] < widths[2]
 
 
+DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+
+
+def test_an_autofit_column_has_room_for_the_first_line_indent(tmp_path):
+    """Word sizes an autofit table's columns so that a word fits beside its
+    paragraph's first-line indent, in a document of every compatibility mode;
+    the editor counted the indent from Word 2013's mode only. A Word 2007
+    calendar whose cells inherit an indent from Normal came out with "Su" over
+    "n" and "2" over "3" (ElixirOffice's #66, their fix, sdkjs 0007)."""
+    pdftotext = shutil.which("pdftotext")
+    if pdftotext is None:
+        pytest.skip("no pdftotext to read the PDF's words")
+
+    def row(words) -> str:
+        return (
+            "<w:tr>"
+            + "".join(
+                '<w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/></w:tcPr>'
+                '<w:p><w:pPr><w:ind w:firstLine="432"/></w:pPr>'
+                f"<w:r><w:t>{word}</w:t></w:r></w:p></w:tc>"
+                for word in words
+            )
+            + "</w:tr>"
+        )
+
+    numbers = [str(n) for n in range(23, 30)]
+    table = (
+        '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid>'
+        + '<w:gridCol w:w="600"/>' * 7
+        + "</w:tblGrid>"
+        + row(DAYS)
+        + row(numbers)
+        + "</w:tbl><w:p/>"
+    )
+    document = tmp_path / "calendar.docx"
+    blank = payload_mod.resolve().root / "empty" / apps.WORDS.blank
+    with zipfile.ZipFile(blank) as src, zipfile.ZipFile(document, "w") as dst:
+        for item in src.infolist():
+            data = src.read(item)
+            if item.filename == "word/document.xml":
+                data = re.sub(
+                    rb"<w:body>.*?(<w:sectPr)",
+                    b"<w:body>" + table.encode() + rb"\1",
+                    data,
+                    flags=re.DOTALL,
+                )
+            elif item.filename == "word/settings.xml":
+                data, n = re.subn(
+                    rb'(w:name="compatibilityMode"[^>]*w:val=")15"', rb'\g<1>12"', data
+                )
+                assert n == 1
+            dst.writestr(item, data)
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    pdf = tmp_path / "calendar.pdf"
+
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    text = subprocess.run(
+        [pdftotext, "-bbox", str(pdf), "-"], capture_output=True, text=True, check=True
+    ).stdout
+    drawn = re.findall(r"<word [^>]*>([^<]*)</word>", text)
+    assert drawn == [*DAYS, *numbers]
+
+
 def thin_pen_wmf() -> bytes:
     """A metafile drawn the way CAD exports are: a logical window 32,000 units
     wide, and a pen 1 unit wide, a fiftieth of a pixel once the window is
