@@ -8,15 +8,19 @@ fixture produced, which is the same thing a save does.
 from __future__ import annotations
 
 import csv
+import functools
 import io
+import operator
 import re
 import shutil
+import struct
 import subprocess
 import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
 from support import ScriptedShell, repo_root
+from support.pictures import IMAGE, picture_docx
 from support.protected import make_protected
 
 from libera import payload as payload_mod
@@ -791,6 +795,61 @@ def test_a_hexadecimal_value_in_a_csv_stays_text(tmp_path):
     )
 
     assert rows_x2t_changes(document, tmp_path / "s") == []
+
+
+def thin_pen_wmf() -> bytes:
+    """A metafile drawn the way CAD exports are: a logical window 32,000 units
+    wide, and a pen 1 unit wide, a fiftieth of a pixel once the window is
+    scaled to the picture. Two lines."""
+
+    def record(function: int, *words: int) -> bytes:
+        return struct.pack("<IH", 3 + len(words), function) + struct.pack(
+            f"<{len(words)}h", *words
+        )
+
+    body = b"".join([
+        record(0x0103, 8),  # SETMAPMODE, MM_ANISOTROPIC
+        record(0x020B, 0, 0),  # SETWINDOWORG
+        record(0x020C, 14000, 32000),  # SETWINDOWEXT, y then x
+        record(0x02FA, 0, 1, 0, 0, 0),  # CREATEPENINDIRECT: solid, 1 wide, black
+        record(0x012D, 0),  # SELECTOBJECT
+        record(0x0214, 2000, 2000),  # MOVETO
+        record(0x0213, 2000, 30000),  # LINETO
+        record(0x0214, 2000, 16000),
+        record(0x0213, 12000, 16000),
+        record(0x0000),  # EOF
+    ])
+    header = struct.pack("<HHHIHIH", 1, 9, 0x0300, (len(body) + 18) // 2, 1, 8, 0)
+    # The placeable header: key, handle, bounds, units per inch, reserved, and
+    # the XOR of its ten words before this one.
+    placeable = struct.pack("<IHhhhhHI", 0x9AC6CDD7, 0, 0, 0, 32000, 14000, 4000, 0)
+    checksum = functools.reduce(
+        operator.xor, (w for (w,) in struct.iter_unpack("<H", placeable))
+    )
+    return placeable + struct.pack("<H", checksum) + header + body
+
+
+def test_a_metafile_s_thin_lines_are_drawn_a_pixel_wide(live_payload, tmp_path):
+    """The editor draws a WMF or EMF from the SVG x2t writes of it on opening,
+    and x2t scaled a pen one logical unit wide with the drawing: a CAD drawing's
+    lines came out a fiftieth of a pixel wide and the picture looked empty
+    (ElixirOffice's #61). GDI draws no line thinner than a pixel, and core 0200
+    does the same."""
+    document = tmp_path / "drawing.docx"
+    picture_docx(
+        live_payload,
+        document,
+        '<a:blip r:embed="rIdWmf"/>',
+        f'<Relationship Id="rIdWmf" Type="{IMAGE}" Target="media/drawing.wmf"/>',
+        {"word/media/drawing.wmf": thin_pen_wmf()},
+    )
+
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+
+    [svg] = words.media.glob("*.svg")
+    lines = re.findall(r"<(?:polyline|line|path)\b[^>]*>", svg.read_text())
+    assert len(lines) == 2
+    assert all('vector-effect="non-scaling-stroke"' in line for line in lines)
 
 
 def test_a_saved_presentation_has_nothing_for_a_handout_master_it_lacks(tmp_path):

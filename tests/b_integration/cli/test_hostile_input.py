@@ -20,6 +20,7 @@ import zipfile
 import zlib
 
 import pytest
+from support.pictures import IMAGE, picture_docx
 
 from libera import cli
 from libera.host import apps, convert
@@ -168,7 +169,6 @@ def test_a_part_larger_than_its_package_says_is_read_no_further(
     assert "kept" in (tmp_path / "understated.txt").read_text(encoding="utf-8-sig")
 
 
-IMAGE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
 SVG_BLIP = "{96DAC541-7B7A-43D3-8B79-37D633B846F1}"
 
 
@@ -188,45 +188,6 @@ def png(size: int = 64, rgb: bytes = b"\0\0\xff") -> bytes:
         + chunk(b"IDAT", zlib.compress(rows))
         + chunk(b"IEND", b"")
     )
-
-
-def picture_docx(live_payload, path, blip: str, rels: str, media: dict) -> None:
-    """The blank with one picture, drawn by `blip`, whose relationships are
-    `rels`, and `media` added to the package."""
-    with zipfile.ZipFile(live_payload / "empty" / apps.WORDS.blank) as z:
-        parts = {n: z.read(n) for n in z.namelist() if not n.endswith("/")}
-    drawing = (
-        "<w:p><w:r><w:drawing><wp:inline>"
-        '<wp:extent cx="914400" cy="914400"/><wp:docPr id="901" name="p"/>'
-        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
-        '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-        '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-        '<pic:nvPicPr><pic:cNvPr id="901" name="p"/><pic:cNvPicPr/></pic:nvPicPr>'
-        f"<pic:blipFill>{blip}<a:stretch><a:fillRect/></a:stretch></pic:blipFill>"
-        '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/>'
-        '</a:xfrm><a:prstGeom prst="rect"/></pic:spPr>'
-        "</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
-    )
-    document, n = re.subn(
-        r"(<w:body>)", lambda m: m[1] + drawing, parts["word/document.xml"].decode()
-    )
-    assert n == 1
-    parts["word/document.xml"] = document.encode()
-    relations = parts["word/_rels/document.xml.rels"].decode()
-    parts["word/_rels/document.xml.rels"] = relations.replace(
-        "</Relationships>", rels + "</Relationships>"
-    ).encode()
-    types = parts["[Content_Types].xml"].decode()
-    for ext, mime in (("png", "image/png"), ("svg", "image/svg+xml")):
-        if f'Extension="{ext}"' not in types:
-            types = types.replace(
-                "</Types>", f'<Default Extension="{ext}" ContentType="{mime}"/></Types>'
-            )
-    parts["[Content_Types].xml"] = types.encode()
-    parts.update(media)
-    with zipfile.ZipFile(path, "w") as z:
-        for name, data in parts.items():
-            z.writestr(name, data)
 
 
 def blue_in_pdf(pdf) -> int:

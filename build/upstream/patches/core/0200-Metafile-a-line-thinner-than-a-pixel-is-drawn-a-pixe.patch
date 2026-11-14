@@ -1,0 +1,40 @@
+From 851e090e5c80f0a3e6e691cede5a8eb8af994e2b Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Sat, 14 Nov 2026 14:49:25 +0100
+Subject: [PATCH] Metafile: a line thinner than a pixel is drawn a pixel wide
+
+The SVG written from a WMF or EMF, which the editor draws the picture
+from, scaled every pen with the drawing, and only a pen of width 0 kept
+one pixel. A CAD export has a logical window tens of thousands of units
+wide and pens one unit wide, so its lines came out a fiftieth of a pixel
+wide and the picture looked empty, where Word and LibreOffice draw it.
+GDI draws no line thinner than one device pixel; a pen whose width comes
+to less after the metafile's transform is now drawn as width 0 was.
+---
+ .../Wmf/WmfInterpretator/CInterpretatorSvgBase.cpp     | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/DesktopEditor/raster/Metafile/Wmf/WmfInterpretator/CInterpretatorSvgBase.cpp b/DesktopEditor/raster/Metafile/Wmf/WmfInterpretator/CInterpretatorSvgBase.cpp
+index bc0b0e7ce7..d3feb7641b 100644
+--- a/DesktopEditor/raster/Metafile/Wmf/WmfInterpretator/CInterpretatorSvgBase.cpp
++++ b/DesktopEditor/raster/Metafile/Wmf/WmfInterpretator/CInterpretatorSvgBase.cpp
+@@ -686,7 +686,15 @@ namespace MetaFile
+ 
+ 		double dStrokeWidth = std::fabs(m_pParser->GetPen()->GetWidth());
+ 
+-		if (Equals(0., dStrokeWidth))
++		// GDI draws no line thinner than one device pixel. A drawing exported
++		// from CAD has a logical window tens of thousands of units wide and pens
++		// one unit wide: its lines print in Word, and here they were scaled with
++		// the shape to a fiftieth of a pixel and all but vanished. Such a pen is
++		// one pixel wide, as a pen of width 0 already was.
++		const TXForm &oTransform{m_pParser->GetTransform()};
++		const double dDeviceWidth = dStrokeWidth * std::sqrt(std::fabs(oTransform.M11 * oTransform.M22 - oTransform.M12 * oTransform.M21));
++
++		if (Equals(0., dStrokeWidth) || dDeviceWidth < 1.)
+ 		{
+ 			dStrokeWidth = 1.;
+ 			arAttributes.Add(L"vector-effect", L"non-scaling-stroke");
+-- 
+2.55.0
+
