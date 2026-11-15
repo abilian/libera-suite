@@ -1,8 +1,8 @@
-From a242fa392f5f905280b3e0df497ec4626e64de6a Mon Sep 17 00:00:00 2001
+From 2772d635d16e928c020a73116f7cf7f7e8678df8 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 16:55:48 +0200
-Subject: [PATCH 60/82] OdfFile writer: a click action belongs to the frame,
- after its content
+Subject: [PATCH] OdfFile writer: a click action belongs to the frame, after
+ its content
 
 A click action on a picture, a media object or a text box was written
 inside the draw:image, draw:plugin or draw:text-box, whichever level

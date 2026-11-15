@@ -1,8 +1,8 @@
-From 4fc889fe1433475bf80823416009a6c3eaf6fabd Mon Sep 17 00:00:00 2001
+From ab63cd9f261f6170e78556a4332ba19d0135d751 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
-Subject: [PATCH 69/82] OdfFile writer: an image the source does not hold is
- not listed
+Subject: [PATCH] OdfFile writer: an image the source does not hold is not
+ listed
 
 An image or an object's preview that the source names but does not
 contain, as x2t's reader sometimes writes an OLE object's, was still

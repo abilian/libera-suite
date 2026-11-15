@@ -1,4 +1,4 @@
-From eaa5d0022c51353fdd3fbd6ff5fd16e45c9415cc Mon Sep 17 00:00:00 2001
+From 8cc62aa4d065fcb1f6da7c7f105fbb0a0ea610c9 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Thu, 29 Oct 2026 22:24:06 +0100
 Subject: [PATCH] pdf: leave the XFA out of a form saved as an incremental

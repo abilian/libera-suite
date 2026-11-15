@@ -1,7 +1,7 @@
 """The attribution says the same thing everywhere it is said.
 
 Four surfaces carry it and three of them are outside Python: the editor's About
-panel reads the theme's `attribution` token, the Flatpak's AppStream metadata
+panel reads the theme's `meta/about.json`, the Flatpak's AppStream metadata
 is read by software centres, and `build/macos/macos-app.sh` writes a copyright line
 into `Info.plist`. `host/about.py` holds the text the host itself shows.
 
@@ -29,14 +29,27 @@ from libera.host import about
 from libera.launcher import macos
 
 ROOT = repo_root()
-THEME = ROOT / "build" / "payload" / "theme" / "libera" / "meta" / "config.json"
+THEME = ROOT / "build" / "payload" / "theme" / "libera" / "meta" / "about.json"
 METAINFO = ROOT / "build" / "flatpak" / "eu.liberasuite.Libera.metainfo.xml"
 
 
 def test_the_theme_and_the_host_say_the_same_thing() -> None:
-    """The editor's About panel and Help > About are one sentence, not two."""
+    """The editor's About panel and Help > About are one sentence, not two.
+
+    Up to Euro-Office v9.3.5-2 the panel read an `attribution` key in the
+    theme's `config.json`; v9.3.8 dropped it for `about.json`'s blocks, and the
+    key, still there, was read by nothing.
+    """
     theme = json.loads(THEME.read_text(encoding="utf-8"))
-    assert theme["attribution"] == about.ATTRIBUTION
+    texts = [block.get("text") for block in theme["blocks"]]
+    assert about.ATTRIBUTION in texts
+    assert theme["sourceUrl"] == about.SOURCE_URL
+
+
+def test_the_editor_about_panel_says_when_it_was_modified() -> None:
+    """AGPLv3 section 5(a): a modified work says so, "giving a relevant date"."""
+    theme = json.loads(THEME.read_text(encoding="utf-8"))
+    assert any("{buildDate}" in (block.get("text") or "") for block in theme["blocks"])
 
 
 @pytest.mark.parametrize(

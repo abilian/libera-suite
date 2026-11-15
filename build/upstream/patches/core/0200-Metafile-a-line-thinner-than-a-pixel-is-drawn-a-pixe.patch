@@ -1,4 +1,4 @@
-From 851e090e5c80f0a3e6e691cede5a8eb8af994e2b Mon Sep 17 00:00:00 2001
+From 25bae4baa63e9b170433e79f0cb8af2872792fbf Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Sat, 14 Nov 2026 14:49:25 +0100
 Subject: [PATCH] Metafile: a line thinner than a pixel is drawn a pixel wide

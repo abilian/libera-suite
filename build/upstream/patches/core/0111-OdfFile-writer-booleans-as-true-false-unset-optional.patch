@@ -1,8 +1,8 @@
-From fed2ebfe4d767d669b20ea0a672abab290fa3242 Mon Sep 17 00:00:00 2001
+From ba3d40b4f0bbf36e791fb403d3454bdc44443b1f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 21:23:07 +0200
-Subject: [PATCH 25/82] OdfFile writer: booleans as true/false, unset optionals
- left out
+Subject: [PATCH] OdfFile writer: booleans as true/false, unset optionals left
+ out
 
 Streaming a C++ bool into an attribute writes 0 or 1, and ODF's
 boolean type allows only true and false. Fixed where the writer does

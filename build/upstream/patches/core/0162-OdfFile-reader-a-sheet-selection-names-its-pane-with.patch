@@ -1,8 +1,7 @@
-From 49373f31ac2fb64b0e5b276f22ba20c27977b990 Mon Sep 17 00:00:00 2001
+From f55195d2e454f6d90a02bea37fcd97dea5ea8ff6 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:40 +0200
-Subject: [PATCH 76/82] OdfFile reader: a sheet selection names its pane with
- pane
+Subject: [PATCH] OdfFile reader: a sheet selection names its pane with pane
 
 A sheet view's selection was written with activePane, which is the
 pane element's attribute; a selection has pane. 799 of LibreOffice's

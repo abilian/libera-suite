@@ -1,8 +1,7 @@
-From 412e92f81669da94468716b1d89e50bd91888e3d Mon Sep 17 00:00:00 2001
+From 9a313eeb3517759995d89dbd47e7330af8b8b0c4 Mon Sep 17 00:00:00 2001
 From: Libera Suite <dev@liberasuite.eu>
 Date: Tue, 22 Sep 2026 16:27:50 +0200
-Subject: [PATCH 07/82] cryptopp: stop using the stdext namespace MSVC has
- removed
+Subject: [PATCH] cryptopp: stop using the stdext namespace MSVC has removed
 
 ---
  Common/3dParty/cryptopp/integer.cpp  | 10 +++++-----

@@ -1,7 +1,7 @@
-From c5784734c3ecae9a3ff2573ffe72f46dbbe521af Mon Sep 17 00:00:00 2001
+From 8115bffdda1e22baf707d282ba43f4db8ffb95ea Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
-Subject: [PATCH 66/82] OdfFile writer: no soft page break directly in a list
+Subject: [PATCH] OdfFile writer: no soft page break directly in a list
 
 A paragraph with "page break before" also gets a text:soft-page-break,
 a hint of where the page broke, next to the fo:break-before that carries

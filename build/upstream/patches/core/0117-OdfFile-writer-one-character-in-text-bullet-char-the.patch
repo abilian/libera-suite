@@ -1,8 +1,8 @@
-From 0d6d20330f32b2253eac498d15b05d27bfff5916 Mon Sep 17 00:00:00 2001
+From 396c6d1b32b489424f8575eb10d01155b9f9e77f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:16:10 +0200
-Subject: [PATCH 31/82] OdfFile writer: one character in text:bullet-char, the
- rest as suffix
+Subject: [PATCH] OdfFile writer: one character in text:bullet-char, the rest
+ as suffix
 
 set_bullet_char copied the whole OOXML level text into
 text:bullet-char, which the schema limits to one character. Level text

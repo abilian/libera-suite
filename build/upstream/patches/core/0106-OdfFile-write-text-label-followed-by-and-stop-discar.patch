@@ -1,8 +1,8 @@
-From 284c8c8f7ed3343b6b9eeb985e5697f2bd2016ac Mon Sep 17 00:00:00 2001
+From 2278fb16c388c87e460d975182779280333c3852 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:53:47 +0200
-Subject: [PATCH 20/82] OdfFile: write text:label-followed-by, and stop
- discarding w:suff
+Subject: [PATCH] OdfFile: write text:label-followed-by, and stop discarding
+ w:suff
 
 Every list level the writer produces is schema-invalid, and the OOXML
 value that should decide the attribute is read and thrown away.

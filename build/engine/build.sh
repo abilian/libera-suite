@@ -340,17 +340,6 @@ cmd_configure() {
         echo "==> $1"
     fi
 
-    # libxml2 from its own pin, not the copy core keeps (about 2.9.4, which a
-    # 6 KB document took to 3.9 GB): core patch 0172 reads this, and fetch
-    # applies the libxml2 queue, which writes its xmlversion.h. Absent, core
-    # would silently build its own copy, so its absence stops the build.
-    [ -f "$SRC/libxml2/include/libxml/xmlversion.h" ] || {
-        echo "FATAL: no libxml2 at $SRC/libxml2 -- run build.sh fetch libxml2" >&2
-        exit 1
-    }
-    set -- "$@" "-DEO_CORE_LIBXML2_DIR=$(winpath "$SRC/libxml2")"
-    echo "==> libxml2: $SRC/libxml2 @ $(git -C "$SRC/libxml2" rev-parse --short HEAD)"
-
     # Links get a ninja pool of their own on Windows, sized by memory, apart
     # from the compile job count. Measured on a 4-core, 8 GB machine: link.exe
     # peaks at 2.9 GB on x2tlib.dll, and x2tlib, docbuilder and x2t link at the

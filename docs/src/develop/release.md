@@ -259,7 +259,7 @@ make verify                    # lint, the whole suite, docs links, the patch qu
 lb payload check                            # the queue still applies to the pinned SHAs
 ```
 
-`stage` installs the release on every platform. One thing remains that no automated check covers: **read the attribution out loud.** It is a licence obligation. It lives in `build/payload/theme/libera/meta/config.json` and shows in Help ▸ About.
+`stage` installs the release on every platform. One thing remains that no automated check covers: **read the attribution out loud.** It is a licence obligation. It lives in `build/payload/theme/libera/meta/about.json` and `src/libera/host/about.py`, and shows in the editor's About panel and in Help ▸ About.
 
 ## Publish
 

@@ -1,8 +1,8 @@
-From 9e76549bdddc63ad9c8dde597381d816adf6314b Mon Sep 17 00:00:00 2001
+From 2dc7ae966a80baafa4f98d95c43ba6f6257bfd3a Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 19:24:01 +0200
-Subject: [PATCH 73/82] OdfFile writer: an XLSX pivot table becomes a data
- pilot table
+Subject: [PATCH] OdfFile writer: an XLSX pivot table becomes a data pilot
+ table
 
 The converter wrote a pivot table as table:data-pilot-table with its
 name and nothing else, no target range, source or fields, which the

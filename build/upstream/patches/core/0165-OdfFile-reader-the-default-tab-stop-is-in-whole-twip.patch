@@ -1,7 +1,7 @@
-From d3e4eb9c796e7887464f0ee60c6bdcd2c44d163b Mon Sep 17 00:00:00 2001
+From 39b012424a10ee19fd252de87321ecb59098863f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:42 +0200
-Subject: [PATCH 79/82] OdfFile reader: the default tab stop is in whole twips
+Subject: [PATCH] OdfFile reader: the default tab stop is in whole twips
 
 w:defaultTabStop took the tab distance as a double, 709.184, where the
 schema wants whole twips: 1 600 of LibreOffice's ODF test documents,

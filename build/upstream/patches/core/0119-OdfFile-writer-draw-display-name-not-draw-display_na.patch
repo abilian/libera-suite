@@ -1,8 +1,7 @@
-From 876ef92fe9ab0fb84be64f2f73930938219b14b4 Mon Sep 17 00:00:00 2001
+From 900db6127629af449b10bfde0bc44d46b650e84c Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:17:01 +0200
-Subject: [PATCH 33/82] OdfFile writer: draw:display-name, not
- draw:display_name
+Subject: [PATCH] OdfFile writer: draw:display-name, not draw:display_name
 
 Five drawing styles (fill image, marker, gradient, hatch, opacity)
 wrote their display name as draw:display_name, an attribute ODF does

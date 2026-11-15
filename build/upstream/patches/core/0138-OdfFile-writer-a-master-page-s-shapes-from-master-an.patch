@@ -1,8 +1,8 @@
-From e6a9dfdb1399dd4bd71f7421272110f44e3e7c0c Mon Sep 17 00:00:00 2001
+From ee65cdf027bc9e89e3ad94cd67fc3c79757baeac Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 08:56:29 +0200
-Subject: [PATCH 52/82] OdfFile writer: a master page's shapes from master and
- layout get distinct ids
+Subject: [PATCH] OdfFile writer: a master page's shapes from master and layout
+ get distinct ids
 
 An ODF master page is made of a PPTX master's shapes and then its
 layout's, and each shape's xml:id came from a map keyed by the PPTX shape

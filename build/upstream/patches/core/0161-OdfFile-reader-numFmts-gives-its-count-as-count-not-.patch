@@ -1,7 +1,7 @@
-From a08db6770833c98a79240c5531062d22e0d16afc Mon Sep 17 00:00:00 2001
+From 94a90792c853620c15491377b59e721c906be5e7 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:40 +0200
-Subject: [PATCH 75/82] OdfFile reader: numFmts gives its count as count, not
+Subject: [PATCH] OdfFile reader: numFmts gives its count as count, not
  formatCode
 
 xl/styles.xml wrote <numFmts formatCode="N">, where the attribute is

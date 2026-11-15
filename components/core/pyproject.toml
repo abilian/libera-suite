@@ -43,7 +43,6 @@ cache-keys = [
     { file = "hatch_build.py" },
     { file = "../../build/upstream/pins.toml" },
     { file = "../../build/upstream/patches/core/*.patch" },
-    { file = "../../build/upstream/patches/libxml2/*.patch" },
     { file = "../../build/engine/*.sh" },
     { file = "../../build/src/libera_build/components.py" },
 ]

@@ -1,7 +1,7 @@
-From 2afe704fbc12da1101af0cecb7f7b28691e22335 Mon Sep 17 00:00:00 2001
+From 7df9338622050806bdc7690b83c75ce489c21d14 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 5 Nov 2026 14:52:27 +0100
-Subject: [PATCH 196/197] PPTX: a presentation with no handout master gets none
+Subject: [PATCH] PPTX: a presentation with no handout master gets none
 
 With an empty table of handout masters the writer made a default one, and
 gave its writer the folder where the file should go, so the master itself

@@ -1,8 +1,7 @@
-From 218c15d6a0e60c33799c46c1a1133780fdeb8774 Mon Sep 17 00:00:00 2001
+From e112110dd199a5ce296301b40b895ba4d6a7fe90 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:42 +0200
-Subject: [PATCH 80/82] OdfFile reader: the default run properties go in
- w:rPrDefault
+Subject: [PATCH] OdfFile reader: the default run properties go in w:rPrDefault
 
 The default paragraph style converts to a w:pPr and a w:rPr, and both
 were written in w:pPrDefault, where the schema has no place for the

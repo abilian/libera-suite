@@ -1,7 +1,7 @@
-From 2c17d0fcb7746d8a46fd70bdd02c545ee2a907bb Mon Sep 17 00:00:00 2001
+From 703ce44de448baac3faaa71875a161e4e30a3482 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 21:24:52 +0200
-Subject: [PATCH 26/82] OdfFile writer: no text:span inside text-only fields
+Subject: [PATCH] OdfFile writer: no text:span inside text-only fields
 
 A DOCX field result is a sequence of runs, and each run opened a
 text:span inside the field element: <text:page-number><text:span>5

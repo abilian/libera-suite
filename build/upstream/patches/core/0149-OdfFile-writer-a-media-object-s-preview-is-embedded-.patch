@@ -1,8 +1,8 @@
-From 8a3bb65550807b0154e489d8750148a098882b8d Mon Sep 17 00:00:00 2001
+From de5f9cbdde9e76ab4303e80a5c82d46eba5a6288 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
-Subject: [PATCH 63/82] OdfFile writer: a media object's preview is embedded,
- and so is the media
+Subject: [PATCH] OdfFile writer: a media object's preview is embedded, and so
+ is the media
 
 In a presentation, a picture that plays audio or video took the
 "external" flag of its media link for its preview image too. x2t's reader

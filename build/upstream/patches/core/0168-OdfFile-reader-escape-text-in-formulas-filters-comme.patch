@@ -1,8 +1,8 @@
-From c5daaf85a20568a30aec62160cc0feb9212bdf97 Mon Sep 17 00:00:00 2001
+From 9ec2b0d89c91e7c52c3e675e3787b49e306950a1 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:43 +0200
-Subject: [PATCH 82/82] OdfFile reader: escape text in formulas, filters,
- comments and fields
+Subject: [PATCH] OdfFile reader: escape text in formulas, filters, comments
+ and fields
 
 Some text went into the OOXML unescaped, so an & or a < in it made the
 part not well-formed, and Word or Excel will not open such a file: an

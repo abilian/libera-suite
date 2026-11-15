@@ -1,8 +1,8 @@
-From 6da6e62c108cbf060bf2131ad606eb2c4139c175 Mon Sep 17 00:00:00 2001
+From ba01f09bd5b0efc01f2dd4aabbab03c61319f54d Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 21 Sep 2026 10:35:08 +0200
-Subject: [PATCH 04/82] boost: build the Boost.Build engine with a named
- toolset on Windows
+Subject: [PATCH] boost: build the Boost.Build engine with a named toolset on
+ Windows
 
 bootstrap.bat calls build.bat with no arguments, and build.bat then guesses
 the toolset from the Visual Studio *installation* it finds with vswhere. On
@@ -21,17 +21,21 @@ engine, build one, copy b2.exe to the root where the build step looks for it.
 project-config.jam it would also write is overwritten a few lines below
 anyway.
 ---
- Common/3dParty/boost/nc-build.py | 36 +++++++++++++++++++++++++++++---
- 1 file changed, 33 insertions(+), 3 deletions(-)
+ Common/3dParty/boost/nc-build.py | 40 ++++++++++++++++++++++++++------
+ 1 file changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/Common/3dParty/boost/nc-build.py b/Common/3dParty/boost/nc-build.py
-index 52b9948874..9cd7e27d28 100644
+index 32685ca4bc..4a81d3d480 100644
 --- a/Common/3dParty/boost/nc-build.py
 +++ b/Common/3dParty/boost/nc-build.py
-@@ -85,11 +85,41 @@ def build_and_install():
+@@ -98,15 +98,41 @@ def build_and_install():
      elif nc.is_windows():
          boost_arch, host_subdir = boost_msvc_arch()
  
+-        # Boost 1.83 can't guess the toolset for Visual Studio 2026 (18.x)
+-        # and fails with "Unknown toolset: vcunk". Name it explicitly; the
+-        # MSVC environment is already set up, so b2's engine is built with
+-        # the cl.exe from PATH. project-config.jam is rewritten below anyway.
 +        # bootstrap.bat, unrolled, so that the toolset can be named.
 +        #
 +        # bootstrap.bat calls `build.bat` with no arguments, and build.bat then
@@ -58,7 +62,7 @@ index 52b9948874..9cd7e27d28 100644
 +            stale.unlink( missing_ok = True )
 +
          nc.run_command(
--            [ "cmd.exe", "/c", "bootstrap.bat", f"--prefix={ nc.install_dir }" ],
+-            [ "cmd.exe", "/c", "bootstrap.bat", "vc143", f"--prefix={ nc.install_dir }" ],
 -            "Running bootstrap",
 -            nc.work_dir
 +            [ "cmd.exe", "/c", str( engine / "build.bat" ), "msvc" ],

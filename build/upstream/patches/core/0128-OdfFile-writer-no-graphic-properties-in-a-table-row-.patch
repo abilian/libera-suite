@@ -1,8 +1,7 @@
-From 0aff940b7916a3ee93dbb15dbebf8826be9ac5d1 Mon Sep 17 00:00:00 2001
+From a34ecbbac1a428dc2672abcc42414df647627636 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:25:53 +0200
-Subject: [PATCH 42/82] OdfFile writer: no graphic properties in a table-row
- style
+Subject: [PATCH] OdfFile writer: no graphic properties in a table-row style
 
 A presentation's table rows are started through the drawing context,
 which gives the style of every element it starts graphic properties. A

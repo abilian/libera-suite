@@ -1,8 +1,8 @@
-From a34553455de943e60626a0030d4dd3dded4d5a4b Mon Sep 17 00:00:00 2001
+From 2a4645d86cb9051ca4ec7f76cd0cd524ec10228b Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:57:24 +0200
-Subject: [PATCH 22/82] OdfFile: drop a content control's trailing newline, not
- its tail
+Subject: [PATCH] OdfFile: drop a content control's trailing newline, not its
+ tail
 
 The code means to strip a trailing newline from a form control's text.
 std::wstring::erase(size_type pos) takes a position and erases from it to

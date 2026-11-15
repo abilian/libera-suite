@@ -1,8 +1,8 @@
-From 50e16b0e9efffd34eb5e02202ca39cadba0fbe0d Mon Sep 17 00:00:00 2001
+From 32eba76d41ed15c3177343f7ab2c75066b2554f4 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 2 Oct 2026 17:27:49 +0200
-Subject: [PATCH 10/82] csv: do not skip the character after each
- 500000-character block
+Subject: [PATCH] csv: do not skip the character after each 500000-character
+ block
 
 CSVReader drops the text it has read once it passes 500000 characters, and
 sets nIndex to 0 before the loop's ++nIndex. The first character kept was
@@ -14,10 +14,10 @@ half a million characters. The index now wraps, so ++nIndex lands on it.
  1 file changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/OOXML/Binary/Sheets/Reader/CSVReader.cpp b/OOXML/Binary/Sheets/Reader/CSVReader.cpp
-index 1c37152da6..cb22b71e44 100644
+index 6dca6cb96e..da09cb6495 100644
 --- a/OOXML/Binary/Sheets/Reader/CSVReader.cpp
 +++ b/OOXML/Binary/Sheets/Reader/CSVReader.cpp
-@@ -374,7 +374,11 @@ _UINT32 CSVReader::Impl::Read(const std::wstring &sFileName, OOX::Spreadsheet::C
+@@ -378,7 +378,11 @@ _UINT32 CSVReader::Impl::Read(const std::wstring &sFileName, OOX::Spreadsheet::C
  			{
  				nStartCell = 0;
  				sFileDataW.erase(0, nIndex + nDelimiterSize);
@@ -30,7 +30,7 @@ index 1c37152da6..cb22b71e44 100644
  				pTemp = sFileDataW.c_str();
  			}
  			else
-@@ -409,7 +413,8 @@ _UINT32 CSVReader::Impl::Read(const std::wstring &sFileName, OOX::Spreadsheet::C
+@@ -413,7 +417,8 @@ _UINT32 CSVReader::Impl::Read(const std::wstring &sFileName, OOX::Spreadsheet::C
  			{
  				nStartCell = 0;
  				sFileDataW.erase(0, nIndex + 1);

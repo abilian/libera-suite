@@ -1,38 +1,38 @@
-From 741d4f19b973c53a79da7a0309bcdf4832249dc9 Mon Sep 17 00:00:00 2001
+From 14a1296052f4d4bdfb755b6fbc8fa8f6e08aae5e Mon Sep 17 00:00:00 2001
 From: Libera Suite <dev@liberasuite.eu>
 Date: Tue, 22 Sep 2026 13:04:41 +0200
-Subject: [PATCH 06/82] cmake: let EO_CORE_OPENSSL_DIR point at an OpenSSL
- built elsewhere
+Subject: [PATCH] cmake: let EO_CORE_OPENSSL_DIR point at an OpenSSL built
+ elsewhere
 
 ---
  common.cmake | 18 ++++++++++++++++--
  1 file changed, 16 insertions(+), 2 deletions(-)
 
 diff --git a/common.cmake b/common.cmake
-index fda5dba110..c0415c9b55 100644
+index 041849678c..d0591bbef6 100644
 --- a/common.cmake
 +++ b/common.cmake
-@@ -98,6 +98,10 @@ else()
-         if(NOT BUILD_DESKTOP)
-             set(NO_DESKTOP_EXCLUDE ",cef,qt")
-         endif()
-+        # An OpenSSL that came from somewhere else is not one to build here.
-+        if( DEFINED EO_CORE_OPENSSL_DIR )
-+            set(EXTERNAL_OPENSSL_EXCLUDE ",openssl")
-+        endif()
+@@ -131,6 +131,10 @@ else()
+             if(NOT BUILD_DESKTOP)
+                 set(NO_DESKTOP_EXCLUDE ",cef,qt")
+             endif()
++            # An OpenSSL that came from somewhere else is not one to build here.
++            if( DEFINED EO_CORE_OPENSSL_DIR )
++                set(EXTERNAL_OPENSSL_EXCLUDE ",openssl")
++            endif()
  
-         set(PLATFORM_EXCLUDE "")
-         if(BUILD_DESKTOP AND APPLE)
-@@ -110,7 +114,7 @@ else()
-             COMMAND_ECHO STDOUT
-             COMMAND "${PYTHON_BIN}"
-             "${BUILDER_PATH}"
--            "--except=openssl-hash,icu-wasm${NO_DESKTOP_EXCLUDE}${PLATFORM_EXCLUDE}" # cef and qt need old build environment, cannot be built here
-+            "--except=openssl-hash,icu-wasm${NO_DESKTOP_EXCLUDE}${PLATFORM_EXCLUDE}${EXTERNAL_OPENSSL_EXCLUDE}" # cef and qt need old build environment, cannot be built here
-             "${EO_CORE_3RD_PARTY_WORK_DIR}" "${EO_CORE_3RD_PARTY_INSTALL_DIR}"
-             RESULT_VARIABLE result
-             OUTPUT_VARIABLE output
-@@ -223,7 +227,17 @@ else()
+             set(PLATFORM_EXCLUDE "")
+             if(BUILD_DESKTOP AND APPLE)
+@@ -139,7 +143,7 @@ else()
+             endif()
+ 
+             # cef and qt need old build environment, cannot be built here
+-            set(THIRD_PARTY_ARGS "--except=openssl-hash,icu-wasm,zlib-ng-wasm,libxml2-wasm${NO_DESKTOP_EXCLUDE}${PLATFORM_EXCLUDE}")
++            set(THIRD_PARTY_ARGS "--except=openssl-hash,icu-wasm,zlib-ng-wasm,libxml2-wasm${NO_DESKTOP_EXCLUDE}${PLATFORM_EXCLUDE}${EXTERNAL_OPENSSL_EXCLUDE}")
+         endif()
+ 
+         cmake_path( APPEND BUILDER_PATH "${CMAKE_CURRENT_LIST_DIR}" "Common" "3dParty" "build_3rdparty.py" )
+@@ -271,7 +275,17 @@ else()
      endif()
  
      # Setup openssl

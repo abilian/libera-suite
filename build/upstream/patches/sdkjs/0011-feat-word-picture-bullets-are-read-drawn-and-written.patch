@@ -1,4 +1,4 @@
-From e298a1ce443cbf84c086a8b3564592574a319bb7 Mon Sep 17 00:00:00 2001
+From d73d979f559d14bb8c87463469c555a303d12481 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 20:49:16 +0100
 Subject: [PATCH] feat(word): picture bullets are read, drawn and written back
@@ -359,7 +359,7 @@ index ff598b34e6..ec2723fa1d 100644
  CNumberingLvl.prototype.private_ReadLvlTextFromBinary = function(oReader)
  {
 diff --git a/word/Editor/Serialize2.js b/word/Editor/Serialize2.js
-index e29a2f1cc0..27754fbb5a 100644
+index 1cfbdc999e..42cf8c1d41 100644
 --- a/word/Editor/Serialize2.js
 +++ b/word/Editor/Serialize2.js
 @@ -129,7 +129,15 @@ var c_oSerNumTypes = {
@@ -379,7 +379,7 @@ index e29a2f1cc0..27754fbb5a 100644
  };
  var c_oSerOtherTableTypes = {
      ImageMap:0,
-@@ -4972,12 +4980,47 @@ function BinaryNumberingTableWriter(memory, doc, oNumIdMap, oUsedNumIdMap, saveP
+@@ -5059,12 +5067,47 @@ function BinaryNumberingTableWriter(memory, doc, oNumIdMap, oUsedNumIdMap, saveP
          var oThis = this;
          if(null != this.Document.Numbering)
          {
@@ -427,7 +427,7 @@ index e29a2f1cc0..27754fbb5a 100644
      this.WriteNums = function()
      {
          var oThis = this;
-@@ -5182,6 +5225,13 @@ function BinaryNumberingTableWriter(memory, doc, oNumIdMap, oUsedNumIdMap, saveP
+@@ -5269,6 +5312,13 @@ function BinaryNumberingTableWriter(memory, doc, oNumIdMap, oUsedNumIdMap, saveP
  			this.memory.WriteByte(c_oSerPropLenType.Long);
  			this.memory.WriteLong(ILvl);
  		}
@@ -441,7 +441,7 @@ index e29a2f1cc0..27754fbb5a 100644
  		// if(null != lvl.Tentative)
  		// {
  		// 	this.memory.WriteByte(c_oSerNumTypes.Tentative);
-@@ -10972,6 +11022,7 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
+@@ -11059,6 +11109,7 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
  	this.oReadResult = oReadResult;
      this.stream = stream;
  	this.m_oANums = {};
@@ -449,7 +449,7 @@ index e29a2f1cc0..27754fbb5a 100644
      this.bcr = new Binary_CommonReader(this.stream);
      this.brPrr = new Binary_rPrReader(this.Document, this.oReadResult, this.stream);
      this.bpPrr = new Binary_pPrReader(this.Document, this.oReadResult, this.stream);
-@@ -10993,6 +11044,12 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
+@@ -11080,6 +11131,12 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
                  return oThis.ReadAbstractNums(t, l);
              });
          }
@@ -462,7 +462,7 @@ index e29a2f1cc0..27754fbb5a 100644
          else if ( c_oSerNumTypes.Nums === type )
          {
  			var tmpNum = {NumId: null, Num: null};
-@@ -11004,6 +11061,44 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
+@@ -11091,6 +11148,44 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
              res = c_oSerConstants.ReadUnknown;
          return res;
      },
@@ -507,7 +507,7 @@ index e29a2f1cc0..27754fbb5a 100644
      this.ReadNums = function(type, length, tmpNum)
      {
          var oThis = this;
-@@ -11203,6 +11298,11 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
+@@ -11290,6 +11385,11 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
  		{
  			tmp.nLevelNum = this.stream.GetULongLE();
  		}

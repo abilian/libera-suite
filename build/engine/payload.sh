@@ -35,8 +35,9 @@ PAYLOAD="${PAYLOAD:-$OUT/payload}"
 EO_VERSION="${EO_VERSION:-9.2.1}"
 
 # Branding. THEME names a directory under web-apps/theme/ whose meta/config.json
-# carries company_name, publisher_url, app_title, the logos and the attribution
-# line -- that file is the brand surface, not this script.
+# carries company_name, publisher_url, app_title and the logos, and whose
+# meta/about.json the About panel's licence and attribution -- those files are
+# the brand surface, not this script.
 COMPANY_NAME="${COMPANY_NAME:-Libera Suite}"
 BLANK_LOCALE="${BLANK_LOCALE:-en-US}"
 THEME="${THEME:-libera}"

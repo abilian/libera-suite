@@ -1,4 +1,4 @@
-From 2261f9740fe3512d4c8416178fea59a5458f029d Mon Sep 17 00:00:00 2001
+From 5dd4c488af09419e0f931d18553c2fa28ee387da Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Ga=C3=ABl=20Duval?= <gael@murena.io>
 Date: Sun, 15 Nov 2026 00:23:50 +0100
 Subject: [PATCH] feat(word): use the alternate font names of the document
@@ -152,7 +152,7 @@ index 6a53fd972c..6530f2f319 100644
  	{
  		withInstalled(["Carlito", "Liberation Sans"], function ()
 diff --git a/word/Editor/Serialize2.js b/word/Editor/Serialize2.js
-index 27754fbb5a..d2dc810e61 100644
+index 42cf8c1d41..ad53ce1a02 100644
 --- a/word/Editor/Serialize2.js
 +++ b/word/Editor/Serialize2.js
 @@ -75,7 +75,13 @@ var c_oSerTableTypes = {
@@ -170,7 +170,7 @@ index 27754fbb5a..d2dc810e61 100644
  };
  var c_oSerSigTypes = {
      Version:0
-@@ -8140,6 +8146,10 @@ function BinaryFileReader(doc, openParams)
+@@ -8227,6 +8233,10 @@ function BinaryFileReader(doc, openParams)
  					this.Document.CustomProperties.fromStream(fileStream);
  					this.stream.FromFileStream(fileStream);
  					break;
@@ -181,7 +181,7 @@ index 27754fbb5a..d2dc810e61 100644
  				case c_oSerTableTypes.Customs:
  					this.stream.Seek2(mtiOffBits);
  					res = (new AscCommon.BinaryCustomsTableReader(this.Document.getCustomXmlManager(), this.stream)).Read();
-@@ -8541,6 +8551,9 @@ function BinaryFileReader(doc, openParams)
+@@ -8628,6 +8638,9 @@ function BinaryFileReader(doc, openParams)
  		if (this.oReadResult.DocumentContent.length > 0) {
  			this.Document.ReplaceContent(this.oReadResult.DocumentContent);
  		}
@@ -191,7 +191,7 @@ index 27754fbb5a..d2dc810e61 100644
  		if(null !== this.oReadResult.defaultTabStop && this.oReadResult.defaultTabStop > 0) {
  			AscCommonWord.Default_Tab_Stop = this.oReadResult.defaultTabStop;
  		}
-@@ -16525,6 +16538,38 @@ function Binary_CommentsTableReader(doc, oReadResult, stream, oComments)
+@@ -16612,6 +16625,38 @@ function Binary_CommentsTableReader(doc, oReadResult, stream, oComments)
          return res;
      };
  };
@@ -230,7 +230,7 @@ index 27754fbb5a..d2dc810e61 100644
  function Binary_SettingsTableReader(doc, oReadResult, stream)
  {
      this.Document = doc;
-@@ -17561,6 +17606,7 @@ DocSaveParams.prototype.writeNestedReviewType = function(type, reviewInfo, fWrit
+@@ -17648,6 +17693,7 @@ DocSaveParams.prototype.writeNestedReviewType = function(type, reviewInfo, fWrit
  function DocReadResult(doc) {
  	this.logicDocument = doc;
  	this.ImageMap = {};

@@ -1,7 +1,7 @@
-From 2ac7ec64299015bf91fbdbb78d8988de9b5a0502 Mon Sep 17 00:00:00 2001
+From 18ebeb63dc15ddb7a95d97f4e18bc4149c5f0e39 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Fri, 11 Sep 2026 14:37:12 +0200
-Subject: [PATCH 4/8] config: the wrapper page is not ONLYOFFICE Documents
+Subject: [PATCH] config: the wrapper page is not ONLYOFFICE Documents
 
 Nothing shows this title in our window -- the host sets the native one -- but
 it is the document title all the same.
@@ -10,7 +10,7 @@ it is the document title all the same.
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/apps/api/documents/index.html.desktop b/apps/api/documents/index.html.desktop
-index 569d82d37e..fdcad30103 100644
+index b0f9c8948c..9941d01868 100644
 --- a/apps/api/documents/index.html.desktop
 +++ b/apps/api/documents/index.html.desktop
 @@ -1,7 +1,7 @@

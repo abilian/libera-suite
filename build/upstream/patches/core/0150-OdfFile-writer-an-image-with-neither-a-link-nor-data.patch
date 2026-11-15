@@ -1,8 +1,8 @@
-From 6668c14b246bbb0e33dafc7be03b2d7e518e6c7d Mon Sep 17 00:00:00 2001
+From 867e216cd5182f986c63005a29a08c83e89a2b30 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
-Subject: [PATCH 64/82] OdfFile writer: an image with neither a link nor data
- is not written
+Subject: [PATCH] OdfFile writer: an image with neither a link nor data is not
+ written
 
 When the source's image cannot be had (a StarView metafile x2t does not
 convert, an OLE object without a preview, a link to nothing), the writer

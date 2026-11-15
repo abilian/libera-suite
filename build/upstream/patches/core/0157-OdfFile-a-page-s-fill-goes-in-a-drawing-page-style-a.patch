@@ -1,8 +1,8 @@
-From de51c19cb6a8d1a4abed70798caf11b93cae2ad0 Mon Sep 17 00:00:00 2001
+From 048c299526b2e928dc90e5ad957974c3e1d5d9b8 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 19:24:01 +0200
-Subject: [PATCH 71/82] OdfFile: a page's fill goes in a drawing-page style, as
- ODF 1.3 has it
+Subject: [PATCH] OdfFile: a page's fill goes in a drawing-page style, as ODF
+ 1.3 has it
 
 The writer put a page's fill, draw:fill and the rest, on
 style:page-layout-properties, which is LibreOffice's extension and not

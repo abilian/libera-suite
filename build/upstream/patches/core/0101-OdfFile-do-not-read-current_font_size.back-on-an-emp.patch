@@ -1,8 +1,8 @@
-From 0a4e6e071c92192023400be119e4f36c3cd769a8 Mon Sep 17 00:00:00 2001
+From b489c8e55ee8094b2df7bc2000fa0301b33a5af6 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:51:14 +0200
-Subject: [PATCH 15/82] OdfFile: do not read current_font_size.back() on an
- empty vector
+Subject: [PATCH] OdfFile: do not read current_font_size.back() on an empty
+ vector
 
 Converting a docx that holds a form content control crashes the ODF
 writer with SIGSEGV when no font size has been resolved yet.

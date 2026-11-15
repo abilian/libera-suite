@@ -1,4 +1,4 @@
-From 5f5682440b65f7e16e985180a0487f4363b0aef2 Mon Sep 17 00:00:00 2001
+From 4323a8bc78ea5408cc9bac24c82b6bc6c3dc62c3 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 30 Oct 2026 07:28:47 +0100
 Subject: [PATCH] pdf: a moved page keeps what it inherits from its own parents

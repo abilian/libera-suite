@@ -1,8 +1,7 @@
-From 7650032dde3510022e7abf66ae73150b37b603eb Mon Sep 17 00:00:00 2001
+From 6b3fdc19690d3652f6282985d8d50a20dd83c33e Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 30 Oct 2026 18:06:00 +0100
-Subject: [PATCH 182/182] pdf: an incremental update that cannot start writes
- nothing
+Subject: [PATCH] pdf: an incremental update that cannot start writes nothing
 
 When setting up the update failed, the edits after it went into a
 document never set up, and closing appended an update with nothing in

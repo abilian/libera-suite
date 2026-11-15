@@ -1,7 +1,7 @@
-From 26d8ce942d047cd468e611aa4d6a38a975f1a633 Mon Sep 17 00:00:00 2001
+From 6c365cf347b5feafc55548112f5f5a8bfb4760e2 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 21:20:37 +0200
-Subject: [PATCH 23/82] OdfFile writer: master page headers before footers
+Subject: [PATCH] OdfFile writer: master page headers before footers
 
 style_master_page::serialize wrote style:footer before style:header,
 which the schema rejects: it wants header, header-left, header-first,

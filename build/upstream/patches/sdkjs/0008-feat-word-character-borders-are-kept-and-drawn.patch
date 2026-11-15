@@ -1,4 +1,4 @@
-From 8ee3f9bd3e55c7165496c2684c6f7ddc2bcbd68e Mon Sep 17 00:00:00 2001
+From 83dcf0303f292eca9c88609a204ccc88b3a31015 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 17:12:37 +0100
 Subject: [PATCH] feat(word): character borders are kept and drawn
@@ -27,7 +27,7 @@ that keeps and draws character borders, with its QUnit test.
  create mode 100644 tests/word/document-calculation/paragraph/char-border.js
 
 diff --git a/tests/runAll.js b/tests/runAll.js
-index deb5af9da7..c27d5b4171 100644
+index f4e1f1d580..6246b9e2de 100644
 --- a/tests/runAll.js
 +++ b/tests/runAll.js
 @@ -67,6 +67,7 @@ const allTests = [
@@ -223,7 +223,7 @@ index 0000000000..a3f3f5a72b
 +	});
 +});
 diff --git a/word/Editor/Paragraph.js b/word/Editor/Paragraph.js
-index 564e7a402e..1503b9ca2a 100644
+index 382135f3ff..ef83ddf27a 100644
 --- a/word/Editor/Paragraph.js
 +++ b/word/Editor/Paragraph.js
 @@ -3226,6 +3226,32 @@ Paragraph.prototype.drawRunContentLines = function(CurPage, pGraphics, drawState
@@ -259,7 +259,7 @@ index 564e7a402e..1503b9ca2a 100644
  		// Рисуем зачеркивание
  		pGraphics.Start_Command(AscFormat.DRAW_COMMAND_LINE, Line, CurLine, AscFormat.CLineStructure_DrawType_Strikeouts);
  		var Element = aStrikeout.Get_Next();
-@@ -19786,6 +19812,8 @@ CParaDrawingRangeLines.prototype =
+@@ -19794,6 +19820,8 @@ CParaDrawingRangeLines.prototype =
  					Element.Intermediate.push(Element.x0);
  
                  Element.x0 = PrevEl.x0;
@@ -268,7 +268,7 @@ index 564e7a402e..1503b9ca2a 100644
                  Count--;
              }
              else
-@@ -19847,6 +19875,16 @@ CParaDrawingRangeLines.prototype =
+@@ -19855,6 +19883,16 @@ CParaDrawingRangeLines.prototype =
  			if (undefined === PrevEl.Additional || undefined === Element.Additional)
  				return false;
  
@@ -420,7 +420,7 @@ index 7034bf716f..7df9b3d291 100644
  	ParagraphLineDrawState.prototype.handleFormBorder = function(item, run, inRunPos)
  	{
 diff --git a/word/Editor/Serialize2.js b/word/Editor/Serialize2.js
-index e23dc7f6dd..e29a2f1cc0 100644
+index d418074298..1cfbdc999e 100644
 --- a/word/Editor/Serialize2.js
 +++ b/word/Editor/Serialize2.js
 @@ -336,7 +336,9 @@ var c_oSerProp_rPrType = {
@@ -434,7 +434,7 @@ index e23dc7f6dd..e29a2f1cc0 100644
  };
  var c_oSerProp_rowPrType = {
      CantSplit:0,
-@@ -3350,6 +3352,12 @@ function Binary_rPrWriter(memory, saveParams)
+@@ -3437,6 +3439,12 @@ function Binary_rPrWriter(memory, saveParams)
              this.memory.WriteByte(c_oSerPropLenType.Variable);
              this.bs.WriteItemWithLength(function () { _this.bs.WriteShd(rPr.Shd); });
  		}
@@ -447,7 +447,7 @@ index e23dc7f6dd..e29a2f1cc0 100644
  		if(null != rPr.Vanish)
  		{
  			this.memory.WriteByte(c_oSerProp_rPrType.Vanish);
-@@ -10280,6 +10288,14 @@ function Binary_rPrReader(doc, oReadResult, stream)
+@@ -10367,6 +10375,14 @@ function Binary_rPrReader(doc, oReadResult, stream)
                  rPr.Shd = new CDocumentShd();
  				ReadDocumentShd(length, this.bcr, rPr.Shd);
                  break;

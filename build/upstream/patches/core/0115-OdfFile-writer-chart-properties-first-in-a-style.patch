@@ -1,7 +1,7 @@
-From 0d91dd187de0f830220ab923105e98d990066f06 Mon Sep 17 00:00:00 2001
+From 172962634912c63dab08f7fed0f1c912a027447f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:14:23 +0200
-Subject: [PATCH 29/82] OdfFile writer: chart properties first in a style
+Subject: [PATCH] OdfFile writer: chart properties first in a style
 
 style_content::serialize wrote style:chart-properties after the
 graphic and paragraph properties. Every family's schema is ordered,

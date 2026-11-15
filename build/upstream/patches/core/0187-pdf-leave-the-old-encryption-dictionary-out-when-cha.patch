@@ -1,8 +1,8 @@
-From b913d7e9982aeeb048fccaafc855e1c1500f68e5 Mon Sep 17 00:00:00 2001
+From 7f7b8a57b50cad8ef65492eec87f912273415bd6 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Sat, 31 Oct 2026 21:03:41 +0100
-Subject: [PATCH 187/187] pdf: leave the old encryption dictionary out when
- changing a password
+Subject: [PATCH] pdf: leave the old encryption dictionary out when changing a
+ password
 
 _ChangePassword copied every object of the original, its encryption
 dictionary too, which then stayed in the file unreferenced, its strings

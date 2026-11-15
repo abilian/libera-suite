@@ -1,4 +1,4 @@
-From 0eae76be695d2eee4c7b470da46a458af5e135fc Mon Sep 17 00:00:00 2001
+From ec49a0295e26607049c3a43ee1e367c681d06861 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Sun, 18 Oct 2026 14:52:26 +0200
 Subject: [PATCH] config: no macros in the desktop editor
@@ -14,12 +14,12 @@ running any macro a document holds.
  1 file changed, 5 insertions(+)
 
 diff --git a/apps/api/documents/index.html.desktop b/apps/api/documents/index.html.desktop
-index fdcad30103..9bd3817ea6 100644
+index 9941d01868..e0e2d93177 100644
 --- a/apps/api/documents/index.html.desktop
 +++ b/apps/api/documents/index.html.desktop
 @@ -111,6 +111,11 @@
-                         // a folder a desktop app does not have.
-                         features: { featuresTips: false }
+                         // ONLYOFFICE's helpdesk.
+                         , features: { featuresTips: false }
                          , feedback: false
 +                        // Macros here are JavaScript against the editor's own
 +                        // API: they run none of the VBA a document from

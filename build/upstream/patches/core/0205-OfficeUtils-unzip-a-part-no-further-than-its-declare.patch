@@ -1,0 +1,51 @@
+From 7d9332c5c464a535337d6c40c56dd61f3c6d6f14 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Sun, 15 Nov 2026 11:27:37 +0100
+Subject: [PATCH] OfficeUtils: unzip a part no further than its declared size
+
+minizip stopped reading an entry at the uncompressed size the central
+directory gives; minizip-ng, which replaced it, inflates to the end of
+the deflate stream. A package that understates a part's size therefore
+unpacked in full, though the sizes it declares are what a caller checks
+before conversion. Read at most the declared size, as before.
+---
+ OfficeUtils/src/ZipUtilsCP.cpp | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/OfficeUtils/src/ZipUtilsCP.cpp b/OfficeUtils/src/ZipUtilsCP.cpp
+index 2750d6d642..5b4677db6f 100644
+--- a/OfficeUtils/src/ZipUtilsCP.cpp
++++ b/OfficeUtils/src/ZipUtilsCP.cpp
+@@ -366,19 +366,28 @@ namespace ZLibZipUtils
+ 
+ 			if (fout != NULL)
+ 			{
++				// No further than the central directory says. minizip stopped
++				// there by itself; minizip-ng reads to the end of the deflate
++				// stream, so a part that understates its size, which is what
++				// the size checks before conversion read, unpacked in full.
++				uLong rest = file_info.uncompressed_size;
+ 				do
+ 				{
+-					err = unzReadCurrentFile(uf, buf, size_buf);
++					uInt want = rest < size_buf ? (uInt)rest : size_buf;
++					err = want ? unzReadCurrentFile(uf, buf, want) : 0;
+ 					if (err<0)
+ 					{
+ 						break;
+ 					}
+ 					if (err>0)
++					{
++						rest -= err;
+ 						if (fwrite(buf, err, 1, fout) != 1)
+ 						{
+ 							err=UNZ_ERRNO;
+ 							break;
+ 						}
++					}
+ 				}
+ 				// ?
+ 				while (err>0);
+-- 
+2.55.0
+

@@ -1,8 +1,8 @@
-From e374c0a0e1344362508f8644ccf606933dddcc76 Mon Sep 17 00:00:00 2001
+From 3822eda74d5eb825f1d431f57728802fb68c9178 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
-Subject: [PATCH 68/82] OdfFile writer: one line numbering configuration for
- the document
+Subject: [PATCH] OdfFile writer: one line numbering configuration for the
+ document
 
 Each DOCX section can have its own w:lnNumType, and each became a
 text:linenumbering-configuration in office:styles, which allows one:

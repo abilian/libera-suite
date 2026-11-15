@@ -1,7 +1,7 @@
-From f3b331d67af80e8538cf568708ad014a6d6eb42c Mon Sep 17 00:00:00 2001
+From 9a7a695fb8420a5b9bc77afb0eb55af02b328f36 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 08:56:53 +0200
-Subject: [PATCH 53/82] OdfFile writer: a combo box writes its items after its
+Subject: [PATCH] OdfFile writer: a combo box writes its items after its
  properties
 
 form:combobox wrote its form:item list first, then form:properties and

@@ -1,7 +1,7 @@
-From 12cd1d6e19be1f0b9569b8269b89bf1895380411 Mon Sep 17 00:00:00 2001
+From a9f747e932c3f9b95519d088f29c300c49398093 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:59:21 +0200
-Subject: [PATCH 47/82] OdfFile reader: whitespace in a note body is not text
+Subject: [PATCH] OdfFile reader: whitespace in a note body is not text
 
 note_body::add_text and add_space kept any text, whitespace included, as
 content of the note. In a flat ODF file, the indentation between

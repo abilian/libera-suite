@@ -1,8 +1,8 @@
-From 5a86967ab290d6565f931e6934cd012dad287102 Mon Sep 17 00:00:00 2001
+From a9e2efe5a05c32007e777527ed9dd5aceeb29f6d Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:27:38 +0200
-Subject: [PATCH 40/82] OdfFile: presentation master page names are NCNames,
- shown as they were
+Subject: [PATCH] OdfFile: presentation master page names are NCNames, shown as
+ they were
 
 A presentation's master pages are named after the PowerPoint master and
 layout, "User Theme: 1_0" for instance, and style:name and the

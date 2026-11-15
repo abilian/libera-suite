@@ -1,8 +1,7 @@
-From f5ec021ab0fcfbd04ddeb306b2db772727fb808e Mon Sep 17 00:00:00 2001
+From 29392c7aff664f14a5729eeeb682dec53f9bd934 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:57:06 +0200
-Subject: [PATCH 16/82] OdfFile: give a date content control a value its type
- allows
+Subject: [PATCH] OdfFile: give a date content control a value its type allows
 
 A date content control converts to an ODF form:date whose form:value and
 form:current-value are filled with the control's display string, for

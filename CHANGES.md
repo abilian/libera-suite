@@ -12,6 +12,7 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 ### Changed
 
+- **The payload is built from Euro-Office v9.3.8**, from v9.3.5-2. Among its 109 core commits is Brotli 1.2.1, which fixes CVE-2026-111497, and a fix for the empty row a UTF-8 CSV gained at its end, which drops one of our patches. The converter now builds its own libxml2 (2.15.4), so ours and its patch are gone too; so is the web-apps patch that emptied the editor's back link, which upstream now does. The 30 documents of ElixirOffice's corpus print the same, page for page. The editor's About panel now gives the copyrights, the dates of the modifications, the licence and the source as separate paragraphs, beside the attribution it showed before.
 - **The menus show their keys on Linux and Windows.** New, Open, Save, Save As, Print and Close show Ctrl-N, Ctrl-O, Ctrl-S, Ctrl-Shift-S, Ctrl-P and Ctrl-W, and on Windows Undo shows Ctrl-Z. On Linux only New, Open and Close showed theirs, and on Windows nothing did. On Linux, Ctrl-S, Ctrl-Shift-S and Ctrl-P are now the menu's, as on a Mac; Ctrl-Z stays the document's, which is why Undo shows no key there.
 
 ### Fixed

@@ -1,8 +1,7 @@
-From 2848a71f44925d9b8a659a62571612be5e771d08 Mon Sep 17 00:00:00 2001
+From 8e98c85feea53300dffca9f921b875a43ad79a9d Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:56:29 +0200
-Subject: [PATCH 18/82] OdfFile: carry the document metadata OOXML actually
- provides
+Subject: [PATCH] OdfFile: carry the document metadata OOXML actually provides
 
 OoxConverter::convert_meta maps 6 of the 15 core properties that CCore
 already parses, and mislabels authorship. It is shared by the DOCX, PPTX

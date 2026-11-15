@@ -1,7 +1,7 @@
-From f3c46df605039cb7f4d952004003dfae8aec771c Mon Sep 17 00:00:00 2001
+From 4debc97ba5f3d22ec770cf5e3bfb7a034c664946 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 3 Nov 2026 13:55:30 +0100
-Subject: [PATCH 192/193] xmlsec: accept the signatures LibreOffice makes
+Subject: [PATCH] xmlsec: accept the signatures LibreOffice makes
 
 Every signature LibreOffice makes was refused, for two reasons. It
 suffixes the ids of its objects (idPackageObject_ID_...), and the

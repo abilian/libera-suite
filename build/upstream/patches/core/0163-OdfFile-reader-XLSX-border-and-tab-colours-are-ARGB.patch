@@ -1,7 +1,7 @@
-From df4a51fd3fd15e9a1d3ddd715b8d50cdb25df6c4 Mon Sep 17 00:00:00 2001
+From f70b18ce7c59be5902de660086a38e68551f5695 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:41 +0200
-Subject: [PATCH 77/82] OdfFile reader: XLSX border and tab colours are ARGB
+Subject: [PATCH] OdfFile reader: XLSX border and tab colours are ARGB
 
 A border's colour and a sheet tab's were written as six hex digits,
 000000; the schema's rgb is ARGB, eight, and fonts and fills already

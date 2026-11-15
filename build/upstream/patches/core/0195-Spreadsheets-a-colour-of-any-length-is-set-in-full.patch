@@ -1,7 +1,7 @@
-From 52fbe4319eb5c89fe0c725f69a5c3df5969e9846 Mon Sep 17 00:00:00 2001
+From 5ac7186b03bee01ae8b237740c00fc1c921331f5 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Wed, 4 Nov 2026 19:13:37 +0100
-Subject: [PATCH 195/195] Spreadsheets: a colour of any length is set in full
+Subject: [PATCH] Spreadsheets: a colour of any length is set in full
 
 A colour's parser sets the alpha only from eight digits and nothing at
 all from a length it does not know, while reporting success, and the

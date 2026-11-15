@@ -1,8 +1,8 @@
-From 2f2b9d3dc1830946560c0e8b72bb7e85dfafac4d Mon Sep 17 00:00:00 2001
+From 69f116864f4ab48ce85b87695840a6102faea641 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:23:43 +0200
-Subject: [PATCH 41/82] OdfFile writer: a chart series writes its domain before
- its data points
+Subject: [PATCH] OdfFile writer: a chart series writes its domain before its
+ data points
 
 chart:series serialised its children in the order the converter added
 them, and it adds the data points before the x values of a scatter or

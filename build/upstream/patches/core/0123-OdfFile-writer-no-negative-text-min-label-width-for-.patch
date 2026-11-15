@@ -1,7 +1,7 @@
-From 99966d217a0aabc25825324421c81682c0796be5 Mon Sep 17 00:00:00 2001
+From a71708bfd1bb3e5f523c8c88546480fbd58638e9 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 19:28:57 +0200
-Subject: [PATCH 37/82] OdfFile writer: no negative text:min-label-width for a
+Subject: [PATCH] OdfFile writer: no negative text:min-label-width for a
  positive indent
 
 A PPTX bullet level's label width was written as minus the paragraph's

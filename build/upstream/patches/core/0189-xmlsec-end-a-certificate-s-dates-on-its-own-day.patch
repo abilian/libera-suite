@@ -1,7 +1,7 @@
-From 5fd063adc00090fecea3d0096aaab0f60f0969e7 Mon Sep 17 00:00:00 2001
+From 9602298e2e9e7d779bed9bda4df2fdaf5f4cb9f4 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Sun, 1 Nov 2026 08:44:43 +0100
-Subject: [PATCH 189/190] xmlsec: end a certificate's dates on its own day
+Subject: [PATCH] xmlsec: end a certificate's dates on its own day
 
 GetDate wrote the end of a certificate's validity with the day of its
 start: valid until 20/11/2027 read 5/11/2027 for one issued on the 5th.

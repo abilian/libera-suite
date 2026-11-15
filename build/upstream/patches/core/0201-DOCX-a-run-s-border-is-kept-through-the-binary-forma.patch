@@ -1,4 +1,4 @@
-From 55db2c04c52c3e00349987f39a8028ec7b043185 Mon Sep 17 00:00:00 2001
+From 3d1c62f3abba810f7d4489f5821ae4d9140d20b9 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 17:12:21 +0100
 Subject: [PATCH] DOCX: a run's border is kept through the binary format

@@ -1,4 +1,4 @@
-From f4d305efb85118301af7243d9d1f4080b9e2ebb5 Mon Sep 17 00:00:00 2001
+From de0b830c3bb1c9515ef601dc66bc13b807d20f56 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 30 Oct 2026 07:05:48 +0100
 Subject: [PATCH] pdf: keep the Creator of a PDF saved as an incremental update

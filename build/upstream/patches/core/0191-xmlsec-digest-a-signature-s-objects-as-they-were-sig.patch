@@ -1,8 +1,7 @@
-From 3ee88396e93d57d41d233d73cb2266c2ce7527c7 Mon Sep 17 00:00:00 2001
+From 8ef155a2cab0cca62cc1dc5b59f9da72ae17642f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 3 Nov 2026 13:54:28 +0100
-Subject: [PATCH 191/193] xmlsec: digest a signature's objects as they were
- signed
+Subject: [PATCH] xmlsec: digest a signature's objects as they were signed
 
 The verifier digested each object a signature references, and the
 SignedInfo it checks the signature value over, from its own
@@ -38,10 +37,10 @@ index 909f4aade9..aa49c6b58c 100644
  
  	// UTF-8 BOM, UTF-16BE BOM, UTF-16LE BOM, UTF-32BE BOM, UTF-32LE BOM
 diff --git a/DesktopEditor/xml/src/xmldom.cpp b/DesktopEditor/xml/src/xmldom.cpp
-index d087324c51..ae68815af0 100644
+index a28a28d836..19f2e09697 100644
 --- a/DesktopEditor/xml/src/xmldom.cpp
 +++ b/DesktopEditor/xml/src/xmldom.cpp
-@@ -947,6 +947,72 @@ namespace XmlUtils
+@@ -948,6 +948,72 @@ namespace XmlUtils
  		return "";
  #endif
  	}

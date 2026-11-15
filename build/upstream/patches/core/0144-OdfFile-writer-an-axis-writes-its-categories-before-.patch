@@ -1,8 +1,8 @@
-From 9313e09d4f19b0ebdfe000a102a6012a7ff8221d Mon Sep 17 00:00:00 2001
+From aa1d0b3bd91cdebb5b65847a88f7e33d100262f4 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 16:55:47 +0200
-Subject: [PATCH 58/82] OdfFile writer: an axis writes its categories before
- its grids
+Subject: [PATCH] OdfFile writer: an axis writes its categories before its
+ grids
 
 chart:axis wrote its children in the order they were added, and the
 converter adds chart:categories after the grids. The schema wants the

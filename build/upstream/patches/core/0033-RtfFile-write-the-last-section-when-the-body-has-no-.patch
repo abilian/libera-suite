@@ -1,8 +1,7 @@
-From 8bf1d59fddd71758eb2807ba94ff84e051f1e4f3 Mon Sep 17 00:00:00 2001
+From 20efb568c988730c440f7b5622ce224be1bfe0ad Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Wed, 14 Oct 2026 15:24:52 +0200
-Subject: [PATCH 14/82] RtfFile: write the last section when the body has no
- w:sectPr
+Subject: [PATCH] RtfFile: write the last section when the body has no w:sectPr
 
 The OOXML reader made an RTF section from each w:sectPr and from
 nothing else, so the paragraphs after the last one were never read.

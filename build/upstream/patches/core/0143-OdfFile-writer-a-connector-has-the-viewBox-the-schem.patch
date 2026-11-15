@@ -1,7 +1,7 @@
-From 8496f3c4586f9a290aebd6e69be9d4594bbaf17e Mon Sep 17 00:00:00 2001
+From 5da069087331d07ec0a034f785982e52994fc5ec Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 16:55:47 +0200
-Subject: [PATCH 57/82] OdfFile writer: a connector has the viewBox the schema
+Subject: [PATCH] OdfFile writer: a connector has the viewBox the schema
  requires
 
 draw:connector was written with its end points and no svg:viewBox, which

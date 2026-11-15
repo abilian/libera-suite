@@ -1,8 +1,8 @@
-From b6a4ad6706b1053b01b5e7cf504ba288ca2f4f1c Mon Sep 17 00:00:00 2001
+From 0ced1098dbb54946e4808c8b822c4f29fdd40016 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
-Subject: [PATCH 65/82] OdfFile writer: a bitmap tile's size is a percentage of
- the image
+Subject: [PATCH] OdfFile writer: a bitmap tile's size is a percentage of the
+ image
 
 OOXML's a:tile gives sx and sy in thousandths of a percent of the
 image's size. The converter multiplied them by the image's size in

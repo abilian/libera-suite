@@ -1,4 +1,4 @@
-From 6add268870345832e05906e7014927e0f772393e Mon Sep 17 00:00:00 2001
+From 5dbee9d473ebb7a2449f3e8c6c9bff751b70bba9 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Mon, 19 Oct 2026 14:09:32 +0200
 Subject: [PATCH] svg: draw only the pictures an SVG carries in itself

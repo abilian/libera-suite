@@ -1,8 +1,8 @@
-From 63d5cedffeda2a6598e0754074dfe73ebc8815df Mon Sep 17 00:00:00 2001
+From ce74c4993ee0a5279915d228b437aecc95f4cd82 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:21:27 +0200
-Subject: [PATCH 39/82] OdfFile writer: a DOCX table without grid columns gets
- one column per cell
+Subject: [PATCH] OdfFile writer: a DOCX table without grid columns gets one
+ column per cell
 
 A table whose w:tblGrid is empty or missing, which Word accepts and x2t's
 own reader writes for a table whose columns have no width, was written

@@ -1,8 +1,8 @@
-From 5b72556aa61cf48618ec18baaa0ce641b27cc158 Mon Sep 17 00:00:00 2001
+From b4ac9bb0a2efbb11aefd340968c4983e0a027235 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:13:20 +0200
-Subject: [PATCH 28/82] OdfFile writer: master page notes after the shapes, and
- only once
+Subject: [PATCH] OdfFile writer: master page notes after the shapes, and only
+ once
 
 style_master_page::add_child_element had no break after storing
 presentation:notes, so the notes fell through into style_style_, which

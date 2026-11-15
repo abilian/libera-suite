@@ -1,8 +1,7 @@
-From ab3122e32137f0e867662b9b5fd02c91271502bd Mon Sep 17 00:00:00 2001
+From 4607be05476565786560092a0af1196b19d75f09 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 08:59:17 +0200
-Subject: [PATCH 55/82] OdfFile writer: a named range without a sheet keeps the
- dot
+Subject: [PATCH] OdfFile writer: a named range without a sheet keeps the dot
 
 A sheet-scoped name, as x2t's reader writes it, gives its range without
 the sheet: $B$2. ODF allows the sheet to be left out only with the

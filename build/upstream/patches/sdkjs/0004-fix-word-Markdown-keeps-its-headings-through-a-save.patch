@@ -1,4 +1,4 @@
-From 1ac037eb0a3aeaa3bf0eb79775d9825257c7fe77 Mon Sep 17 00:00:00 2001
+From 688e5024a01f42484683f79ffb6ac1400d25e90e Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Sun, 25 Oct 2026 15:45:49 +0100
 Subject: [PATCH] fix(word): Markdown keeps its headings through a save

@@ -1,8 +1,8 @@
-From 2fa58c6140eff058bf6c71ee37ba601a84242e41 Mon Sep 17 00:00:00 2001
+From 8f791d8f2c1f18802ce538cde2b21ea13802cd4c Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:55:52 +0200
-Subject: [PATCH 21/82] OdfFile: stop overruling the note style's indent and
- line spacing
+Subject: [PATCH] OdfFile: stop overruling the note style's indent and line
+ spacing
 
 Writing ODT, the converter stamps a 0.2cm hanging indent and a 100% line
 height onto the automatic style of every footnote and endnote body

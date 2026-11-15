@@ -1,4 +1,4 @@
-From d93430c62904068198b46ecc4a572ff068e60e76 Mon Sep 17 00:00:00 2001
+From c42e11ac2c48f2f97c3ac7256a80c92b7687e80d Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 26 Oct 2026 18:57:16 +0100
 Subject: [PATCH] doctrenderer: let DOCTRENDERER_CACHE_DIR hold the V8 code

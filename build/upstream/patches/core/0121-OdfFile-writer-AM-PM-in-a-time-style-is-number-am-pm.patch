@@ -1,8 +1,8 @@
-From 295647d649be817c7ebe4d9d1d18b897b5d381db Mon Sep 17 00:00:00 2001
+From 617445ac4f4457e9abe7b6bb927dc0bd755d945a Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 19:26:45 +0200
-Subject: [PATCH 35/82] OdfFile writer: AM/PM in a time style is number:am-pm,
- not three texts
+Subject: [PATCH] OdfFile writer: AM/PM in a time style is number:am-pm, not
+ three texts
 
 create_time_style lowercased the format code with XmlUtils::GetLower(s),
 which returns the lowered string and leaves its argument alone. Its

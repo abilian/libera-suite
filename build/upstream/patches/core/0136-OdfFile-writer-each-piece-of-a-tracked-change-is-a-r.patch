@@ -1,8 +1,8 @@
-From cfd4136c391a8e107d168805a259feee790283f9 Mon Sep 17 00:00:00 2001
+From 8e0ff90ba0584a17716a6910ef800fb0f2eb21ca Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 08:54:40 +0200
-Subject: [PATCH 50/82] OdfFile writer: each piece of a tracked change is a
- region with its own id
+Subject: [PATCH] OdfFile writer: each piece of a tracked change is a region
+ with its own id
 
 A DOCX change split into pieces, one w:ins or w:del per run or
 paragraph, repeats its w:id, and the writer named each piece's

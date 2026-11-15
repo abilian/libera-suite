@@ -1,8 +1,7 @@
-From 66a8802d0e85c7ef6421b3ffafbcae9c4f0bb75e Mon Sep 17 00:00:00 2001
+From 45f4882824e1230728b7c0222abb256ca36ba685 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 30 Oct 2026 18:06:00 +0100
-Subject: [PATCH 181/182] pdf: keep an encrypted PDF's file ID at its own
- length
+Subject: [PATCH] pdf: keep an encrypted PDF's file ID at its own length
 
 The key of every encryption but AES-256 is computed over the first file
 ID, which the writer copied into 16 bytes while counting its full

@@ -1,7 +1,7 @@
-From c3fb98a65f8477990eee96a60b8805dac2cb15e4 Mon Sep 17 00:00:00 2001
+From ddd9d5487769081c1fb5e5f854eca379d00d6dc8 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 07:49:07 +0200
-Subject: [PATCH 49/82] OdfFile writer: office:text opens with forms, tracked
+Subject: [PATCH] OdfFile writer: office:text opens with forms, tracked
  changes, then sequences
 
 office:text wrote its sequence declarations first, then its forms, then

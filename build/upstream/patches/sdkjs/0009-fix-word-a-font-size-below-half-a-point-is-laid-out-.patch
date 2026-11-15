@@ -1,4 +1,4 @@
-From 6ba711388eb7cd9b2c705117c0330a47c5662e63 Mon Sep 17 00:00:00 2001
+From 6d9c88eacbbd67a1c39e4940755e623681e4a026 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 18:08:22 +0100
 Subject: [PATCH] fix(word): a font size below half a point is laid out as half

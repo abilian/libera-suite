@@ -1,7 +1,7 @@
-From 84938711e681888e1a2ddf79b0ccf8661ae72610 Mon Sep 17 00:00:00 2001
+From 57c47f19563d871b0819e66befc369eb44ef9f39 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 10 Sep 2026 15:27:28 +0200
-Subject: [PATCH 01/82] v8: allow the build job count to be overridden
+Subject: [PATCH] v8: allow the build job count to be overridden
 
 The job count is fixed at one per core with a floor of four and no way to
 lower it. Linking v8_monolith is memory-hungry, so eight parallel clang
@@ -12,10 +12,10 @@ V8_BUILD_JOBS when set.
  1 file changed, 6 insertions(+)
 
 diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
-index 3016cea975..f3726ab278 100644
+index d7949cf9b8..88c6854578 100644
 --- a/Common/3dParty/v8/nc-build.py
 +++ b/Common/3dParty/v8/nc-build.py
-@@ -904,7 +904,13 @@ solutions = [
+@@ -1102,7 +1102,13 @@ solutions = [
              if shutil.which( tool ) is None:
                  nc.abort_op( f"Tool not found: {tool}" )
  

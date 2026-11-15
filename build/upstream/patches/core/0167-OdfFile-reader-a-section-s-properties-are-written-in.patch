@@ -1,8 +1,8 @@
-From 8c4ce642e12333133a4c4e2f488d40fafd4b83c3 Mon Sep 17 00:00:00 2001
+From 2ea29a791d7659cb89071defc921d6a4504a3983 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:43 +0200
-Subject: [PATCH 81/82] OdfFile reader: a section's properties are written in
- the schema's order
+Subject: [PATCH] OdfFile reader: a section's properties are written in the
+ schema's order
 
 w:sectPr's children come from several functions, each writing its own:
 columns and line numbering, then the section type, then the header and

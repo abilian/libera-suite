@@ -1,8 +1,8 @@
-From 74611dd8a9203afad1b95fa07d6280fd3200bd1c Mon Sep 17 00:00:00 2001
+From 5d082e893d719f214f581163fb2e53ec765775a2 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:58:32 +0200
-Subject: [PATCH 46/82] OdfFile writer: a table cell writes its annotation
- before its text
+Subject: [PATCH] OdfFile writer: a table cell writes its annotation before its
+ text
 
 A spreadsheet comment is added to its cell after the cell's text, and
 the cell wrote its children in that order. The schema wants

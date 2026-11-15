@@ -1,7 +1,7 @@
-From de48f91e7d86813b283d4225d734ef66e34912d6 Mon Sep 17 00:00:00 2001
+From 0281c9c1f8032fa9aaf63e81b95e9e557ec9e9b8 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 23:38:18 +0200
-Subject: [PATCH 27/82] OdfFile writer: declare ODF 1.3
+Subject: [PATCH] OdfFile writer: declare ODF 1.3
 
 Every part of the package declared ODF 1.2 while the writer emits 1.3
 constructs: style:header-first and style:footer-first (305 of

@@ -1,8 +1,8 @@
-From fcaa24a0d5fa28cef03b06d8b0fc296c668fec03 Mon Sep 17 00:00:00 2001
+From 0b3ef8ab280ace54b067a24094a4e96435bff23b Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:39 +0200
-Subject: [PATCH 74/82] OdfFile reader: an XLSX package's core properties have
- the right relationship
+Subject: [PATCH] OdfFile reader: an XLSX package's core properties have the
+ right relationship
 
 The package relationship to docProps/core.xml was typed
 http://schemas.openxmlformats.org/officedocument/2006/relationships/metadata/core-properties,

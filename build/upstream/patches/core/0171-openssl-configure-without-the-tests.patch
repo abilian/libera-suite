@@ -1,7 +1,7 @@
-From 403cdd56fb22a8b016952305e1cbf20d335c7114 Mon Sep 17 00:00:00 2001
+From 8bcc7a5ba0dfe4453ad007fc0d18b6ff0fccea18 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 27 Oct 2026 17:42:53 +0100
-Subject: [PATCH 171/171] openssl: configure without the tests
+Subject: [PATCH] openssl: configure without the tests
 
 make builds about three hundred test programs, each with libcrypto
 linked in statically: 1.2 GB that nothing runs, beside libraries the
@@ -11,10 +11,10 @@ core links against that take a few megabytes.
  1 file changed, 3 insertions(+)
 
 diff --git a/Common/3dParty/openssl/nc-build.py b/Common/3dParty/openssl/nc-build.py
-index 2114bc342d..41f7917fc7 100644
+index d2534aa713..04006b45c3 100644
 --- a/Common/3dParty/openssl/nc-build.py
 +++ b/Common/3dParty/openssl/nc-build.py
-@@ -59,6 +59,7 @@ def build_and_install():
+@@ -98,6 +98,7 @@ def build_and_install():
                  "--libdir=lib64",
                  "enable-md2",
                  "no-shared",
@@ -22,7 +22,7 @@ index 2114bc342d..41f7917fc7 100644
                  "no-asm",
              ],
              "Configure",
-@@ -84,6 +85,7 @@ def build_and_install():
+@@ -123,6 +124,7 @@ def build_and_install():
                  f"--openssldir={nc.install_dir}",
                  "enable-md2",
                  "no-shared",
@@ -30,7 +30,7 @@ index 2114bc342d..41f7917fc7 100644
              ],
              "Configure",
              nc.work_dir
-@@ -111,6 +113,7 @@ def build_and_install():
+@@ -150,6 +152,7 @@ def build_and_install():
                  f"--openssldir={nc.install_dir}",
                  "enable-md2",
                  "no-shared",

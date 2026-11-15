@@ -1,8 +1,7 @@
-From d9ab61f9ef13d15b659b4e96043ebe980bed9b06 Mon Sep 17 00:00:00 2001
+From 74d5191e3485d16a16f651f06af658098e8b8ce0 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:14:56 +0200
-Subject: [PATCH 30/82] OdfFile writer: tab leader type from the type, not the
- style
+Subject: [PATCH] OdfFile writer: tab leader type from the type, not the style
 
 style_tab_stop::serialize wrote style:leader-type from
 style_leader_style_, so a dotted leader came out as

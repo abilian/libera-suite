@@ -1,7 +1,7 @@
-From f1366cc1d3206c6a391519c4f1bacea0a3235d3e Mon Sep 17 00:00:00 2001
+From 084c86ecd0937fc1e166f286d39235b0660868e7 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 09:18:20 +0200
-Subject: [PATCH 56/82] OdfFile reader: deleted text in a deleted frame is
+Subject: [PATCH] OdfFile reader: deleted text in a deleted frame is
  well-formed
 
 Text deleted inside a frame that is itself in a deletion was written as

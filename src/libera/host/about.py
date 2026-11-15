@@ -1,8 +1,8 @@
 """Who wrote what, in one place, for everything that has to say so.
 
 Three surfaces need the same sentences and used to hold their own copy: the
-editor's own About panel (through the theme's `attribution` token, which is
-build-time and lives in `build/payload/theme/libera/meta/config.json`), the macOS About
+editor's own About panel (through the theme's `about.json`, which is
+build-time and lives in `build/payload/theme/libera/meta/`), the macOS About
 panel (through `NSHumanReadableCopyright`), and Help > About on Linux. A fourth,
 `--payload-status`, prints the revisions instead of the prose.
 

@@ -1,8 +1,8 @@
-From a34b5d84d5387af25bedba65c9b75bf7fadb71ac Mon Sep 17 00:00:00 2001
+From c054c43baf9f8ce3de42bbdfd1dcfa01a5a0fe5c Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:16:44 +0200
-Subject: [PATCH 32/82] OdfFile writer: validation help message before the
- error message
+Subject: [PATCH] OdfFile writer: validation help message before the error
+ message
 
 table_content_validation wrote its children in the order the XLSX
 converter added them, error message first. The schema wants

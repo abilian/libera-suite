@@ -1,4 +1,4 @@
-From 0874f2ce85e8b45263d97566ee4f29272badb8c9 Mon Sep 17 00:00:00 2001
+From d08ad9a19ff9c9e9fdf2b9687cc9e37df843148d Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 18:17:54 +0100
 Subject: [PATCH] OdfFile writer: an .ods keeps its page margins through a save

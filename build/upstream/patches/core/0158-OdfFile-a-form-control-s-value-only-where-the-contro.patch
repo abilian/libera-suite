@@ -1,8 +1,8 @@
-From 55435eb04dcac3263f1dc3c960374fb9904645c9 Mon Sep 17 00:00:00 2001
+From 60a4af0269a32dfa23501144aded800081a42d6f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 19:24:01 +0200
-Subject: [PATCH 72/82] OdfFile: a form control's value only where the control
- takes one
+Subject: [PATCH] OdfFile: a form control's value only where the control takes
+ one
 
 Every control was written with form:value and form:current-value, which
 ODF allows only on some: 38 of LibreOffice's ODF test documents after the

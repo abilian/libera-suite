@@ -1,7 +1,7 @@
-From 376b706d2288ef7f3fd72dd22f50fc061d759600 Mon Sep 17 00:00:00 2001
+From 823f89087f6509d547e7ae8e7d22e958a34da1df Mon Sep 17 00:00:00 2001
 From: SF on Windows <sf+windows@abilian.com>
 Date: Tue, 29 Sep 2026 05:03:11 +0000
-Subject: [PATCH 8/8] build: spawn npm and webpack through node, for Windows
+Subject: [PATCH] build: spawn npm and webpack through node, for Windows
 
 Two tasks spawned a command that only exists as a .cmd on Windows:
 mobile:install ran `npm`, and every webpack task ran

@@ -1,8 +1,8 @@
-From 9485a2f8e743d07fc2027b4c430b53c6c161820e Mon Sep 17 00:00:00 2001
+From 9eb7845affb3ad3c0629f8b9e6f89b64ccbc95d0 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 5 Nov 2026 14:56:45 +0100
-Subject: [PATCH 197/197] xmlsec: the relationships of a part that is not there
- go unsigned
+Subject: [PATCH] xmlsec: the relationships of a part that is not there go
+ unsigned
 
 They belong to nothing, and Microsoft's System.IO.Packaging calls a
 signature over them invalid. Files the converter saved before it stopped

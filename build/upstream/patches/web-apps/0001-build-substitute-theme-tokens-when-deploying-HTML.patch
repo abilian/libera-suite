@@ -1,7 +1,7 @@
-From 6701736c5555220e743e707ee8a6d6556fd22148 Mon Sep 17 00:00:00 2001
+From f03557db435a6c48e800dc9cf789ef2f495b9937 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Thu, 10 Sep 2026 20:09:19 +0200
-Subject: [PATCH 1/8] build: substitute theme tokens when deploying HTML
+Subject: [PATCH] build: substitute theme tokens when deploying HTML
 
 deploy-html.js says it replaces grunt copy:indexhtml + replace:indexhtml,
 but it only ever did @@SRC_ROOT@@. The {{TOKEN}} placeholders reached the
@@ -57,10 +57,10 @@ index b2b1619513..87cecbf49e 100644
              fs.writeFileSync(path.join(destDir, destName), replaced, 'utf8');
          }
 diff --git a/build/theme.config.mjs b/build/theme.config.mjs
-index 9a6438c513..ccfb07394d 100644
+index 3dd420cf46..02b2f0c573 100644
 --- a/build/theme.config.mjs
 +++ b/build/theme.config.mjs
-@@ -106,8 +106,9 @@ export function themeGlobalVars(env, editor) {
+@@ -107,8 +107,9 @@ export function themeGlobalVars(env, editor) {
   * bare AST identifiers). productVersion is passed in because BUILD_NUMBER is already
   * computed in each webpack config alongside BannerPlugin.
   */

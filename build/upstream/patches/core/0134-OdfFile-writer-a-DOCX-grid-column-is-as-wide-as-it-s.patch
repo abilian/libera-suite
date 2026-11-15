@@ -1,8 +1,7 @@
-From 5cbf25ad4d3b8fae51d76b454924de6cb46eb631 Mon Sep 17 00:00:00 2001
+From 3c2b4943081010dbaf6d8eee58af22ed73856552 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 07:00:23 +0200
-Subject: [PATCH 48/82] OdfFile writer: a DOCX grid column is as wide as it
- says
+Subject: [PATCH] OdfFile writer: a DOCX grid column is as wide as it says
 
 Upstream's fix for bug 51597 added 37 twips to every grid column
 narrower than 7 cm, to make up for cells that came back narrower after a

@@ -1,7 +1,7 @@
-From 32db5a99dff8e6e13dfcdd9d42bc613deae71ee0 Mon Sep 17 00:00:00 2001
+From 42e88bb9189f872be846e92b6a9b1662ff96d07b Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Mon, 5 Oct 2026 22:17:59 +0200
-Subject: [PATCH 13/82] graphics: bind hypotf to its old glibc version on Linux
+Subject: [PATCH] graphics: bind hypotf to its old glibc version on Linux
 
 libgraphics was the only library in the Linux core that needed
 GLIBC_2.35, for one hypotf call in HarfBuzz's hb-outline.hh: glibc 2.35
@@ -16,10 +16,10 @@ old version, GLIBC_2.2.5 on x86_64 and GLIBC_2.17 on arm64.
  create mode 100644 DesktopEditor/graphics/cmake/glibc-hypotf.h
 
 diff --git a/DesktopEditor/graphics/cmake/CMakeLists.txt b/DesktopEditor/graphics/cmake/CMakeLists.txt
-index e8686f32c8..900cbdf9b7 100644
+index 873355854a..caf1891d79 100644
 --- a/DesktopEditor/graphics/cmake/CMakeLists.txt
 +++ b/DesktopEditor/graphics/cmake/CMakeLists.txt
-@@ -1072,6 +1072,14 @@ if(LINUX)
+@@ -1053,6 +1053,14 @@ if(LINUX)
      )
  endif()
  
@@ -32,8 +32,8 @@ index e8686f32c8..900cbdf9b7 100644
 +endif()
 +
  # dynamic libs
- target_link_libraries(graphics PUBLIC
-     Boost::system
+ 
+ 
 diff --git a/DesktopEditor/graphics/cmake/glibc-hypotf.h b/DesktopEditor/graphics/cmake/glibc-hypotf.h
 new file mode 100644
 index 0000000000..cf2510164a

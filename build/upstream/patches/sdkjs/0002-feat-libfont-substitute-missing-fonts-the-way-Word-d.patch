@@ -1,7 +1,7 @@
-From 58c42c3c8ac2ec58f5499b86bc3ad49b05fe992f Mon Sep 17 00:00:00 2001
+From be2d14886e98b50ab0a2fc69a6d8f00f49923ce7 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Ga=C3=ABl=20Duval?= <gael@murena.io>
 Date: Mon, 5 Oct 2026 23:03:20 +0200
-Subject: [PATCH 2/3] feat(libfont): substitute missing fonts the way Word does
+Subject: [PATCH] feat(libfont): substitute missing fonts the way Word does
 
 When a font is not installed, the replacement was chosen only by
 panose/metrics similarity against the installed fonts, so Calibri
@@ -276,7 +276,7 @@ index 0000000000..e92d44257f
 +	});
 +});
 diff --git a/tests/runAll.js b/tests/runAll.js
-index 22e726193c..deb5af9da7 100644
+index ee7026b796..f4e1f1d580 100644
 --- a/tests/runAll.js
 +++ b/tests/runAll.js
 @@ -56,6 +56,7 @@ const allTests = [

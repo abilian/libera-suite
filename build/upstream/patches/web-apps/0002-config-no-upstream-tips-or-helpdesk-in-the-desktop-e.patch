@@ -1,0 +1,36 @@
+From ce0b7025a10d310df89320c765dc83e38476a194 Mon Sep 17 00:00:00 2001
+From: Libera build <build@libera.invalid>
+Date: Fri, 11 Sep 2026 13:21:26 +0200
+Subject: [PATCH] config: no upstream tips or helpdesk in the desktop editor
+
+The desktop index.html points a feedback button at upstream's helpdesk,
+and featuresTips pops "New feature!" callouts linking to upstream
+release-notes blog posts. Neither belongs in a fork's product. Go back,
+which pointed at onlyoffice.com, upstream now names with no address.
+---
+ apps/api/documents/index.html.desktop | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/apps/api/documents/index.html.desktop b/apps/api/documents/index.html.desktop
+index ed2b0b7412..b0f9c8948c 100644
+--- a/apps/api/documents/index.html.desktop
++++ b/apps/api/documents/index.html.desktop
+@@ -105,9 +105,12 @@
+                 return {
+                     customization   : {
+                         goback: { url: "" }
+-                        , feedback: {
+-                            url: "{{SUPPORT_URL}}"
+-                        }
++                        // featuresTips are "New feature!" callouts advertising
++                        // an upstream release cadence, linking to an upstream
++                        // blog. A fork ships neither. The feedback button opened
++                        // ONLYOFFICE's helpdesk.
++                        , features: { featuresTips: false }
++                        , feedback: false
+                         , uiTheme: urlParams["uitheme"]
+                     },
+                     mode            : urlParams["mode"] || 'edit',
+-- 
+2.55.0
+

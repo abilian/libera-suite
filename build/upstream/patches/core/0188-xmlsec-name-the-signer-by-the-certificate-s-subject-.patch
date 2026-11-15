@@ -1,8 +1,8 @@
-From a1f96063ac0676a5ce1b65a9169fdabfae8c8175 Mon Sep 17 00:00:00 2001
+From 89ad92ff3e912802a7102c5ad208fd9b884defbf Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Sun, 1 Nov 2026 08:44:36 +0100
-Subject: [PATCH 188/190] xmlsec: name the signer by the certificate's subject,
- in UTF-8
+Subject: [PATCH] xmlsec: name the signer by the certificate's subject, in
+ UTF-8
 
 GetSignerName read the issuer's common name, the signer's only for a
 self-signed certificate: one a CA issued showed the CA as its signer.

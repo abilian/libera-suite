@@ -1,7 +1,7 @@
-From 6942651ebd5dda0cb0aa36455a62db95a683db2a Mon Sep 17 00:00:00 2001
+From ca6eb6bddeb3c383f705fbec78fd585a0efe2775 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:52:45 +0200
-Subject: [PATCH 19/82] OdfFile: declare the ODF version on the manifest and on
+Subject: [PATCH] OdfFile: declare the ODF version on the manifest and on
  settings.xml
 
 Every ODF package the writer produces fails schema validation in two

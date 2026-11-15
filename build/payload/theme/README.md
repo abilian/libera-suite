@@ -6,7 +6,9 @@ Branding in `web-apps` is a directory under `web-apps/theme/`, selected by `THEM
 
 ## What is in it
 
-`meta/config.json` is the brand surface: company name, URLs, the attribution line, and which file each logo slot uses. Every key also has an environment-variable override (`COMPANY_NAME`, `PUBLISHER_URL`, `ATTRIBUTION`, …) — except `loader_logo` and `loader_logo_dark`, which are config-file-only.
+`meta/config.json` is the brand surface: company name, URLs, and which file each logo slot uses. Every key also has an environment-variable override (`COMPANY_NAME`, `PUBLISHER_URL`, …) — except `loader_logo` and `loader_logo_dark`, which are config-file-only.
+
+`meta/about.json` is the About panel's legal text, one block per paragraph: copyrights, the attribution sentence `src/libera/host/about.py` also holds (`tests/a_unit/test_attribution.py` compares them), the date of the modifications, the licence and the source. `web-apps/build/about-html.mjs` renders it at build time, linking `{sourceUrl}` and `{modificationsUrl}` to our repository and `{licenceUrl}` to the AGPL at gnu.org (we set no `BUILD_COMMITS`, which would point all three at one upstream repository's commit), and putting the build date in `{buildDate}`. Up to Euro-Office v9.3.5-2 the panel read an `attribution` key in `config.json` instead; v9.3.8 reads only this file and fails the build without it.
 
 `assets/less/theme.less` is imported **last** by every editor's `app.less`, through a stub `build/theme.config.mjs` writes. LESS resolves a variable to its last definition, so a variable set there beats the one upstream declared — `@brand-primary` is one line and reaches every `.btn-primary` in the build. Prefer a variable; `overrides/` is for what cannot be one, and today that is one thing, the per-editor header colour.
 

@@ -1,7 +1,7 @@
-From fd7bf174d9851aa60ee4af4bc9c8182c80aa40dd Mon Sep 17 00:00:00 2001
+From 59b39eac53d5b446b22d9be834df44ae2d8679b9 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Tue, 15 Sep 2026 09:48:46 +0200
-Subject: [PATCH 6/8] brand: drop the ONLYOFFICE favicon
+Subject: [PATCH] brand: drop the ONLYOFFICE favicon
 
 favicon.ico is ONLYOFFICE's stacked-sheets device -- the trademark itself,
 not a wordmark -- and the same file five times over. It is the last piece of

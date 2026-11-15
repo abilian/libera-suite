@@ -1,7 +1,7 @@
-From 7397af8ff981ebd2d2997147d9cd7c782bc891fd Mon Sep 17 00:00:00 2001
+From a5b5f6ff2268dc6890d2239d4acfc70676c33b43 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 19:28:06 +0200
-Subject: [PATCH 36/82] OdfFile writer: a slide's body placeholder is
+Subject: [PATCH] OdfFile writer: a slide's body placeholder is
  presentation:class outline
 
 PptxConverter recodes an explicit body placeholder on a slide as type 16,

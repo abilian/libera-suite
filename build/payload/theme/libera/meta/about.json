@@ -1,0 +1,29 @@
+{
+  "sourceUrl": "https://github.com/abilian/libera-suite",
+  "blocks": [
+    {
+      "text": "Copyright (C) Ascensio System SIA, 2009-2026\nCopyright (C) 2026 Euro-Office contributors\nCopyright (C) 2026 Abilian SAS"
+    },
+    {
+      "text": "Libera Suite includes components from Euro-Office, itself a fork of ONLYOFFICE by Ascensio System SIA. Those components are free software under the GNU AGPL v3 and are modified. The exact upstream revisions this build came from, and every change applied to them: https://github.com/abilian/libera-suite"
+    },
+    {
+      "text": "Euro-Office modified ONLYOFFICE from 2026-03-15, and Libera Suite modified Euro-Office's components until {buildDate}. Every change, with its date: [Modifications]({modificationsUrl})"
+    },
+    {
+      "text": "Neither Euro-Office nor Libera Suite is affiliated with, endorsed by, or sponsored by Ascensio System SIA. ONLYOFFICE is a trademark of Ascensio System SIA."
+    },
+    {
+      "heading": "Licence"
+    },
+    {
+      "text": "These components are free software, licensed under the GNU Affero General Public License version 3. You may convey and modify them under the terms of that licence: [View licence]({licenceUrl})"
+    },
+    {
+      "text": "This program is distributed WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+    },
+    {
+      "text": "The complete corresponding source code for this version is available at: [Source code]({sourceUrl})"
+    }
+  ]
+}

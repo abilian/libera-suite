@@ -1,7 +1,7 @@
-From b49c87141303327bc349fec99cab09495d978401 Mon Sep 17 00:00:00 2001
+From ff4577392857b7ebafa3914fb168a9c4f7121a01 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 08:55:09 +0200
-Subject: [PATCH 51/82] OdfFile writer: a link on a drawing opens in place, not
+Subject: [PATCH] OdfFile writer: a link on a drawing opens in place, not
  embedded
 
 start_link_object wrote the draw:a around a linked image or shape with

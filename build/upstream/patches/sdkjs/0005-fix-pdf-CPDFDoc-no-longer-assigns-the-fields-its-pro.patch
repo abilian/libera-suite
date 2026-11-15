@@ -1,4 +1,4 @@
-From 643b269669319e025f105368093190dc5f03121f Mon Sep 17 00:00:00 2001
+From d3db1821b94bf43280167b2d2234a7cd33ed9127 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Tue, 6 Oct 2026 10:25:17 +0200
 Subject: [PATCH] fix(pdf): CPDFDoc no longer assigns the fields its prototype

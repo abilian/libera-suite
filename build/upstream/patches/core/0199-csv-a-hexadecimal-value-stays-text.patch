@@ -1,4 +1,4 @@
-From 77d70d56bf59b80362e1072571079314d431fa7b Mon Sep 17 00:00:00 2001
+From 666369e78ee3a770e5dc74ceb60cb110a15296a4 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Sat, 14 Nov 2026 14:36:07 +0100
 Subject: [PATCH] csv: a hexadecimal value stays text

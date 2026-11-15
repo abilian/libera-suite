@@ -1,7 +1,7 @@
-From 6a1d02b030568c7f3771763e45e47587d275227f Mon Sep 17 00:00:00 2001
+From 5bb72c84f6e34203c2961c5441d83dc314491db5 Mon Sep 17 00:00:00 2001
 From: Libera Suite <dev@liberasuite.eu>
 Date: Tue, 22 Sep 2026 19:09:25 +0200
-Subject: [PATCH 08/82] doctrenderer: build against an OpenSSL without MD2
+Subject: [PATCH] doctrenderer: build against an OpenSSL without MD2
 
 ---
  DesktopEditor/doctrenderer/hash.cpp | 14 ++++++++++++++

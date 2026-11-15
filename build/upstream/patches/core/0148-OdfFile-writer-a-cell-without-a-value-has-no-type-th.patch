@@ -1,8 +1,8 @@
-From 642b233790e5010dabb1f57509386b1d451ff559 Mon Sep 17 00:00:00 2001
+From 76a221422ce4847f1e3cff71c707140513a80548 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 16:55:48 +0200
-Subject: [PATCH 62/82] OdfFile writer: a cell without a value has no type that
- needs one
+Subject: [PATCH] OdfFile writer: a cell without a value has no type that needs
+ one
 
 A formula cell whose cached result is missing, as x2t's reader writes
 a formula that yields an empty string, took the number, date or time

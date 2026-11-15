@@ -1,4 +1,4 @@
-From 9c2dc5e8d799741573f82515389c3659298c1c94 Mon Sep 17 00:00:00 2001
+From e6ca8e3d1c9b4e0e14066b63a8cf168edf50aed5 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 16:41:03 +0100
 Subject: [PATCH] fix(word): an autofit column has room for the first line
@@ -18,7 +18,7 @@ it that sizes autofit columns.
  1 file changed, 16 insertions(+)
 
 diff --git a/word/Editor/Paragraph.js b/word/Editor/Paragraph.js
-index 8954529678..564e7a402e 100644
+index 828754877a..382135f3ff 100644
 --- a/word/Editor/Paragraph.js
 +++ b/word/Editor/Paragraph.js
 @@ -2169,6 +2169,20 @@ Paragraph.prototype.GetCalculatedCurPosXY = function()

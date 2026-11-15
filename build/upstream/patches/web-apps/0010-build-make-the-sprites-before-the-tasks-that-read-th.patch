@@ -1,4 +1,4 @@
-From e672ecbe9da05a5e9128e2a71799153f8cc1df92 Mon Sep 17 00:00:00 2001
+From 69f9db361ce5fc7cad638b717aa1617a9c98517c Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Wed, 28 Oct 2026 09:33:46 +0100
 Subject: [PATCH] build: make the sprites before the tasks that read them

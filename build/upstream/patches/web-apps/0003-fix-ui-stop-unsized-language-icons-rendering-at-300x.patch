@@ -1,7 +1,7 @@
-From 5fb624722586b5af19d694ec99076faa33743ca1 Mon Sep 17 00:00:00 2001
+From 3025133178e12b20f12c75b4d4d4b426aa27bd44 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Fri, 11 Sep 2026 13:36:04 +0200
-Subject: [PATCH 3/8] fix(ui): stop unsized language icons rendering at 300x150
+Subject: [PATCH] fix(ui): stop unsized language icons rendering at 300x150
 
 The v2 icon migration turned <i class="icon"> into <svg class="icon"> in the
 language picker -- the Set document language dialog and the statusbar menu --
@@ -20,7 +20,7 @@ Measured in a browser against the built app.css, before and after.
  1 file changed, 15 insertions(+)
 
 diff --git a/apps/common/main/resources/less/language-dialog.less b/apps/common/main/resources/less/language-dialog.less
-index 03cc093ca2..b05ef02d82 100644
+index cca0dcb7cd..78772da7bd 100644
 --- a/apps/common/main/resources/less/language-dialog.less
 +++ b/apps/common/main/resources/less/language-dialog.less
 @@ -1,3 +1,18 @@

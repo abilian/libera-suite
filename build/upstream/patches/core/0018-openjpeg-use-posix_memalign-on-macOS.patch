@@ -1,7 +1,7 @@
-From 05c1232a558fa51fb175d06145469d82ee1efcc5 Mon Sep 17 00:00:00 2001
+From 6ab6c5a338ccbbc457193e094a03353556ffdb64 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Thu, 10 Sep 2026 17:28:49 +0200
-Subject: [PATCH 03/82] openjpeg: use posix_memalign on macOS
+Subject: [PATCH] openjpeg: use posix_memalign on macOS
 
 memalign() is a glibc/SVID extension that macOS does not provide, so
 libPdfFile failed to link on an undefined _memalign. macOS does have
