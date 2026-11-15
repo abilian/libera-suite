@@ -102,10 +102,14 @@ setup_env() {
     # roughly 2 GB a job, so a machine with fewer gigabytes than twice its cores
     # gets the build OOM-killed.
     #
-    # There is no prebuilt V8 for us on any platform: hashes.txt lists cache
-    # keys for a Nextcloud store that wants NEXTCLOUD_USER/PASS, so ensure_dep
-    # finds nothing and builds from source everywhere. Half an hour, on Linux
-    # too.
+    # No third-party library is downloaded prebuilt: everything we ship is
+    # built here from the pins. Up to v9.3.5-2 upstream's cache wanted
+    # Nextcloud credentials and so found nothing; v9.3.8 made it an anonymous
+    # S3 bucket by default, and the first build on those pins took Euro-Office's
+    # Boost, libxml2 and zlib-ng from it on the Mac and on Windows. Not an
+    # option: there is no case for turning it back on. V8 is half an hour
+    # from source, on Linux too.
+    export REMOTE_CACHE_TYPE=none
     export V8_BUILD_JOBS="${V8_BUILD_JOBS:-$(v8_jobs)}"
     # Keep V8's object files between runs so an interrupted build resumes
     # rather than restarting from nothing.
@@ -372,6 +376,8 @@ cmd_configure() {
     set -- "$@" -UTHIRD_PARTY_PREPARED
     echo "==> cmake configure (no vcpkg toolchain: surface the plain-CMake gaps first)"
     cd "$OUT/core"
+    # What configure rebuilds, it gives a new ok_marker, newer than this.
+    : > "$OUT/core/.configure-started"
     # Teed rather than redirected: a configure that prints nothing for minutes
     # reads as hung, and build_3rdparty.py is minutes. The status goes through
     # a file because a pipeline's exit status is the last command's, and POSIX
@@ -399,6 +405,24 @@ cmd_configure() {
         exit 1
     }
     icu_data_filter_check
+    # REMOTE_CACHE_TYPE=none only holds while upstream reads that name; what
+    # its builder printed is what happened.
+    if grep -q "fetched from remote" "$cmake_log"; then
+        echo "FATAL: a third-party library was downloaded prebuilt, not built here:" >&2
+        grep "fetched from remote" "$cmake_log" >&2
+        exit 1
+    fi
+    # A library built again can install headers older than the objects built
+    # against the one it replaced: ninja compares times, so it kept those
+    # objects, and kept the precompiled headers that clang then refused
+    # ("has been modified since the precompiled header was built"). A pin
+    # bump is rare, and the core compiles in well under the hour V8 takes:
+    # everything is compiled again.
+    if [ -f build.ninja ] &&
+        [ -n "$(find "$OUT/core/third_party/install" -name ok_marker -newer "$OUT/core/.configure-started")" ]; then
+        echo "==> a third-party library was built again: the core is compiled from clean"
+        ninja -t clean > /dev/null
+    fi
     # Every third-party library is installed now, and its ok_marker under
     # install/ is what tells the next configure not to build it again. What
     # built it is 3 GB or more (V8, depot_tools, OpenSSL, Boost, ICU) that
