@@ -373,9 +373,14 @@ cmd_configure() {
     if ! cmp -s "$ICU_FILTER" "$ICU_INSTALL/libera-data-filter.json"; then
         echo "==> ICU: not built with this data filter, so built again"
         rm -rf "$ICU_INSTALL" "$OUT/core/third_party/work/icu"
-        # Upstream runs its third-party builder only while this is unset.
-        set -- "$@" -UTHIRD_PARTY_PREPARED
     fi
+    # Upstream runs its third-party builder only while this is unset, and
+    # caches it as set once it has run, so a pin that bumps a library's
+    # recipe (Brotli at v9.3.8) was never rebuilt: configure failed on a
+    # source file the old install lacked. Unset every time, as upstream's own
+    # Docker build does; each library's ok_marker, which holds its recipe's
+    # version, decides what is built again.
+    set -- "$@" -UTHIRD_PARTY_PREPARED
     echo "==> cmake configure (no vcpkg toolchain: surface the plain-CMake gaps first)"
     cd "$OUT/core"
     # Teed rather than redirected: a configure that prints nothing for minutes
