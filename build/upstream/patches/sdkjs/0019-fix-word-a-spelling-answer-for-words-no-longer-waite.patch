@@ -1,0 +1,75 @@
+From 656bfb4cc63fd26d89df7eefc7bf6ff50bf712d5 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 18:23:49 +0100
+Subject: [PATCH] fix(word): a spelling answer for words no longer waited for
+ is dropped
+
+A change of the document language checks every paragraph again, but the
+answer to the request already sent still arrived, with the same RecalcId,
+and was applied to the words of the new language. An answer now counts
+only if the paragraph still waits for those words in those languages.
+After ElixirOffice 0.9.1 (leag1234/sdkjs c7eac93).
+---
+ word/Editor/SpellChecker/DocumentSpellChecker.js  | 9 +++++++++
+ word/Editor/SpellChecker/ParagraphSpellChecker.js | 9 ++++++++-
+ word/api.js                                       | 2 +-
+ 3 files changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/word/Editor/SpellChecker/DocumentSpellChecker.js b/word/Editor/SpellChecker/DocumentSpellChecker.js
+index 38ef93e8e9..35e33d59d4 100644
+--- a/word/Editor/SpellChecker/DocumentSpellChecker.js
++++ b/word/Editor/SpellChecker/DocumentSpellChecker.js
+@@ -218,6 +218,15 @@
+ 
+ 		return false;
+ 	};
++	/**
++	 * Is the paragraph still waiting for exactly this request (same words, languages and recalculation id)
++	 * @returns {boolean}
++	 */
++	CDocumentSpellChecker.prototype.IsWaitingRequest = function(oParagraph, arrWords, arrLangs, nRecalcId)
++	{
++		let oInfo = this.WaitingParagraphs[oParagraph.GetId()];
++		return !!oInfo && oInfo.IsEqual(arrWords, arrLangs, nRecalcId);
++	};
+ 	CDocumentSpellChecker.prototype.IsWaitingParagraph = function(oParagraph)
+ 	{
+ 		return (undefined !== this.WaitingParagraphs[oParagraph.GetId()]);
+diff --git a/word/Editor/SpellChecker/ParagraphSpellChecker.js b/word/Editor/SpellChecker/ParagraphSpellChecker.js
+index 549790550c..3ad56fd5a1 100644
+--- a/word/Editor/SpellChecker/ParagraphSpellChecker.js
++++ b/word/Editor/SpellChecker/ParagraphSpellChecker.js
+@@ -187,9 +187,16 @@
+ 		endRun.AddSpellCheckerElement(new AscWord.SpellMarkEnd(oElement));
+ 		this.Elements.push(oElement);
+ 	};
+-	CParagraphSpellChecker.prototype.SpellCheckResponse = function(nRecalcId, usrCorrect)
++	CParagraphSpellChecker.prototype.SpellCheckResponse = function(nRecalcId, usrCorrect, arrWords, arrLangs)
+ 	{
+ 		let oDocumentSpellChecker = this.GetDocumentSpellChecker();
++
++		// A restart (for example a change of the document language) drops the pending request of the paragraph, but the
++		// answer to it still arrives later with the same RecalcId. It describes words checked in the old language and
++		// must not be applied to the elements collected for the new one.
++		if (arrWords && arrLangs && !oDocumentSpellChecker.IsWaitingRequest(this.Paragraph, arrWords, arrLangs, nRecalcId))
++			return;
++
+ 		oDocumentSpellChecker.RemoveWaitingParagraph(this.Paragraph);
+ 
+ 		if (nRecalcId !== this.RecalcId)
+diff --git a/word/api.js b/word/api.js
+index b53e14249b..a03d20590f 100644
+--- a/word/api.js
++++ b/word/api.js
+@@ -1896,7 +1896,7 @@ background-repeat: no-repeat;\
+ 			{
+ 				if ("spell" === Type)
+ 				{
+-					Paragraph.SpellChecker.SpellCheckResponse(Obj["RecalcId"], Obj["usrCorrect"]);
++					Paragraph.SpellChecker.SpellCheckResponse(Obj["RecalcId"], Obj["usrCorrect"], Obj["usrWords"], Obj["usrLang"]);
+ 					Paragraph.ReDraw();
+ 				}
+ 				else if ("suggest" === Type)
+-- 
+2.55.0
+
