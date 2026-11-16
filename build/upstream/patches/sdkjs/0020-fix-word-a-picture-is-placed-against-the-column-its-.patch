@@ -1,0 +1,47 @@
+From ace12f78a1c00a0160acedbf335d2aa06e62f922 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 18:36:52 +0100
+Subject: [PATCH] fix(word): a picture is placed against the column its
+ paragraph is in
+
+A paragraph that moves whole to the next column leaves an empty piece in
+the one before, and a picture anchored to it, placed against its column,
+was placed against that empty piece, under whatever filled the column.
+The first piece that holds lines is now the one. After ElixirOffice
+0.9.0 (leag1234/sdkjs 6f67073).
+---
+ word/Editor/Paragraph.js | 3 +++
+ word/Editor/Run.js       | 3 +++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/word/Editor/Paragraph.js b/word/Editor/Paragraph.js
+index ef83ddf27a..1520e02473 100644
+--- a/word/Editor/Paragraph.js
++++ b/word/Editor/Paragraph.js
+@@ -12496,6 +12496,9 @@ Paragraph.prototype.Get_Layout = function(ContentPos, Drawing)
+ 			var _CurPage = 0;
+ 			if (0 !== PageAbs && CurPage > ColumnAbs)
+ 				_CurPage = CurPage - ColumnAbs;
++			// A paragraph that moved wholesale to the next column leaves an empty piece behind: anchor against the first piece holding lines
++			while (_CurPage < CurPage && this.Pages[_CurPage].EndLine < this.Pages[_CurPage].StartLine)
++				++_CurPage;
+ 
+ 			var ColumnStartX = (0 === CurPage ? this.X_ColumnStart : this.Pages[_CurPage].X     );
+ 			var ColumnEndX   = (0 === CurPage ? this.X_ColumnEnd : this.Pages[_CurPage].XLimit);
+diff --git a/word/Editor/Run.js b/word/Editor/Run.js
+index 535505f0c4..89fc63332c 100644
+--- a/word/Editor/Run.js
++++ b/word/Editor/Run.js
+@@ -5593,6 +5593,9 @@ ParaRun.prototype.Recalculate_Range_Spaces = function(PRSA, _CurLine, _CurRange,
+                	var _CurPage = 0;
+ 				if (0 !== PageAbs && CurPage > ColumnAbs)
+ 					_CurPage = CurPage - ColumnAbs;
++				// A paragraph that moved wholesale to the next column leaves an empty piece behind: anchor against the first piece holding lines
++				while (_CurPage < CurPage && Para.Pages[_CurPage].EndLine < Para.Pages[_CurPage].StartLine)
++					++_CurPage;
+ 
+ 				var ColumnStartX, ColumnEndX;
+ 				if (0 === CurPage)
+-- 
+2.55.0
+

@@ -55,6 +55,8 @@ Two more fix Office 2016's extended charts (sunburst, treemap, waterfall, funnel
 
 `0019`, theirs (commit `c7eac93`, their 0.9.1), drops a spelling answer the paragraph no longer waits for. A change of the document language checks every paragraph again, but the answer to the request already sent still came back, with the same recalculation id, and was applied to the words of the new language: French text set to French as it opened stayed underlined as English. An answer now counts only if the paragraph still waits for those words in those languages, which the answer carries back.
 
+`0020`, theirs (commit `6f67073`, their 0.9.0, for their #57), places a picture anchored to a paragraph against the column the paragraph's text is in. A paragraph that a picture filling a column pushes whole into the next one leaves an empty piece in the first, and a picture placed against its column was placed against that piece: at the foot of the first column, under the picture that fills it.
+
 `0004` is ours: Markdown keeps its headings through a save. Markdown read into a document gives each heading a style derived from a heading style, which the HTML writer, on the way back to Markdown, did not recognise, so `# Title` came back as `**Title**`. It now writes a heading by its outline level, and leaves out a bold that covers the whole heading.
 
 `0005` is ours too, and lets the PDF editor open a PDF at all. `CPDFDoc`'s constructor assigned `widgets`, `annots` and `drawings`, which its prototype defines as getters with no setters, and the bundle's strict mode refuses that: "Cannot set property widgets of #<CPDFDoc> which has only a getter". The patch drops the three assignments.

@@ -8,6 +8,7 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 ### Fixed
 
+- **A picture in a two-column page is placed beside its text.** When a picture filling the first column pushed a paragraph into the second, a picture anchored to that paragraph was put at the foot of the first column, hidden under the other. An editor patch, after ElixirOffice's fix.
 - **Changing a document's language as it opens no longer leaves every word underlined.** The spelling of the previous language was applied to the new one until the text was edited. An editor patch, after ElixirOffice's fix.
 - **A SET field in a Word document shows nothing, as in Word, and is kept when saved.** The value it sets was drawn in the text, and a SET field written in its short form was lost on save. An editor patch, after ElixirOffice's fix.
 - **Positional tabs in Word documents are kept and laid out.** A positional tab, which Word puts in headers to centre a title or push a page number to the margin, was dropped when the document opened, so the text ran together, and a save lost it. A core and an editor patch, after ElixirOffice's fix.

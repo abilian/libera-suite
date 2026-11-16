@@ -197,3 +197,30 @@ def check(path: str) -> list[str]:
 if __name__ == "__main__":
     for line in check(sys.argv[1]):
         print("  ERROR", line)
+
+
+def colour_box(
+    path: str, rgb: tuple[int, int, int]
+) -> tuple[int, int, int, int] | None:
+    """Where the picture holds `rgb`, give or take 40 a channel, as
+    (left, top, right, bottom), or None where it holds none."""
+    width, height, channels, raw = read_png(path)
+    stride = width * channels
+    prev = bytearray(stride)
+    box = None
+    pos = 0
+    for y in range(height):
+        line = unfilter(
+            bytearray(raw[pos + 1 : pos + 1 + stride]), prev, raw[pos], channels
+        )
+        pos += 1 + stride
+        prev = line
+        xs = [
+            x // channels
+            for x in range(0, stride, channels)
+            if all(abs(line[x + i] - rgb[i]) <= 40 for i in range(3))
+        ]
+        if xs:
+            left, top, right, _ = box or (xs[0], y, xs[-1], y)
+            box = (min(left, xs[0]), top, max(right, xs[-1]), y)
+    return box

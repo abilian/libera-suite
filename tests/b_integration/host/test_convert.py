@@ -19,8 +19,15 @@ import pytest
 from support import ScriptedShell, repo_root
 from support.blank import with_body
 from support.charts import sunburst_docx
-from support.pictures import thin_pen_wmf, wmf_docx, write_pic_bullet_docx
+from support.make_sample_docx import solid_png
+from support.pictures import (
+    RELATIONSHIPS,
+    thin_pen_wmf,
+    wmf_docx,
+    write_pic_bullet_docx,
+)
 from support.protected import make_protected
+from support.render import colour_box
 
 from libera import payload as payload_mod
 from libera.host import apps, hooks, opening, session as sessions
@@ -1262,6 +1269,131 @@ def test_a_set_fields_result_is_not_drawn(tmp_path):
     text = _read_text(pdf).decode()
     assert "Before" in text, text
     assert "2001" not in text, text
+
+
+EMU_PER_TWIP = 635
+RED, BLUE = (220, 0, 0), (0, 0, 220)
+
+
+def anchored(rid: str, n: int, size: tuple[int, int], h: str, wrap: str) -> str:
+    """A floating picture, `h` its horizontal position, the top of the
+    paragraph its vertical one."""
+    cx, cy = size
+    return (
+        '<w:r><w:drawing><wp:anchor distT="0" distB="0" distL="0" distR="0"'
+        f' simplePos="0" relativeHeight="{n}" behindDoc="0" locked="0"'
+        ' layoutInCell="1" allowOverlap="1"><wp:simplePos x="0" y="0"/>'
+        f"{h}"
+        '<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset>'
+        f'</wp:positionV><wp:extent cx="{cx}" cy="{cy}"/>{wrap}'
+        f'<wp:docPr id="{n}" name="p{n}"/>'
+        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        f'<pic:nvPicPr><pic:cNvPr id="{n}" name="p{n}"/><pic:cNvPicPr/></pic:nvPicPr>'
+        f'<pic:blipFill><a:blip xmlns:r="{RELATIONSHIPS}" r:embed="{rid}"/>'
+        "<a:stretch><a:fillRect/></a:stretch></pic:blipFill>"
+        f'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/>'
+        '</a:xfrm><a:prstGeom prst="rect"/></pic:spPr></pic:pic></a:graphicData>'
+        "</a:graphic></wp:anchor></w:drawing></w:r>"
+    )
+
+
+def test_a_picture_follows_its_paragraph_into_the_next_column(tmp_path):
+    """A picture placed against its paragraph's column goes in the column the
+    paragraph's text is in. A picture filling the first column pushes the
+    text into the second, and the editor placed the second picture against
+    the empty piece the paragraph left in the first, under the one that
+    fills it (ElixirOffice's #57, sdkjs 0020, after their 0.9.0)."""
+    pdftoppm = shutil.which("pdftoppm")
+    if pdftoppm is None:
+        pytest.skip("no pdftoppm to draw the PDF")
+    column = (12240 - 2 * 1440 - 720) // 2  # two columns, 720 between
+    filler = anchored(
+        "rIdRed",
+        1,
+        (column * EMU_PER_TWIP, 12960 * EMU_PER_TWIP),
+        '<wp:positionH relativeFrom="margin"><wp:posOffset>0</wp:posOffset>'
+        "</wp:positionH>",
+        '<wp:wrapSquare wrapText="bothSides"/>',
+    )
+    follower = anchored(
+        "rIdBlue",
+        2,
+        (1440 * EMU_PER_TWIP, 1440 * EMU_PER_TWIP),
+        '<wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset>'
+        "</wp:positionH>",
+        "<wp:wrapNone/>",
+    )
+    body = (
+        f"<w:p>{filler}</w:p>"
+        f"<w:p>{follower}<w:r><w:t>Come and worship</w:t></w:r></w:p>"
+        '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/>'
+        '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"'
+        ' w:header="720" w:footer="720" w:gutter="0"/>'
+        '<w:cols w:num="2" w:space="720"/></w:sectPr>'
+    )
+    document = with_body(tmp_path, "")
+    with zipfile.ZipFile(document) as z:
+        package = {n: z.read(n) for n in z.namelist()}
+    xml = package["word/document.xml"].decode()
+    package["word/document.xml"] = re.sub(
+        r"<w:body>.*</w:body>",
+        lambda _: f"<w:body>{body}</w:body>",
+        xml,
+        flags=re.DOTALL,
+    ).encode()
+    package["word/_rels/document.xml.rels"] = (
+        package["word/_rels/document.xml.rels"]
+        .decode()
+        .replace(
+            "</Relationships>",
+            f'<Relationship Id="rIdRed" Type="{RELATIONSHIPS}/image"'
+            ' Target="media/red.png"/>'
+            f'<Relationship Id="rIdBlue" Type="{RELATIONSHIPS}/image"'
+            ' Target="media/blue.png"/></Relationships>',
+        )
+        .encode()
+    )
+    types = package["[Content_Types].xml"].decode()
+    if 'Extension="png"' not in types:
+        types = types.replace(
+            "</Types>", '<Default Extension="png" ContentType="image/png"/></Types>'
+        )
+    package["[Content_Types].xml"] = types.encode()
+    package["word/media/red.png"] = solid_png(8, 8, RED)
+    package["word/media/blue.png"] = solid_png(8, 8, BLUE)
+    with zipfile.ZipFile(document, "w") as z:
+        for name, data in package.items():
+            z.writestr(name, data)
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    pdf = tmp_path / "columns.pdf"
+
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    subprocess.run(
+        [
+            pdftoppm,
+            "-png",
+            "-r",
+            "20",
+            "-f",
+            "1",
+            "-l",
+            "1",
+            str(pdf),
+            str(tmp_path / "page"),
+        ],
+        check=True,
+    )
+    (page,) = tmp_path.glob("page*.png")
+    red = colour_box(str(page), RED)
+    blue = colour_box(str(page), BLUE)
+    assert red is not None, "the picture that fills the first column is missing"
+    assert blue is not None, "the second picture is hidden"
+    # In the second column, at its top, where the paragraph's text is.
+    assert blue[0] > red[2], (red, blue)
+    assert blue[1] == red[1], (red, blue)
 
 
 DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
