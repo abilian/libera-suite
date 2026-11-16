@@ -1,0 +1,135 @@
+From d7f20e6eab359bb3dcbdf177691618c0a530dd65 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 18:09:39 +0100
+Subject: [PATCH] feat(word): SET fields are read, and their result is not
+ shown
+
+A SET field defines a bookmark and Word shows nothing for it. The
+instruction parser did not know SET, so a complex one showed its cached
+result and a simple one was read as that text alone, the field lost on
+save. SET is now a field type of its own whose result a complex field
+hides, as ASK's. After ElixirOffice 0.7.3 (leag1234/sdkjs 8f74f43), less
+its hiding of a simple field's result, which did not hide it.
+---
+ word/Editor/Field.js                          |  5 ++
+ word/Editor/Paragraph/ComplexField.js         |  3 +-
+ .../Paragraph/ComplexFieldInstruction.js      | 47 +++++++++++++++++++
+ word/Editor/Paragraph/ComplexFields/types.js  |  1 +
+ 4 files changed, 55 insertions(+), 1 deletion(-)
+
+diff --git a/word/Editor/Field.js b/word/Editor/Field.js
+index ddcb19295a..bc0615ff33 100644
+--- a/word/Editor/Field.js
++++ b/word/Editor/Field.js
+@@ -591,6 +591,11 @@ ParaField.prototype.GetInstructionLine = function()
+ 			name = "REF";
+ 			break;
+ 		}
++		case AscWord.fieldtype_SET :
++		{
++			name = "SET";
++			break;
++		}
+ 		case AscWord.fieldtype_HYPERLINK :
+ 		{
+ 			name = "HYPERLINK";
+diff --git a/word/Editor/Paragraph/ComplexField.js b/word/Editor/Paragraph/ComplexField.js
+index 89a43fc611..5d693ba9fa 100644
+--- a/word/Editor/Paragraph/ComplexField.js
++++ b/word/Editor/Paragraph/ComplexField.js
+@@ -1907,7 +1907,8 @@ CComplexField.prototype.IsHidden = function()
+ 	if (!this.BeginChar || !this.SeparateChar)
+ 		return false;
+ 	
+-	return (AscWord.fieldtype_ASK === oInstruction.GetType());
++	return (AscWord.fieldtype_ASK === oInstruction.GetType()
++		|| AscWord.fieldtype_SET === oInstruction.GetType());
+ };
+ CComplexField.prototype.RemoveFieldWrap = function()
+ {
+diff --git a/word/Editor/Paragraph/ComplexFieldInstruction.js b/word/Editor/Paragraph/ComplexFieldInstruction.js
+index ae50920e8d..cf087da025 100644
+--- a/word/Editor/Paragraph/ComplexFieldInstruction.js
++++ b/word/Editor/Paragraph/ComplexFieldInstruction.js
+@@ -537,6 +537,37 @@ CFieldInstructionASK.prototype.GetPromptText = function()
+ 	return this.PromptText;
+ };
+ 
++/**
++ * SET field: defines a bookmark; Word does not display the field result
++ * @constructor
++ */
++function CFieldInstructionSET()
++{
++	AscWord.FieldInstructionBase.call(this);
++
++	this.BookmarkName = "";
++	this.Value        = "";
++}
++CFieldInstructionSET.prototype = Object.create(AscWord.FieldInstructionBase.prototype);
++CFieldInstructionSET.prototype.constructor = CFieldInstructionSET;
++CFieldInstructionSET.prototype.Type = AscWord.fieldtype_SET;
++CFieldInstructionSET.prototype.SetBookmarkName = function(sBookmarkName)
++{
++	this.BookmarkName = sBookmarkName;
++};
++CFieldInstructionSET.prototype.GetBookmarkName = function()
++{
++	return this.BookmarkName;
++};
++CFieldInstructionSET.prototype.SetValue = function(sValue)
++{
++	this.Value = sValue;
++};
++CFieldInstructionSET.prototype.GetValue = function()
++{
++	return this.Value;
++};
++
+ /**
+  * NUMPAGES field
+  * @constructor
+@@ -1458,6 +1489,10 @@ CFieldInstructionParser.prototype.private_Parse = function()
+ 	{
+ 		this.private_ReadFORMCHECKBOX();
+ 	}
++	else if ("SET" === sBuffer)
++	{
++		this.private_ReadSET();
++	}
+ 	else if(sBuffer.indexOf("=") === 0)
+ 	{
+ 		this.private_ReadFORMULA();
+@@ -1775,6 +1810,18 @@ CFieldInstructionParser.prototype.private_ReadASK = function()
+ 
+ 	// TODO: Switches
+ };
++CFieldInstructionParser.prototype.private_ReadSET = function()
++{
++	this.Result = new CFieldInstructionSET();
++
++	var arrArguments = this.private_ReadArguments();
++
++	if (arrArguments.length >= 2)
++		this.Result.SetValue(arrArguments[1]);
++
++	if (arrArguments.length >= 1)
++		this.Result.SetBookmarkName(arrArguments[0]);
++};
+ CFieldInstructionParser.prototype.private_ReadREF = function(sBookmarkName)
+ {
+ 	this.Result = new AscWord.FieldInstructionREF();
+diff --git a/word/Editor/Paragraph/ComplexFields/types.js b/word/Editor/Paragraph/ComplexFields/types.js
+index 3df1e1daa1..85451de05a 100644
+--- a/word/Editor/Paragraph/ComplexFields/types.js
++++ b/word/Editor/Paragraph/ComplexFields/types.js
+@@ -50,5 +50,6 @@
+ 	window['AscWord'].fieldtype_ADDIN        = 0x0014;
+ 	window['AscWord'].fieldtype_FORMCHECKBOX = 0x0015;
+ 	window['AscWord'].fieldtype_FORMDROPDOWN = 0x0016;
++	window['AscWord'].fieldtype_SET          = 0x0017; // defines a bookmark, its result is not shown
+ 	
+ })(window);
+-- 
+2.55.0
+

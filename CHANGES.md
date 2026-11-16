@@ -8,6 +8,7 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 ### Fixed
 
+- **A SET field in a Word document shows nothing, as in Word, and is kept when saved.** The value it sets was drawn in the text, and a SET field written in its short form was lost on save. An editor patch, after ElixirOffice's fix.
 - **Positional tabs in Word documents are kept and laid out.** A positional tab, which Word puts in headers to centre a title or push a page number to the margin, was dropped when the document opened, so the text ran together, and a save lost it. A core and an editor patch, after ElixirOffice's fix.
 - **A Word document keeps its compatibility options when saved.** A document edited here lost the layout options Word keeps for older documents (`w:compat`) that the editor does not use itself, such as `noLeading` or `growAutofit`, so Word laid it out differently afterwards. An editor patch, after ElixirOffice's fix.
 - **A workbook with a sunburst, treemap, waterfall or funnel chart opens with all its sheets.** When the chart read its data from another sheet, the workbook opened with its first sheet only, and a save kept only that one. An editor patch, after ElixirOffice's fix.

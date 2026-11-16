@@ -1238,6 +1238,32 @@ def test_a_positional_tab_moves_the_text_to_its_place(tmp_path):
     assert abs(found["End"][1] - right) < 2, (found, right)
 
 
+# A SET field holding its last result, as Word writes one.
+SET_FIELD = (
+    '<w:p><w:r><w:t xml:space="preserve">Before </w:t></w:r>'
+    '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'
+    '<w:r><w:instrText xml:space="preserve"> SET year "2001" </w:instrText></w:r>'
+    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'
+    "<w:r><w:t>2001</w:t></w:r>"
+    '<w:r><w:fldChar w:fldCharType="end"/></w:r>'
+    "<w:r><w:t>after</w:t></w:r></w:p>"
+)
+
+
+def test_a_set_fields_result_is_not_drawn(tmp_path):
+    """A SET field sets a bookmark, and Word draws nothing for it, though the
+    file holds its result. The editor drew the result (sdkjs 0018, after
+    ElixirOffice 0.7.3)."""
+    words = open_in(apps.WORDS, with_body(tmp_path, SET_FIELD), tmp_path / "session")
+    pdf = tmp_path / "set.pdf"
+
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    text = _read_text(pdf).decode()
+    assert "Before" in text, text
+    assert "2001" not in text, text
+
+
 DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
 

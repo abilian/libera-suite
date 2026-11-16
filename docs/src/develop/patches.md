@@ -51,6 +51,8 @@ Two more fix Office 2016's extended charts (sunburst, treemap, waterfall, funnel
 
 `0017`, theirs (the same commit), with core `0207`, reads, lays out and writes back a positional tab: a tab to the left edge, the centre or the right edge of the area between the margins or the indents, whatever the tab stops, as Word lays out a header's centred title and right-aligned page number. It has a change log id of its own, `0x004f`, after the last one at our pin.
 
+`0018`, theirs (the same commit), knows the SET field, which defines a bookmark and of which Word shows nothing. The instruction parser did not know it: a complex SET showed its cached result, and a simple one (`w:fldSimple`) was read as that text alone, so a save lost the field. SET is now field type `0x0017` (theirs is `0x0018`, after an XE type we do not have), and a complex SET hides its result as ASK does. A simple SET is now kept, but still shows its result: their hiding of it, three drawing overrides on `ParaField`, did not hide it, measured, and is left out.
+
 `0004` is ours: Markdown keeps its headings through a save. Markdown read into a document gives each heading a style derived from a heading style, which the HTML writer, on the way back to Markdown, did not recognise, so `# Title` came back as `**Title**`. It now writes a heading by its outline level, and leaves out a bold that covers the whole heading.
 
 `0005` is ours too, and lets the PDF editor open a PDF at all. `CPDFDoc`'s constructor assigned `widgets`, `annots` and `drawings`, which its prototype defines as getters with no setters, and the bundle's strict mode refuses that: "Cannot set property widgets of #<CPDFDoc> which has only a getter". The patch drops the three assignments.
