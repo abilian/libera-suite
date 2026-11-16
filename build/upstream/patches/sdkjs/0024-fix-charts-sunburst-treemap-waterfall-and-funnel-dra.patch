@@ -1,0 +1,1722 @@
+From dc3b08e31b3fcbd551130c11a8d4b29655dc23f1 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 21:57:20 +0100
+Subject: [PATCH] fix(charts): sunburst, treemap, waterfall and funnel drawn as
+ in Office
+
+ElixirOffice's, from their commits 8f3b4c4 (0.8.0, their #78 and #79)
+and 6f67073 (0.9.0), with their node tests, less two: one checks their
+wording of the regular extended-chart title, which ours says otherwise,
+and one their Change Colors ribbon, not taken. A sunburst's levels are
+read root first, each top-level branch takes the next accent, and its
+labels read along the radius, shrunk, wrapped or hidden to fit. A
+treemap is laid out squarified, with a header per branch. A waterfall
+takes accents for increase, decrease and total, with that legend, and
+a funnel's labels are white. Dragging an extended chart's data label,
+which stopped the editor, is ignored.
+---
+ common/Charts/ChartsDrawer.js              | 496 ++++++++++++++++++++-
+ common/Drawings/Format/ChartEx.js          |  24 +-
+ common/Drawings/Format/ChartFormat.js      |  38 +-
+ common/Drawings/Format/ChartSpace.js       | 287 +++++++++++-
+ common/Drawings/TrackObjects/MoveTracks.js |   5 +
+ tests/word/chartex-style.test.cjs          |  45 ++
+ tests/word/sunburst.test.cjs               | 354 +++++++++++++++
+ tests/word/treemap.test.cjs                | 195 ++++++++
+ 8 files changed, 1425 insertions(+), 19 deletions(-)
+ create mode 100644 tests/word/chartex-style.test.cjs
+ create mode 100644 tests/word/sunburst.test.cjs
+ create mode 100644 tests/word/treemap.test.cjs
+
+diff --git a/common/Charts/ChartsDrawer.js b/common/Charts/ChartsDrawer.js
+index dc0100a671..fc9a43b222 100644
+--- a/common/Charts/ChartsDrawer.js
++++ b/common/Charts/ChartsDrawer.js
+@@ -7990,11 +7990,31 @@ drawSunburstChart.prototype = {
+ 			// let i = 0;
+ 			let currentLayer= 1;
+ 			// let pathIndex = {};
++			// geometry of every segment, for the colours (one per top-level branch) and the labels
++			this.segments = {};
++			this.segmentCoords = coords;
++			// the ring is sorted by size, the colours follow the order of the data: the first branch of the file is accent 1
++			const aBranches = head.slice().sort(function (a, b) {
++				return a.stIdx - b.stIdx;
++			});
++			let currentBranch = 0;
+ 
+ 			cachedData.data.preorderTraverse(
+ 				function(t, node) {
+ 					var angle = node.pVal * Math.PI * 2;
+ 
++					if (currentLayer === 1) {
++						currentBranch = aBranches.indexOf(node);
++					}
++					t.segments[node.idx] = {
++						node: node,
++						startAngle: startAngle,
++						angle: angle,
++						innerRadius: ringWidth * currentLayer,
++						outerRadius: ringWidth * (currentLayer + 1),
++						branch: currentBranch
++					};
++
+ 					// Do your layout logic here, maybe with external state
+ 					t.paths[node.idx] = t._calculateSegment(
+ 						startAngle,
+@@ -8073,7 +8093,7 @@ drawSunburstChart.prototype = {
+ 				if (this.paths.hasOwnProperty(i) && this.paths[i]) {
+ 					let nPtIdx = parseInt(i);
+ 					let pen = oSeries.getPtPen(nPtIdx);
+-					let brush = oSeries.getPtBrush(nPtIdx);
++					let brush = this._getSegmentBrush(oSeries, nPtIdx);
+ 					pen.Fill = brush.createDuplicate();
+ 					pen.Fill.fill.color.RGBA.B = 255;
+ 					pen.Fill.fill.color.RGBA.G = 255;
+@@ -8086,8 +8106,216 @@ drawSunburstChart.prototype = {
+ 		this.cChartDrawer.cShapeDrawer.Graphics.RestoreGrState();
+ 	},
+ 
++	/**
++	 * The fill of a segment: the explicit data point fill of the file when there is one, else one colour per top-level
++	 * branch (accent 1, 2, 3...) shared by all its descendants, as Word draws a sunburst chart.
++	 */
++	_getSegmentBrush: function (oSeries, nIdx) {
++		const oDpt = oSeries.getDptByIdx ? oSeries.getDptByIdx(nIdx) : null;
++		const oSegment = this.segments ? this.segments[nIdx] : null;
++		if ((oDpt && oDpt.spPr && oDpt.spPr.Fill) || !oSegment) {
++			return oSeries.getPtBrush(nIdx);
++		}
++		if (!this.branchBrushes) {
++			this.branchBrushes = {};
++		}
++		const nAccent = oSegment.branch % 6;
++		if (!this.branchBrushes[nAccent]) {
++			const oBrush = AscFormat.CreateUnifillSolidFillSchemeColor(nAccent, 0);
++			const oParents = this.cChartSpace.getParentObjects();
++			oBrush.calculate(oParents.theme, oParents.slide, oParents.layout, oParents.master, {R: 0, G: 0, B: 0, A: 255}, this.cChartSpace.clrMapOvr);
++			this.branchBrushes[nAccent] = oBrush;
++		}
++		return this.branchBrushes[nAccent];
++	},
++
++	/** limits the width of the text of a segment label (null: no limit) and lays the text out again */
++	_setLabelMaxWidth: function (compiledDlb, dMaxWidth) {
++		const dNew = dMaxWidth === null ? null : Math.max(dMaxWidth, 1);
++		if (compiledDlb.eoMaxWidth === dNew || (compiledDlb.eoMaxWidth === undefined && dNew === null)) {
++			return;
++		}
++		compiledDlb.eoMaxWidth = dNew;
++		AscFormat.ExecuteNoHistory(function () {
++			compiledDlb.recalcInfo.recalculateContent = true;
++			compiledDlb.recalcInfo.recalculateTransformText = true;
++			compiledDlb.recalculateInternal();
++		}, this, []);
++	},
++
++	/** true when the laid out text of a label breaks a line inside a word (a line starting after something else than a space) */
++	_labelSplitsWord: function (compiledDlb) {
++		const oContent = compiledDlb.txBody && compiledDlb.txBody.content;
++		if (!oContent || !oContent.Content) {
++			return false;
++		}
++		for (let i = 0; i < oContent.Content.length; ++i) {
++			const oPar = oContent.Content[i];
++			const aItems = oPar && oPar.Content;
++			if (!aItems) {
++				continue;
++			}
++			for (let j = 0; j < aItems.length; ++j) {
++				const oRun = aItems[j];
++				if (!oRun || !oRun.Content || !oRun.Lines || !oRun.protected_GetLinesCount) {
++					continue;
++				}
++				const nLines = oRun.protected_GetLinesCount();
++				for (let nLine = 1; nLine < nLines; ++nLine) {
++					const nStart = oRun.protected_GetRangeStartPos(nLine, 0);
++					const oPrev = nStart > 0 ? oRun.Content[nStart - 1] : null;
++					if (oPrev && !(oPrev.IsSpace && oPrev.IsSpace())) {
++						return true;
++					}
++				}
++			}
++		}
++		return false;
++	},
++
++	/** lays the text of a label out again */
++	_relayoutLabel: function (compiledDlb) {
++		AscFormat.ExecuteNoHistory(function () {
++			compiledDlb.recalcInfo.recalculateContent = true;
++			compiledDlb.recalcInfo.recalculateTransformText = true;
++			compiledDlb.recalculateInternal();
++		}, this, []);
++	},
++
++	/** scales the font size of the text of a label (1: as compiled); returns true when the scale changed */
++	_setLabelFontScale: function (compiledDlb, dScale) {
++		const dOld = compiledDlb.eoFontScale === undefined ? 1 : compiledDlb.eoFontScale;
++		if (dOld === dScale) {
++			return false;
++		}
++		const aBodies = [compiledDlb.tx && compiledDlb.tx.rich, compiledDlb.txBody];
++		let bChanged = false;
++		AscFormat.ExecuteNoHistory(function () {
++			for (let nBody = 0; nBody < aBodies.length; ++nBody) {
++				const oContent = aBodies[nBody] && aBodies[nBody].content;
++				if (!oContent || !oContent.Content) {
++					continue;
++				}
++				for (let nPara = 0; nPara < oContent.Content.length; ++nPara) {
++					const oPara = oContent.Content[nPara];
++					if (!oPara || !oPara.CheckRunContent) {
++						continue;
++					}
++					oPara.CheckRunContent(function (oRun) {
++						if (oRun && oRun.SetFontSize && oRun.Get_FontSize) {
++							if (oRun.eoBaseFontSize === undefined) {
++								oRun.eoBaseFontSize = oRun.Get_FontSize();
++							}
++							if (AscFormat.isRealNumber(oRun.eoBaseFontSize)) {
++								oRun.SetFontSize(Math.max(4, Math.round(oRun.eoBaseFontSize * dScale * 2) / 2));
++								bChanged = true;
++							}
++						}
++						return false;
++					});
++				}
++			}
++		}, this, []);
++		compiledDlb.eoFontScale = dScale;
++		if (bChanged) {
++			this._relayoutLabel(compiledDlb);
++		}
++		return bChanged;
++	},
++
++	/**
++	 * Fits the text of a label to the width of its ring like Excel: the text is made smaller (down to 65%) to stay on one
++	 * line; when it is still too wide it wraps at spaces only, never inside a word.
++	 * @returns {number} the width of the text
++	 */
++	_wrapLabelAtSpaces: function (compiledDlb, dRingWidth) {
++		let dNatural = compiledDlb.extX;                      // the text on one line
++		// the insets of the label do not shrink with its font, so the scale is refined a few times
++		for (let n = 0; n < 4 && AscFormat.isRealNumber(dRingWidth) && dRingWidth > 0 && AscFormat.isRealNumber(dNatural) && dNatural > dRingWidth * 1.02; ++n) {
++			const dOldScale = compiledDlb.eoFontScale === undefined ? 1 : compiledDlb.eoFontScale;
++			if (!this._setLabelFontScale(compiledDlb, Math.max(0.65, dOldScale * dRingWidth / dNatural * 0.97))) {
++				break;
++			}
++			this._setLabelMaxWidth(compiledDlb, null);
++			dNatural = compiledDlb.extX;
++			if (compiledDlb.eoFontScale <= 0.65) {
++				break;
++			}
++		}
++		if (dNatural <= dRingWidth * 1.02) {
++			return dNatural;
++		}
++		let dWidth = dRingWidth;
++		this._setLabelMaxWidth(compiledDlb, dWidth);
++		for (let n = 0; n < 40 && dWidth < dNatural && this._labelSplitsWord(compiledDlb); ++n) {
++			dWidth = Math.min(dNatural, dWidth * 1.05);
++			this._setLabelMaxWidth(compiledDlb, dWidth);
++		}
++		return dWidth;
++	},
++
++	/** true when the box (centre and half sizes in chart units, turned by dRotation radians clockwise) is inside the ring segment */
++	_boxInSegment: function (oSegment, dCenterX, dCenterY, dHalfW, dHalfH, dRotation) {
++		const aSigns = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
++		const dFull = Math.PI * 2;
++		const dCos = Math.cos(dRotation || 0), dSin = Math.sin(dRotation || 0);
++		for (let i = 0; i < aSigns.length; ++i) {
++			const dOffX = aSigns[i][0] * dHalfW, dOffY = aSigns[i][1] * dHalfH;
++			const dRx = dCenterX + dOffX * dCos - dOffY * dSin - this.segmentCoords.x;
++			const dRy = this.segmentCoords.y - (dCenterY + dOffX * dSin + dOffY * dCos);
++			const dRadius = Math.sqrt(dRx * dRx + dRy * dRy);
++			if (dRadius < oSegment.innerRadius || dRadius > oSegment.outerRadius) {
++				return false;
++			}
++			let dDelta = (Math.atan2(dRy, dRx) - oSegment.startAngle) % dFull;
++			if (dDelta < 0) {
++				dDelta += dFull;
++			}
++			if (dDelta > oSegment.angle) {
++				return false;
++			}
++		}
++		return true;
++	},
++
++	/**
++	 * The label of a segment is centred in it (mid angle, mid radius) and hidden when the segment is too small for it.
++	 * @param {CDLbl} compiledDlb the label of the segment with the index compiledDlb.idx
++	 */
+ 	_calculateDLbl: function (compiledDlb) {
+-		return {x: 0, y: 0};
++		const oSegment = this.segments ? this.segments[compiledDlb.idx] : null;
++		const pxToMm = this.chartProp ? this.chartProp.pxToMM : null;
++		if (!oSegment || !this.segmentCoords || !AscFormat.isRealNumber(pxToMm) || pxToMm === 0) {
++			compiledDlb.eoHidden = true;
++			return {x: 0, y: 0};
++		}
++		const dMidAngle = oSegment.startAngle + oSegment.angle / 2;
++		const dMidRadius = (oSegment.innerRadius + oSegment.outerRadius) / 2;
++		const dCenterX = (this.segmentCoords.x + dMidRadius * Math.cos(dMidAngle)) / pxToMm;
++		const dCenterY = (this.segmentCoords.y - dMidRadius * Math.sin(dMidAngle)) / pxToMm;
++		// like Word, the text reads along the radius (upright, never upside down) and wraps inside the segment
++		// when it is longer than the ring is wide; a label that still does not fit is hidden
++		let dText = dMidAngle;
++		if (Math.cos(dText) < 0) {
++			dText += Math.PI;
++		}
++		const dRotation = -dText;
++		const dRingWidth = (oSegment.outerRadius - oSegment.innerRadius) / pxToMm;
++		const oThis = this;
++		const fFits = function () {
++			return oThis._boxInSegment(oSegment, dCenterX * pxToMm, dCenterY * pxToMm,
++				compiledDlb.extX * pxToMm * 0.42, compiledDlb.extY * pxToMm * 0.5, dRotation);
++		};
++		this._setLabelFontScale(compiledDlb, 1);
++		this._setLabelMaxWidth(compiledDlb, null);
++		let bFits = fFits();
++		if (!bFits) {
++			this._wrapLabelAtSpaces(compiledDlb, dRingWidth);
++			bFits = fFits();
++		}
++		compiledDlb.eoHidden = !bFits;
++		compiledDlb.eoRotation = dRotation;
++		return {x: dCenterX - compiledDlb.extX / 2, y: dCenterY - compiledDlb.extY / 2};
+ 	}
+ }
+ 
+@@ -8519,6 +8747,28 @@ drawTreemapChart.prototype = {
+ 			return;
+ 		}
+ 		const plotArea = this.cChartSpace && this.cChartSpace.chart && this.cChartSpace.chart.plotArea;
++		if (cachedData.rects && cachedData.rects.length > 0 && this.chartProp && this.chartProp.chartGutter && plotArea) {
++			// a treemap with several levels: the rectangles of the leaves are laid out in the cached data
++			this.branchOf = {};
++			this.branchCorner = {};
++			const oCorners = {};
++			for (let i = 0; i < cachedData.rects.length; ++i) {
++				const r = cachedData.rects[i];
++				this.paths[r.idx] = this.cChartDrawer._calculateRect(plotArea.x + r.x, plotArea.y + r.y + r.h, r.w, r.h, true);
++				this.branchOf[r.idx] = r.branch;
++				// the leaf at the top left corner of a branch carries its header
++				const c = oCorners[r.branch];
++				if (!c || r.y < c.y - 1e-9 || (Math.abs(r.y - c.y) < 1e-9 && r.x < c.x)) {
++					oCorners[r.branch] = r;
++				}
++			}
++			for (let b in oCorners) {
++				if (oCorners.hasOwnProperty(b)) {
++					this.branchCorner[b] = oCorners[b].idx;
++				}
++			}
++			return;
++		}
+ 		if (cachedData.data.length > 0 && this.chartProp && this.chartProp.chartGutter && plotArea) {
+ 			let x = plotArea.x;
+ 			let y = plotArea.y;
+@@ -8579,9 +8829,10 @@ drawTreemapChart.prototype = {
+ 				if (this.paths.hasOwnProperty(i) && this.paths[i]) {
+ 					let nPtIdx = parseInt(i);
+ 					let pen = oSeries.getPtPen(nPtIdx);
+-					let brush = oSeries.getPtBrush(nPtIdx);
++					const oBranchBrush = this._getBranchBrush(oSeries, nPtIdx);
++					let brush = oBranchBrush || oSeries.getPtBrush(nPtIdx);
+ 					
+-					if (!brush || !brush.Fill) {
++					if (!oBranchBrush && (!brush || !brush.Fill)) {
+ 						brush = this._getDefaultTreemapBrush(nPtIdx);
+ 					}
+ 					
+@@ -8595,13 +8846,36 @@ drawTreemapChart.prototype = {
+ 		}
+ 	},
+ 
++	/**
++	 * The fill of a leaf of a treemap with several levels: the explicit data point fill of the file when there is
++	 * one, else the colour of its top-level branch (accent 1, 2, 3... in the order of the data), as in Office.
++	 * @returns {null|CUniFill} null for a treemap with one level (each point keeps its own colour)
++	 */
++	_getBranchBrush: function (oSeries, nIdx) {
++		if (!this.branchOf || this.branchOf[nIdx] === undefined) {
++			return null;
++		}
++		const oDpt = oSeries.getDptByIdx ? oSeries.getDptByIdx(nIdx) : null;
++		if (oDpt && oDpt.spPr && oDpt.spPr.Fill) {
++			return null;
++		}
++		return this.cChartSpace.getBranchBrush(this.branchOf[nIdx]);
++	},
++
+ 	_calculateDLbl: function (compiledDlb) {
+ 		if (!compiledDlb || !this.paths || !this.chartProp || !this.cChartSpace) {
+ 			return;
+ 		}
+ 
+-		const path = this.paths[compiledDlb.idx];
++		// the header of a branch: at the top left of the leaf in the corner of the branch
++		const bHeader = AscFormat.isRealNumber(compiledDlb.eoBranch);
++		const nLeaf = bHeader ? (this.branchCorner ? this.branchCorner[compiledDlb.eoBranch] : undefined) : compiledDlb.idx;
++		const path = this.paths[nLeaf];
+ 		if (!AscFormat.isRealNumber(path)) {
++			if (bHeader) {
++				compiledDlb.eoHidden = true;
++				return {x: 0, y: 0};
++			}
+ 			return;
+ 		}
+ 
+@@ -8639,7 +8913,9 @@ drawTreemapChart.prototype = {
+ 		const paddingY = 2 / pxToMm; // 2px
+ 
+ 		let centerX = x + paddingX;
+-		let centerY = y - labelH - paddingY;
++		let centerY = bHeader ? y - h + paddingY : y - labelH - paddingY;
++		// a label that does not fit its rectangle is not drawn (the leaf labels of a treemap with several levels)
++		compiledDlb.eoHidden = !!(this.branchOf && (labelW > w || labelH > h));
+ 
+ 		const rectLeft = x;
+ 		const rectRight = x + w;
+@@ -19985,6 +20261,172 @@ CErrBarsDraw.prototype = {
+ 		return isNegative ? -num : num;
+ 	}
+ 
++	/**
++	 * Squarified treemap (Bruls, Huizing, van Wijk): the values, largest first, become rectangles of the given area.
++	 * @param {number[]} aValues positive values, sorted in descending order
++	 * @returns {{x: number, y: number, w: number, h: number}[]} one rectangle per value
++	 */
++	function squarifyTreemap(aValues, x, y, w, h) {
++		const aRects = [];
++		let dTotal = 0;
++		for (let i = 0; i < aValues.length; ++i) {
++			dTotal += aValues[i];
++		}
++		if (!(dTotal > 0) || !(w > 0) || !(h > 0)) {
++			return aValues.map(function () { return {x: x, y: y, w: 0, h: 0}; });
++		}
++		const dScale = w * h / dTotal;
++		const worst = function (aAreas, dSide) {
++			let dSum = 0, dMax = 0, dMin = Infinity;
++			for (let i = 0; i < aAreas.length; ++i) {
++				dSum += aAreas[i];
++				dMax = Math.max(dMax, aAreas[i]);
++				dMin = Math.min(dMin, aAreas[i]);
++			}
++			return Math.max(dSide * dSide * dMax / (dSum * dSum), dSum * dSum / (dSide * dSide * dMin));
++		};
++		let i = 0;
++		while (i < aValues.length) {
++			const dSide = Math.min(w, h);
++			let aRow = [aValues[i] * dScale];
++			let nEnd = i + 1;
++			while (nEnd < aValues.length) {
++				const aNext = aRow.concat([aValues[nEnd] * dScale]);
++				if (worst(aNext, dSide) > worst(aRow, dSide)) {
++					break;
++				}
++				aRow = aNext;
++				++nEnd;
++			}
++			let dRowArea = 0;
++			for (let r = 0; r < aRow.length; ++r) {
++				dRowArea += aRow[r];
++			}
++			if (w >= h) {
++				// a column along the height
++				const dColW = dRowArea / h;
++				let dY = y;
++				for (let r = 0; r < aRow.length; ++r) {
++					const dH = aRow[r] / dColW;
++					aRects.push({x: x, y: dY, w: dColW, h: dH});
++					dY += dH;
++				}
++				x += dColW;
++				w -= dColW;
++			} else {
++				// a row along the width
++				const dRowH = dRowArea / w;
++				let dX = x;
++				for (let r = 0; r < aRow.length; ++r) {
++					const dW = aRow[r] / dRowH;
++					aRects.push({x: dX, y: y, w: dW, h: dRowH});
++					dX += dW;
++				}
++				y += dRowH;
++				h -= dRowH;
++			}
++			i = nEnd;
++		}
++		return aRects;
++	}
++
++	/**
++	 * The tree and the layout of a treemap with several levels of categories.
++	 * @param {{idx: number, val: number}[]} aValues the values of the rows
++	 * @param {{pts: {idx: number, val: string}[]}[]} aLevels the levels, root first, without the empty points
++	 * @returns {{rects: {idx: number, x: number, y: number, w: number, h: number, branch: number}[],
++	 *            branches: {name: string, first: number, leaves: number[]}[], leafNames: Object}}
++	 *   the rectangles of the leaves (the row idx and the index of its top-level branch, in the order of the data) and
++	 *   the top-level branches; only the leaves are rectangles, a group (a stem) shares the area of its leaves
++	 */
++	function buildHierarchicalTreemap(aValues, aLevels, width, height) {
++		const aNames = aLevels.map(function (oLvl) {
++			const oMap = {};
++			oLvl.pts.forEach(function (oPt) {
++				oMap[oPt.idx] = String(oPt.val);
++			});
++			return oMap;
++		});
++		const oRoot = {children: [], value: 0};
++		const oLeafNames = {};
++		aValues.forEach(function (oRow) {
++			if (!(oRow.val > 0)) {
++				return;
++			}
++			const aPath = [];
++			for (let nLvl = 0; nLvl < aNames.length; ++nLvl) {
++				if (aNames[nLvl][oRow.idx] !== undefined) {
++					aPath.push(aNames[nLvl][oRow.idx]);
++				}
++			}
++			let oNode = oRoot;
++			for (let p = 0; p < aPath.length - 1; ++p) {
++				let oChild = null;
++				for (let c = 0; c < oNode.children.length; ++c) {
++					if (oNode.children[c].group && oNode.children[c].name === aPath[p]) {
++						oChild = oNode.children[c];
++						break;
++					}
++				}
++				if (!oChild) {
++					oChild = {name: aPath[p], group: true, children: [], value: 0, first: oRow.idx};
++					oNode.children.push(oChild);
++				}
++				oNode = oChild;
++			}
++			const sLeaf = aPath.length > 0 ? aPath[aPath.length - 1] : null;
++			oNode.children.push({name: sLeaf, idx: oRow.idx, value: oRow.val, first: oRow.idx});
++			if (sLeaf !== null) {
++				oLeafNames[oRow.idx] = sLeaf;
++			}
++		});
++		const fSum = function (oNode) {
++			if (!oNode.children) {
++				return oNode.value;
++			}
++			oNode.value = 0;
++			oNode.first = Infinity;
++			oNode.children.forEach(function (oChild) {
++				oNode.value += fSum(oChild);
++				oNode.first = Math.min(oNode.first, oChild.first);
++			});
++			return oNode.value;
++		};
++		fSum(oRoot);
++		const aBranches = oRoot.children.slice().sort(function (a, b) {
++			return a.first - b.first;
++		}).map(function (oNode) {
++			return {name: oNode.name, first: oNode.first, leaves: [], node: oNode};
++		});
++		const aRects = [];
++		const fLayout = function (oNode, x, y, w, h, nBranch) {
++			const aKids = oNode.children.slice().sort(function (a, b) {
++				return (b.value - a.value) || (a.first - b.first);
++			});
++			const aBoxes = squarifyTreemap(aKids.map(function (k) { return k.value; }), x, y, w, h);
++			aKids.forEach(function (oKid, k) {
++				const oBox = aBoxes[k];
++				const nKidBranch = nBranch === null ? aBranches.findIndex(function (b) { return b.node === oKid; }) : nBranch;
++				if (oKid.children) {
++					fLayout(oKid, oBox.x, oBox.y, oBox.w, oBox.h, nKidBranch);
++				} else {
++					aRects.push({idx: oKid.idx, x: oBox.x, y: oBox.y, w: oBox.w, h: oBox.h, branch: nKidBranch});
++					aBranches[nKidBranch].leaves.push(oKid.idx);
++				}
++			});
++		};
++		if (oRoot.children.length > 0 && oRoot.value > 0) {
++			fLayout(oRoot, 0, 0, width, height, null);
++		}
++		return {
++			rects: aRects,
++			branches: aBranches.map(function (b) {
++				return {name: b.node.group ? b.name : null, first: b.first, leaves: b.leaves, isGroup: !!b.node.group};
++			}),
++			leafNames: oLeafNames
++		};
++	}
++
+ 	function CCachedTreemap(type, seria, numLit, strLit, width, height) {
+ 		CCachedChartExData.call(this, seria.Id, type, []);
+ 		this._calculate(numLit, strLit, width, height);
+@@ -20118,7 +20560,38 @@ CErrBarsDraw.prototype = {
+ 		}
+ 
+ 		const numArr = numLit.pts;
+-		const lastLayer = getLastLayer(strLit)
++		// a point of the file with no text is an empty cell, not a label; a level with no text at all is no level
++		if (Array.isArray(strLit)) {
++			strLit = strLit.map(function (oLvl) {
++				return {ptCount: oLvl.ptCount, pts: oLvl.pts.filter(function (oPt) {
++					return oPt.val !== '' && oPt.val !== null && oPt.val !== undefined;
++				})};
++			}).filter(function (oLvl) {
++				return oLvl.pts.length > 0;
++			});
++		}
++		const lastLayer = getLastLayer(strLit);
++		if (lastLayer !== null) {
++			// several levels: the tree, level by level (the levels come root first, see CSeries.getCatLit)
++			const aRows = [];
++			const oVerified = {};
++			strLit.forEach(function (oLvl) {
++				oLvl.pts.forEach(function (oPt) {
++					oVerified[oPt.idx] = true;
++				});
++			});
++			numArr.forEach(function (oPt) {
++				if (oPt.val > 0 && oVerified[oPt.idx]) {
++					aRows.push({idx: oPt.idx, val: oPt.val});
++				}
++			});
++			const oResult = buildHierarchicalTreemap(aRows, strLit, width, height);
++			this.data = [];
++			this.rects = oResult.rects;
++			this.branches = oResult.branches;
++			this.leafNames = oResult.leafNames;
++			return;
++		}
+ 		const newNumArr = normalizeNumArr(numArr, strLit, lastLayer, width * height);
+ 		this.data = createTreemap(newNumArr, strLit, lastLayer, width, height);
+ 	}
+@@ -20441,8 +20914,13 @@ CErrBarsDraw.prototype = {
+ 			}
+ 			const newStrLit = [];
+ 			for (let i = 0; i < strLit.length; i++) {
+-				if (strLit[i].pts.length > 0) {
+-					newStrLit.push(strLit[i]);
++				// a point of the file with no text (<cx:pt idx="5"></cx:pt>) is an empty cell, not a label: without
++				// it the leaf that has no stem would get a nameless segment in the outer ring
++				const aPts = strLit[i].pts.filter(function (oPt) {
++					return oPt.val !== '' && oPt.val !== null && oPt.val !== undefined;
++				});
++				if (aPts.length > 0) {
++					newStrLit.push(aPts.length === strLit[i].pts.length ? strLit[i] : {pts: aPts, ptCount: strLit[i].ptCount});
+ 				}
+ 			}
+ 			return newStrLit;
+diff --git a/common/Drawings/Format/ChartEx.js b/common/Drawings/Format/ChartEx.js
+index b4f9491e12..9e8d5f87bc 100644
+--- a/common/Drawings/Format/ChartEx.js
++++ b/common/Drawings/Format/ChartEx.js
+@@ -2590,6 +2590,7 @@ function (window, undefined) {
+ 			return false;
+ 		}
+ 		let nPtCount = 0;
++		const aNewLevels = [];
+ 		if (aParsedRef.length > 0) {
+ 			let nRows = 0, nRef, oRef, oBBox, nPtIdx, nCol, oWS, oCell, sVal, nCols = 0, nRow;
+ 			let nLvl, oLvl;
+@@ -2631,7 +2632,7 @@ function (window, undefined) {
+ 					}
+ 					nPtCount = Math.max(nPtCount, nPtIdx);
+ 					oLvl.setPtCount(nPtIdx);
+-					this.addLevelData(oLvl);
++					aNewLevels.push(oLvl);
+ 				}
+ 			}
+ 			else {
+@@ -2661,9 +2662,17 @@ function (window, undefined) {
+ 					}
+ 					nPtCount = Math.max(nPtCount, nPtIdx);
+ 					oLvl.setPtCount(nPtIdx);
+-					this.addLevelData(oLvl);
++					aNewLevels.push(oLvl);
+ 				}
+ 			}
++			// the sheet gives the levels from the first column (the root) to the last; the file stores them from the
++			// deepest to the shallowest, so does the model of the categories of every extended chart
++			if (this.type === AscFormat.STRING_DIMENSION_TYPE_CAT) {
++				aNewLevels.reverse();
++			}
++			for (let nNew = 0; nNew < aNewLevels.length; ++nNew) {
++				this.addLevelData(aNewLevels[nNew]);
++			}
+ 		}
+ 		this.onUpdateCache();
+ 	};
+@@ -3419,11 +3428,14 @@ function (window, undefined) {
+ 		if (aCatDim.length > 0) {
+ 			let oDim = aCatDim[0];
+ 			if (oDim) {
+-				if (type === AscFormat.SERIES_LAYOUT_SUNBURST) {
+-					return oDim.levelData;
++				if (type === AscFormat.SERIES_LAYOUT_SUNBURST || type === AscFormat.SERIES_LAYOUT_TREEMAP) {
++					// cx:lvl elements are stored from the deepest level to the shallowest (as Excel writes them),
++					// the tree of a sunburst or a treemap starts from its root: the last level
++					return oDim.levelData.slice().reverse();
+ 				} else {
+-					let index = (type === AscFormat.SERIES_LAYOUT_WATERFALL || type === AscFormat.SERIES_LAYOUT_FUNNEL) ? oDim.levelData.length - 1 : 0;
+-					return oDim.levelData[index] || null;
++					// the levels are kept deepest first (as in the file): the first level holds the names of the leaves,
++					// the labels of the axis of a waterfall or a funnel
++					return oDim.levelData[0] || null;
+ 				}
+ 			}
+ 		}
+diff --git a/common/Drawings/Format/ChartFormat.js b/common/Drawings/Format/ChartFormat.js
+index c6de9bc5a1..d62cbf459d 100644
+--- a/common/Drawings/Format/ChartFormat.js
++++ b/common/Drawings/Format/ChartFormat.js
+@@ -2637,6 +2637,10 @@
+         if(this.series && this.pt) {
+             var oSeries = this.series;
+             if(oSeries) {
++                // the series of an extended chart (CSeries of ChartEx.js) keeps its labels in dataLabels, not in dLbls
++                if(typeof oSeries.setDLbls !== "function") {
++                    return null;
++                }
+                 var oDlbls;
+                 if(!oSeries.dLbls) {
+                     var oChart = oSeries.parent;
+@@ -3255,6 +3259,10 @@
+         return compiled_string;
+     };
+     CDLbl.prototype.getMaxWidth = function(bodyPr) {
++        if(AscFormat.isRealNumber(this.eoMaxWidth) && this.eoMaxWidth > 0) {
++            //a label of a sunburst chart wraps inside its segment
++            return this.eoMaxWidth;
++        }
+         var oChartSpace = this.getChartSpace();
+ 
+ 		if (oChartSpace && this.layout) {
+@@ -3640,7 +3648,10 @@
+         }
+     };
+     CDLbl.prototype.draw = function () {
+-
++        if(this.eoHidden) {
++            //the segment of a sunburst chart is too small for its label
++            return;
++        }
+         if(this.txWarpStructNoTransform === undefined) {
+ 
+             if(this.txBody && this.txBody.content) {
+@@ -3691,6 +3702,31 @@
+         this.transformText = this.localTransformText.CreateDublicate();
+         this.invertTransformText = global_MatrixTransformer.Invert(this.transformText);
+     };
++    /**
++     * Places the label like setPosition and turns it (and its text) by dAngle (radians, clockwise on the page)
++     * around the centre of its box. Used by the labels of a sunburst chart, which read along the radius.
++     */
++    CDLbl.prototype.setPositionRotated = function(x, y, dAngle) {
++        this.setPosition(x, y);
++        if(!AscFormat.isRealNumber(dAngle) || dAngle === 0) {
++            return;
++        }
++        var oThis = this;
++        var fRotate = function(oMatrix) {
++            global_MatrixTransformer.TranslateAppend(oMatrix, -oThis.extX / 2, -oThis.extY / 2);
++            global_MatrixTransformer.RotateRadAppend(oMatrix, dAngle);
++            global_MatrixTransformer.TranslateAppend(oMatrix, oThis.extX / 2 + x, oThis.extY / 2 + y);
++        };
++        this.localTransform.Reset();
++        fRotate(this.localTransform);
++        this.transform = this.localTransform.CreateDublicate();
++        this.invertTransform = global_MatrixTransformer.Invert(this.transform);
++
++        this.localTransformText = this.ownTransformText.CreateDublicate();
++        fRotate(this.localTransformText);
++        this.transformText = this.localTransformText.CreateDublicate();
++        this.invertTransformText = global_MatrixTransformer.Invert(this.transformText);
++    };
+     CDLbl.prototype.setPosition2 = function(x, y) {
+         this.x = x;
+         this.y = y;
+diff --git a/common/Drawings/Format/ChartSpace.js b/common/Drawings/Format/ChartSpace.js
+index 04105471c8..c5a0aff588 100644
+--- a/common/Drawings/Format/ChartSpace.js
++++ b/common/Drawings/Format/ChartSpace.js
+@@ -5018,6 +5018,10 @@ function(window, undefined) {
+ 						oTrendlineLbl.updatePosition(posX, posY);
+ 					}
+ 				}
++				var aSunburstLbls = this.getSunburstDLbls();
++				for (var nSb = 0; nSb < aSunburstLbls.length; ++nSb) {
++					aSunburstLbls[nSb].updatePosition(posX, posY);
++				}
+ 				var aAxes = this.chart.plotArea.axId;
+ 				for (var i = 0; i < aAxes.length; ++i) {
+ 					var oAxis = aAxes[i];
+@@ -5916,6 +5920,15 @@ function(window, undefined) {
+ 			let sPts = seria.getCatPts();
+ 			let sPtsIndex = 0;
+ 
++			if (chartType === AscFormat.SERIES_LAYOUT_SUNBURST) {
++				// one label per segment, not one per value point
++				for (let nPt = 0; nPt < aPts.length; ++nPt) {
++					aPts[nPt].compiledDlb = null;
++				}
++				this.calculateSunburstDLbls(seria, cachedData, default_lbl);
++				return;
++			}
++
+ 			for(let nPt = 0; nPt < aPts.length; ++nPt) {
+ 				let pt = null;
+ 				// if (chartType === AscFormat.SERIES_LAYOUT_TREEMAP) {
+@@ -5936,16 +5949,247 @@ function(window, undefined) {
+ 
+ 				// treemap show labels rather than numbers
+ 				if (chartType === AscFormat.SERIES_LAYOUT_TREEMAP) {
+-					const label = searchLabel(sPts, pt.idx);
++					// the leaf of the row (a row whose deepest levels are empty has its name on a higher level)
++					const label = (cachedData.leafNames && cachedData.leafNames[pt.idx]) || searchLabel(sPts, pt.idx);
+ 					pt.compiledDlb.replaceTextContentNoHistory(label);
++					if (cachedData.rects) {
++						this.setSunburstLabelColor(pt.compiledDlb);
++					}
++					pt.compiledDlb.recalculateInternal();
++				}
++				// the labels of a funnel sit on the bars: Office draws them white unless the file sets a text colour
++				if (chartType === AscFormat.SERIES_LAYOUT_FUNNEL && !(seria.dataLabels.txPr)) {
++					this.setSunburstLabelColor(pt.compiledDlb);
+ 					pt.compiledDlb.recalculateInternal();
+ 				}
+ 				if (cachedData.funnel && pt.compiledDlb.pt <= 0) {
+ 					pt.compiledDlb = default_lbl;
+ 				}
+ 			}
++			if (chartType === AscFormat.SERIES_LAYOUT_TREEMAP && cachedData.rects) {
++				this.calculateTreemapHeaders(seria, cachedData, default_lbl);
++			}
+ 		}
+ 	}
++	/**
++	 * The header of every top-level branch of a treemap with several levels: its name, white, at the top left of the
++	 * branch (parentLabelLayout "overlapping", the layout of Office); none when the file asks for no parent labels.
++	 */
++	CChartSpace.prototype.calculateTreemapHeaders = function (seria, cachedData, defaultLbl) {
++		cachedData.compiledDlbs = [];
++		const oVisibility = seria.dataLabels && seria.dataLabels.visibility;
++		const nLayout = seria.layoutPr ? seria.layoutPr.parentLabelLayout : null;
++		if ((oVisibility && !oVisibility.categoryName) || nLayout === AscFormat.PARENT_LABEL_LAYOUT_NONE || !cachedData.branches) {
++			return;
++		}
++		const oThis = this;
++		cachedData.branches.forEach(function (oBranch, nBranch) {
++			if (!oBranch.isGroup || !oBranch.name) {
++				return;
++			}
++			AscFormat.ExecuteNoHistory(function () {
++				const oPt = new AscFormat.CNumericPoint();
++				oPt.setIdx(oBranch.first);
++				oPt.setVal(0);
++				const oLbl = new AscFormat.CDLbl();
++				oLbl.merge(defaultLbl);
++				oLbl.chart = oThis;
++				oLbl.series = seria;
++				oLbl.pt = oPt;
++				oLbl.idx = -1 - nBranch;
++				oLbl.eoBranch = nBranch;
++				oLbl.setShowChartExVal(true);
++				oLbl.recalculate();
++				oLbl.replaceTextContentNoHistory(oBranch.name);
++				oThis.setSunburstLabelColor(oLbl);
++				oLbl.recalculateInternal();
++				cachedData.compiledDlbs.push(oLbl);
++			}, oThis, []);
++		});
++	};
++	/**
++	 * The fill of a bar of a waterfall chart: accent 1 for an increase, accent 2 for a decrease (a negative value),
++	 * accent 3 for a total (a point of the subtotals of the layout).
++	 */
++	CChartSpace.prototype.getWaterfallBrush = function (oSeries, oPt) {
++		const oSubtotals = oSeries.layoutPr && oSeries.layoutPr.subtotals;
++		const aSubtotals = oSubtotals && oSubtotals.idx ? oSubtotals.idx : [];
++		let nAccent = 0;
++		if (aSubtotals.indexOf(oPt.idx) !== -1) {
++			nAccent = 2;
++		} else if (oPt.val < 0) {
++			nAccent = 1;
++		}
++		return this.getBranchBrush(nAccent);
++	};
++	/** The fill of the top-level branch with the given index (accent 1, 2, 3... of the theme) in a sunburst or a treemap. */
++	CChartSpace.prototype.getBranchBrush = function (nBranch) {
++		const oBrush = AscFormat.CreateUnifillSolidFillSchemeColor(nBranch % 6, 0);
++		const oParents = this.getParentObjects();
++		oBrush.calculate(oParents.theme, oParents.slide, oParents.layout, oParents.master, {R: 0, G: 0, B: 0, A: 255}, this.clrMapOvr);
++		return oBrush;
++	};
++	/**
++	 * The legend of a waterfall chart lists the kinds of bars, not the series: Increase, Decrease and Total, with the
++	 * colours (accent 1, 2 and 3 of the theme) of Office.
++	 * @returns {null|{name: string}[]}
++	 */
++	CChartSpace.prototype.getWaterfallLegendEntries = function () {
++		if (!this.isChartEx()) {
++			return null;
++		}
++		const aSeries = this.chart.plotArea.plotAreaRegion.series;
++		const oSeries = aSeries && aSeries[0];
++		if (!oSeries || oSeries.layoutId !== AscFormat.SERIES_LAYOUT_WATERFALL) {
++			return null;
++		}
++		const tr = function (sName) {
++			return AscCommon.translateManager && AscCommon.translateManager.getValue ? AscCommon.translateManager.getValue(sName) : sName;
++		};
++		return [{name: tr("Increase")}, {name: tr("Decrease")}, {name: tr("Total")}];
++	};
++	/**
++	 * The top-level branches of a sunburst or a treemap with several levels, in the order of the data: the entries of its
++	 * legend (the legend is laid out before the data of the chart is calculated, so it reads the series itself).
++	 * @returns {null|{name: string}[]}
++	 */
++	CChartSpace.prototype.getHierarchyLegendEntries = function () {
++		if (!this.isChartEx()) {
++			return null;
++		}
++		const aSeries = this.chart.plotArea.plotAreaRegion.series;
++		const oSeries = aSeries && aSeries[0];
++		if (!oSeries || (oSeries.layoutId !== AscFormat.SERIES_LAYOUT_SUNBURST && oSeries.layoutId !== AscFormat.SERIES_LAYOUT_TREEMAP)) {
++			return null;
++		}
++		const aLevels = (oSeries.getCatLit(oSeries.layoutId) || []).map(function (oLvl) {
++			return oLvl.pts.filter(function (oPt) {
++				return oPt.val !== '' && oPt.val !== null && oPt.val !== undefined;
++			});
++		}).filter(function (aPts) {
++			return aPts.length > 0;
++		});
++		const oNumLit = oSeries.getValLit();
++		if (aLevels.length < 2 || !oNumLit || !oNumLit.pts) {
++			return null;
++		}
++		const aNames = [], oSeen = {};
++		oNumLit.pts.forEach(function (oRow) {
++			if (!(oRow.val > 0)) {
++				return;
++			}
++			for (let nLvl = 0; nLvl < aLevels.length; ++nLvl) {
++				for (let p = 0; p < aLevels[nLvl].length; ++p) {
++					if (aLevels[nLvl][p].idx === oRow.idx) {
++						const sName = String(aLevels[nLvl][p].val);
++						if (!oSeen[sName]) {
++							oSeen[sName] = true;
++							aNames.push({name: sName});
++						}
++						return;
++					}
++				}
++			}
++		});
++		return aNames;
++	};
++	/**
++	 * The labels of a sunburst chart: one per segment (a node of the tree), with its category name and/or value as
++	 * the data label settings of the series ask. They are kept in cachedData.compiledDlbs; the chart drawer places
++	 * them (drawSunburstChart._calculateDLbl) and hides those that do not fit.
++	 */
++	CChartSpace.prototype.calculateSunburstDLbls = function (seria, cachedData, defaultLbl) {
++		cachedData.compiledDlbs = [];
++		const oVisibility = seria.dataLabels && seria.dataLabels.visibility;
++		const bCat = !oVisibility || oVisibility.categoryName !== false && oVisibility.categoryName !== 0;
++		const bVal = !!(oVisibility && oVisibility.value);
++		const bSer = !!(oVisibility && oVisibility.seriesName);
++		if (!cachedData.data || !(bCat || bVal || bSer)) {
++			return;
++		}
++		const dTotal = cachedData.data.pVal || 0;
++		const sSeriesName = bSer && seria.getSeriesName ? seria.getSeriesName() : "";
++		const oThis = this;
++		const aNodes = [];
++		const collect = function (aChildren) {
++			for (let i = 0; i < aChildren.length; ++i) {
++				aNodes.push(aChildren[i]);
++				if (aChildren[i].children && aChildren[i].children.length) {
++					collect(aChildren[i].children);
++				}
++			}
++		};
++		collect(cachedData.data.getChildren());
++		for (let i = 0; i < aNodes.length; ++i) {
++			const oNode = aNodes[i];
++			const aParts = [];
++			if (bSer && sSeriesName) {
++				aParts.push(sSeriesName);
++			}
++			if (bCat && oNode.name !== null && oNode.name !== undefined && oNode.name !== "") {
++				aParts.push(String(oNode.name));
++			}
++			if (bVal) {
++				aParts.push(String(Math.round(oNode.pVal * dTotal * 100) / 100));
++			}
++			if (aParts.length === 0) {
++				continue;
++			}
++			AscFormat.ExecuteNoHistory(function () {
++				const oPt = new AscFormat.CNumericPoint();
++				oPt.setIdx(oNode.idx);
++				oPt.setVal(oNode.pVal * dTotal);
++				const oLbl = new AscFormat.CDLbl();
++				oLbl.merge(defaultLbl);
++				oLbl.chart = oThis;
++				oLbl.series = seria;
++				oLbl.pt = oPt;
++				oLbl.idx = oNode.idx;
++				oLbl.setShowChartExVal(true);
++				oLbl.recalculate();
++				oLbl.replaceTextContentNoHistory(aParts.join(", "));
++				oThis.setSunburstLabelColor(oLbl);
++				oLbl.recalculateInternal();
++				cachedData.compiledDlbs.push(oLbl);
++			}, this, []);
++		}
++	};
++	/** white text, as the labels of a sunburst chart in Word (they sit on the coloured segments) */
++	CChartSpace.prototype.setSunburstLabelColor = function (oLbl) {
++		const oFill = AscFormat.CreateUnfilFromRGB(255, 255, 255);
++		oFill.check(this.Get_Theme(), this.Get_ColorMap());
++		// the text of the label is kept in its rich text and in the text body compiled from it
++		const aBodies = [oLbl.tx && oLbl.tx.rich, oLbl.txBody];
++		for (let nBody = 0; nBody < aBodies.length; ++nBody) {
++			const oContent = aBodies[nBody] && aBodies[nBody].content;
++			if (!oContent || !oContent.Content) {
++				continue;
++			}
++			for (let nPara = 0; nPara < oContent.Content.length; ++nPara) {
++				const oPara = oContent.Content[nPara];
++				if (oPara.CheckRunContent) {
++					oPara.CheckRunContent(function (oRun) {
++						if (oRun && oRun.Set_Unifill) {
++							oRun.Set_Unifill(oFill, false);
++						}
++						return false;
++					});
++				}
++			}
++		}
++	};
++	/** @returns {CDLbl[]} the labels of the segments of a sunburst chart (empty for the other charts) */
++	CChartSpace.prototype.getSunburstDLbls = function () {
++		if (!this.isChartEx()) {
++			return [];
++		}
++		const oCachedData = this.getCachedData();
++		if (oCachedData && (oCachedData.type === AscFormat.SERIES_LAYOUT_SUNBURST || oCachedData.type === AscFormat.SERIES_LAYOUT_TREEMAP) &&
++			Array.isArray(oCachedData.compiledDlbs)) {
++			return oCachedData.compiledDlbs;
++		}
++		return [];
++	};
+ 	CChartSpace.prototype.calculateChartExLabelsPositions = function () {
+ 		if (!this.chartObj || !this.chart || !this.chart.plotArea || !this.chart.plotArea.plotAreaRegion || !this.chart.plotArea.plotAreaRegion.series) {
+ 			return;
+@@ -5956,7 +6200,11 @@ function(window, undefined) {
+ 		for (let i = 0; i < aDLbls.length; i++) {
+ 			let oLbl = aDLbls[i];
+ 			let pos = this.chartObj.recalculatePositionText(oLbl);
+-			oLbl.setPosition(pos.x, pos.y);
++			if (oLbl.eoRotation) {
++				oLbl.setPositionRotated(pos.x, pos.y, oLbl.eoRotation);
++			} else {
++				oLbl.setPosition(pos.x, pos.y);
++			}
+ 		}
+ 	};
+ 
+@@ -7676,7 +7924,32 @@ function(window, undefined) {
+ 				series[0].dPt.some(function(dPt) { return dPt.spPr; });
+ 
+ 			let bSeriesLegend = aCharts.length > 1 || (bNoPieChart && (!((oFirstChart.varyColors || bHasCustomDPt) && series.length === 1) || bSurfaceChart || bRadarChart));
+-			if (bSeriesLegend) {
++			// a sunburst or a treemap with several levels: one entry per top-level branch, with its colour
++			const aBranchEntries = this.getHierarchyLegendEntries() || this.getWaterfallLegendEntries();
++			if (aBranchEntries && aBranchEntries.length > 0 && series[0]) {
++				this.legendLength = aBranchEntries.length;
++				for (i = 0; i < aBranchEntries.length; ++i) {
++					entry = legend.findLegendEntryByIndex(i);
++					if (entry && entry.bDelete)
++						continue;
++					arr_str_labels.push(aBranchEntries[i].name);
++					calc_entry = new AscFormat.CalcLegendEntry(legend, this, i);
++					calc_entry.series = series[0];
++					calc_entry.txBody = AscFormat.CreateTextBodyFromString(aBranchEntries[i].name, this.getDrawingDocument(), calc_entry);
++					calc_entryes.push(calc_entry);
++					cur_width = calc_entry.txBody.getRectWidth(2000);
++					if (cur_width > max_width)
++						max_width = cur_width;
++					cur_font_size = calc_entry.txBody.content.Content[0].CompiledPr.Pr.TextPr.FontSize;
++					if (cur_font_size > max_font_size)
++						max_font_size = cur_font_size;
++					calc_entry.calcMarkerUnion = new AscFormat.CUnionMarker();
++					union_marker = calc_entry.calcMarkerUnion;
++					union_marker.marker = AscFormat.CreateMarkerGeometryByType(AscFormat.SYMBOL_SQUARE);
++					union_marker.marker.pen = series[0].compiledSeriesPen;
++					union_marker.marker.brush = this.getBranchBrush(i);
++				}
++			} else if (bSeriesLegend) {
+ 				if (bSurfaceChart) {
+ 					this.legendLength = this.chart.plotArea.charts[0].compiledBandFormats.length;
+ 					ser = series[0];
+@@ -9506,6 +9779,10 @@ function(window, undefined) {
+ 							let oPt = pts[nPt];
+ 							oPt.brush = oSeries.compiledSeriesBrush;
+ 							oPt.pen = oSeries.compiledSeriesPen;
++							if (oSeries.layoutId === AscFormat.SERIES_LAYOUT_WATERFALL && !(oSeries.spPr && oSeries.spPr.Fill && oSeries.spPr.Fill.fill)) {
++								// increase, decrease and total bars have the colours of the legend (a data point fill below wins)
++								oPt.brush = oChartSpace.getWaterfallBrush(oSeries, oPt);
++							}
+ 							if (Array.isArray(oSeries.dPt) && !(oSeries.getObjectType && oSeries.getObjectType() === AscDFH.historyitem_type_AreaSeries)) {
+ 								for (let nDpt = 0; nDpt < oSeries.dPt.length; ++nDpt) {
+ 									let oDpt = oSeries.dPt[nDpt];
+@@ -10486,6 +10763,10 @@ function(window, undefined) {
+ 						oTrendlineLbl.draw(graphics);
+ 					}
+ 				}
++				var aSunburstLbls = this.getSunburstDLbls();
++				for (var nSb = 0; nSb < aSunburstLbls.length; ++nSb) {
++					aSunburstLbls[nSb].draw(graphics);
++				}
+ 				for (var i = 0; i < this.chart.plotArea.axId.length; ++i) {
+ 					var oAxis = this.chart.plotArea.axId[i];
+ 					if (oAxis.title) {
+diff --git a/common/Drawings/TrackObjects/MoveTracks.js b/common/Drawings/TrackObjects/MoveTracks.js
+index f7a8b23479..50ee2e3b95 100644
+--- a/common/Drawings/TrackObjects/MoveTracks.js
++++ b/common/Drawings/TrackObjects/MoveTracks.js
+@@ -875,6 +875,11 @@ function MoveChartObjectTrack(oObject, oChartSpace)
+             return;
+         }
+ 
++        if(this.originalObject instanceof AscFormat.CDLbl && this.chartSpace && this.chartSpace.isChartEx && this.chartSpace.isChartEx())
++        {
++            //the labels of an extended chart are placed by the chart: dragging them changes nothing
++            return;
++        }
+         AscCommon.History.Create_NewPoint(1);
+         var oObjectToSet = null;
+         if(this.originalObject instanceof AscFormat.CDLbl)
+diff --git a/tests/word/chartex-style.test.cjs b/tests/word/chartex-style.test.cjs
+new file mode 100644
+index 0000000000..6fc193e23d
+--- /dev/null
++++ b/tests/word/chartex-style.test.cjs
+@@ -0,0 +1,45 @@
++// SPDX-License-Identifier: AGPL-3.0-only
++'use strict';
++// Extended charts: regular titles, white funnel labels, Increase/Decrease/Total legend of a waterfall (like Office).
++const {test} = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'),
++	path = require('node:path'), vm = require('node:vm');
++const root = path.resolve(__dirname, '../..');
++const read = f => fs.readFileSync(path.join(root, f), 'utf8');
++const chartSpace = read('common/Drawings/Format/ChartSpace.js');
++
++test('funnel labels are white unless the file sets a text colour', () => {
++	assert(/chartType === AscFormat\.SERIES_LAYOUT_FUNNEL && !\(seria\.dataLabels\.txPr\)\) \{\s*this\.setSunburstLabelColor/.test(chartSpace));
++});
++
++test('waterfall legend lists Increase, Decrease, Total', () => {
++	const start = chartSpace.indexOf('CChartSpace.prototype.getWaterfallLegendEntries');
++	const end = chartSpace.indexOf('CChartSpace.prototype.getHierarchyLegendEntries');
++	assert(start > 0 && end > start);
++	const fn = chartSpace.slice(start, end).replace(/^[^=]*=\s*/, '').replace(/\/\*\*[\s\S]*$/, '');
++	const run = layoutId => {
++		const ctx = vm.createContext({AscFormat: {SERIES_LAYOUT_WATERFALL: 7}, AscCommon: {}});
++		const f = vm.runInContext('(' + fn.trim().replace(/;$/, '') + ')', ctx);
++		return JSON.parse(JSON.stringify(f.call({isChartEx: () => true, chart: {plotArea: {plotAreaRegion: {series: [{layoutId}]}}}})));
++	};
++	assert.deepEqual(run(7).map(e => e.name), ['Increase', 'Decrease', 'Total']);
++	assert.equal(run(1), null);
++});
++
++test('waterfall bars: increase accent 1, decrease accent 2, total accent 3, data point fill wins', () => {
++	const start = chartSpace.indexOf('CChartSpace.prototype.getWaterfallBrush');
++	const end = chartSpace.indexOf('/** The fill of the top-level branch');
++	assert(start > 0 && end > start);
++	const fn = chartSpace.slice(start, end).replace(/^[^=]*=\s*/, '').replace(/\/\*\*[\s\S]*$/, '').trim().replace(/;$/, '');
++	const f = vm.runInContext('(' + fn + ')', vm.createContext({}));
++	const accent = (series, pt) => f.call({getBranchBrush: n => n}, series, pt);
++	const series = {layoutPr: {subtotals: {idx: [5, 10]}}};
++	assert.equal(accent(series, {idx: 0, val: 22}), 0);
++	assert.equal(accent(series, {idx: 1, val: -12}), 1);
++	assert.equal(accent(series, {idx: 5, val: 88}), 2);
++	assert.equal(accent(series, {idx: 10, val: -3}), 2);
++	assert.equal(accent({}, {idx: 3, val: 5}), 0);
++	// the colours are set before the data point fills, and not when the series has its own fill
++	const call = chartSpace.indexOf('oChartSpace.getWaterfallBrush(oSeries, oPt)');
++	assert(call > 0 && call < chartSpace.indexOf('for (let nDpt = 0; nDpt < oSeries.dPt.length; ++nDpt) {\n\t\t\t\t\t\t\t\t\tlet oDpt', call));
++	assert(/layoutId === AscFormat\.SERIES_LAYOUT_WATERFALL && !\(oSeries\.spPr && oSeries\.spPr\.Fill && oSeries\.spPr\.Fill\.fill\)/.test(chartSpace));
++});
+diff --git a/tests/word/sunburst.test.cjs b/tests/word/sunburst.test.cjs
+new file mode 100644
+index 0000000000..b3d41451f3
+--- /dev/null
++++ b/tests/word/sunburst.test.cjs
+@@ -0,0 +1,354 @@
++// SPDX-License-Identifier: AGPL-3.0-only
++'use strict';
++// Sunburst chart (extended chart, cx:chartSpace): level order, colours per branch, labels and the label drag.
++// The code under test is cut out of the sources and run in a vm with small stubs, like the other tests of this folder.
++const {test} = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'),
++	path = require('node:path'), vm = require('node:vm');
++const root = path.resolve(__dirname, '../..');
++const read = f => fs.readFileSync(path.join(root, f), 'utf8');
++function slice(source, from, to) {
++	const start = source.indexOf(from);
++	assert(start >= 0, from);
++	const end = source.indexOf(to, start + from.length);
++	assert(end > start, to);
++	return source.slice(start, end);
++}
++const plain = v => JSON.parse(JSON.stringify(v));
++const drawer = read('common/Charts/ChartsDrawer.js'), common = read('common/editorscommon.js'),
++	chartEx = read('common/Drawings/Format/ChartEx.js'), format = read('common/Drawings/Format/ChartFormat.js'),
++	moves = read('common/Drawings/TrackObjects/MoveTracks.js');
++
++// ------------------------------------------------------------------------------ the tree of the chart
++function loadTree() {
++	const ctx = vm.createContext({console});
++	const treeSrc = slice(common, 'function CTree() {', '\n\tfunction ');
++	ctx.AscCommon = {};
++	ctx.AscFormat = {InitClassWithoutType(child, parent) { child.prototype = Object.create(parent.prototype); child.prototype.constructor = child; }};
++	ctx.CCachedChartExData = function () {};
++	vm.runInContext(treeSrc + ';AscCommon.CTree = CTree;', ctx);
++	vm.runInContext(slice(drawer, 'function CSunburstNode(', 'function CUpDownBars(') + ';this.CCachedSunburst = CCachedSunburst;', ctx);
++	return ctx;
++}
++// the file has points with no text (<cx:pt idx="5"></cx:pt>): they are kept here, as the reader keeps them
++const lvl = (values) => ({ptCount: values.length, pts: values.map((v, i) => ({idx: i, val: v}))});
++// chartex.docx of the issue #76: the levels are stored from the deepest (leaf) to the shallowest (branch)
++const FILE_LEVELS = [
++	lvl(['Leaf 1', 'Leaf 2', 'Leaf 3', 'Leaf 4', 'Leaf 5', '', '', 'Leaf 8', '', 'Leaf 10', 'Leaf 11', 'Leaf 12', 'Leaf 13', 'Leaf 14', 'Leaf 15', '']),
++	lvl(['Stem 1', 'Stem 1', 'Stem 1', 'Stem 2', 'Stem 2', 'Leaf 6', 'Leaf 7', 'Stem 3', 'Leaf 9', 'Stem 4', 'Stem 4', 'Stem 5', 'Stem 5', 'Stem 6', 'Stem 6', 'Leaf 16']),
++	lvl(['Branch 1', 'Branch 1', 'Branch 1', 'Branch 1', 'Branch 1', 'Branch 1', 'Branch 1', 'Branch 2', 'Branch 2', 'Branch 2', 'Branch 2', 'Branch 3', 'Branch 3', 'Branch 3', 'Branch 3', 'Branch 3'])
++];
++const SIZES = [22, 12, 18, 87, 88, 17, 14, 25, 16, 24, 89, 16, 19, 86, 23, 21].map((v, i) => ({idx: i, val: v}));
++
++// CSeries.getCatLit
++function loadCatLit() {
++	const ctx = vm.createContext({AscFormat: {SERIES_LAYOUT_SUNBURST: 5, SERIES_LAYOUT_TREEMAP: 4, SERIES_LAYOUT_WATERFALL: 2, SERIES_LAYOUT_FUNNEL: 3}});
++	vm.runInContext('var CSeries = function () {};' + slice(chartEx, 'CSeries.prototype.getCatLit = function', 'CSeries.prototype.getBrush') + ';this.getCatLit = CSeries.prototype.getCatLit;', ctx);
++	return ctx.getCatLit;
++}
++const seriesWith = levels => ({getData: () => ({getCatDimensions: () => [{levelData: levels}]})});
++
++function names(node) {return node.getChildren().map(c => c.name).sort();}
++function build(levelsForTree) {
++	const ctx = loadTree();
++	const cached = new ctx.CCachedSunburst(0, {Id: 'x'}, {pts: SIZES}, levelsForTree);
++	return cached.data;
++}
++test('the last cx:lvl is the root of the tree: Branch, Stem, Leaf', () => {
++	const getCatLit = loadCatLit();
++	const levels = getCatLit.call(seriesWith(FILE_LEVELS), 5);
++	assert.equal(levels[0].pts[0].val, 'Branch 1');
++	assert.equal(levels[2].pts[0].val, 'Leaf 1');
++	assert.equal(FILE_LEVELS[0].pts[0].val, 'Leaf 1', 'the model keeps the order of the file');
++	const tree = build(levels);
++	assert.deepEqual(plain(names(tree)), ['Branch 1', 'Branch 2', 'Branch 3']);
++	const byName = Object.fromEntries(tree.getChildren().map(c => [c.name, c]));
++	assert.deepEqual(plain(names(byName['Branch 1'])), ['Leaf 6', 'Leaf 7', 'Stem 1', 'Stem 2']);
++	assert.deepEqual(plain(names(byName['Branch 2'])), ['Leaf 9', 'Stem 3', 'Stem 4']);
++	assert.deepEqual(plain(names(byName['Branch 3'])), ['Leaf 16', 'Stem 5', 'Stem 6']);
++	const stem1 = byName['Branch 1'].getChildren().find(c => c.name === 'Stem 1');
++	assert.deepEqual(plain(names(stem1)), ['Leaf 1', 'Leaf 2', 'Leaf 3']);
++});
++test('a leaf without a stem stays in the middle ring, its outer ring is empty', () => {
++	const tree = build(loadCatLit().call(seriesWith(FILE_LEVELS), 5));
++	const branch1 = tree.getChildren().find(c => c.name === 'Branch 1');
++	for (const name of ['Leaf 6', 'Leaf 7']) {
++		assert.equal(branch1.getChildren().find(c => c.name === name).children.length, 0, name);
++	}
++	const middle = tree.getChildren().reduce((all, b) => all.concat(b.getChildren()), []);
++	for (const name of ['Leaf 9', 'Leaf 16']) {
++		assert.equal(middle.find(c => c.name === name).children.length, 0, name);
++	}
++});
++test('segments per ring: 3 branches, 10 middle (6 stems and 4 lone leaves), 12 outer', () => {
++	const tree = build(loadCatLit().call(seriesWith(FILE_LEVELS), 5));
++	const rings = [[], [], [], []];
++	const walk = (node, depth) => node.getChildren().forEach(c => { rings[depth].push(c); walk(c, depth + 1); });
++	walk(tree, 0);
++	assert.deepEqual(rings.map(r => r.length), [3, 10, 12, 0]);
++	assert.ok(rings.every(r => r.every(n => n.name !== '' && n.name !== null)), 'no nameless segment');
++});
++test('the labels of the other chart types come from the deepest level, the treemap reads its levels like the sunburst', () => {
++	const getCatLit = loadCatLit();
++	assert.equal(getCatLit.call(seriesWith(FILE_LEVELS), 99), FILE_LEVELS[0]);          // clustered column, box and whisker: the first level
++	assert.equal(getCatLit.call(seriesWith(FILE_LEVELS), 2), FILE_LEVELS[0]);           // waterfall: the leaves, like Office
++	assert.equal(getCatLit.call(seriesWith(FILE_LEVELS), 3), FILE_LEVELS[0]);           // funnel
++	const treemap = getCatLit.call(seriesWith(FILE_LEVELS), 4);
++	assert.equal(treemap[0].pts[0].val, 'Branch 1');
++	assert.equal(treemap[2].pts[0].val, 'Leaf 1');
++});
++test('a sheet gives the levels root first: the model keeps them deepest first, as the file does', () => {
++	const src = slice(chartEx, 'CDimension.prototype.updateReferences = function', 'CDimension.prototype.updateCache');
++	assert(src.includes('aNewLevels.reverse()') && src.includes('this.type === AscFormat.STRING_DIMENSION_TYPE_CAT'));
++	assert(!chartEx.includes('isSunburstCategories'));
++});
++
++// ------------------------------------------------------------------------------ colours and labels
++function loadDrawer() {
++	const calc = [];
++	const AscFormat = {
++		isRealNumber: v => typeof v === 'number' && isFinite(v),
++		CreateUnifillSolidFillSchemeColor: (id) => ({accent: id, calculate() { calc.push(id); }}),
++		ExecuteNoHistory: (f, t, a) => f.apply(t, a || [])
++	};
++	const ctx = vm.createContext({AscFormat, cToDeg: 180 / Math.PI, console});
++	ctx.AscCommon = {};
++	vm.runInContext(slice(common, 'function CTree() {', '\n\tfunction ') + ';AscCommon.CTree = CTree;', ctx);
++	vm.runInContext(slice(drawer, 'function drawSunburstChart(', '/** @constructor */\nfunction drawWaterfallChart(') + ';this.drawSunburstChart = drawSunburstChart;', ctx);
++	return {ctx, calc};
++}
++function makeChart(tree, layers) {
++	const {ctx, calc} = loadDrawer();
++	const chartSpace = {
++		getCachedData: () => ({data: tree, layersCount: layers}), getParentObjects: () => ({}), clrMapOvr: null,
++		AllocPath: () => 1, GetPath: () => ({moveTo() {}, arcTo() {}, lnTo() {}})
++	};
++	const props = {trueWidth: 100, trueHeight: 100, chartGutter: {_left: 0, _top: 0}, pxToMM: 1, pathW: 1, pathH: 1};
++	const chart = new ctx.drawSunburstChart(null, {calcProp: props, cChartSpace: chartSpace, cChartDrawer: {}});
++	return {chart, calc};
++}
++function treeOf(spec) {
++	const ctx = loadTree();
++	const mk = (s, parent) => {
++		const n = new ctx.CSunburstNode(s.name, s.v, s.i, parent, [], s.st, 0);
++		n.children = (s.kids || []).map(k => mk(k, n));
++		return n;
++	};
++	const head = new ctx.CSunburstNode(null, 1, -1, null, [], 0, 0);
++	head.children = spec.map(s => mk(s, head));
++	return head;
++}
++// ring sorted by size (ascending), the data order is the order of stIdx
++const SPEC = [
++	{name: 'B2', v: 0.2, i: 0, st: 7, kids: [{name: 'S3', v: 0.2, i: 1, st: 7}]},
++	{name: 'B3', v: 0.3, i: 2, st: 11},
++	{name: 'B1', v: 0.5, i: 3, st: 0, kids: [{name: 'S1', v: 0.25, i: 4, st: 0}, {name: 'L6', v: 0.25, i: 5, st: 5}]}
++];
++test('one colour per top-level branch, in the order of the data, shared by its descendants', () => {
++	const {chart} = makeChart(treeOf(SPEC), 2);
++	chart.recalculate();
++	const brush = idx => chart._getSegmentBrush({getDptByIdx: () => null, getPtBrush: () => 'series'}, idx).accent;
++	assert.equal(brush(3), 0, 'B1 is the first branch of the data: accent 1');
++	assert.equal(brush(4), 0);
++	assert.equal(brush(5), 0);
++	assert.equal(brush(0), 1, 'B2 accent 2');
++	assert.equal(brush(1), 1);
++	assert.equal(brush(2), 2, 'B3 accent 3');
++});
++test('an explicit data point fill of the file is not overridden', () => {
++	const {chart} = makeChart(treeOf(SPEC), 2);
++	chart.recalculate();
++	const explicit = chart._getSegmentBrush({getDptByIdx: i => i === 4 ? {spPr: {Fill: {}}} : null, getPtBrush: () => 'from the file'}, 4);
++	assert.equal(explicit, 'from the file');
++});
++// a label whose text is laid out on lines of at most eoMaxWidth: natural size w x h per line, text 'words' of width w/words
++function makeLabel(idx, natural, lineH, words) {
++	const lbl = {idx, recalcInfo: {}, recalculateInternal() {
++		const wordW = natural / words;
++		const maxW = this.eoMaxWidth || Infinity;
++		const perLine = Math.min(words, Math.max(1, Math.floor(maxW / wordW)));
++		const lines = Math.ceil(words / perLine);
++		this.extX = Math.min(natural, perLine * wordW);
++		this.extY = lines * lineH;
++	}};
++	lbl.recalculateInternal();
++	return lbl;
++}
++test('a label is centred in its segment (mid angle, mid radius)', () => {
++	const {chart} = makeChart(treeOf(SPEC), 2);
++	chart.recalculate();
++	const seg = chart.segments[3];                                   // B1: the first ring, 0.5 of the circle
++	const lbl = makeLabel(3, 4, 2, 1);
++	const pos = chart._calculateDLbl(lbl);
++	const mid = (seg.innerRadius + seg.outerRadius) / 2, ang = seg.startAngle + seg.angle / 2;
++	assert.ok(Math.abs(pos.x + 2 - (50 + mid * Math.cos(ang))) < 1e-9);
++	assert.ok(Math.abs(pos.y + 1 - (50 - mid * Math.sin(ang))) < 1e-9);
++	assert.equal(lbl.eoHidden, false);
++	assert.notDeepEqual(plain(pos), {x: 0, y: 0});
++});
++test('the label reads along the radius and is never upside down', () => {
++	const {chart} = makeChart(treeOf(SPEC), 2);
++	chart.recalculate();
++	for (const idx of [0, 1, 2, 3, 4, 5]) {
++		const seg = chart.segments[idx];
++		const lbl = makeLabel(idx, 4, 2, 1);
++		chart._calculateDLbl(lbl);
++		const mid = seg.startAngle + seg.angle / 2;
++		// direction of the text on the page (y down) is (cos r, sin r) for the clockwise rotation r
++		const dx = Math.cos(lbl.eoRotation), dy = Math.sin(lbl.eoRotation);
++		assert.ok(dx > -1e-9, 'text runs left to right: ' + idx);
++		assert.ok(Math.abs(Math.abs(dx * Math.cos(mid) - dy * Math.sin(mid)) - 1) < 1e-9, 'along the radius: ' + idx);
++	}
++});
++test('a label longer than the ring is wide wraps on several lines inside the segment', () => {
++	const {chart} = makeChart(treeOf(SPEC), 2);
++	chart.recalculate();
++	const seg = chart.segments[3];                                   // B1: 0.5 of the circle, ring 1
++	const ring = seg.outerRadius - seg.innerRadius;
++	const lbl = makeLabel(3, ring * 1.6, 3, 4);                      // four words, 1.6 times the ring on one line
++	chart._calculateDLbl(lbl);
++	assert.equal(lbl.eoMaxWidth, ring, 'wrapped at the width of the ring');
++	assert.ok(lbl.extY > 3, 'more than one line');
++	assert.equal(lbl.eoHidden, false);
++});
++// a label with text of one run: the stand-in engine breaks at spaces, and inside a word when the line is narrower than
++// the word; the font size (a run property) scales the width of a character, the insets of the label stay as they are
++function makeTextLabel(idx, text, charW, lineH, inset) {
++	inset = inset || 0;
++	const words = text.split(' ');
++	const run = {
++		fontSize: 10, Lines: [], Content: text.split('').map(c => ({IsSpace: () => c === ' '})),
++		Get_FontSize() { return this.fontSize; },
++		SetFontSize(v) { this.fontSize = v; },
++		protected_GetLinesCount() { return this.starts.length; },
++		protected_GetRangeStartPos(line) { return this.starts[line]; }
++	};
++	const par = {Content: [run], CheckRunContent(fn) { fn(run); }};
++	const body = {content: {Content: [par]}};
++	const lbl = {idx, txBody: body, tx: {rich: body}, recalcInfo: {}, recalculateInternal() {
++		const w = charW * run.fontSize / 10;
++		const maxW = (this.eoMaxWidth || Infinity) - inset;
++		const perLine = Math.max(1, Math.floor(maxW / w + 1e-9));    // characters per line
++		const starts = [0];
++		let idx = 0, cur = 0, widest = 0;
++		for (const word of words) {
++			let n = word.length, start = idx;
++			idx += n + 1;
++			if (cur > 0 && cur + 1 + n <= perLine) { cur += 1 + n; continue; }
++			if (cur > 0) { starts.push(start); widest = Math.max(widest, cur); }
++			while (n > perLine) { starts.push(start + perLine); widest = Math.max(widest, perLine); n -= perLine; start += perLine; }
++			cur = n;
++		}
++		widest = Math.max(widest, cur);
++		run.starts = starts;
++		this.extX = widest * w + inset;
++		this.extY = starts.length * lineH;
++	}};
++	lbl.recalculateInternal();
++	return lbl;
++}
++test('a label wider than its ring is made smaller to stay on one line, like Excel', () => {
++	const {chart} = makeChart(treeOf(SPEC), 2);
++	chart.recalculate();
++	const seg = chart.segments[3];
++	const ring = seg.outerRadius - seg.innerRadius;
++	const lbl = makeTextLabel(3, 'Stem 222', ring / 5.5, 0.5, 0);   // 8 characters, 1.45 times the ring on one line
++	chart._calculateDLbl(lbl);
++	assert.ok(lbl.eoFontScale < 1 && lbl.eoFontScale >= 0.65, 'smaller font');
++		assert.equal(lbl.extY, 0.5, 'one line');
++	assert.ok(!lbl.eoMaxWidth, 'not wrapped');
++	// laid out again, the label starts from the original font again
++	chart._calculateDLbl(lbl);
++	assert.equal(lbl.extY, 0.5);
++});
++test('a wrapped label breaks at spaces only and never inside a word', () => {
++	const {chart} = makeChart(treeOf(SPEC), 2);
++	chart.recalculate();
++	const seg = chart.segments[3];
++	const ring = seg.outerRadius - seg.innerRadius;
++	// 4.2 characters of the ring: even at 65% "Stem 22" (7 characters) does not fit on one line
++	const charW = ring / 4.2 * 1.9;
++	const lbl = makeTextLabel(3, 'Stem 22', charW, 0.5, 0);
++	chart._calculateDLbl(lbl);
++	const run = lbl.txBody.content.Content[0].Content[0];
++	assert.equal(run.protected_GetLinesCount(), 2, 'Stem / 22');
++	assert.equal(run.protected_GetRangeStartPos(1), 5, 'the second line starts after the space');
++	const long = makeTextLabel(3, 'Longword 2', charW, 0.5, 0);
++	chart._calculateDLbl(long);
++	const lrun = long.txBody.content.Content[0].Content[0];
++	assert.equal(lrun.protected_GetLinesCount(), 2, 'Longword / 2: the word stays whole');
++	assert.equal(lrun.protected_GetRangeStartPos(1), 9);
++});
++
++test('a label that fits on one line is not wrapped', () => {
++	const {chart} = makeChart(treeOf(SPEC), 2);
++	chart.recalculate();
++	const lbl = makeLabel(3, 4, 2, 2);
++	chart._calculateDLbl(lbl);
++	assert.ok(!lbl.eoMaxWidth);
++	assert.equal(lbl.extY, 2);
++});
++test('a label that does not fit its segment is hidden', () => {
++	const {chart} = makeChart(treeOf(SPEC), 2);
++	chart.recalculate();
++	const big = makeLabel(1, 60, 40, 1);
++	chart._calculateDLbl(big);
++	assert.equal(big.eoHidden, true);
++	const tooTall = makeLabel(1, 4, 400, 1);                           // wrapped or not, three lines do not fit
++	chart._calculateDLbl(tooTall);
++	assert.equal(tooTall.eoHidden, true);
++	const unknown = {idx: 999, extX: 1, extY: 1};
++	assert.deepEqual(plain(chart._calculateDLbl(unknown)), {x: 0, y: 0});
++	assert.equal(unknown.eoHidden, true);
++});
++
++test('a rotated label turns around the centre of its box, a wrapped one asks for its own width', () => {
++	const ops = [];
++	const mt = {
++		TranslateAppend: (m, x, y) => m.ops.push(['t', x, y]), RotateRadAppend: (m, a) => m.ops.push(['r', a]),
++		Invert: m => m
++	};
++	const mk = ops => ({ops, Reset() { this.ops = []; }, CreateDublicate() { return mk(this.ops.slice()); }});
++	const matrix = () => mk([]);
++	const ctx = vm.createContext({global_MatrixTransformer: mt, AscFormat: {isRealNumber: v => typeof v === 'number' && isFinite(v)}});
++	const src = slice(format, 'CDLbl.prototype.setPositionRotated = function', 'CDLbl.prototype.setPosition2');
++	vm.runInContext('var CDLbl = function () {};' + src + ';this.f = CDLbl.prototype.setPositionRotated;', ctx);
++	const lbl = {extX: 10, extY: 4, localTransform: matrix(), ownTransformText: matrix(), setPosition(x, y) { ops.push(['pos', x, y]); }};
++	ctx.f.call(lbl, 20, 30, 0.5);
++	assert.deepEqual(plain(lbl.localTransform.ops), [['t', -5, -2], ['r', 0.5], ['t', 25, 32]]);
++	assert.deepEqual(plain(lbl.transformText.ops), [['t', -5, -2], ['r', 0.5], ['t', 25, 32]]);
++	ops.length = 0;
++	ctx.f.call(lbl, 1, 2, 0);
++	assert.deepEqual(plain(ops), [['pos', 1, 2]], 'no rotation: the plain position');
++	const fn = slice(format, 'CDLbl.prototype.getMaxWidth = function', '\n    CDLbl.prototype.');
++	const c2 = vm.createContext({AscFormat: {isRealNumber: v => typeof v === 'number' && isFinite(v)}});
++	vm.runInContext('var CDLbl = function () {};' + fn + ';this.f = CDLbl.prototype.getMaxWidth;', c2);
++	assert.equal(c2.f.call({eoMaxWidth: 12.5}, {}), 12.5);
++});
++
++// ------------------------------------------------------------------------------ #79: dragging a label of an extended chart
++test('checkDlbl of a label whose series is a chartEx series does not throw and gives no label', () => {
++	const src = slice(format, 'CDLbl.prototype.checkDlbl = function() {', 'CDLbl.prototype.checkDocContent');
++	const ctx = vm.createContext({AscDFH: {historyitem_type_TrendLine: 1}, AscFormat: {}});
++	vm.runInContext('var CDLbl = function () {};' + src + ';this.checkDlbl = CDLbl.prototype.checkDlbl;', ctx);
++	const chartExSeries = {parent: {}};                              // no setDLbls, no dLbls: CSeries of ChartEx.js
++	const lbl = {parent: null, series: chartExSeries, pt: {idx: 0}};
++	assert.equal(ctx.checkDlbl.call(lbl), null);
++	// a classic series still gets its dLbls
++	let set = null;
++	const classic = {parent: {}, setDLbls(v) { set = v; this.dLbls = v; }};
++	ctx.AscFormat.CDLbls = function () { this.findDLblByIdx = () => ({}); };
++	const res = ctx.checkDlbl.call({parent: null, series: classic, pt: {idx: 0}});
++	assert.ok(set, 'setDLbls called for a classic series');
++	assert.ok(res);
++});
++test('the end of a label drag in an extended chart changes nothing and does not throw', () => {
++	const track0 = moves.slice(moves.indexOf('function MoveChartObjectTrack'));
++	const src = slice(track0, 'this.trackEnd = function()', 'this.getBounds = function ()');
++	const calls = [];
++	class CDLbl {}
++	const ctx = vm.createContext({AscFormat: {CDLbl}, AscCommon: {History: {Create_NewPoint: () => calls.push('point')}}, AscDFH: {}});
++	const trackEnd = vm.runInContext('(function () { var o = {}; (function () {' + src + '}).call(o); return o.trackEnd; })()', ctx);
++	const track = {bIsTracked: true, originalObject: new CDLbl(), chartSpace: {isChartEx: () => true}};
++	assert.doesNotThrow(() => trackEnd.call(track));
++	assert.deepEqual(calls, [], 'no history point for a chartEx label');
++});
+diff --git a/tests/word/treemap.test.cjs b/tests/word/treemap.test.cjs
+new file mode 100644
+index 0000000000..c68351f684
+--- /dev/null
++++ b/tests/word/treemap.test.cjs
+@@ -0,0 +1,195 @@
++// SPDX-License-Identifier: AGPL-3.0-only
++'use strict';
++// Treemap chart (extended chart): the levels, one colour per top-level branch, headers and leaf labels like Office.
++const {test} = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'),
++	path = require('node:path'), vm = require('node:vm');
++const root = path.resolve(__dirname, '../..');
++const read = f => fs.readFileSync(path.join(root, f), 'utf8');
++function slice(source, from, to) {
++	const start = source.indexOf(from);
++	assert(start >= 0, from);
++	const end = source.indexOf(to, start + from.length);
++	assert(end > start, to);
++	return source.slice(start, end);
++}
++const drawer = read('common/Charts/ChartsDrawer.js'), chartSpace = read('common/Drawings/Format/ChartSpace.js');
++
++function load() {
++	const ctx = vm.createContext({console});
++	vm.runInContext(slice(drawer, 'function squarifyTreemap(', 'function CCachedTreemap(') + ';this.squarify = squarifyTreemap; this.build = buildHierarchicalTreemap;', ctx);
++	return ctx;
++}
++const {squarify, build} = load();
++const plain = v => JSON.parse(JSON.stringify(v));
++const lvl = values => ({ptCount: values.length, pts: values.map((v, i) => ({idx: i, val: v})).filter(p => p.val !== '')});
++
++// the data of chartex.xlsx made by Excel (Branch / Stem / Leaf / Value), levels root first
++const LEVELS = [
++	lvl(['Branch 1', 'Branch 1', 'Branch 1', 'Branch 1', 'Branch 1', 'Branch 2', 'Branch 2', 'Branch 2', 'Branch 3', 'Branch 3', 'Branch 3']),
++	lvl(['Stem 1', 'Stem 1', 'Stem 2', 'Stem 2', '', 'Stem 3', 'Stem 3', '', 'Stem 4', 'Stem 4', 'Stem 5']),
++	lvl(['Leaf 1', 'Leaf 2', 'Leaf 3', 'Leaf 4', 'Leaf 5', 'Leaf 6', 'Leaf 7', 'Leaf 8', 'Leaf 9', 'Leaf 10', 'Leaf 11'])
++];
++const VALUES = [22, 12, 18, 87, 30, 88, 25, 43, 52, 33, 64].map((v, i) => ({idx: i, val: v}));
++const W = 508, H = 247;
++
++test('squarified rectangles fill the area, in the order of the values, without overlap', () => {
++	const rects = squarify([60, 30, 20, 10, 5], 0, 0, 100, 50);
++	assert.equal(rects.length, 5);
++	const area = rects.reduce((s, r) => s + r.w * r.h, 0);
++	assert.ok(Math.abs(area - 5000) < 1e-6);
++	for (const r of rects) assert.ok(r.x >= -1e-9 && r.y >= -1e-9 && r.x + r.w <= 100 + 1e-9 && r.y + r.h <= 50 + 1e-9);
++	for (let i = 0; i < rects.length; ++i) {
++		assert.ok(Math.abs(rects[i].w * rects[i].h - [60, 30, 20, 10, 5][i] / 125 * 5000) < 1e-6);
++		for (let j = i + 1; j < rects.length; ++j) {
++			const a = rects[i], b = rects[j];
++			assert.ok(a.x + a.w <= b.x + 1e-9 || b.x + b.w <= a.x + 1e-9 || a.y + a.h <= b.y + 1e-9 || b.y + b.h <= a.y + 1e-9, 'overlap ' + i + ' ' + j);
++		}
++	}
++	assert.deepEqual(plain(squarify([1], 5, 6, 0, 10)), [{x: 5, y: 6, w: 0, h: 0}]);
++});
++
++test('the tree: branches in the order of the data, the leaf of a row without stem under its branch', () => {
++	const t = build(VALUES, LEVELS, W, H);
++	assert.deepEqual(plain(t.branches.map(b => b.name)), ['Branch 1', 'Branch 2', 'Branch 3']);
++	assert.deepEqual(plain(t.branches.map(b => b.leaves.slice().sort((a, b) => a - b))), [[0, 1, 2, 3, 4], [5, 6, 7], [8, 9, 10]]);
++	assert.equal(t.rects.length, 11);
++	assert.equal(t.leafNames[4], 'Leaf 5', 'a leaf without a stem keeps its name');
++	assert.equal(t.leafNames[0], 'Leaf 1');
++});
++
++test('each branch is one area, in proportion to its sum, and its leaves tile it', () => {
++	const t = build(VALUES, LEVELS, W, H);
++	const sums = [169, 156, 149], total = 474;
++	t.branches.forEach((b, k) => {
++		const area = t.rects.filter(r => r.branch === k).reduce((s, r) => s + r.w * r.h, 0);
++		assert.ok(Math.abs(area - W * H * sums[k] / total) < 1e-6, 'area of branch ' + k);
++	});
++	for (const r of t.rects) {
++		const v = VALUES[r.idx].val;
++		assert.ok(Math.abs(r.w * r.h - W * H * v / total) < 1e-6, 'area of leaf ' + r.idx);
++		assert.ok(r.x >= -1e-9 && r.y >= -1e-9 && r.x + r.w <= W + 1e-9 && r.y + r.h <= H + 1e-9);
++	}
++	// the three branches of a wide chart stand side by side, as in Office; the branch of the first rows is the left one
++	const left = k => Math.min(...t.rects.filter(r => r.branch === k).map(r => r.x));
++	assert.ok(left(0) < left(1) && left(1) < left(2));
++});
++
++test('a stem is a group inside its branch: its leaves share one rectangle', () => {
++	const t = build(VALUES, LEVELS, W, H);
++	const box = ids => {
++		const rs = t.rects.filter(r => ids.includes(r.idx));
++		const x0 = Math.min(...rs.map(r => r.x)), y0 = Math.min(...rs.map(r => r.y));
++		const x1 = Math.max(...rs.map(r => r.x + r.w)), y1 = Math.max(...rs.map(r => r.y + r.h));
++		return {area: (x1 - x0) * (y1 - y0), sum: rs.reduce((s, r) => s + r.w * r.h, 0)};
++	};
++	for (const ids of [[0, 1], [2, 3], [5, 6], [8, 9]]) {
++		const b = box(ids);
++		assert.ok(Math.abs(b.area - b.sum) < 1e-6, 'the leaves of ' + ids + ' form a rectangle');
++	}
++});
++
++test('rows with no value, no name or a negative value get no rectangle; a flat list is one branch per row', () => {
++	const t = build([{idx: 0, val: 10}, {idx: 1, val: 0}, {idx: 2, val: -4}, {idx: 3, val: 5}],
++		[lvl(['A', 'A', 'A', 'B']), lvl(['a1', 'a2', 'a3', 'b1'])], 100, 100);
++	assert.deepEqual(plain(t.rects.map(r => r.idx).sort()), [0, 3]);
++	assert.deepEqual(plain(t.branches.map(b => b.name)), ['A', 'B']);
++	const none = build([], [lvl(['A'])], 10, 10);
++	assert.deepEqual(plain(none.rects), []);
++});
++
++// ------------------------------------------------------------------------------ the drawer
++function loadDrawer() {
++	const AscFormat = {isRealNumber: v => typeof v === 'number' && isFinite(v)};
++	const ctx = vm.createContext({AscFormat, console});
++	vm.runInContext(slice(drawer, 'function drawTreemapChart(', '\n/** @constructor */\nfunction ') + ';this.d = drawTreemapChart;', ctx);
++	return ctx;
++}
++function makeChart(t) {
++	const ctx = loadDrawer();
++	const paths = [];
++	const chartSpaceStub = {
++		getCachedData: () => ({data: [], rects: t.rects, branches: t.branches}), chart: {plotArea: {x: 10, y: 20}},
++		getBranchBrush: k => ({accent: k % 6}), GetPath: id => paths[id]
++	};
++	const chart = new ctx.d(null, {
++		calcProp: {chartGutter: {_left: 0, _top: 0}, pxToMM: 1, trueWidth: W, trueHeight: H},
++		cChartSpace: chartSpaceStub,
++		_calculateRect: (x, y, w, h) => { paths.push({cmds: [{X: x, Y: y}, {X: x, Y: y - h}, {X: x + w, Y: y - h}]}); return paths.length - 1; }
++	});
++	paths.forEach(() => {});
++	for (const p of paths) {}
++	return {chart, paths, chartSpaceStub};
++}
++function withPaths(chart, paths) {
++	chart.cChartSpace.GetPath = id => ({getCommandByIndex: i => paths[id].cmds[i]});
++	return chart;
++}
++test('a leaf is drawn in the colour of its branch, an explicit data point fill of the file stays', () => {
++	const t = build(VALUES, LEVELS, W, H);
++	const {chart, paths} = makeChart(t);
++	chart.recalculate();
++	withPaths(chart, paths);
++	const series = {getDptByIdx: () => null};
++	assert.equal(chart._getBranchBrush(series, 0).accent, 0);
++	assert.equal(chart._getBranchBrush(series, 4).accent, 0, 'Leaf 5 has no stem: still Branch 1');
++	assert.equal(chart._getBranchBrush(series, 6).accent, 1);
++	assert.equal(chart._getBranchBrush(series, 10).accent, 2);
++	assert.equal(chart._getBranchBrush({getDptByIdx: i => i === 3 ? {spPr: {Fill: {}}} : null}, 3), null);
++	assert.equal(chart._getBranchBrush(series, 999), null);
++});
++test('the header of a branch is at the top left of the leaf in the corner of the branch', () => {
++	const t = build(VALUES, LEVELS, W, H);
++	const {chart, paths} = makeChart(t);
++	chart.recalculate();
++	withPaths(chart, paths);
++	for (const [k, name] of [[0, 'Branch 1'], [1, 'Branch 2'], [2, 'Branch 3']]) {
++		const corner = t.rects.filter(r => r.branch === k).reduce((a, r) => (r.y < a.y - 1e-9 || (Math.abs(r.y - a.y) < 1e-9 && r.x < a.x)) ? r : a);
++		const lbl = {eoBranch: k, idx: -1 - k, extX: 20, extY: 8};
++		const pos = chart._calculateDLbl(lbl);
++		assert.equal(lbl.eoHidden, false, name);
++		assert.ok(Math.abs(pos.x - (10 + corner.x + 2)) < 1e-6, name + ' x');
++		assert.ok(Math.abs(pos.y - (20 + corner.y + 2)) < 1e-6, name + ' y');
++	}
++	const huge = {eoBranch: 0, idx: -1, extX: 1000, extY: 8};
++	chart._calculateDLbl(huge);
++	assert.equal(huge.eoHidden, true, 'a header wider than its leaf is hidden');
++});
++test('a leaf label is at the bottom left of its leaf and hidden when it does not fit', () => {
++	const t = build(VALUES, LEVELS, W, H);
++	const {chart, paths} = makeChart(t);
++	chart.recalculate();
++	withPaths(chart, paths);
++	const r = t.rects.find(x => x.idx === 3);
++	const lbl = {idx: 3, extX: 20, extY: 8};
++	const pos = chart._calculateDLbl(lbl);
++	assert.equal(lbl.eoHidden, false);
++	assert.ok(Math.abs(pos.x - (10 + r.x + 2)) < 1e-6);
++	assert.ok(Math.abs(pos.y - (20 + r.y + r.h - 8 - 2)) < 1e-6);
++	const wide = {idx: 3, extX: r.w + 5, extY: 8};
++	chart._calculateDLbl(wide);
++	assert.equal(wide.eoHidden, true);
++});
++
++// ------------------------------------------------------------------------------ the wiring
++test('the chart space: leaf names, headers, branch colours and legend entries', () => {
++	for (const needle of ['cachedData.leafNames && cachedData.leafNames[pt.idx]', 'calculateTreemapHeaders = function', 'CChartSpace.prototype.getBranchBrush = function',
++		'getHierarchyLegendEntries = function', 'AscFormat.PARENT_LABEL_LAYOUT_NONE', 'oCachedData.type === AscFormat.SERIES_LAYOUT_TREEMAP'])
++		assert(chartSpace.includes(needle), needle);
++	assert(chartSpace.indexOf('const aBranchEntries = this.getHierarchyLegendEntries()') > 0);
++});
++test('the legend entries are the top-level branches in the order of the data, read from the series', () => {
++	const src = slice(chartSpace, 'CChartSpace.prototype.getHierarchyLegendEntries = function', 'CChartSpace.prototype.calculateSunburstDLbls');
++	const ctx = vm.createContext({AscFormat: {SERIES_LAYOUT_SUNBURST: 5, SERIES_LAYOUT_TREEMAP: 4}});
++	vm.runInContext('var CChartSpace = function () {};' + src + ';this.f = CChartSpace.prototype.getHierarchyLegendEntries;', ctx);
++	const mk = (layoutId, levels, nums) => ({
++		isChartEx: () => true,
++		chart: {plotArea: {plotAreaRegion: {series: [{layoutId, getCatLit: () => levels, getValLit: () => ({pts: nums})}]}}}
++	});
++	assert.deepEqual(plain(ctx.f.call(mk(4, LEVELS, VALUES))), [{name: 'Branch 1'}, {name: 'Branch 2'}, {name: 'Branch 3'}]);
++	assert.deepEqual(plain(ctx.f.call(mk(5, LEVELS, VALUES))), [{name: 'Branch 1'}, {name: 'Branch 2'}, {name: 'Branch 3'}]);
++	assert.equal(ctx.f.call(mk(4, [LEVELS[2]], VALUES)), null, 'one level: no branches');
++	assert.equal(ctx.f.call(mk(2, LEVELS, VALUES)), null, 'a waterfall has none');
++	assert.equal(ctx.f.call({isChartEx: () => false}), null);
++	const names = ctx.f.call(mk(4, LEVELS, VALUES.map((v, i) => ({idx: i, val: i < 5 ? 0 : v.val}))));
++	assert.deepEqual(plain(names), [{name: 'Branch 2'}, {name: 'Branch 3'}], 'a branch with no value has no entry');
++});
+-- 
+2.55.0
+

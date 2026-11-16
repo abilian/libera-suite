@@ -32,7 +32,8 @@ LEAVES = (
 
 def sunburst(title: str, sheet: str | None = None) -> str:
     """A sunburst of LEAVES under `title`, whose run properties are empty, as
-    Word leaves them when the chart's style decides. With `sheet`, its data is
+    Word leaves them when the chart's style decides, and whose segments are
+    named, as Word's are by default. With `sheet`, its data is
     read from that sheet's columns A to C, rows 2 on, as Excel writes it."""
     count = len(LEAVES)
     last = count + 1
@@ -64,6 +65,8 @@ def sunburst(title: str, sheet: str | None = None) -> str:
         f'<a:r><a:rPr lang="en-US"/><a:t>{title}</a:t></a:r></a:p>'
         "</cx:rich></cx:tx></cx:title>"
         '<cx:plotArea><cx:plotAreaRegion><cx:series layoutId="sunburst">'
+        '<cx:dataLabels pos="ctr"><cx:visibility seriesName="0"'
+        ' categoryName="1" value="0"/></cx:dataLabels>'
         '<cx:dataId val="0"/></cx:series></cx:plotAreaRegion></cx:plotArea>'
         "</cx:chart></cx:chartSpace>"
     )

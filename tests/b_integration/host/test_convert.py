@@ -1200,6 +1200,57 @@ def test_an_extended_charts_title_is_not_bold(tmp_path):
     assert not [f for f in fonts if "Bold" in f], fonts
 
 
+# The Office theme's first two accents, which colour a sunburst's branches.
+ACCENT1 = (0x5B, 0x9B, 0xD5)
+ACCENT2 = (0xED, 0x7D, 0x31)
+
+
+def test_a_sunburst_colours_its_branches_and_names_them(tmp_path):
+    """Word colours each branch of a sunburst, out from the centre, in the
+    next accent of the theme, and writes each segment's name in it. The editor
+    drew every segment in the first accent, and no name at all (sdkjs 0024,
+    after ElixirOffice 0.8.0)."""
+    pdftoppm, pdftotext = shutil.which("pdftoppm"), shutil.which("pdftotext")
+    if pdftoppm is None or pdftotext is None:
+        pytest.skip("no Poppler to draw and read the page")
+    document = tmp_path / "sunburst.docx"
+    sunburst_docx(payload_mod.resolve().root, document, "Sales by region")
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    pdf = tmp_path / "sunburst.pdf"
+
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    subprocess.run(
+        [
+            pdftoppm,
+            "-png",
+            "-r",
+            "30",
+            "-f",
+            "1",
+            "-l",
+            "1",
+            str(pdf),
+            str(tmp_path / "page"),
+        ],
+        check=True,
+    )
+    (page,) = tmp_path.glob("page*.png")
+    assert colour_box(str(page), ACCENT1) is not None, "no first branch"
+    assert colour_box(str(page), ACCENT2) is not None, "one colour for both branches"
+    # Each name reads along the radius. pdftotext breaks turned text into
+    # pieces, in no order, unless -raw, which keeps it whole, letters spaced.
+    raw = subprocess.run(
+        [pdftotext, "-raw", str(pdf), "-"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    text = "".join(raw.split())
+    names = ("North", "South", "Coast", "Hills", "Plain")
+    assert all(name in text for name in names), text
+
+
 # A positional tab to the centre of the line, then one to its right margin.
 PTABS = (
     "<w:p><w:r><w:t>Left</w:t></w:r>"

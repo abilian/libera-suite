@@ -12,6 +12,7 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 ### Fixed
 
+- **Sunburst, treemap, waterfall and funnel charts look as they do in Office.** A sunburst was drawn inside out, in one colour, with no names; it now has a colour per branch and names each segment. A treemap has a colour and a header per branch, a waterfall its increase, decrease and total colours, and dragging one of these charts' labels no longer stops the editor. An editor patch, after ElixirOffice's fix.
 - **An Office 2016 chart whose data names no cells can be saved.** A sunburst, treemap, waterfall or funnel chart holding its values alone, without the cells they came from, made the save of a document that had one fail. An editor patch.
 - **An Office 2016 chart written by other programs is drawn and kept.** A box-and-whisker or sunburst chart in the form Apache POI and the programs built on it write was left out, along with the picture the file carries in its place, and a save wrote an empty chart. A core patch, after ElixirOffice's fix.
 - **A Word document keeps its style names when saved.** Saved after an edit, a document's styles came back under numbers, "Heading1" as "670", and every paragraph with them. An editor patch, after ElixirOffice's fix.
