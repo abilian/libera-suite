@@ -1,0 +1,57 @@
+From f4d46e7c44ef57b7d57dc8df47c335f902d2cce4 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 21:24:47 +0100
+Subject: [PATCH] Save an extended chart whose data names no cells
+
+A save builds each chart's workbook from its cached values, and read
+every formula as a string. An Office 2016 chart's data may hold its
+values alone: the writer crashed, and x2t refused to save. Such data
+fills no cells now, and a chart with none has no workbook.
+---
+ common/Drawings/Format/ChartSpace.js | 20 ++++++++++++--------
+ 1 file changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/common/Drawings/Format/ChartSpace.js b/common/Drawings/Format/ChartSpace.js
+index 7bda1f9219..04105471c8 100644
+--- a/common/Drawings/Format/ChartSpace.js
++++ b/common/Drawings/Format/ChartSpace.js
+@@ -2133,6 +2133,10 @@ function(window, undefined) {
+ 			oInitOpenManager.initSchemeAndTheme(oWorkbook);
+ 			oInitOpenManager.readDefStyles(oWorkbook, oWorkbook.CellStyles.DefaultStyles);
+ 			const mapWorksheets = this.getWorksheetsFromCache(oWorkbook, false, true);
++			// Data that names no cells has no workbook: the chart keeps its values.
++			if (Object.keys(mapWorksheets).length === 0) {
++				return null;
++			}
+ 			for (let sSheetName in mapWorksheets) {
+ 				oWorkbook.aWorksheets.push(mapWorksheets[sSheetName].ws);
+ 			}
+@@ -2195,17 +2199,17 @@ function(window, undefined) {
+ 					}, this, []
+ 				);
+ 			}
+-			if (oCache)
++			let sFormula;
++			if (typeof ref.f === "string") {
++				sFormula = ref.f;
++			} else if (ref.f && ref.f.content) {
++				sFormula = ref.f.content;
++			}
++			// An extended chart's data may hold its values alone: no cells to fill.
++			if (oCache && sFormula)
+ 			{
+ 				const sFormatCode = (typeof oCache.formatCode === "string" && oCache.formatCode.length > 0) ? oCache.formatCode : "General";
+ 
+-				let sFormula;
+-				if (typeof ref.f === "string") {
+-					sFormula = ref.f;
+-				} else if (ref.f && ref.f.content) {
+-					sFormula = ref.f.content;
+-				}
+-
+ 				const arrF = getParsedCopyRefs(sFormula, oParentWb);
+ 
+ 				let nPtIndex = 0, nPtCount;
+-- 
+2.55.0
+
