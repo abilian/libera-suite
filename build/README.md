@@ -21,7 +21,7 @@ There is one directory per kind of thing:
 | `macos/` | the `.app`: `macos-app.sh`, `macos-icon.py`, `launcher.m` |
 | `windows/` | the installer and its toolchain: `windows-app.sh`, `windows-setup.ps1`, `msvc-env.sh`, `vcpkg.sh`, and what PyInstaller and Inno Setup read |
 | `install/` | what runs on users' machines: `install.sh` (`curl … \| sh`) and `install.ps1` (`irm … \| iex`), published at the origin's root, and `released-gui.sh`, which opens a window from the *published* artifact on a machine it is installed on |
-| `builders.toml.example` | the template for `builders.toml`, the machines `lb release check` and `publish` drive; that copy is gitignored, as is `out/` |
+| `builders.toml` | the machines `lb release check`, `publish` and `lb on` drive |
 
 ## Commands
 

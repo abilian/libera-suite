@@ -1,13 +1,10 @@
-# The machines that build a core. Copy to build/builders.toml.
-#
-# That copy is gitignored: it is an inventory of build hosts, and a public
-# repository is the wrong place for one.
+# The machines that build a core, and that `lb release` and `lb on` drive.
 
 [defaults]
 # The checkout on each builder; it can be overridden per builder below. It
 # builds the commit the driving checkout is at, which `update` sends it over
 # ssh: no branch to name, nothing to push first.
-repo = "~/liberasuite"
+repo = "~/muchado"
 
 [[builders]]
 # platform is what it builds for, and names the libera-core wheel and the
@@ -21,16 +18,16 @@ target = "local"
 
 [[builders]]
 platform = "linux-x86_64"
-target = "builder-amd64"
+target = "fedora.abilian.net"
+
+# Parked 2026-10-15: its 38 GB disk is full; 0.5 goes out without it.
+# [[builders]]
+# platform = "linux-arm64"
+# target = "builder-arm64"
 
 [[builders]]
-platform = "linux-arm64"
-target = "builder-arm64"
-
-[[builders]]
-# Reached over OpenSSH, its shell Git Bash; `ship` builds its core and the
-# installer there with `components build` and `app build windows` (see
-# docs/src/develop/build.md, Windows). C:/b is the build root there
-# (engine/common.sh).
 platform = "windows-x86_64"
 target = "builder-windows"
+# target = "windows.abilian.net"
+# C:/b is the build root there (build/engine/common.sh), short because V8's
+# checkout meets Windows' 260-character limit from under a home directory.

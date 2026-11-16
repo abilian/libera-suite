@@ -116,7 +116,7 @@ Each command prints the script it runs before running it; the scripts stay usabl
   cmd("lb on linux-x86_64 app test flatpak", [any `lb` command, in that builder's checkout; output streams back]),
   cmd("lb on windows-x86_64 --update toolchain check", [this commit sent there first]),
 )
-#note[Builders: `build/builders.toml` (gitignored; copy `builders.toml.example`). Platforms: `macos-arm64`, `linux-x86_64`, `linux-arm64`, `windows-x86_64`. Nothing interactive works through `lb on`.]
+#note[Builders: `build/builders.toml`. Platforms: `macos-arm64`, `linux-x86_64`, `linux-arm64`, `windows-x86_64`. Nothing interactive works through `lb on`.]
 
 #colbreak()
 

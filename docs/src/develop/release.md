@@ -82,7 +82,7 @@ Every phase checks what the machine printed, because over ssh an exit status des
 
 **A builder's job outlives the connection.** `components` and `bundles` start their job detached on the builder, in `~/.lb/runs/<platform> <command>/` there, which holds its script, its log, its pid and, once it has ended, its exit status, and poll it every 15 seconds with a connection of their own. A builder that does not answer is a poll that missed: the watch says how long it has been silent, and gives up after 45 minutes, saying the job may still be running. The same phase, run again, finds the job still running and watches it rather than starting a second build on the same tree. On Windows the job is started through PowerShell's `Start-Process`: one put in the background from Git Bash holds the ssh session open until it ends. The precheck asks each builder four times, a poll apart, before calling it unreachable. All of it measured on 2026-11-01, when builder-windows dropped off the network four times in an afternoon.
 
-`build/builders.toml` lists the builders. It is gitignored because it is an inventory of machines, so copy `builders.toml.example` once. `lb` is its only reader (`libera_build.inventory`), so there is one list.
+`build/builders.toml` lists the builders. `lb` is its only reader (`libera_build.inventory`), so there is one list.
 
 ## A pre-release
 

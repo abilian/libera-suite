@@ -41,6 +41,4 @@ src/libera/manifest.json
 .coverage
 htmlcov/
 
-# An inventory of build hosts (build/builders.toml.example is the template).
-build/builders.toml
 .hop3-local.toml

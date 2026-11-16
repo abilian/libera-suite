@@ -71,10 +71,9 @@ def test_a_wrong_file_is_refused_saying_why(text, says):
     assert says in str(e.value)
 
 
-def test_a_missing_file_says_how_to_make_one(tmp_path):
-    with pytest.raises(RefusedError) as e:
+def test_a_missing_file_is_refused(tmp_path):
+    with pytest.raises(RefusedError, match="no builder list"):
         inventory.read(tmp_path / "builders.toml")
-    assert "builders.toml.example" in str(e.value)
 
 
 def test_only_narrows_and_refuses_a_builder_that_is_not_there():

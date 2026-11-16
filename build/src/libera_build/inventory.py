@@ -1,7 +1,6 @@
 """The builders: build/builders.toml, parsed once, into frozen values.
 
-The file is gitignored, because it is an inventory of machines;
-builders.toml.example is the committed template. This is its one reader: the
+This is its one reader: the
 origin script once read a positional format of its own, and two readers of
 one inventory is two chances to disagree.
 """
@@ -74,10 +73,7 @@ def platform_problem(platform: str) -> str | None:
 
 def read(path: Path) -> list[Builder]:
     if not path.is_file():
-        msg = (
-            f"no builder list at {path}\n"
-            f"  copy build/builders.toml.example to {path.name} and fill it in."
-        )
+        msg = f"no builder list at {path}"
         raise RefusedError(msg)
     return parse(path.read_text(encoding="utf-8"), str(path))
 
