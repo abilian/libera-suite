@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import shutil
 import threading
 import urllib.request
 from typing import TYPE_CHECKING
@@ -251,6 +252,12 @@ def editor_with(tmp_path, sample_document, monkeypatch, shared_browser):
         return httpd, port, opened
 
     made: list = []
+    # A copy of the sample, made once, so that two windows of one test share
+    # it: a test that saves writes over the document that is open, and the
+    # sample is session-wide (the integration tier's `opened` copies it too).
+    # Saved over by test_paste, it gave a later test a picture it never added.
+    sample = tmp_path / sample_document.name
+    shutil.copyfile(sample_document, sample)
 
     def open_editor(
         owned: list[dict],
@@ -261,7 +268,7 @@ def editor_with(tmp_path, sample_document, monkeypatch, shared_browser):
         password: str | tuple[str, ...] | None = None,
         ready: bool = True,
     ) -> Editor:
-        document = document or sample_document
+        document = document or sample
         httpd, port, opened = _open(owned, document, locked_by, fonts)
         made.append(httpd)
         context = shared_browser.new_context()
