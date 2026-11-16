@@ -1,0 +1,39 @@
+From 736da9d7fb237bf46b8ae782c12d795e7622fca7 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 15:43:24 +0100
+Subject: [PATCH] DOCX: no empty w:documentProtection is written
+
+The editor sends a document's protection with every save, an empty
+record when there is none, and CDocProtect wrote that as an element
+with no attribute, which Word never writes. Write nothing then. The
+same guard is in ElixirOffice 0.7.3.
+---
+ OOXML/DocxFormat/Settings/Settings.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/OOXML/DocxFormat/Settings/Settings.cpp b/OOXML/DocxFormat/Settings/Settings.cpp
+index 79769b9bd1..2f25deae45 100644
+--- a/OOXML/DocxFormat/Settings/Settings.cpp
++++ b/OOXML/DocxFormat/Settings/Settings.cpp
+@@ -862,6 +862,7 @@ namespace Settings
+     std::wstring CDocProtect::toXML() const
+ 	{
+         std::wstring sResult = L"<w:documentProtection ";
++		const size_t nNoAttribute = sResult.size();
+ 
+ 		ComplexTypes_WriteAttribute ( L"w:edit=\"", m_oEdit );
+ 		sResult += m_oFormatting.ToAttribute( L"w:formatting");
+@@ -890,6 +891,10 @@ namespace Settings
+ 			sResult += m_sSaltValue.ToAttribute(L"w:saltValue");
+ 			sResult += m_oSpinCount.ToAttribute(L"w:spinCount");
+ 		}
++		// Nothing to protect: Word writes no element, and every document the
++		// editor saved came back with an empty one.
++		if (sResult.size() == nNoAttribute)
++			return L"";
+ 		sResult += L"/>";
+ 
+ 		return sResult;
+-- 
+2.55.0
+
