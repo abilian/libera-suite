@@ -1,6 +1,6 @@
 # Libera Suite
 
-**A desktop office suite you can own.** Libera Suite opens the documents other people send you (`.docx`, `.xlsx`, `.pptx`, ODF), edits them on your machine and saves them back. It runs on your own computer, with no account to create and nothing in it that phones home.
+**A desktop office suite that belongs to you.** Libera Suite opens the documents other people send you (`.docx`, `.xlsx`, `.pptx`, ODF), edits them on your machine and saves them back. It runs on your computer, with no account to create and nothing in it that phones home.
 
 Five editors share one application. The file picks the editor, so there is nothing to choose.
 
@@ -14,7 +14,7 @@ Five editors share one application. The file picks the editor, so there is nothi
 
 ![Libera Words, with a document open: the editor's toolbar in the Libera Words purple, and a laid-out page below it.](https://docs.liberasuite.eu/en/assets/words.png)
 
-Abilian builds the host as free software under the Apache License 2.0. The editors inside it come from [Euro-Office](https://github.com/Euro-Office) (itself an AGPL fork of ONLYOFFICE by Ascensio System SIA), running locally, with a short patch queue of our own: it makes them build on every platform, brands them, sets a few of the editor's options, and fixes bugs, most of them in the converter.
+Abilian builds the host as free software under the Apache License 2.0. The editors inside it come from [Euro-Office](https://github.com/Euro-Office) (an AGPL fork of ONLYOFFICE by Ascensio System SIA), running locally. A short patch queue of ours makes them build on each platform, brands them, sets a few of the editor's options, and fixes bugs, most of them in the converter.
 
 ## Using it
 
@@ -39,7 +39,7 @@ libera --payload-status   # which editors are in use, and the revisions they wer
 
 The editors are a web application. Everything they cannot do in a browser (read a file from disk, convert it, save it, list the fonts, put a dialog on screen) they ask of one injected JavaScript object, `window.AscDesktopEditor`, which the host exists to answer.
 
-We implement it in Python, behind the webview your system already ships. The host serves the editor over a loopback HTTP server and defines `AscDesktopEditor` before the editor's own code runs, so nothing about the editor itself changes.
+We implement it in Python, behind the webview your system already ships. The host serves the editor over a loopback HTTP server and defines `AscDesktopEditor` before the editor's code runs, so nothing about the editor changes.
 
 | | |
 | :--- | :--- |
@@ -47,7 +47,7 @@ We implement it in Python, behind the webview your system already ships. The hos
 | **The host** | `src/libera/`: the loopback HTTP server, the webview, the file dialogs, the menu bar and the converter calls, in about 12,000 lines of Python across 60 modules. All of the desktop application is here. |
 | **The bridge** | Three small JavaScript files, spliced into the `<head>` of every page the host serves. Our code and theirs never share a file. |
 
-**We do not fork the engine.** The patch queue makes upstream build on macOS and Windows, brands it, sets a few of the editor's options (no upstream helpdesk, no macros), and fixes bugs: in the converter, mostly for OpenDocument files, and a handful in the editors, among them font substitution and two cross-site scripting holes. Each patch is small and explained, so following upstream means rebasing a short series. Every release records the exact revisions it was built from, so the corresponding source is a commit plus a series that provably reapplies to it, and `lb payload check` checks that it still does.
+**We do not fork the engine.** The patch queue makes upstream build on macOS and Windows, brands it, sets a few of the editor's options (no upstream helpdesk, no macros), and fixes bugs. Most of those are in the converter, for OpenDocument files. A handful are in the editors, among them font substitution and two cross-site scripting holes. Each patch is small and explained, so following upstream means rebasing a short series. Every release records the exact revisions it was built from, so the corresponding source is a commit plus a series that provably reapplies to it, and `lb payload check` checks that it still does.
 
 Everything we ship, we build. [`build/`](build/README.md) compiles the editors and the native converter from pinned upstream sources, on all three systems, with our patch queue applied.
 
@@ -114,7 +114,7 @@ lb payload test             # the converter: fonts, docx -> odt -> docx, docx ->
 lb payload check           # does the patch queue still apply to the pinned SHAs?
 ```
 
-The test suite enforces one house rule: **assert on content, never on exit codes.** A converter that writes an empty document exits zero. A PDF with no glyphs in it is the right size. So the end-to-end run photographs the editor's own canvas and measures the ink on it.
+The test suite enforces one house rule: **assert on content, never on exit codes.** A converter that writes an empty document exits zero. A PDF with no glyphs in it is the right size. So the end-to-end run photographs the editor's canvas and measures the ink on it.
 
 | | |
 | :--- | :--- |
@@ -126,7 +126,7 @@ The package and the command are `libera`. The repository directory is `local-off
 
 ## Credit
 
-Libera Suite includes components from [Euro-Office](https://github.com/Euro-Office), itself a fork of [ONLYOFFICE](https://www.onlyoffice.com/) by Ascensio System SIA. Those components are AGPL v3 and are modified. The same line appears in Help ▸ About inside the application, in the editor's own About panel, and in what a software centre shows for the Flatpak.
+Libera Suite includes components from [Euro-Office](https://github.com/Euro-Office), itself a fork of [ONLYOFFICE](https://www.onlyoffice.com/) by Ascensio System SIA. Those components are AGPL v3 and are modified. The same line appears in Help ▸ About inside the application, in the editor's About panel, and in what a software centre shows for the Flatpak.
 
 The editors, the document engine and the format support are theirs. That is the hard part: twenty years of correctly reading a `.docx` written by somebody else's software. The host, the packaging and the desktop integration are ours. We are grateful for both.
 
@@ -136,6 +136,6 @@ Libera Suite ships as two artifacts under different licences.
 
 **The host is [Apache-2.0](LICENSE)**: everything in `src/libera/`, which is the whole of this package.
 
-**The editor payload is AGPL-3.0**: Euro-Office plus our patch queue against it (GUI assets are CC-BY-SA-4.0). It arrives as two packages of its own, `libera-core` and `libera-web`, or inside a bundle, never vendored into the host's wheel.
+**The editor payload is AGPL-3.0**: Euro-Office plus our patch queue against it (GUI assets are CC-BY-SA-4.0). It arrives as two separate packages, `libera-core` and `libera-web`, or inside a bundle, never vendored into the host's wheel.
 
 [Licence and attribution](https://docs.liberasuite.eu/en/licence/) has the corresponding-source detail: what each release records, and where to fetch it.
