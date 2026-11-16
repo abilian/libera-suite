@@ -1,0 +1,160 @@
+From d93da281744d65d0f444d0dd7abd2b388f3d23b4 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 17:53:57 +0100
+Subject: [PATCH] DOCX: positional tabs (w:ptab) are kept
+
+x2t wrote nothing into the editor's format for a w:ptab, so a document
+opened in the editor lost every positional tab, and a save with it. It
+is now run item 35, its alignment, relative-to and leader as strings,
+both ways. After ElixirOffice 0.7.3 (leag1234/core 561a9a85f).
+---
+ .../Document/BinReader/BinaryReaderD.cpp      | 35 +++++++++++++++++++
+ .../Binary/Document/BinReader/BinaryReaderD.h |  1 +
+ .../BinWriter/BinReaderWriterDefines.h        |  8 +++++
+ .../Document/BinWriter/BinaryWriterD.cpp      | 24 +++++++++++++
+ .../Binary/Document/BinWriter/BinaryWriterD.h |  1 +
+ 5 files changed, 69 insertions(+)
+
+diff --git a/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp b/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
+index 68f3a10dc8..772764ad7d 100644
+--- a/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
++++ b/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
+@@ -8371,6 +8371,20 @@ int Binary_DocumentTableReader::ReadRun(BYTE type, long length, void* poResult)
+ 		res = c_oSerConstants::ReadUnknown;
+ 	return res;
+ }
++int Binary_DocumentTableReader::ReadPTab(BYTE type, long length, void* poResult)
++{
++	std::wstring* aPTab = static_cast<std::wstring*>(poResult);
++	int res = c_oSerConstants::ReadOk;
++	if (c_oSerPTabType::Alignment == type)
++		aPTab[0] = m_oBufferedStream.GetString3(length);
++	else if (c_oSerPTabType::RelativeTo == type)
++		aPTab[1] = m_oBufferedStream.GetString3(length);
++	else if (c_oSerPTabType::Leader == type)
++		aPTab[2] = m_oBufferedStream.GetString3(length);
++	else
++		res = c_oSerConstants::ReadUnknown;
++	return res;
++}
+ int Binary_DocumentTableReader::ReadRunContent(BYTE type, long length, void* poResult)
+ {
+ 	int res = c_oSerConstants::ReadOk;
+@@ -8395,6 +8409,27 @@ int Binary_DocumentTableReader::ReadRunContent(BYTE type, long length, void* poR
+ 	{
+         GetCurrentStringWriter().WriteString(std::wstring(_T("<w:tab/>")));
+ 	}
++	else if (c_oSerRunType::ptab == type)
++	{
++		// [alignment, relativeTo, leader]
++		std::wstring aPTab[3];
++		READ1_DEF(length, res, this->ReadPTab, aPTab);
++		static const wchar_t* const aAlignments[] = {L"left", L"center", L"right", NULL};
++		static const wchar_t* const aRelativeTo[] = {L"margin", L"indent", NULL};
++		static const wchar_t* const aLeaders[] = {L"none", L"dot", L"hyphen", L"underscore", L"middleDot", NULL};
++		const wchar_t* const* aAllowed[3] = {aAlignments, aRelativeTo, aLeaders};
++		const wchar_t* aNames[3] = {L"alignment", L"relativeTo", L"leader"};
++		std::wstring sXml = L"<w:ptab";
++		for (int i = 0; i < 3; ++i)
++		{
++			// only known values are written, anything else falls back to the first (default) one
++			const wchar_t* sValue = aAllowed[i][0];
++			for (int j = 0; aAllowed[i][j]; ++j)
++				if (aPTab[i] == aAllowed[i][j]) sValue = aAllowed[i][j];
++			sXml += L" w:" + std::wstring(aNames[i]) + L"=\"" + sValue + L"\"";
++		}
++		GetCurrentStringWriter().WriteString(sXml + L"/>");
++	}
+ 	else if (c_oSerRunType::cr == type)
+ 	{
+         GetCurrentStringWriter().WriteString(std::wstring(_T("<w:cr/>")));
+diff --git a/OOXML/Binary/Document/BinReader/BinaryReaderD.h b/OOXML/Binary/Document/BinReader/BinaryReaderD.h
+index 900a1fb6c9..e2a83bfab5 100644
+--- a/OOXML/Binary/Document/BinReader/BinaryReaderD.h
++++ b/OOXML/Binary/Document/BinReader/BinaryReaderD.h
+@@ -442,6 +442,7 @@ public:
+ 	int ReadMathZeroDesc(BYTE type, long length, void* poResult);
+ 	int ReadMathZeroWid(BYTE type, long length, void* poResult);
+ 	int ReadRun(BYTE type, long length, void* poResult);
++	int ReadPTab(BYTE type, long length, void* poResult);
+ 	int ReadRunContent(BYTE type, long length, void* poResult);
+ 	int ReadFootnoteRef(BYTE type, long length, void* poResult);
+ 	int ReadEndnoteRef(BYTE type, long length, void* poResult);
+diff --git a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
+index 262ad1a069..5c52d44887 100644
+--- a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
++++ b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
+@@ -626,8 +626,16 @@ extern int g_nCurFormatVersion;
+ 		linebreakClearAll = 32,
+ 		linebreakClearLeft = 33,
+ 		linebreakClearRight = 34,
++		ptab = 35,
+ 		pptxDrawingAlternative = 0x99
+ 	};}
++	// children of c_oSerRunType::ptab (absolute position tab); each holds the OOXML attribute value as a string
++	namespace c_oSerPTabType{enum c_oSerPTabType
++	{
++		Alignment = 0,
++		RelativeTo = 1,
++		Leader = 2
++	};}
+ 	namespace c_oSerVbaProjectTypes{enum c_oSerVbaProjectType
+ 	{
+ 		Name = 0
+diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
+index 32e3ab60ad..b2c137c9e3 100644
+--- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
++++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
+@@ -6758,6 +6758,9 @@ void BinaryDocumentTableWriter::WriteRunContent(std::vector<OOX::WritingElement*
+ 			}
+ 			break;
+ 		case OOX::et_w_ptab:
++			{
++				WritePTab(static_cast<OOX::Logic::CPTab*>(item));
++			}
+ 			break;
+ 		case OOX::et_w_rPr:
+ 			break;
+@@ -6875,6 +6878,27 @@ void BinaryDocumentTableWriter::WriteNoteRef(const nullable<SimpleTypes::COnOff>
+ 		m_oBcw.WriteItemEnd(nCurPos);
+ 	}
+ }
++void BinaryDocumentTableWriter::WritePTab(OOX::Logic::CPTab* pPTab)
++{
++	// absolute position tab: attribute values are stored as the OOXML strings, absent attributes are not written
++	int nCurPos = m_oBcw.WriteItemStart(c_oSerRunType::ptab);
++	if (pPTab->m_oAlignment.IsInit())
++	{
++		m_oBcw.m_oStream.WriteBYTE(c_oSerPTabType::Alignment);
++		m_oBcw.m_oStream.WriteStringW(pPTab->m_oAlignment->ToString());
++	}
++	if (pPTab->m_oRelativeTo.IsInit())
++	{
++		m_oBcw.m_oStream.WriteBYTE(c_oSerPTabType::RelativeTo);
++		m_oBcw.m_oStream.WriteStringW(pPTab->m_oRelativeTo->ToString());
++	}
++	if (pPTab->m_oLeader.IsInit())
++	{
++		m_oBcw.m_oStream.WriteBYTE(c_oSerPTabType::Leader);
++		m_oBcw.m_oStream.WriteStringW(pPTab->m_oLeader->ToString());
++	}
++	m_oBcw.WriteItemWithLengthEnd(nCurPos);
++}
+ void BinaryDocumentTableWriter::WriteText(const std::wstring& text, BYTE type)
+ {
+ 	if (!text.empty())
+diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.h b/OOXML/Binary/Document/BinWriter/BinaryWriterD.h
+index 779a6ef91b..b8c7157f00 100644
+--- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.h
++++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.h
+@@ -453,6 +453,7 @@ namespace BinDocxRW
+ 		void WriteRunContent(std::vector<OOX::WritingElement*>::iterator &start, std::vector<OOX::WritingElement*>::iterator &end, bool bHyperlink = false);
+ 		void WriteNoteRef(const nullable<SimpleTypes::COnOff>& oCustomMarkFollows, const nullable<SimpleTypes::CDecimalNumber>& oId);
+ 		void WriteText(const std::wstring& text, BYTE type);
++		void WritePTab(OOX::Logic::CPTab* pPTab);
+ 		bool WriteDrawingPptx(OOX::WritingElement* item);
+ 		void WriteDrawing(std::wstring* pXml, OOX::Logic::CDrawing* pDrawing, PPTX::Logic::GraphicFrame *pGraphic);
+ 		void WriteNvGraphicFramePr(const PPTX::Logic::NvGraphicFramePr& oGraphicFramePr);
+-- 
+2.55.0
+

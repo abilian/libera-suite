@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 
-from support.settings import blank, edited_and_saved
+from support.blank import blank, edited_and_saved
 
 PROTECTION = re.compile(r"<w:documentProtection\b[^>]*>")
 READ_ONLY = '<w:documentProtection w:edit="readOnly" w:enforcement="0"/>'

@@ -1,0 +1,324 @@
+From a65f818becfda5686fa1c9cbf760106c23ea2a85 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 17:53:57 +0100
+Subject: [PATCH] feat(word): positional tabs are read, laid out and written
+ back
+
+A w:ptab is a run item of its own, CRunPTab, a tab to the left edge,
+the centre or the right edge of the area between the margins or the
+indents, read from and written to run item 35 and the change log. After
+ElixirOffice 0.7.3 (leag1234/sdkjs 8f74f43).
+---
+ word/Editor/Paragraph/RunContent/Tab.js   | 112 +++++++++++++++++++++-
+ word/Editor/Paragraph/RunContent/Types.js |   2 +
+ word/Editor/Paragraph_Recalculate.js      |  48 ++++++++++
+ word/Editor/Run.js                        |   4 +-
+ word/Editor/Serialize2.js                 |  44 ++++++++-
+ 5 files changed, 206 insertions(+), 4 deletions(-)
+
+diff --git a/word/Editor/Paragraph/RunContent/Tab.js b/word/Editor/Paragraph/RunContent/Tab.js
+index c73c590bfe..18dbc6f32d 100644
+--- a/word/Editor/Paragraph/RunContent/Tab.js
++++ b/word/Editor/Paragraph/RunContent/Tab.js
+@@ -195,8 +195,118 @@ let tab_Symbol_Rtl = 0x0021;
+ 	{
+ 		return AscBidi.TYPE.PM;
+ 	};
++	/**
++	 * Absolute position tab (w:ptab): a tab to a position given relative to the margin or the paragraph indent,
++	 * not to the tab stops. It behaves like a tab of the matching kind (left/center/right) whose stop is computed
++	 * from the page frame when the line is recalculated (see Paragraph.prototype.private_RecalculateGetPTabPos).
++	 * @constructor
++	 * @extends {AscWord.CRunTab}
++	 */
++	function CRunPTab()
++	{
++		CRunTab.call(this);
++		
++		this.Alignment  = "left";   // left | center | right
++		this.RelativeTo = "margin"; // margin | indent
++		this.Leader     = "none";   // none | dot | hyphen | underscore | middleDot
++	}
++	CRunPTab.prototype = Object.create(CRunTab.prototype);
++	CRunPTab.prototype.constructor = CRunPTab;
++	
++	CRunPTab.alignments  = ["left", "center", "right"];
++	CRunPTab.relativeTos = ["margin", "indent"];
++	CRunPTab.leaders     = ["none", "dot", "hyphen", "underscore", "middleDot"];
++	
++	CRunPTab.prototype.IsPTab = function()
++	{
++		return true;
++	};
++	CRunPTab.prototype.GetAlignment = function()
++	{
++		return this.Alignment;
++	};
++	CRunPTab.prototype.GetRelativeTo = function()
++	{
++		return this.RelativeTo;
++	};
++	CRunPTab.prototype.GetLeader = function()
++	{
++		return this.Leader;
++	};
++	CRunPTab.prototype.SetAlignment = function(value)
++	{
++		if (-1 !== CRunPTab.alignments.indexOf(value))
++			this.Alignment = value;
++	};
++	CRunPTab.prototype.SetRelativeTo = function(value)
++	{
++		if (-1 !== CRunPTab.relativeTos.indexOf(value))
++			this.RelativeTo = value;
++	};
++	CRunPTab.prototype.SetLeader = function(value)
++	{
++		// The inherited SetLeader(leaderType, textPr) is called by the recalculation with an Asc.c_oAscTabLeader
++		// value and a text properties object, here a string is a request to change the stored leader
++		if (typeof value === "string")
++		{
++			if (-1 !== CRunPTab.leaders.indexOf(value))
++				this.Leader = value;
++			return;
++		}
++		CRunTab.prototype.SetLeader.apply(this, arguments);
++	};
++	CRunPTab.prototype.GetTabLeaderType = function()
++	{
++		switch (this.Leader)
++		{
++			case "dot":        return Asc.c_oAscTabLeader.Dot;
++			case "hyphen":     return Asc.c_oAscTabLeader.Hyphen;
++			case "underscore": return Asc.c_oAscTabLeader.Underscore;
++			case "middleDot":  return Asc.c_oAscTabLeader.MiddleDot;
++		}
++		return Asc.c_oAscTabLeader.None;
++	};
++	CRunPTab.prototype.GetTabType = function()
++	{
++		switch (this.Alignment)
++		{
++			case "center": return tab_Center;
++			case "right":  return tab_Right;
++		}
++		return tab_Left;
++	};
++	CRunPTab.prototype.Copy = function()
++	{
++		let tab = new CRunPTab();
++		tab.Alignment  = this.Alignment;
++		tab.RelativeTo = this.RelativeTo;
++		tab.Leader     = this.Leader;
++		return tab;
++	};
++	CRunPTab.prototype.Write_ToBinary = function(Writer)
++	{
++		// Long   : para_PTab
++		// String : alignment
++		// String : relativeTo
++		// String : leader
++		Writer.WriteLong(para_PTab);
++		Writer.WriteString2(this.Alignment);
++		Writer.WriteString2(this.RelativeTo);
++		Writer.WriteString2(this.Leader);
++	};
++	CRunPTab.prototype.Read_FromBinary = function(Reader)
++	{
++		this.SetAlignment(Reader.GetString2());
++		this.SetRelativeTo(Reader.GetString2());
++		this.SetLeader(Reader.GetString2());
++	};
++	CRunTab.prototype.IsPTab = function()
++	{
++		return false;
++	};
+ 	//--------------------------------------------------------export----------------------------------------------------
+ 	window['AscWord'] = window['AscWord'] || {};
+-	window['AscWord'].CRunTab = CRunTab;
++	window['AscWord'].CRunTab  = CRunTab;
++	window['AscWord'].CRunPTab = CRunPTab;
+ 
+ })(window);
+diff --git a/word/Editor/Paragraph/RunContent/Types.js b/word/Editor/Paragraph/RunContent/Types.js
+index 4d7020a854..a187f1af68 100644
+--- a/word/Editor/Paragraph/RunContent/Types.js
++++ b/word/Editor/Paragraph/RunContent/Types.js
+@@ -76,6 +76,7 @@ var para_PermStart                 = 0x004b;
+ var para_PermEnd                   = 0x004c;
+ var para_PdfText                   = 0x004d;
+ var para_PdfSpace                  = 0x004e;
++var para_PTab                      = 0x004f; // Absolute position tab (history binary only, the run element type is para_Tab)
+ 
+ (function(window)
+ {
+@@ -103,6 +104,7 @@ var para_PdfSpace                  = 0x004e;
+ 			case para_NewLine               : oElement = new AscWord.CRunBreak(); break;
+ 			case para_Numbering             : oElement = new ParaNumbering(); break;
+ 			case para_Tab                   : oElement = new AscWord.CRunTab(); break;
++			case para_PTab                  : oElement = new AscWord.CRunPTab(); break;
+ 			case para_PageNum               : oElement = new AscWord.CRunPageNum(); break;
+ 			case para_Math_Placeholder      : oElement = new CMathText(); break;
+ 			case para_Math_Text             : oElement = new CMathText(); break;
+diff --git a/word/Editor/Paragraph_Recalculate.js b/word/Editor/Paragraph_Recalculate.js
+index 04c6cfb703..dc91b17612 100644
+--- a/word/Editor/Paragraph_Recalculate.js
++++ b/word/Editor/Paragraph_Recalculate.js
+@@ -2464,6 +2464,54 @@ Paragraph.prototype.private_RecalculateGetTabPos = function(PRS, X, ParaPr, CurP
+ 	};
+ };
+ 
++/**
++ * Position of an absolute position tab (w:ptab). The result has the shape of private_RecalculateGetTabPos: the tab
++ * stop is the left edge, the center or the right edge of the area between the margins (or the indents).
++ */
++Paragraph.prototype.private_RecalculateGetPTabPos = function(PRS, X, ParaPr, CurPage, ptab)
++{
++	let contentFrame = this.GetPageContentFrame(CurPage);
++	
++	let startX = contentFrame.X;
++	let endX   = contentFrame.XLimit;
++	
++	let paraFrame = this.Get_FramePr();
++	if (paraFrame)
++	{
++		startX = 0;
++		endX   = paraFrame.W;
++	}
++	
++	let left  = startX;
++	let right = endX;
++	if ("indent" === ptab.GetRelativeTo())
++	{
++		left  += ParaPr.Ind.Left;
++		right -= ParaPr.Ind.Right;
++	}
++	
++	let tabType = ptab.GetTabType();
++	let newX    = left;
++	if (tab_Right === tabType)
++		newX = right;
++	else if (tab_Center === tabType)
++		newX = (left + right) / 2;
++	
++	// A tab never moves the text back
++	if (newX < X)
++		newX = X;
++	
++	return {
++		TabWidth     : newX - X,
++		TabValue     : tabType,
++		DefaultTab   : false,
++		TabLeader    : ptab.GetTabLeaderType(),
++		TabRightEdge : false,
++		PageX        : startX,
++		PageXLimit   : endX
++	};
++};
++
+ Paragraph.prototype.private_CheckSkipKeepLinesAndWidowControl = function(CurPage)
+ {
+     var bSkipWidowAndKeepLines = false;
+diff --git a/word/Editor/Run.js b/word/Editor/Run.js
+index 50233f2d5e..535505f0c4 100644
+--- a/word/Editor/Run.js
++++ b/word/Editor/Run.js
+@@ -4568,7 +4568,9 @@ ParaRun.prototype.Recalculate_Range = function(PRS, ParaPr, Depth)
+                     SpaceLen = 0;
+                     WordLen = 0;
+ 
+-                    var TabPos   = Para.private_RecalculateGetTabPos(PRS, X, ParaPr, PRS.Page, false);
++                    var TabPos   = Item.IsPTab()
++						? Para.private_RecalculateGetPTabPos(PRS, X, ParaPr, PRS.Page, Item)
++						: Para.private_RecalculateGetTabPos(PRS, X, ParaPr, PRS.Page, false);
+                     var NewX     = X + TabPos.TabWidth;
+                     var TabValue = TabPos.TabValue;
+ 
+diff --git a/word/Editor/Serialize2.js b/word/Editor/Serialize2.js
+index d1783ed189..4f7a86739f 100644
+--- a/word/Editor/Serialize2.js
++++ b/word/Editor/Serialize2.js
+@@ -545,8 +545,15 @@ var c_oSerRunType = {
+ 	linebreakClearAll: 32,
+ 	linebreakClearLeft: 33,
+ 	linebreakClearRight: 34,
++	ptab: 35,
+ 	pptxDrawingAlternative: 0x99
+ };
++// children of c_oSerRunType.ptab, each holds the OOXML attribute value as a string
++var c_oSerPTabType = {
++	Alignment: 0,
++	RelativeTo: 1,
++	Leader: 2
++};
+ var c_oSerImageType = {
+     MediaId:0,
+     Type:1,
+@@ -6157,6 +6164,15 @@ function BinaryDocumentTableWriter(memory, doc, oMapCommentId, oNumIdMap, copyPa
+ 		}
+ 	};
+ 
++	this.WritePTab = function (item) {
++		this.memory.WriteByte(c_oSerPTabType.Alignment);
++		this.memory.WriteString2(item.GetAlignment());
++		this.memory.WriteByte(c_oSerPTabType.RelativeTo);
++		this.memory.WriteString2(item.GetRelativeTo());
++		this.memory.WriteByte(c_oSerPTabType.Leader);
++		this.memory.WriteString2(item.GetLeader());
++	};
++
+     this.WriteRunContent = function (oRun, nStart, nEnd, delText)
+     {
+         var oThis = this;
+@@ -6192,8 +6208,12 @@ function BinaryDocumentTableWriter(memory, doc, oMapCommentId, oNumIdMap, copyPa
+ 					sCurText += AscCommon.encodeSurrogateChar(item.Value);
+                     break;
+                 case para_Tab:
+-                    oThis.memory.WriteByte(c_oSerRunType.tab);
+-                    oThis.memory.WriteLong(c_oSerPropLenType.Null);
++                    if (item instanceof AscWord.CRunPTab) {
++                        oThis.bs.WriteItem(c_oSerRunType.ptab, function () { oThis.WritePTab(item); });
++                    } else {
++                        oThis.memory.WriteByte(c_oSerRunType.tab);
++                        oThis.memory.WriteLong(c_oSerPropLenType.Null);
++                    }
+                     break;
+                 case para_NewLine:
+                     switch (item.BreakType) {
+@@ -12299,6 +12319,18 @@ function Binary_DocumentTableReader(doc, oReadResult, openParams, stream, curNot
+ 			}
+ 		}
+ 	};
++	this.ReadPTab = function (type, length, ptab) {
++		var res = c_oSerConstants.ReadOk;
++		if (c_oSerPTabType.Alignment === type)
++			ptab.SetAlignment(this.stream.GetString2LE(length));
++		else if (c_oSerPTabType.RelativeTo === type)
++			ptab.SetRelativeTo(this.stream.GetString2LE(length));
++		else if (c_oSerPTabType.Leader === type)
++			ptab.SetLeader(this.stream.GetString2LE(length));
++		else
++			res = c_oSerConstants.ReadUnknown;
++		return res;
++	};
+ 	this.ReadRunContent = function (type, length, run)
+     {
+         var res = c_oSerConstants.ReadOk;
+@@ -12314,6 +12346,14 @@ function Binary_DocumentTableReader(doc, oReadResult, openParams, stream, curNot
+         {
+             oNewElem = new AscWord.CRunTab();
+         }
++        else if (c_oSerRunType.ptab === type)
++        {
++            var oPTab = new AscWord.CRunPTab();
++            res = this.bcr.Read1(length, function (t, l) {
++                return oThis.ReadPTab(t, l, oPTab);
++            });
++            oNewElem = oPTab;
++        }
+         else if (c_oSerRunType.pagenum === type)
+         {
+             oNewElem = new AscWord.CRunPageNum();
+-- 
+2.55.0
+

@@ -8,7 +8,7 @@ been edited here (sdkjs 0016, after ElixirOffice 0.7.3).
 
 from __future__ import annotations
 
-from support.settings import blank, edited_and_saved
+from support.blank import blank, edited_and_saved
 
 # One switch from each word the editor does not model, and one it does.
 KEPT = ("noLeading", "growAutofit", "cachedColBalance", "ulTrailSpace")

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from support import ScriptedShell, repo_root
+from support.blank import with_body
 from support.charts import sunburst_docx
 from support.pictures import thin_pen_wmf, wmf_docx, write_pic_bullet_docx
 from support.protected import make_protected
@@ -1190,6 +1191,51 @@ def test_an_extended_charts_title_is_not_bold(tmp_path):
     # A name can hold a space ("BAAAAA+Liberation Sans-Bold"): the line, not
     # its first word.
     assert not [f for f in fonts if "Bold" in f], fonts
+
+
+# A positional tab to the centre of the line, then one to its right margin.
+PTABS = (
+    "<w:p><w:r><w:t>Left</w:t></w:r>"
+    '<w:r><w:ptab w:relativeTo="margin" w:alignment="center" w:leader="none"/>'
+    "<w:t>Mid</w:t></w:r>"
+    '<w:r><w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"/>'
+    "<w:t>End</w:t></w:r></w:p>"
+)
+
+
+def test_a_positional_tab_moves_the_text_to_its_place(tmp_path):
+    """A positional tab (`w:ptab`) goes to the centre or the edge of the area
+    between the margins, whatever the tab stops. x2t wrote nothing for one, so
+    the editor drew "LeftMidEnd" as one word (core 0207 and sdkjs 0017, after
+    ElixirOffice 0.7.3)."""
+    pdftotext = shutil.which("pdftotext")
+    if pdftotext is None:
+        pytest.skip("no pdftotext to read the PDF's text layer")
+    document = with_body(tmp_path, PTABS)
+    with zipfile.ZipFile(document) as z:
+        xml = z.read("word/document.xml").decode()
+    width = int(re.search(r'<w:pgSz w:w="(\d+)"', xml)[1]) / 20
+    left = int(re.search(r'<w:pgMar [^>]*w:left="(\d+)"', xml)[1]) / 20
+    right = width - int(re.search(r'<w:pgMar [^>]*w:right="(\d+)"', xml)[1]) / 20
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    pdf = tmp_path / "ptab.pdf"
+
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    html = subprocess.run(
+        [pdftotext, "-bbox", str(pdf), "-"], capture_output=True, text=True, check=True
+    ).stdout
+    found = {
+        word: (float(x0), float(x1))
+        for x0, x1, word in re.findall(
+            r'<word xMin="([\d.]+)" yMin="[\d.]+" xMax="([\d.]+)"[^>]*>([^<]+)</word>',
+            html,
+        )
+    }
+    assert {"Left", "Mid", "End"} <= found.keys(), found
+    mid = sum(found["Mid"]) / 2
+    assert abs(mid - (left + right) / 2) < 2, (found, left, right)
+    assert abs(found["End"][1] - right) < 2, (found, right)
 
 
 DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
