@@ -224,3 +224,26 @@ def colour_box(
             left, top, right, _ = box or (xs[0], y, xs[-1], y)
             box = (min(left, xs[0]), top, max(right, xs[-1]), y)
     return box
+
+
+def dark_pixels(path: str, box: tuple[int, int, int, int], level: int = 160) -> int:
+    """How many pixels inside `box` (left, top, right, bottom) are darker than
+    `level` in every channel."""
+    width, height, channels, raw = read_png(path)
+    left, top, right, bottom = box
+    stride = width * channels
+    prev = bytearray(stride)
+    count = pos = 0
+    for y in range(min(height, bottom)):
+        line = unfilter(
+            bytearray(raw[pos + 1 : pos + 1 + stride]), prev, raw[pos], channels
+        )
+        pos += 1 + stride
+        prev = line
+        if y >= top:
+            count += sum(
+                1
+                for x in range(left * channels, right * channels, channels)
+                if max(line[x : x + 3]) < level
+            )
+    return count

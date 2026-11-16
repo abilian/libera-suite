@@ -35,17 +35,21 @@
   // images resolve against it, so an http-served page silently drops every
   // picture. The mapping lives on a minified-away global, but the image load
   // itself goes through HTMLImageElement.src, which is a stable browser API.
+  // The editor also reads an SVG picture's text first, with an XMLHttpRequest
+  // (sdkjs 0021), so that is redirected below too.
   const MEDIA = "file:///doc/media/";
+  function hostMedia(url) {
+    return typeof url === "string" && url.indexOf(MEDIA) === 0
+      ? hostUrl(`/__host__/media/${url.slice(MEDIA.length)}`)
+      : url;
+  }
   const srcDesc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src");
   Object.defineProperty(HTMLImageElement.prototype, "src", {
     configurable: true,
     enumerable: true,
     get: srcDesc.get,
     set: function (v) {
-      if (typeof v === "string" && v.indexOf(MEDIA) === 0) {
-        v = hostUrl(`/__host__/media/${v.slice(MEDIA.length)}`);
-      }
-      srcDesc.set.call(this, v);
+      srcDesc.set.call(this, hostMedia(v));
     },
   });
 
@@ -78,6 +82,8 @@
   XMLHttpRequest.prototype.open = function (_method, url) {
     if (typeof url === "string" && url.indexOf(FONTS) === 0) {
       arguments[1] = hostUrl(`/__host__/fonts/${url.slice(FONTS.length)}`);
+    } else {
+      arguments[1] = hostMedia(url);
     }
     return open.apply(this, arguments);
   };

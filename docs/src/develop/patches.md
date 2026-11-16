@@ -57,6 +57,8 @@ Two more fix Office 2016's extended charts (sunburst, treemap, waterfall, funnel
 
 `0020`, theirs (commit `6f67073`, their 0.9.0, for their #57), places a picture anchored to a paragraph against the column the paragraph's text is in. A paragraph that a picture filling a column pushes whole into the next one leaves an empty piece in the first, and a picture placed against its column was placed against that piece: at the foot of the first column, under the picture that fills it.
 
+`0021`, theirs (commit `8f3b4c4`, their 0.8.0, for their #61), draws a stroke thinner than a pixel in an SVG picture of the document one pixel wide, as core `0200` does for the SVGs x2t makes of WMF and EMF: the loader reads the SVG's text and marks such a stroke `vector-effect="non-scaling-stroke"`, one pixel. It reads the text with an XMLHttpRequest to the picture's `file:///doc/media/` address, which the bridge (`bridge-page.js`) redirects to the host as it does the picture's `src`; without that the request failed and the picture was drawn unchanged.
+
 `0004` is ours: Markdown keeps its headings through a save. Markdown read into a document gives each heading a style derived from a heading style, which the HTML writer, on the way back to Markdown, did not recognise, so `# Title` came back as `**Title**`. It now writes a heading by its outline level, and leaves out a bold that covers the whole heading.
 
 `0005` is ours too, and lets the PDF editor open a PDF at all. `CPDFDoc`'s constructor assigned `widgets`, `annots` and `drawings`, which its prototype defines as getters with no setters, and the bundle's strict mode refuses that: "Cannot set property widgets of #<CPDFDoc> which has only a getter". The patch drops the three assignments.

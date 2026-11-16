@@ -8,6 +8,7 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 ### Fixed
 
+- **Thin lines in a document's SVG pictures are drawn.** A line thinner than a pixel once the picture is scaled to its frame, common in technical drawings, came out a faint grey or not at all; it is now drawn a pixel wide, as Word draws it. An editor patch, after ElixirOffice's fix, and a change in Libera so that it can read the picture.
 - **A picture in a two-column page is placed beside its text.** When a picture filling the first column pushed a paragraph into the second, a picture anchored to that paragraph was put at the foot of the first column, hidden under the other. An editor patch, after ElixirOffice's fix.
 - **Changing a document's language as it opens no longer leaves every word underlined.** The spelling of the previous language was applied to the new one until the text was edited. An editor patch, after ElixirOffice's fix.
 - **A SET field in a Word document shows nothing, as in Word, and is kept when saved.** The value it sets was drawn in the text, and a SET field written in its short form was lost on save. An editor patch, after ElixirOffice's fix.

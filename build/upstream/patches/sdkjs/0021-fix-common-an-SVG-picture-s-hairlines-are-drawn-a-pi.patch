@@ -1,0 +1,247 @@
+From d6c271a60f35994b29f5fea008438288ee9ea648 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 18:55:46 +0100
+Subject: [PATCH] fix(common): an SVG picture's hairlines are drawn a pixel
+ wide
+
+A drawing scaled down to its frame scales its strokes with it, and a
+stroke thinner than a pixel is drawn faint or not at all. The loader now
+reads an SVG picture's text and draws such a stroke one pixel wide, as
+GDI does. After ElixirOffice 0.8.0 (leag1234/sdkjs 8f3b4c4).
+---
+ common/EoSvgHairline.js | 108 ++++++++++++++++++++++++++++++++++++++++
+ common/GlobalLoaders.js |  60 ++++++++++++++++++++++
+ configs/cell.json       |   1 +
+ configs/slide.json      |   1 +
+ configs/word.json       |   1 +
+ 5 files changed, 171 insertions(+)
+ create mode 100644 common/EoSvgHairline.js
+
+diff --git a/common/EoSvgHairline.js b/common/EoSvgHairline.js
+new file mode 100644
+index 0000000000..dba2ee1d39
+--- /dev/null
++++ b/common/EoSvgHairline.js
+@@ -0,0 +1,108 @@
++/*
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++(function(window)
++{
++	window['AscCommon'] = window['AscCommon'] || {};
++	var AscCommon = window['AscCommon'];
++
++	function parseNumber(value)
++	{
++		var parsed = parseFloat(value);
++		return isFinite(parsed) ? parsed : 1;
++	}
++
++	function getTransformScale(transform)
++	{
++		var match = /^\s*(matrix|scale)\s*\(([^)]*)\)\s*$/i.exec(transform || '');
++		if (!match)
++			return 1;
++
++		var values = match[2].split(/[\s,]+/).filter(function(value) { return value.length; });
++		if (match[1].toLowerCase() === 'scale')
++		{
++			var scaleX = parseNumber(values[0]);
++			var scaleY = values.length > 1 ? parseNumber(values[1]) : scaleX;
++			return Math.sqrt(Math.abs(scaleX * scaleY));
++		}
++
++		if (values.length < 6)
++			return 1;
++		var a = parseNumber(values[0]), b = parseNumber(values[1]);
++		var c = parseNumber(values[2]), d = parseNumber(values[3]);
++		return Math.sqrt(Math.abs(a * d - b * c));
++	}
++
++	AscCommon['EoSvgEffectiveScale'] = function(transformStrings, viewBoxFactor)
++	{
++		var scale = isFinite(viewBoxFactor) && viewBoxFactor > 0 ? viewBoxFactor : 1;
++		for (var index = 0; index < transformStrings.length; index++)
++			scale *= getTransformScale(transformStrings[index]);
++		return scale;
++	};
++
++	AscCommon['EoFixSvgHairlines'] = function(svgText)
++	{
++		try
++		{
++			if (typeof svgText !== 'string' || !svgText || typeof DOMParser !== 'function' || typeof XMLSerializer !== 'function')
++				return svgText;
++
++			var doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
++			if (!doc || !doc.documentElement || doc.getElementsByTagName('parsererror').length)
++				return svgText;
++
++			var root = doc.documentElement;
++			var factor = 1;
++			var viewBox = (root.getAttribute('viewBox') || '').trim().split(/[\s,]+/);
++			var width = parseFloat(root.getAttribute('width'));
++			if (viewBox.length === 4 && isFinite(width) && parseFloat(viewBox[2]) > 0)
++				factor = width / parseFloat(viewBox[2]);
++
++			var elements = doc.getElementsByTagName('*');
++			var changed = false;
++			for (var index = 0; index < elements.length; index++)
++			{
++				var element = elements[index];
++				var stroke = element.getAttribute('stroke');
++				if (element.style && element.style.stroke)
++					stroke = element.style.stroke;
++				if (!stroke)
++					continue;
++				if (!stroke || stroke === 'none' || element.getAttribute('vector-effect'))
++					continue;
++
++				var widthValue = element.getAttribute('stroke-width');
++				if (element.style && element.style.strokeWidth)
++					widthValue = element.style.strokeWidth;
++				var strokeWidth = widthValue == null || widthValue === '' ? 1 : parseFloat(widthValue);
++				if (!isFinite(strokeWidth) || strokeWidth <= 0)
++					continue;
++
++				var transforms = [];
++				for (var node = element; node && node.getAttribute; node = node.parentNode)
++				{
++					var transform = node.getAttribute('transform');
++					if (transform)
++						transforms.unshift(transform);
++				}
++				if (strokeWidth * AscCommon.EoSvgEffectiveScale(transforms, factor) >= 1)
++					continue;
++
++				element.setAttribute('vector-effect', 'non-scaling-stroke');
++				element.setAttribute('stroke-width', '1');
++				if (element.style)
++					element.style.removeProperty('stroke-width');
++				changed = true;
++			}
++			return changed ? new XMLSerializer().serializeToString(doc) : svgText;
++		}
++		catch (error)
++		{
++			return svgText;
++		}
++	};
++
++	AscCommon['EoFixSvgHairlines'] = AscCommon.EoFixSvgHairlines;
++	AscCommon['EoSvgEffectiveScale'] = AscCommon.EoSvgEffectiveScale;
++})(window);
+diff --git a/common/GlobalLoaders.js b/common/GlobalLoaders.js
+index 02a3c8c5db..8f837c2bfa 100644
+--- a/common/GlobalLoaders.js
++++ b/common/GlobalLoaders.js
+@@ -445,10 +445,70 @@
+             }
+         };
+ 
++        this.isSvgUrl = function(url)
++        {
++            if (typeof url !== 'string')
++                return false;
++            var lowerUrl = url.toLowerCase();
++            if (0 === lowerUrl.indexOf('data:'))
++                return 0 === lowerUrl.indexOf('data:image/svg+xml');
++            lowerUrl = lowerUrl.split('#')[0].split('?')[0];
++            if (lowerUrl.length > 4 && lowerUrl.lastIndexOf('.svg') === lowerUrl.length - 4)
++                return true;
++            return lowerUrl.indexOf('image/svg+xml') >= 0;
++        };
++
++        this.canFixSvg = function()
++        {
++            return typeof XMLHttpRequest === 'function' && typeof DOMParser === 'function' &&
++                typeof XMLSerializer === 'function' && typeof Blob === 'function' &&
++                typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function' &&
++                !!(window['AscCommon'] && window['AscCommon']['EoFixSvgHairlines']);
++        };
++
++        this.loadFixedSvgImage = function(image, url)
++        {
++            var request = new XMLHttpRequest();
++            request.open('GET', url, true);
++            request.responseType = 'text';
++            request.onload = function()
++            {
++                try
++                {
++                    if (request.status !== 0 && request.status !== 200)
++                        throw new Error('SVG load failed');
++                    var fixed = AscCommon.EoFixSvgHairlines(request.responseText);
++                    if (fixed === request.responseText)
++                    {
++                        image.src = url;
++                        return;
++                    }
++                    image.src = URL.createObjectURL(new Blob([fixed], {type: 'image/svg+xml'}));
++                }
++                catch (error)
++                {
++                    image.src = url;
++                }
++            };
++            request.onerror = function() { image.src = url; };
++            request.send();
++        };
++
+         this.loadImageByUrl = function(image, url, isDisableCrypto)
+         {
+             if (this.isBlockchainSupport && (true !== isDisableCrypto))
+                 image.preload_crypto(url);
++            else if (this.isSvgUrl(url) && this.canFixSvg())
++            {
++                try
++                {
++                    this.loadFixedSvgImage(image, url);
++                }
++                catch (error)
++                {
++                    image.src = url;
++                }
++            }
+             else
+                 image.src = url;
+         };
+diff --git a/configs/cell.json b/configs/cell.json
+index 3cb58920a0..431726133d 100644
+--- a/configs/cell.json
++++ b/configs/cell.json
+@@ -15,6 +15,7 @@
+ 			"vendor/string.js",
+ 			"vendor/array.js",
+ 			"common/editorscommon.js",
++			"common/EoSvgHairline.js",
+           "common/frameManager.js",
+           "common/BulletPreviewDrawer.js",
+ 			"common/HistoryCommon.js",
+diff --git a/configs/slide.json b/configs/slide.json
+index 440f6c6a3f..ac9dd17812 100644
+--- a/configs/slide.json
++++ b/configs/slide.json
+@@ -15,6 +15,7 @@
+ 			"vendor/string.js",
+ 			"vendor/array.js",
+ 			"common/editorscommon.js",
++			"common/EoSvgHairline.js",
+ 			"common/externalChartCollector.js",
+ 			"common/frameManager.js",
+ 			"common/BulletPreviewDrawer.js",
+diff --git a/configs/word.json b/configs/word.json
+index e7341712b8..eea84f4d81 100644
+--- a/configs/word.json
++++ b/configs/word.json
+@@ -15,6 +15,7 @@
+ 			"vendor/string.js",
+ 			"vendor/array.js",
+ 			"common/editorscommon.js",
++			"common/EoSvgHairline.js",
+ 			"common/externalChartCollector.js",
+ 			"common/frameManager.js",
+ 			"common/BulletPreviewDrawer.js",
+-- 
+2.55.0
+
