@@ -8,6 +8,7 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 ### Fixed
 
+- **A Word document keeps its compatibility options when saved.** A document edited here lost the layout options Word keeps for older documents (`w:compat`) that the editor does not use itself, such as `noLeading` or `growAutofit`, so Word laid it out differently afterwards. An editor patch, after ElixirOffice's fix.
 - **A workbook with a sunburst, treemap, waterfall or funnel chart opens with all its sheets.** When the chart read its data from another sheet, the workbook opened with its first sheet only, and a save kept only that one. An editor patch, after ElixirOffice's fix.
 - **The title of a sunburst, treemap, waterfall or funnel chart is drawn regular**, as in Word, not bold. An editor patch.
 - **A Slides table set to "No Border" stays without borders.** Saved and reopened, it came back with black lines half a point wide. An editor patch, after ElixirOffice's fix.

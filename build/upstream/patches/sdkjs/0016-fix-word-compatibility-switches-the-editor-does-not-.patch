@@ -1,0 +1,81 @@
+From ca871155fcd14a034daf02660052b8a0a2bf7c0f Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 17:35:51 +0100
+Subject: [PATCH] fix(word): compatibility switches the editor does not model
+ are saved
+
+x2t hands the editor a document's w:compat switches as three words of
+bits. The reader kept the five it lays out by, and the writer wrote
+every other bit as off and the third word not at all. The words are now
+kept as read and the bits not modeled written back. After ElixirOffice
+0.7.3 (leag1234/sdkjs 8f74f43).
+---
+ word/Editor/DocumentSettings.js |  2 ++
+ word/Editor/Serialize2.js       | 20 ++++++++++++++++++++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/word/Editor/DocumentSettings.js b/word/Editor/DocumentSettings.js
+index f54dfdd282..0a1729d515 100644
+--- a/word/Editor/DocumentSettings.js
++++ b/word/Editor/DocumentSettings.js
+@@ -65,6 +65,8 @@
+ 		this.BalanceSingleByteDoubleByteWidth = false;
+ 		this.UlTrailSpace                     = false;
+ 		this.UseFELayout                      = false;
++		// The w:compat switches as read, [flags1, flags2, flags3], or null: a save writes back the bits not modeled above
++		this.CompatFlags                      = null;
+ 	}
+ 	DocumentSettings.prototype.getCompatibilityMode = function()
+ 	{
+diff --git a/word/Editor/Serialize2.js b/word/Editor/Serialize2.js
+index ad53ce1a02..d1783ed189 100644
+--- a/word/Editor/Serialize2.js
++++ b/word/Editor/Serialize2.js
+@@ -7466,13 +7466,26 @@ function BinarySettingsTableWriter(memory, doc, saveParams)
+ 		if (oSettings.DoNotExpandShiftReturn) {
+ 			flags1 |= 1 << 10;
+ 		}
++		let rawFlags = oSettings.CompatFlags;
++		if (rawFlags) {
++			flags1 = (flags1 | (rawFlags[0] & ~((1 << 6) | (1 << 9) | (1 << 10)))) >>> 0;
++		}
+ 		this.bs.WriteItem(c_oSerCompat.Flags1, function() {oThis.memory.WriteULong(flags1);});
+ 		var flags2 = 0;
+ 		flags2 |=  (oSettings.UseFELayout ? 1 : 0) << 17;
+ 		if (this.saveParams.isCompatible) {
+ 			flags2 |= (oSettings.SplitPageBreakAndParaMark ? 1 : 0) << 27;
+ 		}
++		if (rawFlags) {
++			// bit 27 is modeled, but written only for a compatible save
++			let modeled2 = (1 << 17) | (this.saveParams.isCompatible ? (1 << 27) : 0);
++			flags2 = (flags2 | (rawFlags[1] & ~modeled2)) >>> 0;
++		}
+ 		this.bs.WriteItem(c_oSerCompat.Flags2, function() {oThis.memory.WriteULong(flags2);});
++		if (rawFlags && rawFlags[2]) {
++			let flags3 = rawFlags[2];
++			this.bs.WriteItem(c_oSerCompat.Flags3, function() {oThis.memory.WriteULong(flags3);});
++		}
+ 	};
+ 	this.WriteCompatSetting = function(name, uri, value)
+ 	{
+@@ -17278,10 +17291,17 @@ function Binary_SettingsTableReader(doc, oReadResult, stream)
+ 			Settings.BalanceSingleByteDoubleByteWidth = 0 !== ((flags1 >> 6) & 1);
+ 			Settings.UlTrailSpace = 0 !== ((flags1 >> 9) & 1);
+ 			Settings.DoNotExpandShiftReturn = 0 != ((flags1 >> 10) & 1);
++			Settings.CompatFlags = Settings.CompatFlags || [0, 0, 0];
++			Settings.CompatFlags[0] = flags1 >>> 0;
+ 		} else if (c_oSerCompat.Flags2 === type) {
+ 			var flags2 = this.stream.GetULong(length);
+ 			Settings.UseFELayout = 0 != ((flags2 >> 17) & 1);
+ 			Settings.SplitPageBreakAndParaMark = 0 != ((flags2 >> 27) & 1);
++			Settings.CompatFlags = Settings.CompatFlags || [0, 0, 0];
++			Settings.CompatFlags[1] = flags2 >>> 0;
++		} else if (c_oSerCompat.Flags3 === type) {
++			Settings.CompatFlags = Settings.CompatFlags || [0, 0, 0];
++			Settings.CompatFlags[2] = this.stream.GetULong(length) >>> 0;
+ 		} else
+ 			res = c_oSerConstants.ReadUnknown;
+ 		return res;
+-- 
+2.55.0
+

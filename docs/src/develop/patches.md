@@ -47,6 +47,8 @@ Two more fix Office 2016's extended charts (sunburst, treemap, waterfall, funnel
 
 `0015`, ours, after ElixirOffice 0.9.0, saves a Slides table edge the table panel set to "no border" as no line. The panel sets border type nil, and the writer took only none for no border, so it wrote a black line half a point wide and the table came back ruled.
 
+`0016`, after ElixirOffice 0.7.3 (their commit `8f74f43`), keeps a document's compatibility switches (`w:compat`) through a save. x2t hands them to the editor as three words of bits; the editor read the five it lays out by and wrote every other bit as off, and the third word not at all, so a document edited here lost switches such as `noLeading` or `growAutofit` and Word laid it out differently. It now keeps the words as read and writes back the bits it does not model.
+
 `0004` is ours: Markdown keeps its headings through a save. Markdown read into a document gives each heading a style derived from a heading style, which the HTML writer, on the way back to Markdown, did not recognise, so `# Title` came back as `**Title**`. It now writes a heading by its outline level, and leaves out a bold that covers the whole heading.
 
 `0005` is ours too, and lets the PDF editor open a PDF at all. `CPDFDoc`'s constructor assigned `widgets`, `annots` and `drawings`, which its prototype defines as getters with no setters, and the bundle's strict mode refuses that: "Cannot set property widgets of #<CPDFDoc> which has only a getter". The patch drops the three assignments.
