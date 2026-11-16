@@ -4,6 +4,10 @@
 anything, and these tests vary what the host says: which keys the menu bar
 owns, for one. So the server runs here, in the test process, and a Playwright
 Chromium loads the editor from it. It has no window opener, like `--serve`.
+
+One browser for the session, and a fresh context for each test: launching
+Chromium and Playwright's driver cost each test one to three seconds, and a
+context is as clean as a new browser -- no storage, no cache, no cookies.
 """
 
 from __future__ import annotations
@@ -17,10 +21,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import pytest
-from playwright.sync_api import (
-    TimeoutError as PlaywrightTimeoutError,
-    sync_playwright,
-)
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from support import find_free_port, keyed, launch
 
 from c_e2e.conftest import SYNC_REPORTS, flush_reports
@@ -205,8 +206,20 @@ class Editor:
         self.page.keyboard.press(combination)
 
 
+@pytest.fixture(scope="session")
+def shared_browser(playwright):
+    """Chromium unless E2E_BROWSER says otherwise: webkit is the engine of the
+    macOS window, and the Save As race was WebKit's alone."""
+    engine = os.environ.get("E2E_BROWSER", "chromium")
+    if engine == "webkit" and _is_macos_before(15):
+        pytest.skip(OLD_WEBKIT)
+    browser = launch(playwright, engine)
+    yield browser
+    browser.close()
+
+
 @pytest.fixture
-def editor_with(tmp_path, sample_document, monkeypatch):
+def editor_with(tmp_path, sample_document, monkeypatch, shared_browser):
     """An editor in a real browser, told that the menu owns `owned`.
 
     On the sample document unless given another, whose extension picks the
@@ -251,16 +264,9 @@ def editor_with(tmp_path, sample_document, monkeypatch):
         document = document or sample_document
         httpd, port, opened = _open(owned, document, locked_by, fonts)
         made.append(httpd)
-        play = sync_playwright().start()
-        made.append(play)
-        # Chromium unless E2E_BROWSER says otherwise: webkit is the engine of
-        # the macOS window, and the Save As race was WebKit's alone.
-        engine = os.environ.get("E2E_BROWSER", "chromium")
-        if engine == "webkit" and _is_macos_before(15):
-            pytest.skip(OLD_WEBKIT)
-        browser = launch(play, engine)
-        made.append(browser)
-        page = browser.new_page()
+        context = shared_browser.new_context()
+        made.append(context)
+        page = context.new_page()
         # Before any page script, in every frame: keep the event objects so a
         # test can read defaultPrevented once dispatch is over. The bridge
         # calls stopImmediatePropagation, so a listener cannot be *told* what
@@ -285,7 +291,7 @@ def editor_with(tmp_path, sample_document, monkeypatch):
     yield open_editor
 
     for thing in reversed(made):
-        for close in ("close", "shutdown", "stop"):
+        for close in ("close", "shutdown"):
             if hasattr(thing, close):
                 getattr(thing, close)()
                 break
@@ -296,6 +302,7 @@ def editor_with(tmp_path, sample_document, monkeypatch):
 def second_window(tmp_path, sample_document):
     """Another window beside an open editor: a session and a page of its own,
     on the same server and in the same browser, as windows are."""
+    contexts: list = []
 
     def _open(first: Editor, locked_by: str | None = None) -> Editor:
         document = tmp_path / f"second{sample_document.suffix}"
@@ -312,10 +319,16 @@ def second_window(tmp_path, sample_document):
         assert port is not None
         browser = first.page.context.browser
         assert browser is not None
-        page = browser.new_page()
+        # A context of its own, as before the browser was shared, and closed
+        # with the test rather than left running for the session.
+        context = browser.new_context()
+        contexts.append(context)
+        page = context.new_page()
         editor = Editor(page, port)
         page.goto(server.make_editor_url(port, window, document.name))
         editor.wait_until_ready()
         return editor
 
-    return _open
+    yield _open
+    for context in contexts:
+        context.close()

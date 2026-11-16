@@ -2,11 +2,11 @@
 
 `libera --serve` in a subprocess and a headless Chromium pointed at it: no
 fixture reaches into the package, so what is under test is what ships. Slow --
-one browser, session-scoped, for the whole directory.
+each document is loaded once, by a session-scoped fixture.
 
 Nothing here drives the editor: it photographs its own canvas and posts it to
 the host, and the tests read what the host collected. Playwright launches the
-browser (`_launch`) and, once, asks the page to post what it still holds
+browser (`_launch`) from the session's one Playwright and, once, asks the page to post what it still holds
 (`flush_reports`); tests that click and type are in host/, with their own
 server.
 """
@@ -14,7 +14,6 @@ server.
 from __future__ import annotations
 
 import contextlib
-import functools
 import json
 import os
 import shutil
@@ -51,7 +50,7 @@ BROWSERS = (
 READY = 180  # seconds: a cold payload takes a while to lay out the first page
 
 
-def _playwright_chromium() -> str | None:
+def _playwright_chromium(play) -> str | None:
     """The Chromium Playwright installs, which test_keyboard.py already drives.
 
     `uv run playwright install chromium` is a documented step, so a machine
@@ -60,31 +59,22 @@ def _playwright_chromium() -> str | None:
     install. Asked of Playwright rather than globbed out of its cache: the
     revision is in that path (chromium-1234) and moves with the version.
     """
-    try:
-        from playwright.sync_api import Error as PlaywrightError, sync_playwright
-    except ImportError:
-        return None
-    try:
-        with sync_playwright() as p:
-            found = p.chromium.executable_path
-    except (PlaywrightError, OSError):
-        # No browsers installed yet, or no driver to ask. Not an error here:
-        # the caller skips, and the skip message says how to fix it.
-        return None
+    found = play.chromium.executable_path
     return found if found and Path(found).is_file() else None
 
 
-@functools.cache
-def find_browser() -> str | None:
+def find_browser(play) -> str | None:
     """An explicit CHROMIUM wins outright, then the usual places, then Playwright's.
 
-    Called at test time and cached, not at import: asking Playwright costs a
-    driver process, and `pytest -m unit` imports this file too.
+    Asked of the session's Playwright (pytest-playwright's `playwright`
+    fixture): a process holds one sync Playwright at a time, and starting a
+    second while it runs raises "using Playwright Sync API inside the asyncio
+    loop".
     """
     if env := os.environ.get("CHROMIUM"):
         return env
     system = next((b for b in BROWSERS if b and Path(b).is_file()), None)
-    return system or _playwright_chromium()
+    return system or _playwright_chromium(play)
 
 
 def libera(*args: str, **kw) -> subprocess.CompletedProcess:
@@ -170,8 +160,8 @@ def flush_reports(page) -> None:
     )
 
 
-def _launch():
-    """A headless page, and the Playwright handles to close it with.
+def _launch(play):
+    """A headless browser of its own, and a page in it.
 
     **Through Playwright, not as a bare subprocess.** The same binary, spawned
     with the same flags by `subprocess.Popen`, starts on Linux and never
@@ -192,26 +182,19 @@ def _launch():
     CHROMIUM still wins, as `find_browser` promises: Playwright is told to use
     it rather than asked for its own.
     """
-    from playwright.sync_api import Error as PlaywrightError, sync_playwright
-
-    chosen = find_browser()
+    chosen = find_browser(play)
     launch: dict = {}
-    if chosen and chosen != _playwright_chromium():
+    if chosen and chosen != _playwright_chromium(play):
         launch["executable_path"] = chosen
 
-    play = sync_playwright().start()
-    try:
-        browser = play.chromium.launch(**launch)
-    except PlaywrightError:
-        play.stop()
-        raise
+    browser = play.chromium.launch(**launch)
     page = browser.new_page(viewport={"width": 1400, "height": 900})
     page.add_init_script(SYNC_REPORTS)
-    return play, browser, page
+    return browser, page
 
 
 @contextlib.contextmanager
-def running_editor(document: Path, work: Path) -> Generator[Editor]:
+def running_editor(document: Path, work: Path, play) -> Generator[Editor]:
     """Serve one document, load it in a headless browser, report what happened.
 
     **Everything is torn down before the tests run, and that is the point.**
@@ -234,7 +217,7 @@ def running_editor(document: Path, work: Path) -> Generator[Editor]:
     a time whatever the fixture scopes, which is the property that makes this
     robust rather than merely better tuned.
     """
-    if find_browser() is None:
+    if find_browser(play) is None:
         pytest.skip(
             "needs Chromium or Chrome: uv run playwright install chromium,"
             " or set CHROMIUM=/path/to/browser"
@@ -272,7 +255,7 @@ def running_editor(document: Path, work: Path) -> Generator[Editor]:
         )
 
     try:
-        play, browser, page = _launch()
+        browser, page = _launch(play)
     except Exception as e:
         server.kill()
         pytest.fail(f"could not launch a browser: {e}")
@@ -318,8 +301,6 @@ def running_editor(document: Path, work: Path) -> Generator[Editor]:
         # including the helpers Chromium leaves behind when its parent is shot.
         with contextlib.suppress(Exception):
             browser.close()
-        with contextlib.suppress(Exception):
-            play.stop()
         server.kill()
         server.wait(timeout=10)
 
@@ -330,17 +311,21 @@ def running_editor(document: Path, work: Path) -> Generator[Editor]:
 
 
 @pytest.fixture(scope="session")
-def editor(tmp_path_factory, sample_document) -> Iterator[Editor]:
+def editor(tmp_path_factory, sample_document, playwright) -> Iterator[Editor]:
     """The plain document, opened for real, to the point of being readable."""
-    with running_editor(sample_document, tmp_path_factory.mktemp("e2e")) as e:
+    with running_editor(
+        sample_document, tmp_path_factory.mktemp("e2e"), playwright
+    ) as e:
         yield e
 
 
 @pytest.fixture(scope="session")
-def illustrated_editor(tmp_path_factory, illustrated_document) -> Iterator[Editor]:
+def illustrated_editor(
+    tmp_path_factory, illustrated_document, playwright
+) -> Iterator[Editor]:
     """The same, for the one thing a document without a picture cannot show."""
     with running_editor(
-        illustrated_document, tmp_path_factory.mktemp("e2e-media")
+        illustrated_document, tmp_path_factory.mktemp("e2e-media"), playwright
     ) as e:
         yield e
 
@@ -350,7 +335,7 @@ def illustrated_editor(tmp_path_factory, illustrated_document) -> Iterator[Edito
     params=[apps.TABLES, apps.SLIDES],
     ids=lambda app: app.name,
 )
-def blank_editor(request, tmp_path_factory) -> Iterator[Editor]:
+def blank_editor(request, tmp_path_factory, playwright) -> Iterator[Editor]:
     """Tables and Slides in turn, each on the blank its own payload ships.
 
     Words has the plain sample above; these two only need to prove the second
@@ -361,5 +346,5 @@ def blank_editor(request, tmp_path_factory) -> Iterator[Editor]:
     work = tmp_path_factory.mktemp(f"e2e-{app.name}")
     document = work / f"blank.{app.ext}"
     shutil.copyfile(payload_mod.resolve().root / "empty" / app.blank, document)
-    with running_editor(document, work) as editor:
+    with running_editor(document, work, playwright) as editor:
         yield editor

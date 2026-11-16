@@ -18,8 +18,8 @@ import urllib.request
 from urllib.parse import urlparse
 
 import pytest
-from playwright.sync_api import expect, sync_playwright
-from support import find_free_port, keyed, launch
+from playwright.sync_api import expect
+from support import find_free_port, keyed
 
 from libera import payload as payload_mod
 from libera.host import language, recents, server, session as sessions
@@ -39,7 +39,7 @@ def answered(page, route: str):
 
 
 @pytest.fixture
-def start_window(tmp_path):
+def start_window(tmp_path, shared_browser):
     """The start window, loaded, with three documents in the Recent list."""
     sessions.SESSIONS.clear()
     # The session state gets its own subtree. remember_recent refuses anything
@@ -58,14 +58,8 @@ def start_window(tmp_path):
     httpd = server.make_server(port, start)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
-    play = sync_playwright().start()
-    try:
-        browser = launch(play)
-    except pytest.skip.Exception:
-        play.stop()
-        httpd.shutdown()
-        raise
-    page = browser.new_page(viewport={"width": 720, "height": 640})
+    context = shared_browser.new_context(viewport={"width": 720, "height": 640})
+    page = context.new_page()
     page.goto(keyed(f"http://127.0.0.1:{port}/__host__/start"))
     page.wait_for_selector("#new button")
 
@@ -78,8 +72,7 @@ def start_window(tmp_path):
     page.asked_for = asked_for
     yield page
 
-    browser.close()
-    play.stop()
+    context.close()
     httpd.shutdown()
     sessions.SESSIONS.clear()
 
