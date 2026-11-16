@@ -538,9 +538,16 @@ class Groups:
 
     def __init__(self, parser: argparse.ArgumentParser) -> None:
         # No help: argparse would list the groups above our list of every
-        # command, which says the same and more.
+        # command, which says the same and more. And `prog` here and below,
+        # because Python 3.13's argparse (the builders') builds a subcommand's
+        # from the parent's usage line: "usage: lb [-h] GROUP [COMMAND] ...
+        # release check".
         self._top = parser.add_subparsers(
-            dest="group", metavar="GROUP", required=True, help=argparse.SUPPRESS
+            dest="group",
+            metavar="GROUP",
+            required=True,
+            help=argparse.SUPPRESS,
+            prog=parser.prog,
         )
         self.listing: list[tuple[str, str]] = []
 
@@ -553,7 +560,7 @@ class Groups:
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
         subparsers = parser.add_subparsers(
-            dest="command", metavar="COMMAND", required=True
+            dest="command", metavar="COMMAND", required=True, prog=parser.prog
         )
         return Group(self, name, subparsers)
 

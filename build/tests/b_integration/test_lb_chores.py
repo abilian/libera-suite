@@ -33,9 +33,16 @@ def git(cwd: Path, *args: str) -> str:
 
 
 @pytest.fixture
-def tap(tmp_path):
+def tap(tmp_path, monkeypatch):
     """A tap clone at libera 9.9.8 whose `make update` writes `writes`, its
-    branch tracking a bare repository; and that repository."""
+    branch tracking a bare repository; and that repository.
+
+    The tap phase commits as whoever runs it. A machine with no git identity
+    of its own (the Linux test container) refused that commit, so the test
+    names one."""
+    for who in ("AUTHOR", "COMMITTER"):
+        monkeypatch.setenv(f"GIT_{who}_NAME", "t")
+        monkeypatch.setenv(f"GIT_{who}_EMAIL", "t@t")
     bare = tmp_path / "remote.git"
     git(tmp_path, "init", "-q", "--bare", "-b", "main", str(bare))
     clone = tmp_path / "homebrew-tap"
