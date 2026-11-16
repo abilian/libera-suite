@@ -1,0 +1,31 @@
+From df82f6a58b76480d069825e0aca32fcc1dbda9fc Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 15:51:24 +0100
+Subject: [PATCH] fix(charts): an extended chart's title is not bold
+
+A chart title was always bold. Word draws an extended chart's title
+(sunburst, treemap, waterfall, funnel) in its chart style's regular face
+when its runs say nothing; only a classic chart's default title is
+bold. ElixirOffice 0.9.0 makes the same change.
+---
+ common/Drawings/Format/ChartFormat.js | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/common/Drawings/Format/ChartFormat.js b/common/Drawings/Format/ChartFormat.js
+index b1f7d6bca6..c6de9bc5a1 100644
+--- a/common/Drawings/Format/ChartFormat.js
++++ b/common/Drawings/Format/ChartFormat.js
+@@ -3031,7 +3031,9 @@
+             }
+             let bChartEx = this.isChartEx && this.isChartEx();
+             if(this instanceof CTitle || this.parent instanceof CTitle) {
+-                style.TextPr.Bold = true;
++                // An extended chart's title takes the chart style's face,
++                // which is regular: only a classic chart's default title is bold.
++                style.TextPr.Bold = !bChartEx;
+                 if(this.parent instanceof CChart || (this.parent && (this.parent.parent instanceof CChart))) {
+                     if(chart_text_pr && typeof chart_text_pr.FontSize === "number")
+                         style.TextPr.FontSize = (chart_text_pr.FontSize * 1.2) >> 0;
+-- 
+2.55.0
+

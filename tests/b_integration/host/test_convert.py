@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from support import ScriptedShell, repo_root
+from support.charts import sunburst_docx
 from support.pictures import thin_pen_wmf, wmf_docx, write_pic_bullet_docx
 from support.protected import make_protected
 
@@ -1164,6 +1165,31 @@ def test_a_missing_font_is_drawn_in_its_alternate_name(tmp_path):
     ).stdout
     assert "Liberation Serif" in fonts
     assert "Carlito" not in fonts
+
+
+def test_an_extended_charts_title_is_not_bold(tmp_path):
+    """Word draws an extended chart's title (a sunburst, a waterfall) in the
+    chart style's regular face when its runs say nothing: the PDF Word made of
+    ElixirOffice's #76 embeds no bold font. The editor made every chart title
+    bold, and only a classic chart's default title is (sdkjs 0013, after
+    ElixirOffice 0.9.0)."""
+    pdffonts = shutil.which("pdffonts")
+    if pdffonts is None:
+        pytest.skip("no pdffonts to list the PDF's fonts")
+    document = tmp_path / "sunburst.docx"
+    sunburst_docx(payload_mod.resolve().root, document, "Sales by region")
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    pdf = tmp_path / "sunburst.pdf"
+
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    fonts = subprocess.run(
+        [pdffonts, str(pdf)], capture_output=True, text=True, check=True
+    ).stdout.splitlines()[2:]
+    assert fonts, "the title was not drawn at all"
+    # A name can hold a space ("BAAAAA+Liberation Sans-Bold"): the line, not
+    # its first word.
+    assert not [f for f in fonts if "Bold" in f], fonts
 
 
 DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")

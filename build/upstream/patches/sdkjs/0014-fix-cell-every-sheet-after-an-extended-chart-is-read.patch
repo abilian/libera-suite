@@ -1,0 +1,41 @@
+From 8366a31acdc9275a737a697bb3d5c325f027f5c7 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 15:54:03 +0100
+Subject: [PATCH] fix(cell): every sheet after an extended chart is read
+
+x2t writes a drawing as one record holding the chart and, after it, the
+fallback Excel keeps for it. When the editor could draw the chart it left
+the fallback unread, so every record after it was read from the wrong
+place: a workbook whose sunburst reads its data from another sheet
+opened with its first sheet alone. Go to the end of the record whatever
+was read of it. ElixirOffice 0.9.1 has the same fix.
+---
+ cell/model/Serialize.js | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/cell/model/Serialize.js b/cell/model/Serialize.js
+index 7a1fe8512e..9bbf47105f 100644
+--- a/cell/model/Serialize.js
++++ b/cell/model/Serialize.js
+@@ -12528,6 +12528,10 @@
+             }
+             else if ( c_oSer_DrawingType.pptxDrawing == type )
+             {
++                // The record holds the object and, after it, the fallback Excel
++                // keeps for it. Whatever is read of it, the next record starts
++                // after both, or every record after it is misread.
++                let nEnd = this.bcr.stream.cur + length;
+                 oDrawing.graphicObject = this.ReadPptxDrawing();
+ 
+                 if(oDrawing.graphicObject && !oDrawing.graphicObject.isSupported())
+@@ -12547,6 +12551,7 @@
+                         });
+                     }
+                 }
++                this.bcr.stream.Seek2(nEnd);
+             }
+             else if( c_oSer_DrawingType.ClientData == type ) {
+                 var oClientData = new AscFormat.CClientData();
+-- 
+2.55.0
+

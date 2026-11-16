@@ -1,4 +1,4 @@
-"""A Word document holding one picture, made from the payload's blank."""
+"""A Word document holding one drawing, made from the payload's blank."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import operator
 import re
 import struct
 import zipfile
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from libera.host import apps
@@ -25,39 +26,66 @@ def picture_docx(
 ) -> None:
     """The blank with one picture, drawn by `blip`, whose relationships are
     `rels`, and `media` added to the package."""
-    with zipfile.ZipFile(payload / "empty" / apps.WORDS.blank) as z:
-        parts = {n: z.read(n) for n in z.namelist() if not n.endswith("/")}
-    drawing = (
-        "<w:p><w:r><w:drawing><wp:inline>"
-        '<wp:extent cx="914400" cy="914400"/><wp:docPr id="901" name="p"/>'
-        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+    graphic = (
         '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
         '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
         '<pic:nvPicPr><pic:cNvPr id="901" name="p"/><pic:cNvPicPr/></pic:nvPicPr>'
         f"<pic:blipFill>{blip}<a:stretch><a:fillRect/></a:stretch></pic:blipFill>"
         '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/>'
         '</a:xfrm><a:prstGeom prst="rect"/></pic:spPr>'
-        "</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
+        "</pic:pic></a:graphicData>"
+    )
+    types = "".join(
+        f'<Default Extension="{ext}" ContentType="{mime}"/>'
+        for ext, mime in MIME_TYPES.items()
+    )
+    drawing_docx(payload, path, Drawing(graphic, rels, media, types))
+
+
+@dataclass(frozen=True)
+class Drawing:
+    """An inline drawing: its `a:graphic` content, its relationships, the
+    parts it adds to the package and their content types, and its size in
+    EMU."""
+
+    graphic: str
+    rels: str
+    parts: dict[str, bytes]
+    types: str
+    size: tuple[int, int] = (914400, 914400)
+
+
+def drawing_docx(payload: pathlib.Path, path: pathlib.Path, it: Drawing) -> None:
+    """The blank with `it` in its first paragraph; each content type is added
+    unless the blank already has it."""
+    with zipfile.ZipFile(payload / "empty" / apps.WORDS.blank) as z:
+        package = {n: z.read(n) for n in z.namelist() if not n.endswith("/")}
+    cx, cy = it.size
+    drawing = (
+        "<w:p><w:r><w:drawing><wp:inline>"
+        f'<wp:extent cx="{cx}" cy="{cy}"/><wp:docPr id="901" name="p"/>'
+        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        f"{it.graphic}</a:graphic></wp:inline></w:drawing></w:r></w:p>"
     )
     document, n = re.subn(
-        r"(<w:body>)", lambda m: m[1] + drawing, parts["word/document.xml"].decode()
+        r"(<w:body>)", lambda m: m[1] + drawing, package["word/document.xml"].decode()
     )
     assert n == 1
-    parts["word/document.xml"] = document.encode()
-    relations = parts["word/_rels/document.xml.rels"].decode()
-    parts["word/_rels/document.xml.rels"] = relations.replace(
-        "</Relationships>", rels + "</Relationships>"
+    package["word/document.xml"] = document.encode()
+    relations = package["word/_rels/document.xml.rels"].decode()
+    package["word/_rels/document.xml.rels"] = relations.replace(
+        "</Relationships>", it.rels + "</Relationships>"
     ).encode()
-    types = parts["[Content_Types].xml"].decode()
-    for ext, mime in MIME_TYPES.items():
-        if f'Extension="{ext}"' not in types:
-            types = types.replace(
-                "</Types>", f'<Default Extension="{ext}" ContentType="{mime}"/></Types>'
-            )
-    parts["[Content_Types].xml"] = types.encode()
-    parts.update(media)
+    content_types = package["[Content_Types].xml"].decode()
+    for entry in re.findall(r"<[^>]+/>", it.types):
+        key = re.search(r'(?:Extension|PartName)="[^"]+"', entry)
+        assert key is not None
+        if key[0] not in content_types:
+            content_types = content_types.replace("</Types>", entry + "</Types>")
+    package["[Content_Types].xml"] = content_types.encode()
+    package.update(it.parts)
     with zipfile.ZipFile(path, "w") as z:
-        for name, data in parts.items():
+        for name, data in package.items():
             z.writestr(name, data)
 
 

@@ -8,6 +8,8 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 ### Fixed
 
+- **A workbook with a sunburst, treemap, waterfall or funnel chart opens with all its sheets.** When the chart read its data from another sheet, the workbook opened with its first sheet only, and a save kept only that one. An editor patch, after ElixirOffice's fix.
+- **The title of a sunburst, treemap, waterfall or funnel chart is drawn regular**, as in Word, not bold. An editor patch.
 - **A document saved after an edit no longer gains an empty protection setting.** Its settings gained `<w:documentProtection />`, which protects nothing and which Word never writes. A core patch, the same guard ElixirOffice has.
 
 ## [0.7.2] - 2026-11-16
