@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 import pytest
 from support import ScriptedShell, repo_root
 from support.blank import with_body
-from support.charts import sunburst_docx
+from support.charts import linked_as_chart_docx, sunburst_docx
 from support.make_sample_docx import solid_png
 from support.pictures import (
     RELATIONSHIPS,
@@ -1394,6 +1394,21 @@ def test_a_picture_follows_its_paragraph_into_the_next_column(tmp_path):
     # In the second column, at its top, where the paragraph's text is.
     assert blue[0] > red[2], (red, blue)
     assert blue[1] == red[1], (red, blue)
+
+
+def test_an_extended_chart_linked_as_a_chart_is_drawn(tmp_path):
+    """Apache POI links an extended chart's part as a classic chart, with a
+    picture to fall back on. Word draws the chart; x2t read the part as a
+    classic chart, found none, and drew neither it nor the picture
+    (ElixirOffice's #76, core 0209, after their 0.7.3 and 0.8.0)."""
+    document = tmp_path / "linked.docx"
+    linked_as_chart_docx(payload_mod.resolve().root, document, "Sales by region")
+    words = open_in(apps.WORDS, document, tmp_path / "session")
+    pdf = tmp_path / "linked.pdf"
+
+    export(words, pdf, apps.WORDS.ids_by_ext["pdf"], None)
+
+    assert "Sales by region" in _read_text(pdf).decode()
 
 
 DAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")

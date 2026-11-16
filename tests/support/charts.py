@@ -7,9 +7,12 @@ ElixirOffice's #76 filed, a plain chart relationship, is another matter.
 
 from __future__ import annotations
 
+import re
 import zipfile
 from typing import TYPE_CHECKING
 
+from libera.host import apps
+from support.make_sample_docx import solid_png
 from support.pictures import Drawing, drawing_docx
 
 if TYPE_CHECKING:
@@ -214,3 +217,76 @@ def sunburst_xlsx(path: pathlib.Path, sheets: tuple[str, ...]) -> None:
     with zipfile.ZipFile(path, "w") as z:
         for name, text in parts.items():
             z.writestr(name, text)
+
+
+CHART_REL = f"{OFFICE_REL}/chart"
+CHART_TYPE = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
+MC = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+
+
+def linked_as_chart_docx(payload: pathlib.Path, path: pathlib.Path, title: str) -> None:
+    """The blank holding a sunburst in the form of ElixirOffice's #76 (Apache
+    POI writes it): the extended chart's part linked by the classic chart
+    relationship and content type, its reference a `c:chart`, in an
+    mc:AlternateContent whose fallback is a red picture."""
+    with zipfile.ZipFile(payload / "empty" / apps.WORDS.blank) as z:
+        package = {n: z.read(n) for n in z.namelist() if not n.endswith("/")}
+    extent = '<wp:extent cx="5486400" cy="3200400"/><wp:docPr id="901" name="Chart"/>'
+    choice = (
+        f"<w:drawing><wp:inline>{extent}"
+        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        f'<a:graphicData uri="{CHARTEX}">'
+        '<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"'
+        f' xmlns:r="{OFFICE_REL}" r:id="rIdChart"/>'
+        "</a:graphicData></a:graphic></wp:inline></w:drawing>"
+    )
+    fallback = (
+        f"<w:drawing><wp:inline>{extent}"
+        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        '<pic:nvPicPr><pic:cNvPr id="902" name="Fallback"/><pic:cNvPicPr/></pic:nvPicPr>'
+        f'<pic:blipFill><a:blip xmlns:r="{OFFICE_REL}" r:embed="rIdFallback"/>'
+        "<a:stretch><a:fillRect/></a:stretch></pic:blipFill>"
+        '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="5486400" cy="3200400"/>'
+        '</a:xfrm><a:prstGeom prst="rect"/></pic:spPr></pic:pic>'
+        "</a:graphicData></a:graphic></wp:inline></w:drawing>"
+    )
+    paragraph = (
+        f'<w:p><w:r><mc:AlternateContent xmlns:mc="{MC}" xmlns:cx="{CHARTEX}">'
+        f'<mc:Choice Requires="cx">{choice}</mc:Choice>'
+        f"<mc:Fallback>{fallback}</mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    )
+    document, n = re.subn(
+        r"(<w:body>)", lambda m: m[1] + paragraph, package["word/document.xml"].decode()
+    )
+    assert n == 1
+    package["word/document.xml"] = document.encode()
+    package["word/_rels/document.xml.rels"] = (
+        package["word/_rels/document.xml.rels"]
+        .decode()
+        .replace(
+            "</Relationships>",
+            f'<Relationship Id="rIdChart" Type="{CHART_REL}" Target="charts/chart1.xml"/>'
+            f'<Relationship Id="rIdFallback" Type="{OFFICE_REL}/image"'
+            ' Target="media/fallback.png"/></Relationships>',
+        )
+        .encode()
+    )
+    types = package["[Content_Types].xml"].decode()
+    types = types.replace(
+        "</Types>",
+        f'<Override PartName="/word/charts/chart1.xml" ContentType="{CHART_TYPE}"/></Types>',
+    )
+    if 'Extension="png"' not in types:
+        types = types.replace(
+            "</Types>", '<Default Extension="png" ContentType="image/png"/></Types>'
+        )
+    package["[Content_Types].xml"] = types.encode()
+    # Its data read from cells, as every chart Word or POI writes: the editor
+    # cannot save an extended chart whose data names no cells.
+    package["word/charts/chart1.xml"] = sunburst(title, sheet="Sheet1").encode()
+    package["word/media/fallback.png"] = solid_png(40, 24, (220, 0, 0))
+    with zipfile.ZipFile(path, "w") as z:
+        for name, data in package.items():
+            z.writestr(name, data)

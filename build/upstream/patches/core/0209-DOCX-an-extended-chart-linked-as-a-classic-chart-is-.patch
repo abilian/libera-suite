@@ -1,0 +1,182 @@
+From b36ef7c50c6f17e6d2556d0949e8dc465e186092 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 20:04:02 +0100
+Subject: [PATCH] DOCX: an extended chart linked as a classic chart is read as
+ one
+
+Apache POI links an Office 2016 chart's part (cx:chartSpace) with the
+classic chart relationship and content type. x2t read it as a classic
+chart, found none, and drew neither it nor its fallback picture; a save
+wrote an empty chart in its place. Such a part is now read by its root
+element, the drawing that refers to it written as an extended chart,
+and an extended chart with no fallback no longer turns the next drawing
+into an alternative. After ElixirOffice 0.7.3 and 0.8.0
+(leag1234/core 561a9a85f, 8743e3006).
+---
+ .../Document/BinWriter/BinaryWriterD.cpp      |  7 ++-
+ OOXML/Common/ChartExDetect.h                  | 50 +++++++++++++++++++
+ OOXML/DocxFormat/FileFactory.cpp              |  6 +++
+ OOXML/PPTXFormat/Logic/SmartArt.cpp           | 12 +++++
+ OOXML/PPTXFormat/Logic/SmartArt.h             |  3 ++
+ 5 files changed, 77 insertions(+), 1 deletion(-)
+ create mode 100644 OOXML/Common/ChartExDetect.h
+
+diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
+index b2c137c9e3..b75a7f982f 100644
+--- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
++++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
+@@ -5268,7 +5268,9 @@ void BinaryDocumentTableWriter::WriteMathRunContent(OOX::Logic::CMRun* pMRun)
+ 			case OOX::et_w_pict:
+ 			case OOX::et_w_drawing:
+ 			{
+-				WriteDrawingPptx(item);				
++				WriteDrawingPptx(item);
++				// a chartEx without mc:Fallback must not turn the next drawing into an alternative
++				m_oParamsWriter.bWriteAlternative = false;
+ 			}break;
+ 			case OOX::et_w_fldChar:
+ 			{
+@@ -6722,6 +6724,8 @@ void BinaryDocumentTableWriter::WriteRunContent(std::vector<OOX::WritingElement*
+ 		case OOX::et_w_drawing:
+ 			{
+ 				WriteDrawingPptx(item);
++				// a chartEx without mc:Fallback must not turn the next drawing into an alternative
++				m_oParamsWriter.bWriteAlternative = false;
+ 				break;
+ 			}
+ 		case OOX::et_w_fldChar:
+@@ -7055,6 +7059,7 @@ void BinaryDocumentTableWriter::WriteDrawing(std::wstring* pXml, OOX::Logic::CDr
+ 		}
+ 		if (pGraphic->chartRec.IsInit() && pGraphic->chartRec->id_data.IsInit() )
+ 		{
++			pGraphic->chartRec->CheckChartExFile(&m_oBcw.m_oStream);
+ 			m_oBcw.m_oStream.WriteBYTE(pGraphic->chartRec->m_bChartEx ? c_oSerImageType2::ChartEx : c_oSerImageType2::Chart);
+ 			m_oBcw.m_oStream.WriteBYTE(c_oSerPropLenType::Variable);
+ 
+diff --git a/OOXML/Common/ChartExDetect.h b/OOXML/Common/ChartExDetect.h
+new file mode 100644
+index 0000000000..f6f46b1ccb
+--- /dev/null
++++ b/OOXML/Common/ChartExDetect.h
+@@ -0,0 +1,50 @@
++#pragma once
++
++#include "../../DesktopEditor/common/File.h"
++#include "../SystemUtility/SystemUtility.h"
++
++namespace OOX
++{
++	inline bool IsChartExPart(const CPath& oFileName)
++	{
++		NSFile::CFileBinary oFile;
++		if (!oFile.OpenFile(oFileName.GetPath()))
++			return false;
++
++		BYTE pBuffer[4096];
++		DWORD dwRead = 0;
++		oFile.ReadFile(pBuffer, sizeof(pBuffer), dwRead);
++		oFile.CloseFile();
++
++		std::string sHead((char*)pBuffer, dwRead);
++		size_t nPos = 0;
++		while (true)
++		{
++			nPos = sHead.find('<', nPos);
++			if (nPos == std::string::npos || nPos + 1 >= sHead.size())
++				return false;
++			if (sHead[nPos + 1] != '?' && sHead[nPos + 1] != '!')
++				break;
++			++nPos;
++		}
++		size_t nEnd = sHead.find('>', nPos);
++		if (nEnd == std::string::npos)
++			return false;
++
++		std::string sRoot = sHead.substr(nPos + 1, nEnd - nPos - 1);
++		size_t nNameEnd = sRoot.find_first_of(" \t\r\n/");
++		std::string sName = sRoot.substr(0, nNameEnd);
++		size_t nColon = sName.find(':');
++		std::string sPrefix = (nColon == std::string::npos) ? "" : sName.substr(0, nColon);
++		std::string sLocal = (nColon == std::string::npos) ? sName : sName.substr(nColon + 1);
++		if (sLocal != "chartSpace")
++			return false;
++
++		std::string sDecl = sPrefix.empty() ? "xmlns=" : ("xmlns:" + sPrefix + "=");
++		size_t nDecl = sRoot.find(sDecl);
++		if (nDecl == std::string::npos)
++			return false;
++		const std::string sChartExNs = "http://schemas.microsoft.com/office/drawing/2014/chartex";
++		return sRoot.compare(nDecl + sDecl.size() + 1, sChartExNs.size(), sChartExNs) == 0;
++	}
++}
+diff --git a/OOXML/DocxFormat/FileFactory.cpp b/OOXML/DocxFormat/FileFactory.cpp
+index 9b315d72b5..adfdfe1528 100644
+--- a/OOXML/DocxFormat/FileFactory.cpp
++++ b/OOXML/DocxFormat/FileFactory.cpp
+@@ -60,6 +60,7 @@
+ #include "../XlsxFormat/Chart/ChartDrawing.h"
+ #include "../PPTXFormat/Theme.h"
+ #include "../PPTXFormat/Logic/HeadingVariant.h"
++#include "../Common/ChartExDetect.h"
+ 
+ namespace OOX
+ {
+@@ -168,6 +169,9 @@ namespace OOX
+ 			return smart_ptr<OOX::File>(new CVmlDrawing( pMain, oRootPath, oFileName ));
+ 		else if ( oRelation.Type() == OOX::FileTypes::ChartDrawing)
+ 			return smart_ptr<OOX::File>(new CChartDrawing( pMain, oRootPath, oFileName ));
++		// A chartEx part (root cx:chartSpace) linked with the classic chart relationship: read as what it is
++		else if ( oRelation.Type() == OOX::FileTypes::Chart && IsChartExPart(oFileName) )
++			return smart_ptr<OOX::File>(new OOX::Spreadsheet::CChartExFile( pMain, oRootPath, oFileName ));
+ 		else if ( oRelation.Type() == OOX::FileTypes::Chart )
+ 			return smart_ptr<OOX::File>(new OOX::Spreadsheet::CChartFile( pMain, oRootPath, oFileName ));
+ 		else if ( oRelation.Type() == OOX::FileTypes::ChartEx )
+@@ -319,6 +323,8 @@ namespace OOX
+ 			return smart_ptr<OOX::File>(new CChartDrawing( pMain, oRootPath, oFileName ));
+ 		else if (pRelation->Type() == FileTypes::MicrosoftOfficeUnknown) //ms package
+ 			return smart_ptr<OOX::File>(new OleObject( pMain, oFileName, true ));
++		else if ( pRelation->Type() == OOX::FileTypes::Chart && IsChartExPart(oFileName) )
++			return smart_ptr<OOX::File>(new OOX::Spreadsheet::CChartExFile( pMain, oRootPath, oFileName ));
+ 		else if ( pRelation->Type() == OOX::FileTypes::Chart )
+ 			return smart_ptr<OOX::File>(new OOX::Spreadsheet::CChartFile( pMain, oRootPath, oFileName ));
+ 		else if ( pRelation->Type() == OOX::FileTypes::ChartEx )
+diff --git a/OOXML/PPTXFormat/Logic/SmartArt.cpp b/OOXML/PPTXFormat/Logic/SmartArt.cpp
+index 6c8c104933..de79f1de46 100644
+--- a/OOXML/PPTXFormat/Logic/SmartArt.cpp
++++ b/OOXML/PPTXFormat/Logic/SmartArt.cpp
+@@ -481,6 +481,18 @@ namespace PPTX
+ 				m_bChartEx = true;
+ 			}
+ 		}
++		void ChartRec::CheckChartExFile(NSBinPptxRW::CBinaryFileWriter* pWriter)
++		{
++			if (m_bChartEx || !id_data.IsInit()) return;
++
++			OOX::IFileContainer* pRels = pWriter ? pWriter->GetRelsPtr() : NULL;
++			smart_ptr<OOX::File> file;
++			if (parentFileIs<OOX::IFileContainer>())	file = parentFileAs<OOX::IFileContainer>().Find(*id_data);
++			else if (pRels != NULL)						file = pRels->Find(*id_data);
++
++			if (file.smart_dynamic_cast<OOX::Spreadsheet::CChartExFile>().IsInit())
++				m_bChartEx = true;
++		}
+ 		void ChartRec::toPPTY(NSBinPptxRW::CBinaryFileWriter* pWriter) const
+ 		{
+ 			OOX::IFileContainer* pRels = pWriter->GetRelsPtr();
+diff --git a/OOXML/PPTXFormat/Logic/SmartArt.h b/OOXML/PPTXFormat/Logic/SmartArt.h
+index cf1766b8ca..e481052be2 100644
+--- a/OOXML/PPTXFormat/Logic/SmartArt.h
++++ b/OOXML/PPTXFormat/Logic/SmartArt.h
+@@ -104,6 +104,9 @@ namespace PPTX
+ 
+ 			nullable<OOX::RId>	id_data;
+ 
++			// Sets m_bChartEx when the referenced part is a chartEx part.
++			void CheckChartExFile(NSBinPptxRW::CBinaryFileWriter* pWriter);
++
+ 			bool				m_bChartEx = false;
+ 			int					m_nCountCharts = 0;
+ 
+-- 
+2.55.0
+
