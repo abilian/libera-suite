@@ -1,0 +1,30 @@
+From 6226907a76cc13e6423627c6bc9673116d89f4fe Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 16:03:51 +0100
+Subject: [PATCH] fix(slide): a table edge set to no border is saved as none
+
+The table panel's "no border" sets an edge to border type nil, which
+the writer did not take for none: it wrote a black line half a point
+wide, and the table came back ruled. ElixirOffice 0.9.0 has the same
+fix.
+---
+ common/Shapes/SerializeWriter.js | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/common/Shapes/SerializeWriter.js b/common/Shapes/SerializeWriter.js
+index dad7a56c45..2d84490e93 100644
+--- a/common/Shapes/SerializeWriter.js
++++ b/common/Shapes/SerializeWriter.js
+@@ -5259,7 +5259,8 @@ function CBinaryFileWriter()
+ 
+     this.WriteTableCellBorder = function(_border)
+     {
+-        if (_border.Value == border_None)
++        // The table panel's "no border" is nil, not none: both are no line.
++        if (_border.Value == border_None || _border.Value == AscWord.BorderType.nil)
+         {
+             oThis.StartRecord(0);
+             oThis.WriteUChar(g_nodeAttributeStart);
+-- 
+2.55.0
+

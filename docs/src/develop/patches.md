@@ -45,6 +45,8 @@ The two other `sdkjs` patches choose fonts, and come from ElixirOffice's fork of
 
 Two more fix Office 2016's extended charts (sunburst, treemap, waterfall, funnel), both ours, after changes ElixirOffice made in 0.9.0 and 0.9.1. `0013` draws an extended chart's title in its chart style's regular face, as Word does, where every chart title was bold. `0014` reads every sheet of a workbook that holds one: x2t writes a drawing as one record, the chart and then the fallback Excel keeps for it, and the reader left the fallback unread when it could draw the chart, so every record after it was misread and a workbook whose sunburst reads another sheet opened with its first sheet alone.
 
+`0015`, ours, after ElixirOffice 0.9.0, saves a Slides table edge the table panel set to "no border" as no line. The panel sets border type nil, and the writer took only none for no border, so it wrote a black line half a point wide and the table came back ruled.
+
 `0004` is ours: Markdown keeps its headings through a save. Markdown read into a document gives each heading a style derived from a heading style, which the HTML writer, on the way back to Markdown, did not recognise, so `# Title` came back as `**Title**`. It now writes a heading by its outline level, and leaves out a bold that covers the whole heading.
 
 `0005` is ours too, and lets the PDF editor open a PDF at all. `CPDFDoc`'s constructor assigned `widgets`, `annots` and `drawings`, which its prototype defines as getters with no setters, and the bundle's strict mode refuses that: "Cannot set property widgets of #<CPDFDoc> which has only a getter". The patch drops the three assignments.
