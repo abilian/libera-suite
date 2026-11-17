@@ -41,4 +41,10 @@ src/libera/manifest.json
 .coverage
 htmlcov/
 
+# Each tool ignores its cache from inside it, but pytest writes that file only
+# as a session ends: after `make clean`, the first run found its cache unignored.
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
 .hop3-local.toml
