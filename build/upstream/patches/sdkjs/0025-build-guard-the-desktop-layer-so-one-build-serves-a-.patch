@@ -1,0 +1,172 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Mon, 16 Nov 2026 22:34:11 +0100
+Subject: [PATCH] build: guard the desktop layer, so one build serves a browser too
+
+The desktop layer replaces editor methods as it loads and calls what
+only the desktop host provides, so a desktop build cannot run in a
+browser. Wrapped in one block that runs only where the host object
+exists, the same build serves both.
+---
+ build/loaders/sdk-concat.cjs   | 18 +++++++-
+ build/test/sdk-concat.test.cjs | 95 ++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 112 insertions(+), 1 deletion(-)
+
+diff --git i/build/loaders/sdk-concat.cjs w/build/loaders/sdk-concat.cjs
+index 51aea10e11..324a0d97b1 100644
+--- i/build/loaders/sdk-concat.cjs
++++ w/build/loaders/sdk-concat.cjs
+@@ -120,6 +120,17 @@ module.exports = function sdkConcatLoader() {
+     const addCtx = this.addContextDependency.bind(this);
+     const files  = expandGlobs(rawFiles, addCtx);
+ 
++    // The desktop layer replaces the editors' methods as it loads, and calls what
++    // only the desktop host provides. Guarded by that host's object, one build
++    // serves both: the desktop host defines it before any script runs, and a
++    // browser never does. getFilesMin/getFilesAll append the layer last, so the
++    // guard is one block around the tail, and its files keep sharing one scope.
++    const desktopCfg   = platform === 'desktop' && sdkCfg['desktop'];
++    const desktopCount = desktopCfg
++        ? expandGlobs(desktopCfg[opts.chunk === 'min' ? 'min' : 'common'] || []).length
++        : 0;
++    const guardFrom    = desktopCount ? files.length - desktopCount : -1;
++
+     // Register every source file as a webpack dependency so watch mode works.
+     for (const f of files) {
+         this.addDependency(path.resolve(f));
+@@ -207,7 +218,8 @@ module.exports = function sdkConcatLoader() {
+             // own top-level `"use strict";` from becoming the directive prologue
+             // of the sdk-all wrapper, which would make the whole bundle strict.
+             // Same line count, so per-file line mappings stay exact.
+-            result += ';' + content;
++            // On the same line as the ';', so every line mapping stays exact.
++            result += (i === guardFrom ? ';if (window["AscDesktopEditor"]) {' : ';') + content;
+ 
+             if (hasTrail) {
+                 // Trailing \n already provides the inter-file separator.
+@@ -217,6 +229,10 @@ module.exports = function sdkConcatLoader() {
+                 genLine += nlCount + 1;
+             }
+         }
++        // On a line of its own: the last file may end in a line comment.
++        if (guardFrom !== -1) {
++            result += '}\n';
++        }
+ 
+         // commonDefines.js (part of the 'min' chunk) hardcodes
+         // window.AscCommon.g_cXxx to placeholder values — DefinePlugin above
+diff --git i/build/test/sdk-concat.test.cjs w/build/test/sdk-concat.test.cjs
+index 4c189ebdfd..41bf5457fc 100644
+--- i/build/test/sdk-concat.test.cjs
++++ w/build/test/sdk-concat.test.cjs
+@@ -10,8 +10,10 @@ const assert = require('node:assert/strict');
+ const fs     = require('node:fs');
+ const os     = require('node:os');
+ const path   = require('node:path');
++const vm     = require('node:vm');
+ 
+ const { validate } = require('schema-utils');
++const { SourceMapConsumer } = require('source-map-js');
+ 
+ const sdkConcatLoader = require('../loaders/sdk-concat.cjs');
+ 
+@@ -137,3 +139,96 @@ test('schema: rejects unknown properties', () => {
+         typoedOption: true,
+     }, { name: 'sdk-concat-loader' }));
+ });
++
++// The desktop layer, guarded: a fixture with one web file per chunk and a desktop
++// layer of three files, the way configs/*.json list them. desk.js ends in a line
++// comment with no newline, and desk2.js calls what desk.js declares.
++function makeDesktopFixtureSrcRoot() {
++    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-concat-desktop-'));
++    for (const dir of ['configs', 'src', 'vendor']) fs.mkdirSync(path.join(root, dir));
++    const files = {
++        'vendor/polyfill.js': '',
++        'src/web-min.js': 'window.webMin = true;\n',
++        'src/web.js': 'window.web = true;\n',
++        'src/desk-min.js': '"use strict";\nwindow.desktopMin = true;\n',
++        'src/desk.js': '"use strict";\nwindow.desktopLayer = true;\nfunction helper() { return 1; }\n// no newline after this',
++        'src/desk2.js': 'let shared = helper();\nwindow.helped = shared;\n',
++    };
++    for (const [name, content] of Object.entries(files)) fs.writeFileSync(path.join(root, name), content);
++    fs.writeFileSync(path.join(root, 'configs', 'word.json'), JSON.stringify({ sdk: {
++        min: ['src/web-min.js'],
++        common: ['src/web.js'],
++        desktop: { min: ['src/desk-min.js'], common: ['src/desk.js', 'src/desk2.js'] },
++    } }));
++    return root;
++}
++
++// Runs both chunks as a page would, with or without the desktop host's object.
++async function loadBundles(srcRoot, platform, withHost) {
++    const page = {};
++    page.window = page;
++    if (withHost) page.AscDesktopEditor = {};
++    vm.createContext(page);
++    for (const chunk of ['min', 'all']) {
++        const { content } = await runLoader(srcRoot, { module: 'word', chunk, srcRoot, platform });
++        vm.runInContext(content, page);
++    }
++    return page;
++}
++
++test('loader: in a browser, the desktop layer of a desktop build does nothing', async () => {
++    const srcRoot = makeDesktopFixtureSrcRoot();
++    try {
++        const page = await loadBundles(srcRoot, 'desktop', false);
++        assert.equal(page.webMin, true);
++        assert.equal(page.web, true);
++        assert.equal(page.desktopMin, undefined);
++        assert.equal(page.desktopLayer, undefined);
++        assert.equal(page.helped, undefined);
++    } finally {
++        fs.rmSync(srcRoot, { recursive: true, force: true });
++    }
++});
++
++test('loader: in the desktop host, the desktop layer runs, sharing one scope', async () => {
++    const srcRoot = makeDesktopFixtureSrcRoot();
++    try {
++        const page = await loadBundles(srcRoot, 'desktop', true);
++        assert.equal(page.web, true);
++        assert.equal(page.desktopMin, true);
++        assert.equal(page.desktopLayer, true);
++        assert.equal(page.helped, 1);
++    } finally {
++        fs.rmSync(srcRoot, { recursive: true, force: true });
++    }
++});
++
++test('loader: a browser build has neither the desktop layer nor its guard', async () => {
++    const srcRoot = makeDesktopFixtureSrcRoot();
++    try {
++        for (const chunk of ['min', 'all']) {
++            const { content } = await runLoader(srcRoot, { module: 'word', chunk, srcRoot });
++            assert.doesNotMatch(content, /AscDesktopEditor|desktop/);
++        }
++    } finally {
++        fs.rmSync(srcRoot, { recursive: true, force: true });
++    }
++});
++
++test('loader: the guard leaves every line of the desktop layer where its source map says', async () => {
++    const srcRoot = makeDesktopFixtureSrcRoot();
++    try {
++        const { content, map } = await runLoader(srcRoot, { module: 'word', chunk: 'all', srcRoot, platform: 'desktop' });
++        const consumer = new SourceMapConsumer(map);
++        const lines = content.split('\n');
++        for (const [file, text] of [['desk.js', 'window.desktopLayer = true;'], ['desk2.js', 'window.helped = shared;']]) {
++            const generated = lines.findIndex(line => line.includes(text)) + 1;
++            const original = consumer.originalPositionFor({ line: generated, column: 0 });
++            assert.ok(original.source.endsWith(path.join('src', file)));
++            const source = fs.readFileSync(path.join(srcRoot, 'src', file), 'utf8').split('\n');
++            assert.equal(source[original.line - 1], text);
++        }
++    } finally {
++        fs.rmSync(srcRoot, { recursive: true, force: true });
++    }
++});
+-- 
+2.0
+
