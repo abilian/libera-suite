@@ -276,7 +276,9 @@ cmd_check() {
         brew_opt="$(brew --prefix 2>/dev/null)/opt"
         [ -x "${LLVM_DIR:-$brew_opt/llvm}/bin/llvm-ar" ] ||
             want llvm "Homebrew's LLVM (llvm-ar), which V8 is built with"
-        [ -x "${LLVM_DIR:-$brew_opt/llvm}/bin/ld64.lld" ] || [ -x "$brew_opt/lld/bin/ld64.lld" ] ||
+        # build.sh takes the newest versioned keg (lld@21) when there is no lld.
+        [ -x "${LLVM_DIR:-$brew_opt/llvm}/bin/ld64.lld" ] || [ -x "${LLD_DIR:-$brew_opt/lld}/bin/ld64.lld" ] ||
+            ls "$brew_opt"/lld@*/bin/ld64.lld >/dev/null 2>&1 ||
             want lld "lld (ld64.lld), which V8 is linked with"
     fi
 

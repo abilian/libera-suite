@@ -114,6 +114,14 @@ setup_env() {
     # Keep V8's object files between runs so an interrupted build resumes
     # rather than restarting from nothing.
     export V8_KEEP_BUILD_DIR="${V8_KEEP_BUILD_DIR:-1}"
+    # V8 links with lld on the Mac (core 0210). Where Homebrew has no bottle of
+    # the current lld, it builds LLVM's whole chain from source and fails on
+    # macOS 14; a versioned keg (lld@21) still has one, and the newest is taken.
+    if [ "$(uname -s)" = Darwin ] && [ -z "${LLD_DIR:-}" ] &&
+        [ ! -x "$(brew --prefix)/opt/lld/bin/ld64.lld" ]; then
+        LLD_DIR="$(ls -d "$(brew --prefix)"/opt/lld@* 2>/dev/null | sort -V | tail -1)"
+        [ -n "$LLD_DIR" ] && export LLD_DIR
+    fi
 
     BOTO_CONFIG="$BUILD_ROOT/.boto-empty"
     # Unlink before creating. `: >` truncates, which needs write permission on
