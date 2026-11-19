@@ -369,6 +369,18 @@ cmd_configure() {
         echo "==> link jobs: $link_jobs (link.exe peaks near 3 GB)"
     fi
 
+    # V8's fetch runs depot_tools, which wants Python 3.11 or later, and
+    # gsutil, which refuses anything after 3.13 ("gsutil requires Python
+    # version 3.9-3.13", on this Mac's 3.15). CMake takes the first python3 it
+    # finds; give it one both accept where there is one. PYTHON_BIN is cached.
+    for py in python3.13 python3.12 python3.11; do
+        if command -v "$py" >/dev/null 2>&1; then
+            set -- "$@" "-DPYTHON_BIN=$(command -v "$py")"
+            echo "==> python for the third-party builders: $py"
+            break
+        fi
+    done
+
     ICU_DATA_FILTER_FILE="$(winpath "$ICU_FILTER")"
     export ICU_DATA_FILTER_FILE
     if ! cmp -s "$ICU_FILTER" "$ICU_INSTALL/libera-data-filter.json"; then
