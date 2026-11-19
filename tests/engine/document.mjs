@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
-import { scripts } from "./harness.mjs";
+import { JQUERY_STUB, scripts } from "./harness.mjs";
 
 const EDITOR_TYPES = { word: "document", cell: "spreadsheet", slide: "presentation" };
 
@@ -99,15 +99,15 @@ export async function openDocument(
     vm.runInContext(text, engine, { filename: file });
 
   run(path.join(payload, "AllFonts.js"));
-  const [native, jquery, xregexp, min, all] = scripts(editor, {
+  const files = scripts(editor, {
     sdkjs,
     webApps: path.join(payload, "web-apps"),
   });
-  for (const file of [native, jquery, xregexp, min]) run(file);
+  for (const file of files.slice(0, -1)) run(file);
   runWasmEngine(run, engine, sdkjs, "fonts");
   runWasmEngine(run, engine, sdkjs, "zlib");
-  run(all);
-  if (editor === "cell") {
+  run(files.at(-1));
+  if (editor === "cell" && files.some((f) => f.endsWith(JQUERY_STUB))) {
     // What editors.cpp appends for the spreadsheet, and only for it.
     vm.runInContext("$.ready()", engine);
   }

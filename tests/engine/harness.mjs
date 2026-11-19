@@ -18,7 +18,7 @@ export const EDITORS = ["word", "cell", "slide", "visio"];
 // Upstream deleted jQuery's stub after 9.3.8, and with it the `$.ready()`
 // editors.cpp called for the spreadsheet (Euro-Office/core#311). The config
 // still names the file, and doctrenderer skips a file the payload lacks.
-const JQUERY_STUB = "common/Native/jquery_native.js";
+export const JQUERY_STUB = "common/Native/jquery_native.js";
 
 function payloadPaths() {
   const sdkjs = process.env.LIBERA_SDKJS;
