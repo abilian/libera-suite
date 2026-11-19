@@ -49,6 +49,13 @@ ARG LLVM_VERSION
 ARG IMAGE_IDENTITY
 ARG LLVM_SHA256_AMD64
 ARG LLVM_SHA256_ARM64
+# CPython for V8's fetch alone, from python-build-standalone: depot_tools
+# refuses jammy's 3.10, gsutil anything after 3.13, and depot_tools calls
+# tarfile's extractall(filter=), which jammy's python3.11 (3.11.0) predates.
+ARG PYTHON_VERSION=3.12.16
+ARG PYTHON_RELEASE=20261110
+ARG PYTHON_SHA256_AMD64=c2f87d4b4e8db3abddb0f116c6ccfc503d0cbdbb9ee8faacddad1b679ec12e99
+ARG PYTHON_SHA256_ARM64=4792f81750282597fb2a3389fe18b945ed2ba6aad5e45ad406d122c58cb33081
 ARG NODE_VERSION=20.20.2
 ARG NODE_SHA256_AMD64=df770b2a6f130ed8627c9782c988fda9669fa23898329a61a871e32f965e007d
 ARG NODE_SHA256_ARM64=73093db209e4e9e09dd7d15a47aeaab1b74833830df03efa5f942a1122c5fa71
@@ -103,9 +110,6 @@ RUN set -eu; \
 # clang, lld and llvm-ar for V8 come from the LLVM tarball below; lld links
 # against libxml2, which jammy has, hence libxml2 here.
 #
-# python3.11 for V8's fetch alone: depot_tools refuses jammy's 3.10, and gsutil
-# anything after 3.13. build.sh hands it to CMake as PYTHON_BIN.
-#
 # build-essential covers libstdc++.a, which ICU links against statically and
 # Fedora splits into a package of its own -- see the assertion below.
 #
@@ -132,7 +136,6 @@ RUN apt-get install -y --no-install-recommends --reinstall \
         file \
         python3 \
         python3-venv \
-        python3.11 \
         python-is-python3 \
         autoconf \
         automake \
@@ -179,6 +182,25 @@ RUN set -eu; \
     for tool in clang clang++ ld.lld lld llvm-ar llvm-ranlib llvm-nm; do \
         ln -s "/opt/llvm/bin/$tool" "/usr/local/bin/$tool"; \
     done
+
+# A CPython for V8's fetch (see PYTHON_VERSION above), as python3.12, which
+# build.sh looks for before python3 and hands to CMake as PYTHON_BIN. The
+# image's own python3 stays jammy's, for everything else.
+RUN set -eu; \
+    arch="$(dpkg --print-architecture)"; \
+    case "$arch" in \
+        amd64) py_arch=x86_64;  py_sha="${PYTHON_SHA256_AMD64}" ;; \
+        arm64) py_arch=aarch64; py_sha="${PYTHON_SHA256_ARM64}" ;; \
+        *) echo "FATAL: no pinned Python checksum for $arch" >&2; exit 1 ;; \
+    esac; \
+    tarball="cpython-${PYTHON_VERSION}+${PYTHON_RELEASE}-${py_arch}-unknown-linux-gnu-install_only.tar.gz"; \
+    curl -fsSL -o "$tarball" "https://github.com/astral-sh/python-build-standalone/releases/download/${PYTHON_RELEASE}/cpython-${PYTHON_VERSION}%2B${PYTHON_RELEASE}-${py_arch}-unknown-linux-gnu-install_only.tar.gz"; \
+    echo "${py_sha}  ${tarball}" | sha256sum -c -; \
+    mkdir -p /opt/python; \
+    tar -xzf "$tarball" -C /opt/python --strip-components=1; \
+    rm -f "$tarball"; \
+    ln -s /opt/python/bin/python3.12 /usr/local/bin/python3.12; \
+    python3.12 -c 'import ssl, tarfile, sys; assert sys.version_info[:2] == (3, 12)'
 
 # Node from nodejs.org rather than NodeSource. `curl | bash` of setup_20.x adds
 # an apt repository carrying whatever 20.x is current that week, so the same
