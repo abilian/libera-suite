@@ -33,6 +33,7 @@ src/libera/manifest.json
 /docs/zensical.*.toml
 /docs/.cache/
 /notes/pdf/
+/notes/reports/*.pdf
 
 # The macOS application bundle (build/macos/macos-app.sh)
 /build/out/
