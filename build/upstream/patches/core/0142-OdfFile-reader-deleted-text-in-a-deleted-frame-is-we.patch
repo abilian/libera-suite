@@ -1,4 +1,4 @@
-From 084c86ecd0937fc1e166f286d39235b0660868e7 Mon Sep 17 00:00:00 2001
+From 76924b274fd36a79f354874ea510fb9c2fdc2f6a Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 09:18:20 +0200
 Subject: [PATCH] OdfFile reader: deleted text in a deleted frame is
@@ -19,10 +19,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/OdfFile/Reader/Format/paragraph_elements.cpp b/OdfFile/Reader/Format/paragraph_elements.cpp
-index adeea8a995..865b7dad49 100644
+index f7f8898163..57d61e3c6d 100644
 --- a/OdfFile/Reader/Format/paragraph_elements.cpp
 +++ b/OdfFile/Reader/Format/paragraph_elements.cpp
-@@ -209,6 +209,8 @@ void text::docx_convert(oox::docx_conversion_context & Context)
+@@ -210,6 +210,8 @@ void text::docx_convert(oox::docx_conversion_context & Context)
  		if (state.type == 2)
  		{
  			add_del_run = true;

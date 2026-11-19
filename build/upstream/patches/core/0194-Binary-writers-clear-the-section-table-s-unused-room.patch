@@ -1,4 +1,4 @@
-From f690d66e5f6b966b5caf6d816f3fd29f2d880433 Mon Sep 17 00:00:00 2001
+From 484f8a2c583e6c81762d481b09a3a440e1872d0b Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Wed, 4 Nov 2026 18:30:04 +0100
 Subject: [PATCH] Binary writers: clear the section table's unused room
@@ -47,10 +47,10 @@ index aa4af696d3..b7b09a45f0 100644
  int BinaryFileWriter::GetMainTableSize()
  {
 diff --git a/OOXML/Binary/Sheets/Reader/BinaryWriterS.cpp b/OOXML/Binary/Sheets/Reader/BinaryWriterS.cpp
-index b81b38ae95..8a24b94529 100644
+index 50abcfa799..8fe888ad61 100644
 --- a/OOXML/Binary/Sheets/Reader/BinaryWriterS.cpp
 +++ b/OOXML/Binary/Sheets/Reader/BinaryWriterS.cpp
-@@ -9404,6 +9404,10 @@ void BinaryFileWriter::WriteMainTableStart(NSBinPptxRW::CBinaryFileWriter &oBuff
+@@ -9440,6 +9440,10 @@ void BinaryFileWriter::WriteMainTableStart(NSBinPptxRW::CBinaryFileWriter &oBuff
  	m_nLastFilePos = m_nMainTableStart + GetMainTableSize();
  	//Write mtLen
  	m_oBcw->m_oStream.WriteBYTE(0);

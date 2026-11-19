@@ -1,4 +1,4 @@
-From ba3d40b4f0bbf36e791fb403d3454bdc44443b1f Mon Sep 17 00:00:00 2001
+From 2242a3049bb0f1fc40a03ad2e5004270bfd0e906 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 21:23:07 +0200
 Subject: [PATCH] OdfFile writer: booleans as true/false, unset optionals left
@@ -46,10 +46,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  6 files changed, 87 insertions(+), 62 deletions(-)
 
 diff --git a/OdfFile/Writer/Format/ods_table_state.cpp b/OdfFile/Writer/Format/ods_table_state.cpp
-index da6fbe938a..5b405b187a 100644
+index cee2ff6b3e..c7d83c04bb 100644
 --- a/OdfFile/Writer/Format/ods_table_state.cpp
 +++ b/OdfFile/Writer/Format/ods_table_state.cpp
-@@ -382,6 +382,8 @@ void ods_table_state::add_row_break(_INT32 val)
+@@ -426,6 +426,8 @@ void ods_table_state::add_row_break(_INT32 val)
  void ods_table_state::add_column(office_element_ptr & elm, _UINT32 repeated, office_element_ptr & style_elm)
  {
  	current_level_.back()->add_child_element(elm);
@@ -58,7 +58,7 @@ index da6fbe938a..5b405b187a 100644
  
  	std::wstring style_name;
  
-@@ -464,6 +466,9 @@ void ods_table_state::set_column_hidden(bool val)
+@@ -508,6 +510,9 @@ void ods_table_state::set_column_hidden(bool val)
  	table_table_column* column = dynamic_cast<table_table_column*>(columns_.back().elm.get());
  	if (column == NULL) return;
  
@@ -68,7 +68,7 @@ index da6fbe938a..5b405b187a 100644
  	column->attlist_.table_visibility_ = table_visibility(table_visibility::Collapse);
  }
  void ods_table_state::set_table_dimension(_INT32 col, _INT32 row)
-@@ -490,6 +495,8 @@ void ods_table_state::add_row(office_element_ptr & elm, _UINT32 repeated, office
+@@ -534,6 +539,8 @@ void ods_table_state::add_row(office_element_ptr & elm, _UINT32 repeated, office
  		}
  	}
  	current_level_.back()->add_child_element(elm);
@@ -77,7 +77,7 @@ index da6fbe938a..5b405b187a 100644
  
  	std::wstring style_name;
  
-@@ -533,6 +540,10 @@ void ods_table_state::set_row_hidden(bool Val)
+@@ -577,6 +584,10 @@ void ods_table_state::set_row_hidden(bool Val)
  	table_table_row* row = dynamic_cast<table_table_row*>(rows_.back().elm.get());
  	if (row == NULL)return;
  
@@ -88,7 +88,7 @@ index da6fbe938a..5b405b187a 100644
  	row->attlist_.table_visibility_ = table_visibility(table_visibility::Collapse);
  }
  void ods_table_state::set_row_optimal_height(bool val)
-@@ -1358,7 +1369,9 @@ void ods_table_state::set_cell_value(const std::wstring & value, bool need_cash)
+@@ -1402,7 +1413,9 @@ void ods_table_state::set_cell_value(const std::wstring & value, bool need_cash)
  			cell->attlist_.common_value_and_type_attlist_->office_string_value_ = value;
  			break;
  		case office_value_type::Boolean:

@@ -1,4 +1,4 @@
-From d3db1821b94bf43280167b2d2234a7cd33ed9127 Mon Sep 17 00:00:00 2001
+From 84ed7316b4987b995009eaa6db0085ee0ca77f57 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Tue, 6 Oct 2026 10:25:17 +0200
 Subject: [PATCH] fix(pdf): CPDFDoc no longer assigns the fields its prototype
@@ -13,7 +13,7 @@ three, which strict mode refuses: "Cannot set property widgets of
  1 file changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/pdf/src/document.js b/pdf/src/document.js
-index 8ad9623f9c..a00cd61831 100644
+index d7a7d7de9f..df679eca5b 100644
 --- a/pdf/src/document.js
 +++ b/pdf/src/document.js
 @@ -110,9 +110,10 @@ var CPresentation = CPresentation || function(){};

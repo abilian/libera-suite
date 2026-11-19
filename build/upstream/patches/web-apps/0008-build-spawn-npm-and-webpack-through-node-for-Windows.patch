@@ -1,4 +1,4 @@
-From 823f89087f6509d547e7ae8e7d22e958a34da1df Mon Sep 17 00:00:00 2001
+From 5d9700594b090fa3eae4f6070260c6628d3c476e Mon Sep 17 00:00:00 2001
 From: SF on Windows <sf+windows@abilian.com>
 Date: Tue, 29 Sep 2026 05:03:11 +0000
 Subject: [PATCH] build: spawn npm and webpack through node, for Windows
@@ -20,10 +20,10 @@ get wrong.
  1 file changed, 15 insertions(+), 4 deletions(-)
 
 diff --git a/build/scripts/build-pipeline.js b/build/scripts/build-pipeline.js
-index 8f0f81a972..f45e118da0 100755
+index ba920f4ffe..0e74c573c4 100755
 --- a/build/scripts/build-pipeline.js
 +++ b/build/scripts/build-pipeline.js
-@@ -223,7 +223,10 @@ async function phase(title, taskSpecs) {
+@@ -238,7 +238,10 @@ async function phase(title, taskSpecs) {
  // ---- pipeline ---------------------------------------------------------------
  
  const node = process.execPath; // same node version as the parent
@@ -35,7 +35,7 @@ index 8f0f81a972..f45e118da0 100755
  
  const WEBPACK_CONFIGS = [
      'webpack.documenteditor.mjs',
-@@ -270,13 +273,21 @@ async function main() {
+@@ -290,13 +293,21 @@ async function main() {
  
      for (const cfg of WEBPACK_CONFIGS) {
          const name = cfg.replace('webpack.', '').replace('.mjs', '');

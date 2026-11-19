@@ -1,4 +1,4 @@
-From 85afe8f0fcff929e182c14725fb0d5bcd062b5d7 Mon Sep 17 00:00:00 2001
+From 6e48fe497c2e2d6bc9191fef8c372f227b240b68 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:55:15 +0200
 Subject: [PATCH] OdfFile: w:outlineLvl is zero-based, and text:level must not
@@ -46,10 +46,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  4 files changed, 21 insertions(+), 5 deletions(-)
 
 diff --git a/OdfFile/Reader/Converter/docx_conversion_context.cpp b/OdfFile/Reader/Converter/docx_conversion_context.cpp
-index 8ec9c04547..c15968f172 100644
+index 866600e6ca..36ad05516d 100644
 --- a/OdfFile/Reader/Converter/docx_conversion_context.cpp
 +++ b/OdfFile/Reader/Converter/docx_conversion_context.cpp
-@@ -2199,7 +2199,7 @@ int docx_conversion_context::process_paragraph_attr(odf_reader::text::paragraph_
+@@ -2308,7 +2308,7 @@ int docx_conversion_context::process_paragraph_attr(odf_reader::text::paragraph_
  							if ((outline_level) && (*outline_level < 10))
  							{
  								output_stream() << L"<w:pPr>";
@@ -58,7 +58,7 @@ index 8ec9c04547..c15968f172 100644
  								output_stream() << L"</w:pPr>";
  							}					
  						}
-@@ -2210,7 +2210,7 @@ int docx_conversion_context::process_paragraph_attr(odf_reader::text::paragraph_
+@@ -2319,7 +2319,7 @@ int docx_conversion_context::process_paragraph_attr(odf_reader::text::paragraph_
  							//if ((Attr->outline_level_) && (*Attr->outline_level_ > 0))
  							if ((outline_level) && (*outline_level < 10))
  							{
@@ -67,17 +67,17 @@ index 8ec9c04547..c15968f172 100644
  							}
  							output_stream() << L"</w:pPr>";
  						}
-@@ -2266,7 +2266,7 @@ int docx_conversion_context::process_paragraph_attr(odf_reader::text::paragraph_
- 						output_stream() << L"<w:numId w:val=\"" << list_styles.id_outline() << L"\"/>"; // check bug 51965
- 						output_stream() << L"</w:numPr>";
- 					}
+@@ -2385,7 +2385,7 @@ int docx_conversion_context::process_paragraph_attr(odf_reader::text::paragraph_
+ 				}
+ 				if (write_outline)
+ 				{
 -					output_stream() << L"<w:outlineLvl w:val=\"" << *outline_level << L"\"/>";
 +					output_stream() << L"<w:outlineLvl w:val=\"" << outline_level_to_ooxml(*outline_level) << L"\"/>";
  				}
  
  				if (!get_text_tracked_context().dumpRPrInsDel_.empty())
 diff --git a/OdfFile/Reader/Converter/docx_conversion_context.h b/OdfFile/Reader/Converter/docx_conversion_context.h
-index 3e9802d523..09fc66c1ee 100644
+index 6ed59ea700..b8f506d550 100644
 --- a/OdfFile/Reader/Converter/docx_conversion_context.h
 +++ b/OdfFile/Reader/Converter/docx_conversion_context.h
 @@ -74,6 +74,18 @@ namespace oox {
@@ -100,10 +100,10 @@ index 3e9802d523..09fc66c1ee 100644
  {
      class docx_document;
 diff --git a/OdfFile/Reader/Format/style_paragraph_properties_docx.cpp b/OdfFile/Reader/Format/style_paragraph_properties_docx.cpp
-index ccde631ca0..fdac5ed62d 100644
+index 68ec4010db..dcb7d2dfc8 100644
 --- a/OdfFile/Reader/Format/style_paragraph_properties_docx.cpp
 +++ b/OdfFile/Reader/Format/style_paragraph_properties_docx.cpp
-@@ -210,7 +210,7 @@ void paragraph_format_properties::docx_convert(oox::docx_conversion_context & Co
+@@ -211,7 +211,7 @@ void paragraph_format_properties::docx_convert(oox::docx_conversion_context & Co
  					}
  				_pPr << L"</w:numPr>";
  			}
@@ -113,7 +113,7 @@ index ccde631ca0..fdac5ed62d 100644
  	    
  		if (fo_text_align_)
 diff --git a/OdfFile/Reader/Format/text_elements.cpp b/OdfFile/Reader/Format/text_elements.cpp
-index e0497f50df..32e4525017 100644
+index 35068e945c..4b6296632a 100644
 --- a/OdfFile/Reader/Format/text_elements.cpp
 +++ b/OdfFile/Reader/Format/text_elements.cpp
 @@ -550,7 +550,11 @@ void h::add_attributes( const xml::attributes_wc_ptr & Attributes )

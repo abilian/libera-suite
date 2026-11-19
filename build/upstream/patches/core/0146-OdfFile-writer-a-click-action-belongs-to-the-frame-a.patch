@@ -1,4 +1,4 @@
-From 2772d635d16e928c020a73116f7cf7f7e8678df8 Mon Sep 17 00:00:00 2001
+From 50f816f63de930430cc16398502245f4b12ee8cb Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 16:55:48 +0200
 Subject: [PATCH] OdfFile writer: a click action belongs to the frame, after

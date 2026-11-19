@@ -1,4 +1,4 @@
-From a354f1fbcf9d6f2dc1cde67aafbdb73c92f13845 Mon Sep 17 00:00:00 2001
+From a7ed79d9eb52b1396c6b4404c161c7773258438e Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Sat, 31 Oct 2026 10:28:43 +0100
 Subject: [PATCH] x2t: refuse an encrypted OOXML file whose integrity check

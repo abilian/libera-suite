@@ -1,4 +1,4 @@
-From e1486a25c4a1d72156f02b6ff1d540b6c549a15b Mon Sep 17 00:00:00 2001
+From d165395aa19f442b8e3d60d4e16ff17f9cfa8ed3 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 10 Sep 2026 15:57:06 +0200
 Subject: [PATCH] v8: allow keeping the build directory between runs
@@ -8,32 +8,26 @@ full rebuild from scratch. That is expensive for a multi-hour build that
 may be interrupted. Honour V8_KEEP_BUILD_DIR=1 to keep it; ninja is
 incremental and gn gen still re-runs.
 ---
- Common/3dParty/v8/nc-build.py | 12 ++++++++----
- 1 file changed, 8 insertions(+), 4 deletions(-)
+ Common/3dParty/v8/nc-build.py | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
-index 88c6854578..f6dbee8b45 100644
+index a8d07b68a1..778436f4e2 100644
 --- a/Common/3dParty/v8/nc-build.py
 +++ b/Common/3dParty/v8/nc-build.py
-@@ -1049,10 +1049,14 @@ solutions = [
-         output_path = v8_src_path / "out.gn"/ f"{targetarch}.release"
+@@ -566,8 +566,10 @@ def build_and_install():
+     targetarch = get_cpu()
+     output_path = v8_src_path / "out.gn" / f"{targetarch}.release"
  
-         # ensure out dir is clean
--        try:
--            shutil.rmtree( output_path )
--        except FileNotFoundError:
--            pass
-+        # Wiping forces a full rebuild on every invocation, which is painful on
-+        # a machine where a multi-hour build may be interrupted. Keep it when
-+        # asked; ninja is incremental and gn re-runs below anyway.
-+        if os.environ.get( "V8_KEEP_BUILD_DIR" ) != "1":
-+            try:
-+                shutil.rmtree( output_path )
-+            except FileNotFoundError:
-+                pass
- 
-         gn_args = get_gn_args_file_content()
- 
+-    # ensure out dir is clean
+-    if output_path.exists():
++    # ensure out dir is clean, unless asked to keep it: wiping forces a full
++    # rebuild on every run, painful where a long build may be interrupted.
++    # ninja is incremental, and args.gn is written again below anyway.
++    if output_path.exists() and os.environ.get( "V8_KEEP_BUILD_DIR" ) != "1":
+         shutil.rmtree( output_path )
+     nc.ensure_directory_exists( output_path )
+     ( output_path / "args.gn" ).write_text( get_gn_args_file_content() )
 -- 
 2.55.0
 

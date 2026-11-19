@@ -1,0 +1,33 @@
+From f80aeba8e55208b96020da6c4acc6142177a4a39 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Fri, 25 Sep 2026 08:58:12 +0200
+Subject: [PATCH] OdfFile writer: STYLEREF is not a bookmark reference
+
+The writer took any field instruction containing REF for a REF field,
+STYLEREF included, and wrote it as a text:bookmark-ref without a target,
+whose text-only content could not hold the spaces of a heading's text:
+tdf137855.odt and tdf137855_2.odt, now that the reader writes chapter
+fields as STYLEREF. A STYLEREF field now keeps its result as text.
+
+Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+---
+ OdfFile/Writer/Format/odt_conversion_context.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/OdfFile/Writer/Format/odt_conversion_context.cpp b/OdfFile/Writer/Format/odt_conversion_context.cpp
+index d4ff93b850..ae9685a628 100644
+--- a/OdfFile/Writer/Format/odt_conversion_context.cpp
++++ b/OdfFile/Writer/Format/odt_conversion_context.cpp
+@@ -820,7 +820,8 @@ void odt_conversion_context::set_field_instr()
+ 			current_fields.back().value = instr.substr(9, instr.length() - 5);
+ 	}
+ 	res1 = instr.find(L"REF");
+-	if (std::wstring::npos != res1 && current_fields.back().type == 0)
++	// Not STYLEREF, a heading's text or number: it has no bookmark, and its result is kept as text
++	if (std::wstring::npos != res1 && std::wstring::npos == instr.find(L"STYLEREF") && current_fields.back().type == 0)
+ 	{
+ 		current_fields.back().type = fieldRef;
+ 
+-- 
+2.55.0
+

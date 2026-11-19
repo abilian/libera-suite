@@ -1,4 +1,4 @@
-From b36ef7c50c6f17e6d2556d0949e8dc465e186092 Mon Sep 17 00:00:00 2001
+From fc9cb97588fcc1a72a677eef85f671c7a38ed9ea Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 20:04:02 +0100
 Subject: [PATCH] DOCX: an extended chart linked as a classic chart is read as

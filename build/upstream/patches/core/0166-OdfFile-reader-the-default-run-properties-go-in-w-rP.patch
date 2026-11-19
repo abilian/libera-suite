@@ -1,4 +1,4 @@
-From e112110dd199a5ce296301b40b895ba4d6a7fe90 Mon Sep 17 00:00:00 2001
+From c14f7c60a445c4b01e8ae574e9b6c16d9c9c694c Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:42 +0200
 Subject: [PATCH] OdfFile reader: the default run properties go in w:rPrDefault
@@ -17,10 +17,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 34 insertions(+), 12 deletions(-)
 
 diff --git a/OdfFile/Reader/Converter/docx_conversion_context.cpp b/OdfFile/Reader/Converter/docx_conversion_context.cpp
-index 5e01995591..d8945a857a 100644
+index 36ad05516d..738762bc7b 100644
 --- a/OdfFile/Reader/Converter/docx_conversion_context.cpp
 +++ b/OdfFile/Reader/Converter/docx_conversion_context.cpp
-@@ -1371,11 +1371,15 @@ void docx_conversion_context::process_styles()
+@@ -1373,11 +1373,15 @@ void docx_conversion_context::process_styles()
              styles_map_.get(arStyles[i]->name(), arStyles[i]->type());
          }
  
@@ -39,7 +39,7 @@ index 5e01995591..d8945a857a 100644
              if ( odf_reader::style_content * content = defaultParStyle->content())
              {
  				if (content->get_style_paragraph_properties())
-@@ -1391,23 +1395,41 @@ void docx_conversion_context::process_styles()
+@@ -1393,23 +1397,41 @@ void docx_conversion_context::process_styles()
  						}
  					}
  				}

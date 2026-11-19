@@ -1,4 +1,4 @@
-From 717148ef3ef6e9c374e1630a93ec4a82e8f6a453 Mon Sep 17 00:00:00 2001
+From 21b6765da487cf4f0d089a0f5074b8ea4166a251 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 20:49:16 +0100
 Subject: [PATCH] DOCX: picture bullets are kept through the binary format

@@ -1,4 +1,4 @@
-From c42e11ac2c48f2f97c3ac7256a80c92b7687e80d Mon Sep 17 00:00:00 2001
+From 7cebe5e6a8073560d28e9bd4351bb04ebad40e6a Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 26 Oct 2026 18:57:16 +0100
 Subject: [PATCH] doctrenderer: let DOCTRENDERER_CACHE_DIR hold the V8 code
@@ -17,7 +17,7 @@ it in instead, as <dir>/<editor>-sdk-all.cache. Unset, nothing changes.
  1 file changed, 12 insertions(+)
 
 diff --git a/DesktopEditor/doctrenderer/editors.cpp b/DesktopEditor/doctrenderer/editors.cpp
-index 3c1d5fd61d..86e3ae6908 100644
+index 28dae1d830..4fb0d490fa 100644
 --- a/DesktopEditor/doctrenderer/editors.cpp
 +++ b/DesktopEditor/doctrenderer/editors.cpp
 @@ -1,6 +1,7 @@
@@ -28,7 +28,7 @@ index 3c1d5fd61d..86e3ae6908 100644
  
  namespace NSDoctRenderer
  {
-@@ -206,6 +207,17 @@ String.prototype.replaceAll = function(str, newStr)\
+@@ -205,6 +206,17 @@ String.prototype.replaceAll = function(str, newStr)\
  
  		if (!sCachePath.empty())
  		{

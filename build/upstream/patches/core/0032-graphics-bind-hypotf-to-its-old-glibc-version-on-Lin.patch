@@ -1,4 +1,4 @@
-From 42e88bb9189f872be846e92b6a9b1662ff96d07b Mon Sep 17 00:00:00 2001
+From 5d472c806affc396ddfc8ed0aa6a639a7c03fcec Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Mon, 5 Oct 2026 22:17:59 +0200
 Subject: [PATCH] graphics: bind hypotf to its old glibc version on Linux
@@ -16,10 +16,10 @@ old version, GLIBC_2.2.5 on x86_64 and GLIBC_2.17 on arm64.
  create mode 100644 DesktopEditor/graphics/cmake/glibc-hypotf.h
 
 diff --git a/DesktopEditor/graphics/cmake/CMakeLists.txt b/DesktopEditor/graphics/cmake/CMakeLists.txt
-index 873355854a..caf1891d79 100644
+index 29458a911e..197284e6f6 100644
 --- a/DesktopEditor/graphics/cmake/CMakeLists.txt
 +++ b/DesktopEditor/graphics/cmake/CMakeLists.txt
-@@ -1053,6 +1053,14 @@ if(LINUX)
+@@ -824,6 +824,14 @@ if(LINUX)
      )
  endif()
  

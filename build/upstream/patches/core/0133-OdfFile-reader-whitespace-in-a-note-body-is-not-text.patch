@@ -1,4 +1,4 @@
-From a9f747e932c3f9b95519d088f29c300c49398093 Mon Sep 17 00:00:00 2001
+From c4fe399a4fcf41284ff043e58c5a49927c01cb2b Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:59:21 +0200
 Subject: [PATCH] OdfFile reader: whitespace in a note body is not text

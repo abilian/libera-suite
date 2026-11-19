@@ -1,4 +1,4 @@
-From d7f20e6eab359bb3dcbdf177691618c0a530dd65 Mon Sep 17 00:00:00 2001
+From c955ab45c3a0d4560ee5502d5e90bab50503c7d7 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 18:09:39 +0100
 Subject: [PATCH] feat(word): SET fields are read, and their result is not
@@ -48,7 +48,7 @@ index 89a43fc611..5d693ba9fa 100644
  CComplexField.prototype.RemoveFieldWrap = function()
  {
 diff --git a/word/Editor/Paragraph/ComplexFieldInstruction.js b/word/Editor/Paragraph/ComplexFieldInstruction.js
-index ae50920e8d..cf087da025 100644
+index c7f0d0c06f..9c0692eb24 100644
 --- a/word/Editor/Paragraph/ComplexFieldInstruction.js
 +++ b/word/Editor/Paragraph/ComplexFieldInstruction.js
 @@ -537,6 +537,37 @@ CFieldInstructionASK.prototype.GetPromptText = function()
@@ -100,7 +100,7 @@ index ae50920e8d..cf087da025 100644
  	else if(sBuffer.indexOf("=") === 0)
  	{
  		this.private_ReadFORMULA();
-@@ -1775,6 +1810,18 @@ CFieldInstructionParser.prototype.private_ReadASK = function()
+@@ -1780,6 +1815,18 @@ CFieldInstructionParser.prototype.private_ReadASK = function()
  
  	// TODO: Switches
  };

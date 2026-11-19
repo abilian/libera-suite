@@ -1,4 +1,4 @@
-From 0b3ef8ab280ace54b067a24094a4e96435bff23b Mon Sep 17 00:00:00 2001
+From 4475c2ec4b1598b9308d781448512735330ea7c0 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:39 +0200
 Subject: [PATCH] OdfFile reader: an XLSX package's core properties have the

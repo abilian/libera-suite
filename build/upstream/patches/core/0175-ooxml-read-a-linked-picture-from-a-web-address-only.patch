@@ -1,4 +1,4 @@
-From a5b5ec9bf25d5f45e43e498a4255a747923289d9 Mon Sep 17 00:00:00 2001
+From de9d7c4488d79ad26fd82a6b0e6fee82251dbb71 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Thu, 29 Oct 2026 15:49:48 +0100
 Subject: [PATCH] ooxml: read a linked picture from a web address only

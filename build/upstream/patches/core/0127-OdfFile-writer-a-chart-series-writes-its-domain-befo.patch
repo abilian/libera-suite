@@ -1,4 +1,4 @@
-From 69f116864f4ab48ce85b87695840a6102faea641 Mon Sep 17 00:00:00 2001
+From 805a188eaafdcdfc2659eed9fb985d3f04fcda25 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:23:43 +0200
 Subject: [PATCH] OdfFile writer: a chart series writes its domain before its

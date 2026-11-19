@@ -1,4 +1,4 @@
-From ec49a0295e26607049c3a43ee1e367c681d06861 Mon Sep 17 00:00:00 2001
+From 8b510c4ece976e8a14f6b6363959e7683049c881 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Sun, 18 Oct 2026 14:52:26 +0200
 Subject: [PATCH] config: no macros in the desktop editor

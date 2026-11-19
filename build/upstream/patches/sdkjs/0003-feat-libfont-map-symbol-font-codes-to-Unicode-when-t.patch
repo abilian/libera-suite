@@ -1,4 +1,4 @@
-From 254bb3d80950f237b5e29231f4bb5f34c444908e Mon Sep 17 00:00:00 2001
+From 6d59895d1dc5387bebc06085d1a0bee7f546e1ba Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Ga=C3=ABl=20Duval?= <gael@murena.io>
 Date: Mon, 5 Oct 2026 23:03:21 +0200
 Subject: [PATCH] feat(libfont): map symbol font codes to Unicode when the font

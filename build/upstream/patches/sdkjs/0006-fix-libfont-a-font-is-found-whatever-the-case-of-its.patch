@@ -1,4 +1,4 @@
-From 2a80a6e797dad3aae581839e1742dc2683ba6ffa Mon Sep 17 00:00:00 2001
+From 186959a94291e48efc7c53355498d59abd87e70f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Sat, 14 Nov 2026 16:10:53 +0100
 Subject: [PATCH] fix(libfont): a font is found whatever the case of its name

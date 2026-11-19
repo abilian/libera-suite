@@ -1,4 +1,4 @@
-From 617445ac4f4457e9abe7b6bb927dc0bd755d945a Mon Sep 17 00:00:00 2001
+From dfc86baeda779eaa4f39eea2ed5b6fc232278874 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 19:26:45 +0200
 Subject: [PATCH] OdfFile writer: AM/PM in a time style is number:am-pm, not

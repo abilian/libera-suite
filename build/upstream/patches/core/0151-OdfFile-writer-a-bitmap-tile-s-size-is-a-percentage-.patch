@@ -1,4 +1,4 @@
-From 0ced1098dbb54946e4808c8b822c4f29fdd40016 Mon Sep 17 00:00:00 2001
+From 79bbb8554c6cf8131b8a3941cc45d842db07a18f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
 Subject: [PATCH] OdfFile writer: a bitmap tile's size is a percentage of the
@@ -34,7 +34,7 @@ index 3a03fed18d..ca6a9a9a50 100644
      case length::pt:
          _Wostream << L"pt";
 diff --git a/OdfFile/Writer/Converter/ConvertDrawing.cpp b/OdfFile/Writer/Converter/ConvertDrawing.cpp
-index 95c5c85fab..856c09830c 100644
+index 51c716fc57..43116799b8 100644
 --- a/OdfFile/Writer/Converter/ConvertDrawing.cpp
 +++ b/OdfFile/Writer/Converter/ConvertDrawing.cpp
 @@ -1427,13 +1427,15 @@ void OoxConverter::convert(PPTX::Logic::BlipFill *oox_bitmap_fill)

@@ -1,4 +1,4 @@
-From 9a7a695fb8420a5b9bc77afb0eb55af02b328f36 Mon Sep 17 00:00:00 2001
+From d9401d0300fac48abb59edd14be9414269e8f176 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 08:56:53 +0200
 Subject: [PATCH] OdfFile writer: a combo box writes its items after its

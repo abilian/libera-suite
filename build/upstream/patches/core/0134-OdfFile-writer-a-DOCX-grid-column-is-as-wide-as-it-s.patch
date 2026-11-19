@@ -1,4 +1,4 @@
-From 3c2b4943081010dbaf6d8eee58af22ed73856552 Mon Sep 17 00:00:00 2001
+From 72c9411c68aa9039c25d0bc294646e3606e7ca35 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 07:00:23 +0200
 Subject: [PATCH] OdfFile writer: a DOCX grid column is as wide as it says
@@ -32,10 +32,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  2 files changed, 6 insertions(+), 11 deletions(-)
 
 diff --git a/OdfFile/Writer/Converter/DocxConverter.cpp b/OdfFile/Writer/Converter/DocxConverter.cpp
-index 52d120f7ff..3356f68b53 100644
+index 2fa2e2471f..3d20ab0c56 100644
 --- a/OdfFile/Writer/Converter/DocxConverter.cpp
 +++ b/OdfFile/Writer/Converter/DocxConverter.cpp
-@@ -4974,20 +4974,14 @@ void DocxConverter::convert(OOX::Logic::CTblGrid	*oox_table_grid, int columns_wi
+@@ -4987,20 +4987,14 @@ void DocxConverter::convert(OOX::Logic::CTblGrid	*oox_table_grid, int columns_wi
  		if (oox_table_grid->m_arrGridCol[i] == NULL) continue;
  		double width = -1;
  
@@ -62,10 +62,10 @@ index 52d120f7ff..3356f68b53 100644
  
  		odt_context->add_table_column(width);
 diff --git a/OdfFile/Writer/Format/odf_table_context.cpp b/OdfFile/Writer/Format/odf_table_context.cpp
-index 9fa2e18ec4..0a0f7e4169 100644
+index b2d4357649..0d8808526b 100644
 --- a/OdfFile/Writer/Format/odf_table_context.cpp
 +++ b/OdfFile/Writer/Format/odf_table_context.cpp
-@@ -491,6 +491,7 @@ void odf_table_context::set_column_optimal(bool val)
+@@ -496,6 +496,7 @@ void odf_table_context::set_column_optimal(bool val)
  void odf_table_context::change_current_column_width(double width)
  {
  	if (impl_->empty()) return;

@@ -1,4 +1,4 @@
-From ff4577392857b7ebafa3914fb168a9c4f7121a01 Mon Sep 17 00:00:00 2001
+From 6b081e7f6b140a5e8ea68f9a030f08b3da3c8864 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 08:55:09 +0200
 Subject: [PATCH] OdfFile writer: a link on a drawing opens in place, not

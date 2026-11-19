@@ -1,4 +1,4 @@
-From f70b18ce7c59be5902de660086a38e68551f5695 Mon Sep 17 00:00:00 2001
+From 0079382dfd162dcead5695380ef58cb111c9b214 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:41 +0200
 Subject: [PATCH] OdfFile reader: XLSX border and tab colours are ARGB
@@ -27,10 +27,10 @@ index 1554a5646c..84d21c2fdf 100644
          borderEdge.color = color;
          borderEdge.style = convert_border_style(*borderStyle);
 diff --git a/OdfFile/Reader/Converter/xlsx_table_state.cpp b/OdfFile/Reader/Converter/xlsx_table_state.cpp
-index 8ede92840a..ab640a467c 100644
+index 6f029a645b..094715825a 100644
 --- a/OdfFile/Reader/Converter/xlsx_table_state.cpp
 +++ b/OdfFile/Reader/Converter/xlsx_table_state.cpp
-@@ -652,7 +652,7 @@ void xlsx_table_state::serialize_table_format (std::wostream & strm)
+@@ -726,7 +726,7 @@ void xlsx_table_state::serialize_table_format (std::wostream & strm)
  				{
  					CP_XML_NODE(L"tabColor")
  					{
@@ -38,7 +38,7 @@ index 8ede92840a..ab640a467c 100644
 +						CP_XML_ATTR(L"rgb", L"FF" + table_prop->content().tableooo_tab_color_->get_hex_value()); // ARGB
  					}
  				}
- 				//<pageSetUpPr fitToPage="true"/>
+ 				if (fit_to_pages)
 -- 
 2.55.0
 

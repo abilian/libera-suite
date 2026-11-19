@@ -1,4 +1,4 @@
-From de5f9cbdde9e76ab4303e80a5c82d46eba5a6288 Mon Sep 17 00:00:00 2001
+From fba386e33b21b5adbb4b48cb6edf6f83ccc60274 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
 Subject: [PATCH] OdfFile writer: a media object's preview is embedded, and so
@@ -23,7 +23,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 15 insertions(+), 6 deletions(-)
 
 diff --git a/OdfFile/Writer/Converter/ConvertDrawing.cpp b/OdfFile/Writer/Converter/ConvertDrawing.cpp
-index f14f1e834d..95c5c85fab 100644
+index 239cd7acab..51c716fc57 100644
 --- a/OdfFile/Writer/Converter/ConvertDrawing.cpp
 +++ b/OdfFile/Writer/Converter/ConvertDrawing.cpp
 @@ -343,8 +343,11 @@ void OoxConverter::convert(PPTX::Logic::Pic *oox_picture)

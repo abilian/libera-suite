@@ -119,7 +119,7 @@ package_for() {
     case "$1:$FAMILY" in
     # macOS installs three things; Xcode brings the rest, so they map to
     # nothing and drop out of the install line.
-    cmake:macos | ninja:macos) echo "$1" ;;
+    cmake:macos | ninja:macos | llvm:macos | lld:macos) echo "$1" ;;
     node:macos | npm:macos) echo "node" ;;
     *:macos) echo "" ;;
     # winget ids, which are what a fresh Windows has. cmake and ninja also come
@@ -269,7 +269,18 @@ cmd_check() {
         check_cygwin || return 1
     fi
 
-    # The three below are Linux's: the Mac builds ICU and V8 against what Xcode
+    # V8 14.6 builds on the Mac with Homebrew's LLVM, against Xcode's SDK and
+    # libc++: Xcode's clang has no llvm-ar and no lld, which Chromium's build
+    # uses, and nc-build.py stops without them. lld is a formula of its own.
+    if [ "$FAMILY" = macos ]; then
+        brew_opt="$(brew --prefix 2>/dev/null)/opt"
+        [ -x "${LLVM_DIR:-$brew_opt/llvm}/bin/llvm-ar" ] ||
+            want llvm "Homebrew's LLVM (llvm-ar), which V8 is built with"
+        [ -x "${LLVM_DIR:-$brew_opt/llvm}/bin/ld64.lld" ] || [ -x "$brew_opt/lld/bin/ld64.lld" ] ||
+            want lld "lld (ld64.lld), which V8 is linked with"
+    fi
+
+    # The three below are Linux's: the Mac builds ICU against what Xcode
     # ships, and has no static libstdc++ or glib to find.
     if [ "$FAMILY" != macos ] && [ "$FAMILY" != windows ]; then
         if command -v pkg-config >/dev/null 2>&1; then

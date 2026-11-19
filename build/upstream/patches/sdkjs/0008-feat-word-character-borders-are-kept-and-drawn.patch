@@ -1,4 +1,4 @@
-From 83dcf0303f292eca9c88609a204ccc88b3a31015 Mon Sep 17 00:00:00 2001
+From 21c3e3691b55478cb7e9aa50f2bddd600e01cf95 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 17:12:37 +0100
 Subject: [PATCH] feat(word): character borders are kept and drawn
@@ -27,10 +27,10 @@ that keeps and draws character borders, with its QUnit test.
  create mode 100644 tests/word/document-calculation/paragraph/char-border.js
 
 diff --git a/tests/runAll.js b/tests/runAll.js
-index f4e1f1d580..6246b9e2de 100644
+index 0edeff7878..25526ababd 100644
 --- a/tests/runAll.js
 +++ b/tests/runAll.js
-@@ -67,6 +67,7 @@ const allTests = [
+@@ -72,6 +72,7 @@ const allTests = [
  	'word/custom-xml/custom-xml.html',
  	'word/document-calculation/floating-position/drawing.html',
  	'word/document-calculation/paragraph.html',
@@ -223,7 +223,7 @@ index 0000000000..a3f3f5a72b
 +	});
 +});
 diff --git a/word/Editor/Paragraph.js b/word/Editor/Paragraph.js
-index 382135f3ff..ef83ddf27a 100644
+index e165038f30..80cd57fde0 100644
 --- a/word/Editor/Paragraph.js
 +++ b/word/Editor/Paragraph.js
 @@ -3226,6 +3226,32 @@ Paragraph.prototype.drawRunContentLines = function(CurPage, pGraphics, drawState
@@ -259,7 +259,7 @@ index 382135f3ff..ef83ddf27a 100644
  		// Рисуем зачеркивание
  		pGraphics.Start_Command(AscFormat.DRAW_COMMAND_LINE, Line, CurLine, AscFormat.CLineStructure_DrawType_Strikeouts);
  		var Element = aStrikeout.Get_Next();
-@@ -19794,6 +19820,8 @@ CParaDrawingRangeLines.prototype =
+@@ -19786,6 +19812,8 @@ CParaDrawingRangeLines.prototype =
  					Element.Intermediate.push(Element.x0);
  
                  Element.x0 = PrevEl.x0;
@@ -268,7 +268,7 @@ index 382135f3ff..ef83ddf27a 100644
                  Count--;
              }
              else
-@@ -19855,6 +19883,16 @@ CParaDrawingRangeLines.prototype =
+@@ -19847,6 +19875,16 @@ CParaDrawingRangeLines.prototype =
  			if (undefined === PrevEl.Additional || undefined === Element.Additional)
  				return false;
  

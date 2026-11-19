@@ -1,4 +1,4 @@
-From 7df9338622050806bdc7690b83c75ce489c21d14 Mon Sep 17 00:00:00 2001
+From 17a97db6457234ecf720f0b733e22dab745bd476 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 5 Nov 2026 14:52:27 +0100
 Subject: [PATCH] PPTX: a presentation with no handout master gets none

@@ -1,4 +1,4 @@
-From a5b5f6ff2268dc6890d2239d4acfc70676c33b43 Mon Sep 17 00:00:00 2001
+From 08f4a3db86c81a22914542f5744f9caeaed5a5d2 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 19:28:06 +0200
 Subject: [PATCH] OdfFile writer: a slide's body placeholder is

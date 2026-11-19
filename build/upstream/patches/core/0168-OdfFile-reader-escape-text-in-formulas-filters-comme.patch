@@ -1,4 +1,4 @@
-From 9ec2b0d89c91e7c52c3e675e3787b49e306950a1 Mon Sep 17 00:00:00 2001
+From a91824ea5c73eb15e749c928fd4dd26845b263ff Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:43 +0200
 Subject: [PATCH] OdfFile reader: escape text in formulas, filters, comments
@@ -72,7 +72,7 @@ index 5184191a96..91521bce61 100644
  								}
  							}
 diff --git a/OdfFile/Reader/Converter/xlsx_table_state.cpp b/OdfFile/Reader/Converter/xlsx_table_state.cpp
-index ab640a467c..bd142523b0 100644
+index 094715825a..374f69b341 100644
 --- a/OdfFile/Reader/Converter/xlsx_table_state.cpp
 +++ b/OdfFile/Reader/Converter/xlsx_table_state.cpp
 @@ -144,7 +144,7 @@ void xlsx_data_range::serialize_filterColumn(std::wostream& _Wostream, int index
@@ -85,10 +85,10 @@ index ab640a467c..bd142523b0 100644
  					}
  				}
 diff --git a/OdfFile/Reader/Format/paragraph_elements.cpp b/OdfFile/Reader/Format/paragraph_elements.cpp
-index 865b7dad49..eb14c726c5 100644
+index 57d61e3c6d..008c7540f0 100644
 --- a/OdfFile/Reader/Format/paragraph_elements.cpp
 +++ b/OdfFile/Reader/Format/paragraph_elements.cpp
-@@ -74,7 +74,7 @@ void paragraph_content_element::docx_serialize_field(const std::wstring & field_
+@@ -75,7 +75,7 @@ void paragraph_content_element::docx_serialize_field(const std::wstring & field_
  			strm << L" w:fldLock=\"1\"";
  		}
  		strm << L"/></w:r>";
@@ -97,7 +97,7 @@ index 865b7dad49..eb14c726c5 100644
  	}
  
  	docx_serialize_run(text, Context);
-@@ -99,7 +99,7 @@ void paragraph_content_element::docx_serialize_field(const std::wstring& field_n
+@@ -100,7 +100,7 @@ void paragraph_content_element::docx_serialize_field(const std::wstring& field_n
  			strm << L" w:fldLock=\"1\"";
  		}
  		strm << L"/></w:r>";
@@ -107,10 +107,10 @@ index 865b7dad49..eb14c726c5 100644
  
  	docx_serialize_run(content, Context);
 diff --git a/OdfFile/Reader/Format/table_xlsx.cpp b/OdfFile/Reader/Format/table_xlsx.cpp
-index 24a75f760e..6254a72450 100644
+index a523d56587..f8ccbdca7e 100644
 --- a/OdfFile/Reader/Format/table_xlsx.cpp
 +++ b/OdfFile/Reader/Format/table_xlsx.cpp
-@@ -1382,7 +1382,7 @@ void table_covered_table_cell::xlsx_convert(oox::xlsx_conversion_context & Conte
+@@ -1516,7 +1516,7 @@ void table_covered_table_cell::xlsx_convert(oox::xlsx_conversion_context & Conte
                          {
                              CP_XML_NODE(L"f")
                              {

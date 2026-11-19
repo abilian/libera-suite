@@ -1,4 +1,4 @@
-From d73d979f559d14bb8c87463469c555a303d12481 Mon Sep 17 00:00:00 2001
+From 5e528f85d6fab4b2b25c3d5b23ef2b35117f3ff0 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 20:49:16 +0100
 Subject: [PATCH] feat(word): picture bullets are read, drawn and written back
@@ -253,7 +253,7 @@ index dd628d3a3c..420aae866a 100644
  		return {
  			AbstractNum : oNewAbstractNums,
 diff --git a/word/Editor/Numbering/NumberingLvl.js b/word/Editor/Numbering/NumberingLvl.js
-index ff598b34e6..ec2723fa1d 100644
+index 2d75489a61..e468240d6d 100644
 --- a/word/Editor/Numbering/NumberingLvl.js
 +++ b/word/Editor/Numbering/NumberingLvl.js
 @@ -38,6 +38,9 @@ function CNumberingLvl()
@@ -293,7 +293,7 @@ index ff598b34e6..ec2723fa1d 100644
  	this.Jc      = nAlign;
  	this.SetFormat(nType);
  	this.SetLvlTextFormat(nLvl, sFormatText);
-@@ -1213,7 +1222,8 @@ CNumberingLvl.prototype.IsEqual = function(numLvl)
+@@ -1215,7 +1224,8 @@ CNumberingLvl.prototype.IsEqual = function(numLvl)
  		&& this.TextPr.IsEqual(numLvl.TextPr)
  		&& this.ParaPr.IsEqual(numLvl.ParaPr)
  		&& this.Legacy === numLvl.Legacy
@@ -303,7 +303,7 @@ index ff598b34e6..ec2723fa1d 100644
  };
  /**
   * Заполняем специальный класс для работы с интерфейсом
-@@ -1255,6 +1265,9 @@ CNumberingLvl.prototype.FillToAscNumberingLvl = function(oAscLvl)
+@@ -1257,6 +1267,9 @@ CNumberingLvl.prototype.FillToAscNumberingLvl = function(oAscLvl)
   */
  CNumberingLvl.prototype.FillFromAscNumberingLvl = function(oAscLvl)
  {
@@ -313,7 +313,7 @@ index ff598b34e6..ec2723fa1d 100644
  	if (undefined !== oAscLvl.get_Format())
  		this.SetFormat(oAscLvl.get_Format());
  
-@@ -1458,7 +1471,8 @@ CNumberingLvl.prototype.WriteToBinary = function(oWriter)
+@@ -1460,7 +1473,8 @@ CNumberingLvl.prototype.WriteToBinary = function(oWriter)
  	// Array of variables : массив LvlText
  	// Bool               : true -> CNumberingLegacy
  	//                    : false -> Legacy = undefined
@@ -323,7 +323,7 @@ index ff598b34e6..ec2723fa1d 100644
  
  	oWriter.WriteLong(this.Jc);
  	oWriter.WriteLong(this.Format);
-@@ -1488,7 +1502,12 @@ CNumberingLvl.prototype.WriteToBinary = function(oWriter)
+@@ -1490,7 +1504,12 @@ CNumberingLvl.prototype.WriteToBinary = function(oWriter)
  		oWriter.WriteBool(false);
  	}
  
@@ -337,7 +337,7 @@ index ff598b34e6..ec2723fa1d 100644
  };
  CNumberingLvl.prototype.ReadFromBinary = function(oReader)
  {
-@@ -1504,7 +1523,8 @@ CNumberingLvl.prototype.ReadFromBinary = function(oReader)
+@@ -1506,7 +1525,8 @@ CNumberingLvl.prototype.ReadFromBinary = function(oReader)
  	// Array of variables : массив LvlText
  	// Bool               : true -> CNumberingLegacy
  	//                    : false -> Legacy = undefined
@@ -347,7 +347,7 @@ index ff598b34e6..ec2723fa1d 100644
  
  
  	this.Jc     = oReader.GetLong();
-@@ -1538,7 +1558,9 @@ CNumberingLvl.prototype.ReadFromBinary = function(oReader)
+@@ -1540,7 +1560,9 @@ CNumberingLvl.prototype.ReadFromBinary = function(oReader)
  		this.Legacy.ReadFromBinary(oReader);
  	}
  

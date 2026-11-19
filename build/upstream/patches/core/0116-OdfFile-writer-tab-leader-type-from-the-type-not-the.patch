@@ -1,4 +1,4 @@
-From 74d5191e3485d16a16f651f06af658098e8b8ce0 Mon Sep 17 00:00:00 2001
+From 1bbfdddf612bb5263c86c37f41b61f3184bfc0e6 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:14:56 +0200
 Subject: [PATCH] OdfFile writer: tab leader type from the type, not the style

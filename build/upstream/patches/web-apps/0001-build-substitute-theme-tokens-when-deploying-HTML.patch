@@ -1,4 +1,4 @@
-From f03557db435a6c48e800dc9cf789ef2f495b9937 Mon Sep 17 00:00:00 2001
+From 32ac4fc8a582a5992746a217db4724aded573051 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Thu, 10 Sep 2026 20:09:19 +0200
 Subject: [PATCH] build: substitute theme tokens when deploying HTML

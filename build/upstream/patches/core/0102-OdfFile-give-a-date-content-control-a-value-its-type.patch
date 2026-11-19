@@ -1,4 +1,4 @@
-From 29392c7aff664f14a5729eeeb682dec53f9bd934 Mon Sep 17 00:00:00 2001
+From 807522ea65b8491541e1ab908a23f021266e2edb Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:57:06 +0200
 Subject: [PATCH] OdfFile: give a date content control a value its type allows
@@ -40,7 +40,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 17 insertions(+), 6 deletions(-)
 
 diff --git a/OdfFile/Writer/Converter/DocxConverter.cpp b/OdfFile/Writer/Converter/DocxConverter.cpp
-index 2e5617979f..e47ba74856 100644
+index ab5b6f91cd..478f4fa8f4 100644
 --- a/OdfFile/Writer/Converter/DocxConverter.cpp
 +++ b/OdfFile/Writer/Converter/DocxConverter.cpp
 @@ -566,11 +566,8 @@ void DocxConverter::convert(OOX::Logic::CSdt *oox_sdt)
@@ -59,7 +59,7 @@ index 2e5617979f..e47ba74856 100644
  				{
 @@ -669,7 +666,21 @@ void DocxConverter::convert(OOX::Logic::CSdt *oox_sdt)
  		{
- 			value.erase(value.back());
+ 			value.pop_back();
  		}
 -		odt_context->controls_context()->set_value(value);
 +		// form:value and form:current-value are typed xsd:date on a date

@@ -1,4 +1,4 @@
-From def748698213a5cec0a31d7c4e528ef543635ff6 Mon Sep 17 00:00:00 2001
+From f93d5904871190540625df0666696393f41030ac Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Mon, 14 Sep 2026 18:37:46 +0200
 Subject: [PATCH] build: let BUILD_JOBS cap how many tasks a phase runs at once

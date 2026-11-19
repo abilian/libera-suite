@@ -1,4 +1,4 @@
-From c054c43baf9f8ce3de42bbdfd1dcfa01a5a0fe5c Mon Sep 17 00:00:00 2001
+From 1b54c7537c1b45f2956263a48b05d804a2dfe391 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:16:44 +0200
 Subject: [PATCH] OdfFile writer: validation help message before the error

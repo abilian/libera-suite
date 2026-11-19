@@ -1,4 +1,4 @@
-From 048c299526b2e928dc90e5ad957974c3e1d5d9b8 Mon Sep 17 00:00:00 2001
+From d3d4a409dee6537ffba6f00d1d89a682f0d66bd5 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 19:24:01 +0200
 Subject: [PATCH] OdfFile: a page's fill goes in a drawing-page style, as ODF
@@ -76,7 +76,7 @@ index 8467823274..1ff90cdf13 100644
  				if (layout_properties->attlist_.common_background_color_attlist_.fo_background_color_ || fill.type != 0)
  				{
 diff --git a/OdfFile/Writer/Format/odf_page_layout_context.cpp b/OdfFile/Writer/Format/odf_page_layout_context.cpp
-index ac5e17b657..bcf503fe91 100644
+index d66abf30d7..07292d3870 100644
 --- a/OdfFile/Writer/Format/odf_page_layout_context.cpp
 +++ b/OdfFile/Writer/Format/odf_page_layout_context.cpp
 @@ -34,6 +34,7 @@
@@ -132,7 +132,7 @@ index ac5e17b657..bcf503fe91 100644
  {
  	local_style_context_->process_office_styles(root);
 diff --git a/OdfFile/Writer/Format/odf_page_layout_context.h b/OdfFile/Writer/Format/odf_page_layout_context.h
-index 0c076884c0..be84e264af 100644
+index 88737cb633..7ad5b8d1aa 100644
 --- a/OdfFile/Writer/Format/odf_page_layout_context.h
 +++ b/OdfFile/Writer/Format/odf_page_layout_context.h
 @@ -64,6 +64,7 @@ public:

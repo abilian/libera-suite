@@ -1,4 +1,4 @@
-From 418196a19cf1645f4ca75181a4f18f5ccd7a19aa Mon Sep 17 00:00:00 2001
+From 992945b3b9a5be2687fb0cfc773299a63e1b4436 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:41 +0200
 Subject: [PATCH] OdfFile reader: an XLSX underline is written by name
@@ -13,7 +13,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/OdfFile/Reader/Converter/xlsx_font.cpp b/OdfFile/Reader/Converter/xlsx_font.cpp
-index 306f3f0601..fc92409a11 100644
+index 73af52a8a0..7dfa80d1cc 100644
 --- a/OdfFile/Reader/Converter/xlsx_font.cpp
 +++ b/OdfFile/Reader/Converter/xlsx_font.cpp
 @@ -192,7 +192,9 @@ void xlsx_serialize(std::wostream & _Wostream, const xlsx_font & font)

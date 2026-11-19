@@ -1,4 +1,4 @@
-From 63b5948f7f6ecbfcb58fe3c134b65d4b0e28f3a5 Mon Sep 17 00:00:00 2001
+From 0dea1477f99cbcada98d6ace22f1242898b6a9d1 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
 Subject: [PATCH] OdfFile writer: each table closes its own header rows
@@ -21,10 +21,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  2 files changed, 17 insertions(+)
 
 diff --git a/OdfFile/Writer/Format/odt_conversion_context.cpp b/OdfFile/Writer/Format/odt_conversion_context.cpp
-index baceb2dc5e..0483f384dc 100644
+index ae9685a628..feff533d2d 100644
 --- a/OdfFile/Writer/Format/odt_conversion_context.cpp
 +++ b/OdfFile/Writer/Format/odt_conversion_context.cpp
-@@ -1742,6 +1742,10 @@ void odt_conversion_context::end_drop_cap()
+@@ -1751,6 +1751,10 @@ void odt_conversion_context::end_drop_cap()
  ///////////////////////////////////////
  void odt_conversion_context::start_table(bool styled)
  {
@@ -35,7 +35,7 @@ index baceb2dc5e..0483f384dc 100644
  	office_element_ptr elm;
  	create_element(L"table", L"table",elm,this);
  
-@@ -1885,6 +1889,18 @@ void odt_conversion_context::add_default_cell()
+@@ -1894,6 +1898,18 @@ void odt_conversion_context::add_default_cell()
  }
  void odt_conversion_context::end_table()
  {

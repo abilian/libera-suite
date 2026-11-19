@@ -1,4 +1,4 @@
-From ee65cdf027bc9e89e3ad94cd67fc3c79757baeac Mon Sep 17 00:00:00 2001
+From a503ebde5bf2805ce548b4b74e4336e8c60bfb94 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 08:56:29 +0200
 Subject: [PATCH] OdfFile writer: a master page's shapes from master and layout
@@ -21,7 +21,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  3 files changed, 7 insertions(+)
 
 diff --git a/OdfFile/Writer/Converter/PptxConverter.cpp b/OdfFile/Writer/Converter/PptxConverter.cpp
-index 0e247be2a9..44bdc50144 100644
+index 9d360cafd6..277c58bf07 100644
 --- a/OdfFile/Writer/Converter/PptxConverter.cpp
 +++ b/OdfFile/Writer/Converter/PptxConverter.cpp
 @@ -1402,16 +1402,19 @@ void PptxConverter::convert_slides()

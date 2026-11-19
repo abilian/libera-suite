@@ -1,4 +1,4 @@
-From fbff6a2bf50675245dc2605da8fff6e6ebda304a Mon Sep 17 00:00:00 2001
+From 6c481e76510406e74c7e509a0b4f99720532c642 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:57:15 +0200
 Subject: [PATCH] OdfFile writer: a chart's axes come before its series

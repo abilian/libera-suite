@@ -1,4 +1,4 @@
-From ab63cd9f261f6170e78556a4332ba19d0135d751 Mon Sep 17 00:00:00 2001
+From 04699015a175e736b330a9b0bffabfa933f53c58 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
 Subject: [PATCH] OdfFile writer: an image the source does not hold is not

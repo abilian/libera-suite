@@ -1,4 +1,4 @@
-From ca871155fcd14a034daf02660052b8a0a2bf7c0f Mon Sep 17 00:00:00 2001
+From e093054b1312ebba5f44f913e1c449ae65fca856 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 17:35:51 +0100
 Subject: [PATCH] fix(word): compatibility switches the editor does not model

@@ -1,4 +1,4 @@
-From 900db6127629af449b10bfde0bc44d46b650e84c Mon Sep 17 00:00:00 2001
+From 0fd36351317313db9d54d45b2d8c7613ce74be9a Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:17:01 +0200
 Subject: [PATCH] OdfFile writer: draw:display-name, not draw:display_name

@@ -1,4 +1,4 @@
-From 5d082e893d719f214f581163fb2e53ec765775a2 Mon Sep 17 00:00:00 2001
+From e64e19f9f6dc555cd9770f93a2a09d6018d086b6 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:58:32 +0200
 Subject: [PATCH] OdfFile writer: a table cell writes its annotation before its

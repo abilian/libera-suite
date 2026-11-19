@@ -1,4 +1,4 @@
-From fc130d141d4996930a1c2dfbc611c5f3187addf8 Mon Sep 17 00:00:00 2001
+From 91b3ef4f06274dd9d74d5e8454c341d5727a4df0 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 30 Oct 2026 14:16:19 +0100
 Subject: [PATCH] build: define the headers' constant tables once, as inline

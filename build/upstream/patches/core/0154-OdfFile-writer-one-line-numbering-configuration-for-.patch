@@ -1,4 +1,4 @@
-From 3822eda74d5eb825f1d431f57728802fb68c9178 Mon Sep 17 00:00:00 2001
+From 5dbb3c94b31f433019040fd395bb5dc533a690c7 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
 Subject: [PATCH] OdfFile writer: one line numbering configuration for the

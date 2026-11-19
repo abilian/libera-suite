@@ -1,4 +1,4 @@
-From be2d14886e98b50ab0a2fc69a6d8f00f49923ce7 Mon Sep 17 00:00:00 2001
+From 1da70df7c72b15375eb1b471d4db1e418ce80876 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Ga=C3=ABl=20Duval?= <gael@murena.io>
 Date: Mon, 5 Oct 2026 23:03:20 +0200
 Subject: [PATCH] feat(libfont): substitute missing fonts the way Word does
@@ -276,10 +276,10 @@ index 0000000000..e92d44257f
 +	});
 +});
 diff --git a/tests/runAll.js b/tests/runAll.js
-index ee7026b796..f4e1f1d580 100644
+index 9fd729e16c..0edeff7878 100644
 --- a/tests/runAll.js
 +++ b/tests/runAll.js
-@@ -56,6 +56,7 @@ const allTests = [
+@@ -59,6 +59,7 @@ const allTests = [
  	'common/api/api-cell.html',
  	'common/api/api-slide.html',
  	'common/api/api-visio.html',

@@ -1,4 +1,4 @@
-From 619b58636e5e002ea7c7580eda3fac27ca5fe29f Mon Sep 17 00:00:00 2001
+From 7a8c4d00ccffb8e7facfd766c8b9f0fdec49eedb Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 16:55:47 +0200
 Subject: [PATCH] OdfFile writer: a slide with a draw:id has the xml:id it

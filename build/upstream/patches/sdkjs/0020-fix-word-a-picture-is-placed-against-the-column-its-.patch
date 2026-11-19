@@ -1,4 +1,4 @@
-From ace12f78a1c00a0160acedbf335d2aa06e62f922 Mon Sep 17 00:00:00 2001
+From ba9ffe2522e2ed04316cbbc185dc3f53fc001c27 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 18:36:52 +0100
 Subject: [PATCH] fix(word): a picture is placed against the column its
@@ -15,10 +15,10 @@ The first piece that holds lines is now the one. After ElixirOffice
  2 files changed, 6 insertions(+)
 
 diff --git a/word/Editor/Paragraph.js b/word/Editor/Paragraph.js
-index ef83ddf27a..1520e02473 100644
+index 80cd57fde0..bb4512537d 100644
 --- a/word/Editor/Paragraph.js
 +++ b/word/Editor/Paragraph.js
-@@ -12496,6 +12496,9 @@ Paragraph.prototype.Get_Layout = function(ContentPos, Drawing)
+@@ -12488,6 +12488,9 @@ Paragraph.prototype.Get_Layout = function(ContentPos, Drawing)
  			var _CurPage = 0;
  			if (0 !== PageAbs && CurPage > ColumnAbs)
  				_CurPage = CurPage - ColumnAbs;

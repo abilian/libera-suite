@@ -1,4 +1,4 @@
-From 6c365cf347b5feafc55548112f5f5a8bfb4760e2 Mon Sep 17 00:00:00 2001
+From 2405500d5c187723ca8634a3598cb823c9f65670 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 21:20:37 +0200
 Subject: [PATCH] OdfFile writer: master page headers before footers

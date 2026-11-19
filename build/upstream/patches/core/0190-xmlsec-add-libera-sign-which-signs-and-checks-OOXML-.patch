@@ -1,4 +1,4 @@
-From 4149003b1e93dd9329809d4bb6f26a5c88a7f5f1 Mon Sep 17 00:00:00 2001
+From c16ecb2768f788592d2b914c696a1ea47d51880f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Sun, 1 Nov 2026 08:47:09 +0100
 Subject: [PATCH] xmlsec: add libera-sign, which signs and checks OOXML
@@ -17,10 +17,10 @@ removes signatures, and prints a signer's certificate. Built beside x2t.
  create mode 100644 DesktopEditor/xmlsec/libera-sign/main.cpp
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 12c795aeac..62f3f1760f 100644
+index fa7358db9b..d243a93e27 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -28,6 +28,7 @@ elseif(ANDROID)
+@@ -32,6 +32,7 @@ elseif(ANDROID)
  else()
  
      add_subdirectory( "${CORE_ROOT_DIR}/X2tConverter/build/cmake" x2t )

@@ -1,4 +1,4 @@
-From de0b830c3bb1c9515ef601dc66bc13b807d20f56 Mon Sep 17 00:00:00 2001
+From e1876a5e519080eda4d0e98fe804a6b3cf1f9bed Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 30 Oct 2026 07:05:48 +0100
 Subject: [PATCH] pdf: keep the Creator of a PDF saved as an incremental update
@@ -13,7 +13,7 @@ too. The idea is ElixirOffice's 0011-pdf-preserve-creator
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/PdfFile/SrcWriter/Document.cpp b/PdfFile/SrcWriter/Document.cpp
-index 05da8d0d50..09b3b333e9 100644
+index d665feb4a4..906e528fbe 100644
 --- a/PdfFile/SrcWriter/Document.cpp
 +++ b/PdfFile/SrcWriter/Document.cpp
 @@ -1882,8 +1882,8 @@ namespace PdfWriter

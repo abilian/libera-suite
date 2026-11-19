@@ -1,4 +1,4 @@
-From 5bb72c84f6e34203c2961c5441d83dc314491db5 Mon Sep 17 00:00:00 2001
+From 30515e89a8d3c02ff6e62c98d9a5a9ca2817013d Mon Sep 17 00:00:00 2001
 From: Libera Suite <dev@liberasuite.eu>
 Date: Tue, 22 Sep 2026 19:09:25 +0200
 Subject: [PATCH] doctrenderer: build against an OpenSSL without MD2

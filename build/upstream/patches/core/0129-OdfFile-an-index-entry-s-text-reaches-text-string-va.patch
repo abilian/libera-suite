@@ -1,4 +1,4 @@
-From ceda1d60c52ba0817693f5542391091d10160674 Mon Sep 17 00:00:00 2001
+From 70cfb5d7cb72c517ca2ee10a48306596ce2b4bd3 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:29:14 +0200
 Subject: [PATCH] OdfFile: an index entry's text reaches text:string-value, and
@@ -28,10 +28,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  4 files changed, 31 insertions(+), 11 deletions(-)
 
 diff --git a/OdfFile/Reader/Format/paragraph_elements.cpp b/OdfFile/Reader/Format/paragraph_elements.cpp
-index 2739548674..7ce81f4642 100644
+index 3d9d61f5e2..f7f8898163 100644
 --- a/OdfFile/Reader/Format/paragraph_elements.cpp
 +++ b/OdfFile/Reader/Format/paragraph_elements.cpp
-@@ -2268,6 +2268,11 @@ void alphabetical_index_mark::docx_convert(oox::docx_conversion_context & Contex
+@@ -2318,6 +2318,11 @@ void alphabetical_index_mark::docx_convert(oox::docx_conversion_context & Contex
  	{
  		value = *key1_;
  	}
@@ -68,10 +68,10 @@ index 3c07be421f..ab73a12980 100644
  		}break;
  		case fieldPage:
 diff --git a/OdfFile/Writer/Format/odt_conversion_context.cpp b/OdfFile/Writer/Format/odt_conversion_context.cpp
-index beca02538d..ec3a5ac5bf 100644
+index 58ef37789d..09396d2334 100644
 --- a/OdfFile/Writer/Format/odt_conversion_context.cpp
 +++ b/OdfFile/Writer/Format/odt_conversion_context.cpp
-@@ -882,14 +882,19 @@ void odt_conversion_context::set_field_instr()
+@@ -891,14 +891,19 @@ void odt_conversion_context::set_field_instr()
  	if (std::wstring::npos != res1 && current_fields.back().type == 0)
  	{
  		current_fields.back().type = fieldXE;

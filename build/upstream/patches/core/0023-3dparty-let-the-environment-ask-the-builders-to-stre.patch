@@ -1,4 +1,4 @@
-From c244db0788d5c6573409aeada4bc72385dae91fc Mon Sep 17 00:00:00 2001
+From 7b026c8672c39520739b93d9e10a30dfdc85a6f0 Mon Sep 17 00:00:00 2001
 From: Libera Suite <dev@liberasuite.eu>
 Date: Mon, 21 Sep 2026 19:44:08 +0200
 Subject: [PATCH] 3dparty: let the environment ask the builders to stream their
@@ -9,10 +9,10 @@ Subject: [PATCH] 3dparty: let the environment ask the builders to stream their
  1 file changed, 11 insertions(+)
 
 diff --git a/Common/3dParty/build_3rdparty_common.py b/Common/3dParty/build_3rdparty_common.py
-index 58f9fc6e73..4050b0b88a 100644
+index 21479065b5..c4e3154aa4 100644
 --- a/Common/3dParty/build_3rdparty_common.py
 +++ b/Common/3dParty/build_3rdparty_common.py
-@@ -225,6 +225,17 @@ def run_command(
+@@ -254,6 +254,17 @@ def run_command(
      ):
  
      cwd = (cwd or Path.cwd()).resolve()

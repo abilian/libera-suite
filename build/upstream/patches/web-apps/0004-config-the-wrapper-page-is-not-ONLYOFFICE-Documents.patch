@@ -1,4 +1,4 @@
-From 18ebeb63dc15ddb7a95d97f4e18bc4149c5f0e39 Mon Sep 17 00:00:00 2001
+From 7189f86496be1b39514e3e99e17463e1fd951ad8 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Fri, 11 Sep 2026 14:37:12 +0200
 Subject: [PATCH] config: the wrapper page is not ONLYOFFICE Documents

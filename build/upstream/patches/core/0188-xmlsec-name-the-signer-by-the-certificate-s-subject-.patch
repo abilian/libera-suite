@@ -1,4 +1,4 @@
-From 89ad92ff3e912802a7102c5ad208fd9b884defbf Mon Sep 17 00:00:00 2001
+From 076dd700e29fa2877c1400a8905cb204eff69ea4 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Sun, 1 Nov 2026 08:44:36 +0100
 Subject: [PATCH] xmlsec: name the signer by the certificate's subject, in

@@ -1059,8 +1059,8 @@ def write_ods_with_a_footer(path: pathlib.Path) -> None:
 def test_an_ods_keeps_its_margins_through_saves(tmp_path):
     """x2t wrote an .ods's page margins measured to the body, where ODF
     measures them to the header and footer and adds their height: each save
-    added the height again, 2 cm becoming 2.75, then 4.75, then 7.5 (core 0202,
-    ElixirOffice's fix)."""
+    added the height again, 2 cm becoming 2.75, then 4.75, then 7.5 (fixed by
+    ElixirOffice, then by Euro-Office in core 55a100fd)."""
     document = tmp_path / "sheet.ods"
     write_ods_with_a_footer(document)
 

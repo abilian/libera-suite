@@ -1,4 +1,4 @@
-From 8cc62aa4d065fcb1f6da7c7f105fbb0a0ea610c9 Mon Sep 17 00:00:00 2001
+From ee8ce2f2b00fee0e2ae26fe167c09b93898c67c5 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Thu, 29 Oct 2026 22:24:06 +0100
 Subject: [PATCH] pdf: leave the XFA out of a form saved as an incremental
@@ -15,10 +15,10 @@ readers see the form by its fields.
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/PdfFile/PdfEditor.cpp b/PdfFile/PdfEditor.cpp
-index e378b82339..266c264db9 100644
+index 131c9552c8..9954c81ced 100644
 --- a/PdfFile/PdfEditor.cpp
 +++ b/PdfFile/PdfEditor.cpp
-@@ -1116,8 +1116,9 @@ bool CPdfEditor::IncrementalUpdates()
+@@ -1117,8 +1117,9 @@ bool CPdfEditor::IncrementalUpdates()
  				}
  				else if (strcmp("Fields", chKey) == 0)
  					oAcroForm.dictGetVal(nIndex, &oTemp2);

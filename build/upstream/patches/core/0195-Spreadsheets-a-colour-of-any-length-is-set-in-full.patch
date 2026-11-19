@@ -1,4 +1,4 @@
-From 5ac7186b03bee01ae8b237740c00fc1c921331f5 Mon Sep 17 00:00:00 2001
+From ecbe0778dedf6dfd0b720fe25e69cc13eac53f8b Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Wed, 4 Nov 2026 19:13:37 +0100
 Subject: [PATCH] Spreadsheets: a colour of any length is set in full
@@ -14,10 +14,10 @@ black, as the default constructor and a failed parse already leave it.
  1 file changed, 5 insertions(+)
 
 diff --git a/OOXML/Common/SimpleTypes_Spreadsheet.cpp b/OOXML/Common/SimpleTypes_Spreadsheet.cpp
-index 1e771da674..6aece17ffe 100644
+index 743eb9a59f..08c8a38b94 100644
 --- a/OOXML/Common/SimpleTypes_Spreadsheet.cpp
 +++ b/OOXML/Common/SimpleTypes_Spreadsheet.cpp
-@@ -393,6 +393,11 @@ namespace SimpleTypes
+@@ -383,6 +383,11 @@ namespace SimpleTypes
  
  		void CHexColor::FromString(const std::wstring &sValue)
  		{
@@ -26,7 +26,7 @@ index 1e771da674..6aece17ffe 100644
 +			m_unR = 0;
 +			m_unG = 0;
 +			m_unB = 0;
- 			if (false == Parse(sValue))
+ 			if (!Parse(sValue))
  			{
  				m_unA = 255;
 -- 

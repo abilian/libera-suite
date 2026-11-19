@@ -1,4 +1,4 @@
-From f49f77f42b087e2709905b1c63779d772f4606ac Mon Sep 17 00:00:00 2001
+From f54bc86cabea5ec60f2bb6b5918de1eb51824e6a Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:43 +0200
 Subject: [PATCH] OdfFile reader: a standard connector comes back bent, not

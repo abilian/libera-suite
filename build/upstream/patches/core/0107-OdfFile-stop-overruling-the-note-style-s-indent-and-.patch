@@ -1,4 +1,4 @@
-From 8f791d8f2c1f18802ce538cde2b21ea13802cd4c Mon Sep 17 00:00:00 2001
+From eaa958e9cc0622da27a0cb2f4daf4368c3dc14bb Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:55:52 +0200
 Subject: [PATCH] OdfFile: stop overruling the note style's indent and line
@@ -43,10 +43,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/OdfFile/Writer/Converter/DocxConverter.cpp b/OdfFile/Writer/Converter/DocxConverter.cpp
-index 6afb61f79f..24653fc40d 100644
+index 9dd01836c5..fa47aab13b 100644
 --- a/OdfFile/Writer/Converter/DocxConverter.cpp
 +++ b/OdfFile/Writer/Converter/DocxConverter.cpp
-@@ -1769,12 +1769,19 @@ void DocxConverter::convert(OOX::Logic::CParagraphProperty	*oox_paragraph_pr,
+@@ -1766,12 +1766,19 @@ void DocxConverter::convert(OOX::Logic::CParagraphProperty	*oox_paragraph_pr,
  
  	}
  

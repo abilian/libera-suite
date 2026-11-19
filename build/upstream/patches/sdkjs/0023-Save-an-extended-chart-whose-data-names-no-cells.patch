@@ -1,4 +1,4 @@
-From f4d46e7c44ef57b7d57dc8df47c335f902d2cce4 Mon Sep 17 00:00:00 2001
+From c375a16ac570131b999d9769b7f5a3819964a9f0 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 21:24:47 +0100
 Subject: [PATCH] Save an extended chart whose data names no cells

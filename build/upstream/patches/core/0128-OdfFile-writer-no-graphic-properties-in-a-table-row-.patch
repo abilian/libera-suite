@@ -1,4 +1,4 @@
-From a34ecbbac1a428dc2672abcc42414df647627636 Mon Sep 17 00:00:00 2001
+From dd4c84c99bec26ca681f6e295e090703f4648979 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:25:53 +0200
 Subject: [PATCH] OdfFile writer: no graphic properties in a table-row style

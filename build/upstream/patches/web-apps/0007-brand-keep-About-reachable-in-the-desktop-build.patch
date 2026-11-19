@@ -1,4 +1,4 @@
-From 5597bde508b841af43e6f074b2f163589ef12236 Mon Sep 17 00:00:00 2001
+From a938176132ad790cebb5ca4025f8be7abdd99be3 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 28 Sep 2026 17:51:13 +0200
 Subject: [PATCH] brand: keep About reachable in the desktop build
@@ -36,10 +36,10 @@ forced either way, and compactHeader is untouched.
  6 files changed, 11 insertions(+), 16 deletions(-)
 
 diff --git a/apps/api/documents/api.js b/apps/api/documents/api.js
-index 392bbc4168..8f8308904e 100644
+index f3dbff9e1e..1be394468f 100644
 --- a/apps/api/documents/api.js
 +++ b/apps/api/documents/api.js
-@@ -565,7 +565,12 @@
+@@ -569,7 +569,12 @@
                  _config.editorConfig.targetApp = 'desktop';
                  // _config.editorConfig.canBackToFolder = false;
                  if (!_config.editorConfig.customization) _config.editorConfig.customization = {};
@@ -54,10 +54,10 @@ index 392bbc4168..8f8308904e 100644
              }
          })();
 diff --git a/apps/documenteditor/main/app/controller/Main.js b/apps/documenteditor/main/app/controller/Main.js
-index d2d6069246..5ed90389a9 100644
+index 62d4c749eb..f38661e502 100644
 --- a/apps/documenteditor/main/app/controller/Main.js
 +++ b/apps/documenteditor/main/app/controller/Main.js
-@@ -2602,9 +2602,7 @@ define([
+@@ -2606,9 +2606,7 @@ define([
                  if (!this._state.customizationDone) {
                      this._state.customizationDone = true;
                      if (this.appOptions.customization) {

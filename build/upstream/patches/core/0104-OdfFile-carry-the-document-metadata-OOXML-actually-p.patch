@@ -1,4 +1,4 @@
-From 8e98c85feea53300dffca9f921b875a43ad79a9d Mon Sep 17 00:00:00 2001
+From f0c6cb04371eeffe2d2e2206e7df7c8f7f9a2e90 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:56:29 +0200
 Subject: [PATCH] OdfFile: carry the document metadata OOXML actually provides

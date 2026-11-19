@@ -1,4 +1,4 @@
-From 14a1296052f4d4bdfb755b6fbc8fa8f6e08aae5e Mon Sep 17 00:00:00 2001
+From 8a84576a547666ac8799798bdc8ef0c1ac894d11 Mon Sep 17 00:00:00 2001
 From: Libera Suite <dev@liberasuite.eu>
 Date: Tue, 22 Sep 2026 13:04:41 +0200
 Subject: [PATCH] cmake: let EO_CORE_OPENSSL_DIR point at an OpenSSL built
@@ -9,10 +9,10 @@ Subject: [PATCH] cmake: let EO_CORE_OPENSSL_DIR point at an OpenSSL built
  1 file changed, 16 insertions(+), 2 deletions(-)
 
 diff --git a/common.cmake b/common.cmake
-index 041849678c..d0591bbef6 100644
+index 5e7a9fc381..55bda49bdc 100644
 --- a/common.cmake
 +++ b/common.cmake
-@@ -131,6 +131,10 @@ else()
+@@ -207,6 +207,10 @@ else()
              if(NOT BUILD_DESKTOP)
                  set(NO_DESKTOP_EXCLUDE ",cef,qt")
              endif()
@@ -23,16 +23,16 @@ index 041849678c..d0591bbef6 100644
  
              set(PLATFORM_EXCLUDE "")
              if(BUILD_DESKTOP AND APPLE)
-@@ -139,7 +143,7 @@ else()
+@@ -221,7 +225,7 @@ else()
              endif()
  
              # cef and qt need old build environment, cannot be built here
--            set(THIRD_PARTY_ARGS "--except=openssl-hash,icu-wasm,zlib-ng-wasm,libxml2-wasm${NO_DESKTOP_EXCLUDE}${PLATFORM_EXCLUDE}")
-+            set(THIRD_PARTY_ARGS "--except=openssl-hash,icu-wasm,zlib-ng-wasm,libxml2-wasm${NO_DESKTOP_EXCLUDE}${PLATFORM_EXCLUDE}${EXTERNAL_OPENSSL_EXCLUDE}")
-         endif()
+-            set(THIRD_PARTY_ARGS "--except=openssl-hash,icu-wasm,zlib-ng-wasm,libxml2-wasm,libjpeg-turbo-wasm,libwebp-wasm,libpng-wasm,libtiff-wasm,leptonica-wasm${NO_DESKTOP_EXCLUDE}${PLATFORM_EXCLUDE}${PREBUILT_EXCLUDE}")
++            set(THIRD_PARTY_ARGS "--except=openssl-hash,icu-wasm,zlib-ng-wasm,libxml2-wasm,libjpeg-turbo-wasm,libwebp-wasm,libpng-wasm,libtiff-wasm,leptonica-wasm${NO_DESKTOP_EXCLUDE}${PLATFORM_EXCLUDE}${PREBUILT_EXCLUDE}${EXTERNAL_OPENSSL_EXCLUDE}")
  
-         cmake_path( APPEND BUILDER_PATH "${CMAKE_CURRENT_LIST_DIR}" "Common" "3dParty" "build_3rdparty.py" )
-@@ -271,7 +275,17 @@ else()
+             # On x86_64 Linux the Rocky 9 compiler may emit SSE4.2 or higher
+             # instructions without an explicit -march constraint. Pass CFLAGS/CXXFLAGS
+@@ -368,7 +372,17 @@ else()
      endif()
  
      # Setup openssl

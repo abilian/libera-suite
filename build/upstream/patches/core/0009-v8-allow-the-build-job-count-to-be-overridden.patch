@@ -1,4 +1,4 @@
-From 57c47f19563d871b0819e66befc369eb44ef9f39 Mon Sep 17 00:00:00 2001
+From 22e630b10bbebf7c07f656050edd090ccb23b884 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 10 Sep 2026 15:27:28 +0200
 Subject: [PATCH] v8: allow the build job count to be overridden
@@ -8,27 +8,24 @@ lower it. Linking v8_monolith is memory-hungry, so eight parallel clang
 processes on a 16 GB machine get the build OOM-killed. Honour
 V8_BUILD_JOBS when set.
 ---
- Common/3dParty/v8/nc-build.py | 6 ++++++
- 1 file changed, 6 insertions(+)
+ Common/3dParty/v8/nc-build.py | 4 ++++
+ 1 file changed, 4 insertions(+)
 
 diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
-index d7949cf9b8..88c6854578 100644
+index 1c51cfbcc7..a8d07b68a1 100644
 --- a/Common/3dParty/v8/nc-build.py
 +++ b/Common/3dParty/v8/nc-build.py
-@@ -1102,7 +1102,13 @@ solutions = [
-             if shutil.which( tool ) is None:
-                 nc.abort_op( f"Tool not found: {tool}" )
+@@ -488,6 +488,10 @@ def _available_memory() -> int | None:
+     return min( limits ) if limits else None
  
-+        # One job per core exhausts memory on smaller machines -- linking
-+        # v8_monolith is heavy, and eight parallel clang processes on a 16 GB
-+        # laptop gets the build OOM-killed. Allow an override.
-         job_count = max( os.cpu_count() or 1, 4 ) # at least 4 jobs
-+        job_override = os.environ.get( "V8_BUILD_JOBS" )
-+        if job_override:
-+            job_count = int( job_override )
-         if nc.is_windows():
-             # On Windows, MSVC is more likely to run out of memory if it uses too many workers. TODO: Maybe we could set an optimal job count based on free memory and cpu core count.
-             job_count = 4
+ def _job_count() -> int:
++    # Set by the caller when it knows better, as on a laptop that also has
++    # to stay usable while V8 builds.
++    if os.environ.get( "V8_BUILD_JOBS" ):
++        return int( os.environ[ "V8_BUILD_JOBS" ] )
+     # V8's compile jobs need up to ~2 GB each. One job per CPU gets runners
+     # with many cores and little memory OOM-killed.
+     jobs = os.cpu_count() or 1
 -- 
 2.55.0
 

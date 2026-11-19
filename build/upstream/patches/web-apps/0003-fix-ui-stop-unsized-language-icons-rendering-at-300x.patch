@@ -1,4 +1,4 @@
-From 3025133178e12b20f12c75b4d4d4b426aa27bd44 Mon Sep 17 00:00:00 2001
+From a907ced6372369ea5d7db1242417c32e74e5c6d4 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Fri, 11 Sep 2026 13:36:04 +0200
 Subject: [PATCH] fix(ui): stop unsized language icons rendering at 300x150

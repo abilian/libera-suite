@@ -1,4 +1,4 @@
-From 8e0ff90ba0584a17716a6910ef800fb0f2eb21ca Mon Sep 17 00:00:00 2001
+From 401c907bc922a8f71bd237308e13d9d476b9c30a Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 08:54:40 +0200
 Subject: [PATCH] OdfFile writer: each piece of a tracked change is a region
@@ -19,10 +19,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  2 files changed, 14 insertions(+)
 
 diff --git a/OdfFile/Writer/Format/odt_conversion_context.cpp b/OdfFile/Writer/Format/odt_conversion_context.cpp
-index 56732da7b1..aae8141510 100644
+index 3c1960efd7..d4ff93b850 100644
 --- a/OdfFile/Writer/Format/odt_conversion_context.cpp
 +++ b/OdfFile/Writer/Format/odt_conversion_context.cpp
-@@ -1554,6 +1554,10 @@ bool odt_conversion_context::start_change (int id, int type, std::wstring &autho
+@@ -1563,6 +1563,10 @@ bool odt_conversion_context::start_change (int id, int type, std::wstring &autho
  	text_changes_state_.current_types.push_back(type);
  
  	std::wstring strId = L"ct" + boost::lexical_cast<std::wstring>(id);
@@ -33,7 +33,7 @@ index 56732da7b1..aae8141510 100644
  //---------------------------------------------------------------------------------
  	office_element_ptr start_elm;
  
-@@ -1632,6 +1636,12 @@ void odt_conversion_context::end_change (int id, int type)
+@@ -1641,6 +1645,12 @@ void odt_conversion_context::end_change (int id, int type)
  	//if (!text_changes_state_.main_text_context) return;
  	
  	std::wstring strId = L"ct" + boost::lexical_cast<std::wstring>(id);

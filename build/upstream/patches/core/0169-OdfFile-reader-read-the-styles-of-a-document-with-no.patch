@@ -1,4 +1,4 @@
-From 5dca31f12c78f982616dd21bd8f9848ac33ba865 Mon Sep 17 00:00:00 2001
+From cc2648012e89daafcfc9d6cf9bf3f96ae0233fcb Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 23 Oct 2026 10:30:20 +0200
 Subject: [PATCH] OdfFile reader: read the styles of a document with no master
@@ -15,7 +15,7 @@ needs them.
  1 file changed, 2 insertions(+), 4 deletions(-)
 
 diff --git a/OdfFile/Reader/Format/odf_document_impl.cpp b/OdfFile/Reader/Format/odf_document_impl.cpp
-index 99b03c5f68..98edb4e1fa 100644
+index 5b6be3bddc..2d1f2b9a9b 100644
 --- a/OdfFile/Reader/Format/odf_document_impl.cpp
 +++ b/OdfFile/Reader/Format/odf_document_impl.cpp
 @@ -782,11 +782,9 @@ void odf_document::Impl::parse_styles(office_element *element)

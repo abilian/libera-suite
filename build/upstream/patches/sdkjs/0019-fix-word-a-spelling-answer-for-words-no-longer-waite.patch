@@ -1,4 +1,4 @@
-From 656bfb4cc63fd26d89df7eefc7bf6ff50bf712d5 Mon Sep 17 00:00:00 2001
+From a1c1e3caa9278d99be8ab89ec5045f6269649247 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 18:23:49 +0100
 Subject: [PATCH] fix(word): a spelling answer for words no longer waited for
@@ -58,7 +58,7 @@ index 549790550c..3ad56fd5a1 100644
  
  		if (nRecalcId !== this.RecalcId)
 diff --git a/word/api.js b/word/api.js
-index b53e14249b..a03d20590f 100644
+index 3d7d3f6e2c..c1e11e731f 100644
 --- a/word/api.js
 +++ b/word/api.js
 @@ -1896,7 +1896,7 @@ background-repeat: no-repeat;\

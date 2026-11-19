@@ -1,4 +1,4 @@
-From 4323a8bc78ea5408cc9bac24c82b6bc6c3dc62c3 Mon Sep 17 00:00:00 2001
+From e87f321e59d012eafbdcac6ddf206efc8404a152 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 30 Oct 2026 07:28:47 +0100
 Subject: [PATCH] pdf: a moved page keeps what it inherits from its own parents
@@ -12,10 +12,10 @@ pdf-page-order-inherited-attributes (leag1234/elixiroffice@ac630a1).
  1 file changed, 7 insertions(+)
 
 diff --git a/PdfFile/PdfEditor.cpp b/PdfFile/PdfEditor.cpp
-index 266c264db9..b53b32bc2b 100644
+index 9954c81ced..4fdf022916 100644
 --- a/PdfFile/PdfEditor.cpp
 +++ b/PdfFile/PdfEditor.cpp
-@@ -2038,7 +2038,14 @@ bool CPdfEditor::EditPage(int _nPageIndex, bool bSet, bool bActualPos)
+@@ -2039,7 +2039,14 @@ bool CPdfEditor::EditPage(int _nPageIndex, bool bSet, bool bActualPos)
  		return false;
  	std::pair<int, int> pPageRef = std::make_pair(0, 0);
  	if (bActualPos)

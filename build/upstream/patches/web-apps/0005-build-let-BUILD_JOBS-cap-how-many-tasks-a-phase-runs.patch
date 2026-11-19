@@ -1,4 +1,4 @@
-From e93eb6bc933d724bea9cfd911a31334dcccfbfba Mon Sep 17 00:00:00 2001
+From 378783a2154a7340d2fbff18b86248b081d72511 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Mon, 14 Sep 2026 18:38:07 +0200
 Subject: [PATCH] build: let BUILD_JOBS cap how many tasks a phase runs at once
@@ -15,10 +15,10 @@ previous behaviour: one batch, the same abort-the-siblings semantics.
  1 file changed, 27 insertions(+), 6 deletions(-)
 
 diff --git a/build/scripts/build-pipeline.js b/build/scripts/build-pipeline.js
-index 6f131ee5b4..8f0f81a972 100755
+index eff36c6073..ba920f4ffe 100755
 --- a/build/scripts/build-pipeline.js
 +++ b/build/scripts/build-pipeline.js
-@@ -64,6 +64,13 @@ const THEME = process.env.THEME || 'euro-office';
+@@ -66,6 +66,13 @@ const THEME = process.env.THEME || 'euro-office';
  // 'development') and desktop (defaults to 'production') agree — without this the
  // pipeline could silently emit a dev mobile bundle. Overridable: NODE_ENV=development.
  const NODE_ENV = process.env.NODE_ENV || 'production';
@@ -30,9 +30,9 @@ index 6f131ee5b4..8f0f81a972 100755
 +// at 1 GB do not fit either.
 +const BUILD_JOBS = Math.max(0, parseInt(process.env.BUILD_JOBS || '0', 10) || 0);
  
- // Env passed to every child process
- const CHILD_ENV = {
-@@ -173,14 +180,10 @@ function formatTaskList(labels, maxWidth = 80) {
+ // verify-deploy fails on bundles older than this, so a stale bundle left in
+ // BUILD_ROOT by a failed build is never shipped. Floored to whole seconds for
+@@ -188,14 +195,10 @@ function formatTaskList(labels, maxWidth = 80) {
  // Run a set of task specs in parallel; kills siblings on first failure.
  // Prints the banner and task list BEFORE spawning, so output order is always correct.
  // Returns results array (code=-1 entries are killed tasks, not counted as failures).
@@ -49,7 +49,7 @@ index 6f131ee5b4..8f0f81a972 100755
          running.map(t =>
              t.promise.then(r => {
                  if (r.code > 0 && !aborted) {
-@@ -191,6 +194,24 @@ async function phase(title, taskSpecs) {
+@@ -206,6 +209,24 @@ async function phase(title, taskSpecs) {
              })
          )
      );

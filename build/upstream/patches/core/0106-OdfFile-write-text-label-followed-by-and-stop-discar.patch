@@ -1,4 +1,4 @@
-From 2278fb16c388c87e460d975182779280333c3852 Mon Sep 17 00:00:00 2001
+From fe46cd8b3044d5964f07ad059b6dcdf3e553bb93 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:53:47 +0200
 Subject: [PATCH] OdfFile: write text:label-followed-by, and stop discarding
@@ -36,10 +36,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  2 files changed, 20 insertions(+), 2 deletions(-)
 
 diff --git a/OdfFile/Writer/Converter/DocxConverter.cpp b/OdfFile/Writer/Converter/DocxConverter.cpp
-index e47ba74856..6afb61f79f 100644
+index 478f4fa8f4..9dd01836c5 100644
 --- a/OdfFile/Writer/Converter/DocxConverter.cpp
 +++ b/OdfFile/Writer/Converter/DocxConverter.cpp
-@@ -4161,9 +4161,24 @@ void DocxConverter::convert(OOX::Numbering::CLvl *oox_num_lvl, OOX::Numbering::C
+@@ -4149,9 +4149,24 @@ void DocxConverter::convert(OOX::Numbering::CLvl *oox_num_lvl, OOX::Numbering::C
  	if (start_value > 1)
  		odt_context->styles_context()->lists_styles().set_start_number(start_value);
  //-------------------------------------------

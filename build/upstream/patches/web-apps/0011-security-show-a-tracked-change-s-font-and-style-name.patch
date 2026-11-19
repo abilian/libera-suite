@@ -1,4 +1,4 @@
-From 7686cd5809ed8ef554630e18625f0c3a9081656f Mon Sep 17 00:00:00 2001
+From c664e5b5d0b33e66e256d76eb1daf2812fc8b78a Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Fri, 16 Oct 2026 08:56:31 +0000
 Subject: [PATCH] security: show a tracked change's font and style names as

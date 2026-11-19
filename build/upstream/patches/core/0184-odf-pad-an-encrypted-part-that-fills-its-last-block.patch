@@ -1,4 +1,4 @@
-From 52c6485ea1c9136473567d9b42a8aea69c01ad40 Mon Sep 17 00:00:00 2001
+From 26e780a76cb909f9548eb7e8a74854e8f415c1f5 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Sat, 31 Oct 2026 11:46:13 +0100
 Subject: [PATCH] odf: pad an encrypted part that fills its last block
@@ -12,10 +12,10 @@ the encrypted ODF files x2t wrote. x2t read them back all the same.
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/OfficeCryptReader/source/CryptTransform.cpp b/OfficeCryptReader/source/CryptTransform.cpp
-index 9b75ce99ef..8680fc3ddd 100644
+index 575f8de66d..fbba3f7f3e 100644
 --- a/OfficeCryptReader/source/CryptTransform.cpp
 +++ b/OfficeCryptReader/source/CryptTransform.cpp
-@@ -1374,7 +1374,8 @@ int ODFEncryptor::Encrypt (const std::wstring & wspassword, unsigned char* data,
+@@ -1383,7 +1383,8 @@ int ODFEncryptor::Encrypt (const std::wstring & wspassword, unsigned char* data,
  
  	bool bPadding = (cryptData.cipherAlgorithm == CRYPT_METHOD::AES_CBC);
  	

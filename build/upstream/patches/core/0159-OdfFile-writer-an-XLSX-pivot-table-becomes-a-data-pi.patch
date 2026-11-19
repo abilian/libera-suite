@@ -1,4 +1,4 @@
-From 2dc7ae966a80baafa4f98d95c43ba6f6257bfd3a Mon Sep 17 00:00:00 2001
+From 6b7307a047696cc22de07e759a54fc349d88be69 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 19:24:01 +0200
 Subject: [PATCH] OdfFile writer: an XLSX pivot table becomes a data pilot
@@ -27,7 +27,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  6 files changed, 155 insertions(+), 32 deletions(-)
 
 diff --git a/OdfFile/Writer/Converter/XlsxConverter.cpp b/OdfFile/Writer/Converter/XlsxConverter.cpp
-index 98ad37ff0b..9b60dcc673 100644
+index 9cdffebf58..f91287e82a 100644
 --- a/OdfFile/Writer/Converter/XlsxConverter.cpp
 +++ b/OdfFile/Writer/Converter/XlsxConverter.cpp
 @@ -43,6 +43,7 @@
@@ -38,7 +38,7 @@ index 98ad37ff0b..9b60dcc673 100644
  #include "../../../OOXML/XlsxFormat/Pivot/PivotCacheDefinition.h"
  #include "../../../OOXML/XlsxFormat/Pivot/PivotCacheRecords.h"
  #include "../../../OOXML/XlsxFormat/Worksheets/Sparkline.h"
-@@ -554,48 +555,109 @@ void XlsxConverter::convert(OOX::Spreadsheet::CPivotTableFile *oox_pivot_table)
+@@ -556,48 +557,109 @@ void XlsxConverter::convert(OOX::Spreadsheet::CPivotTableFile *oox_pivot_table)
  		convert(oox_pivot_table->m_oPivotTableDefinition.GetPointer(), oPivotCache->m_oPivotCashDefinition.GetPointer());
  	}
  }
@@ -175,10 +175,10 @@ index 98ad37ff0b..9b60dcc673 100644
  	ods_context->end_pivot_table();
  }
 diff --git a/OdfFile/Writer/Format/ods_conversion_context.cpp b/OdfFile/Writer/Format/ods_conversion_context.cpp
-index 5c073cd49d..3bb9388dee 100644
+index 4710394720..18ef20a4d2 100644
 --- a/OdfFile/Writer/Format/ods_conversion_context.cpp
 +++ b/OdfFile/Writer/Format/ods_conversion_context.cpp
-@@ -365,6 +365,14 @@ void ods_conversion_context::start_pivot_table(const std::wstring &name)
+@@ -370,6 +370,14 @@ void ods_conversion_context::start_pivot_table(const std::wstring &name)
  {
  	return table_context_.start_pivot_table(name);
  }
@@ -215,7 +215,7 @@ index fca6703d0e..09abc607ba 100644
  
  	void start_conditional_formats();
 diff --git a/OdfFile/Writer/Format/ods_table_context.cpp b/OdfFile/Writer/Format/ods_table_context.cpp
-index 58cee0cc9c..6190187e97 100644
+index 599796e2ac..c39a0b38ee 100644
 --- a/OdfFile/Writer/Format/ods_table_context.cpp
 +++ b/OdfFile/Writer/Format/ods_table_context.cpp
 @@ -210,8 +210,6 @@ void ods_table_context::add_autofilter(std::wstring ref)

@@ -5,9 +5,9 @@
 # Bumping a pin is a deliberate act that may require rebasing patches/.
 
 [repos]
-core       = "0c489c97a84c6dd896392de574a4c7e3913030a1"  # 2026-11-13, DesktopEditors v9.3.8
-sdkjs      = "a1b8cac5d1bc575a0a28d8628d4bd30757b1e908"  # 2026-11-03, DesktopEditors v9.3.8
-web-apps   = "f8d4506c130d06f9939dee66f939e0e5bce13b99"  # 2026-11-03, DesktopEditors v9.3.8
+core       = "ab15febf8141add68f6e99b168a1eebcfc9e8a14"  # 2026-11-19, Euro-Office main
+sdkjs      = "1ee04e9a8019ad7374d49fc1988ca20fea070be4"  # 2026-11-19, Euro-Office main
+web-apps   = "d93a3ecd17abf66421c839ad203e61f604ff112b"  # 2026-11-18, Euro-Office main
 core-fonts = "9cd64d6eedc72b75b7271f325f075cb8c73e59fa"  # 2026-10-13, DesktopEditors v9.3.8
 # Blank and sample documents, per locale. core/Common/empty/*.bin looks like
 # it would do instead and does not: see build/README.md.

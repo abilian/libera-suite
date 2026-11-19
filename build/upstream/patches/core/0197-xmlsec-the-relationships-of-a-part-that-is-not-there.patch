@@ -1,4 +1,4 @@
-From 9eb7845affb3ad3c0629f8b9e6f89b64ccbc95d0 Mon Sep 17 00:00:00 2001
+From 4559a0a0d0259b183524969b29bcd3db14fc5e73 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 5 Nov 2026 14:56:45 +0100
 Subject: [PATCH] xmlsec: the relationships of a part that is not there go

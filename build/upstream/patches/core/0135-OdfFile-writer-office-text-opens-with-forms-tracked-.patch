@@ -1,4 +1,4 @@
-From ddd9d5487769081c1fb5e5f854eca379d00d6dc8 Mon Sep 17 00:00:00 2001
+From f0dc9f3750399278a191f04a67804722648e2c5e Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 07:49:07 +0200
 Subject: [PATCH] OdfFile writer: office:text opens with forms, tracked

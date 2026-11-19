@@ -1,4 +1,4 @@
-From 9602298e2e9e7d779bed9bda4df2fdaf5f4cb9f4 Mon Sep 17 00:00:00 2001
+From ab1eeddcc91e225cbe780a0e313b0a1c1c9adb4f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Sun, 1 Nov 2026 08:44:43 +0100
 Subject: [PATCH] xmlsec: end a certificate's dates on its own day

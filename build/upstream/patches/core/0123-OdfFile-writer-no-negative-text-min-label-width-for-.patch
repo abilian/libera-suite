@@ -1,4 +1,4 @@
-From a71708bfd1bb3e5f523c8c88546480fbd58638e9 Mon Sep 17 00:00:00 2001
+From d56b7ff631238a4100288e99c5752f45ad8611c7 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 19:28:57 +0200
 Subject: [PATCH] OdfFile writer: no negative text:min-label-width for a
@@ -18,7 +18,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/OdfFile/Writer/Converter/ConvertDrawing.cpp b/OdfFile/Writer/Converter/ConvertDrawing.cpp
-index f4ca3ac5dc..f14f1e834d 100644
+index b7d0b98c11..239cd7acab 100644
 --- a/OdfFile/Writer/Converter/ConvertDrawing.cpp
 +++ b/OdfFile/Writer/Converter/ConvertDrawing.cpp
 @@ -1940,7 +1940,9 @@ void OoxConverter::convert_list_level(PPTX::Logic::TextParagraphPr	*oox_para_pro

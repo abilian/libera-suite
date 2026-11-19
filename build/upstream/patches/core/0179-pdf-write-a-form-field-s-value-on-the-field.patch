@@ -1,4 +1,4 @@
-From 6378a1889d9646dfb1511c0349b944c4c68cfaa8 Mon Sep 17 00:00:00 2001
+From 4bd04ebb01502e2a13584c3fc607f562c28a130c Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 30 Oct 2026 08:46:59 +0100
 Subject: [PATCH] pdf: write a form field's value on the field
@@ -13,7 +13,7 @@ own now owns its values.
  1 file changed, 6 insertions(+)
 
 diff --git a/PdfFile/SrcWriter/Annotation.cpp b/PdfFile/SrcWriter/Annotation.cpp
-index 110c1d33b6..b07267d427 100644
+index 5fa6459963..7f5657f886 100644
 --- a/PdfFile/SrcWriter/Annotation.cpp
 +++ b/PdfFile/SrcWriter/Annotation.cpp
 @@ -1380,11 +1380,17 @@ namespace PdfWriter

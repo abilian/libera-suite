@@ -1,4 +1,4 @@
-From e85858b223843c53c5320cc3bf0f083380f64d90 Mon Sep 17 00:00:00 2001
+From c71c59fad544b93061e036dee07911e109e199fe Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Wed, 11 Nov 2026 22:46:39 +0100
 Subject: [PATCH] HTML: a style made from CSS stays out of the style gallery

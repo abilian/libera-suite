@@ -1,4 +1,4 @@
-From 703ce44de448baac3faaa71875a161e4e30a3482 Mon Sep 17 00:00:00 2001
+From 5985cf95c6c9bd24de8eb1f1bb58c0da989fef07 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 21:24:52 +0200
 Subject: [PATCH] OdfFile writer: no text:span inside text-only fields

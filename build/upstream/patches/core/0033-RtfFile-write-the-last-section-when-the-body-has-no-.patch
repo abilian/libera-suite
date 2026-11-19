@@ -1,4 +1,4 @@
-From 20efb568c988730c440f7b5622ce224be1bfe0ad Mon Sep 17 00:00:00 2001
+From d44c83b1429d3044b76a82afa18a64e10ba4acc0 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Wed, 14 Oct 2026 15:24:52 +0200
 Subject: [PATCH] RtfFile: write the last section when the body has no w:sectPr
@@ -14,7 +14,7 @@ section now runs to the end of the body, with the default properties.
  1 file changed, 14 insertions(+), 4 deletions(-)
 
 diff --git a/RtfFile/OOXml/Reader/OOXDocumentReader.cpp b/RtfFile/OOXml/Reader/OOXDocumentReader.cpp
-index 1687218556..b01ea6bded 100644
+index 3c461cc471..1d68a85fd0 100644
 --- a/RtfFile/OOXml/Reader/OOXDocumentReader.cpp
 +++ b/RtfFile/OOXml/Reader/OOXDocumentReader.cpp
 @@ -73,6 +73,16 @@ bool OOXDocumentReader::Parse(ReaderParameter oParam)
@@ -32,7 +32,7 @@ index 1687218556..b01ea6bded 100644
 +			}
 +
  			OOXSectionPropertyReader oSectReader(dynamic_cast<OOX::Logic::CSectionProperty*>(m_ooxDocument->m_arrSections[i].sect));
- 			if (true == oSectReader.Parse(oParam, section.props->m_oProperty))
+ 			if (oSectReader.Parse(oParam, section.props->m_oProperty))
  			{
 @@ -127,11 +137,11 @@ bool OOXDocumentReader::Parse(ReaderParameter oParam)
  		if (m_ooxDocument->m_oSectPr.IsInit())// properties of the last section

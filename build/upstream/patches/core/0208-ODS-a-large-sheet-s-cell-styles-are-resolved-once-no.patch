@@ -1,4 +1,4 @@
-From bf919d32c60c73175d0b2e409c6b574ba4ab515a Mon Sep 17 00:00:00 2001
+From d1520638b17518e7a96a50a7bb7a7e72270a6ea5 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 19:38:39 +0100
 Subject: [PATCH] ODS: a large sheet's cell styles are resolved once, not once
@@ -88,7 +88,7 @@ index 6672843ee1..62b2b2f404 100644
  		_CP_OPT(int) calc_outline_level(_CP_OPT(int) value, const style_instance * styleInstance);
  	}
 diff --git a/OdfFile/Reader/Format/odfcontext.cpp b/OdfFile/Reader/Format/odfcontext.cpp
-index b8d5e1bd40..844693b91c 100644
+index 373737e516..63ea949e55 100644
 --- a/OdfFile/Reader/Format/odfcontext.cpp
 +++ b/OdfFile/Reader/Format/odfcontext.cpp
 @@ -47,6 +47,21 @@ namespace cpdoccore {
@@ -166,10 +166,10 @@ index b8d5e1bd40..844693b91c 100644
  			map_wstring_int_t::const_iterator res = map2_.find(n);
  
 diff --git a/OdfFile/Reader/Format/odfcontext.h b/OdfFile/Reader/Format/odfcontext.h
-index cbf467c633..1a2bf2677d 100644
+index ef9da82112..54ca7283b0 100644
 --- a/OdfFile/Reader/Format/odfcontext.h
 +++ b/OdfFile/Reader/Format/odfcontext.h
-@@ -389,6 +389,8 @@ private:
+@@ -390,6 +390,8 @@ private:
          
  };
  
@@ -178,7 +178,7 @@ index cbf467c633..1a2bf2677d 100644
  class odf_read_context
  {
  public:
-@@ -404,6 +406,8 @@ public:
+@@ -405,6 +407,8 @@ public:
  	styles_lite_container&	Templates()				{ return template_container_; }
  	settings_container&		Settings()				{ return settings_container_; }
  	doc_props_container&	DocProps()				{ return doc_props_container_; }
@@ -187,7 +187,7 @@ index cbf467c633..1a2bf2677d 100644
  
  private:
      styles_container		major_style_container_;
-@@ -418,6 +422,7 @@ private:
+@@ -419,6 +423,7 @@ private:
      
  	settings_container		settings_container_;
  	doc_props_container		doc_props_container_;
@@ -196,10 +196,10 @@ index cbf467c633..1a2bf2677d 100644
  
  
 diff --git a/OdfFile/Reader/Format/table_xlsx.cpp b/OdfFile/Reader/Format/table_xlsx.cpp
-index 6254a72450..cca881c953 100644
+index f8ccbdca7e..f6abcdba28 100644
 --- a/OdfFile/Reader/Format/table_xlsx.cpp
 +++ b/OdfFile/Reader/Format/table_xlsx.cpp
-@@ -940,9 +940,10 @@ void table_table_cell::xlsx_convert(oox::xlsx_conversion_context & Context)
+@@ -1078,9 +1078,10 @@ void table_table_cell::xlsx_convert(oox::xlsx_conversion_context & Context)
  				instances.push_back(cellStyle);
  		}
  

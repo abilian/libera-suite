@@ -1,4 +1,4 @@
-From ce74c4993ee0a5279915d228b437aecc95f4cd82 Mon Sep 17 00:00:00 2001
+From 51556a4bcd915f64eedc9572929b589fd171844a Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:21:27 +0200
 Subject: [PATCH] OdfFile writer: a DOCX table without grid columns gets one
@@ -20,11 +20,11 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  2 files changed, 38 insertions(+), 6 deletions(-)
 
 diff --git a/OdfFile/Writer/Converter/DocxConverter.cpp b/OdfFile/Writer/Converter/DocxConverter.cpp
-index 95958787ec..52d120f7ff 100644
+index fa47aab13b..2fa2e2471f 100644
 --- a/OdfFile/Writer/Converter/DocxConverter.cpp
 +++ b/OdfFile/Writer/Converter/DocxConverter.cpp
-@@ -4705,6 +4705,32 @@ void DocxConverter::convert_hdr_ftr(std::wstring sId)
- 	oox_current_child_document  = back_document;
+@@ -4718,6 +4718,32 @@ bool DocxConverter::in_table()
+ 	return odt_context->table_context()->depth() > tables_around_hdr_ftr;
  }
  
 +// The widest row, in grid columns: what a table without a grid, which Word accepts, has
@@ -56,7 +56,7 @@ index 95958787ec..52d120f7ff 100644
  void DocxConverter::convert(OOX::Logic::CTbl *oox_table)
  {
  	if (oox_table == NULL) return;
-@@ -4879,11 +4905,13 @@ void DocxConverter::convert(OOX::Logic::CTbl *oox_table)
+@@ -4892,11 +4918,13 @@ void DocxConverter::convert(OOX::Logic::CTbl *oox_table)
  
  	int count_rows		= oox_table->m_nCountRow;
  	int count_columns	= oox_table->m_oTblGrid.IsInit() ? (int)oox_table->m_oTblGrid->m_arrGridCol.size() : 0;
@@ -71,7 +71,7 @@ index 95958787ec..52d120f7ff 100644
  
  //------ lines
      for (size_t i = 0; i < oox_table->m_arrItems.size(); ++i)
-@@ -4929,15 +4957,19 @@ void DocxConverter::convert(OOX::Logic::CTbl *oox_table)
+@@ -4942,15 +4970,19 @@ void DocxConverter::convert(OOX::Logic::CTbl *oox_table)
  		odt_context->end_change(id_change_properties, 3); 
  }
  
@@ -96,10 +96,10 @@ index 95958787ec..52d120f7ff 100644
  		if (oox_table_grid->m_arrGridCol[i] == NULL) continue;
  		double width = -1;
 diff --git a/OdfFile/Writer/Converter/DocxConverter.h b/OdfFile/Writer/Converter/DocxConverter.h
-index a09359319c..9cd383c9e8 100644
+index 09db8b04c0..98db08518f 100644
 --- a/OdfFile/Writer/Converter/DocxConverter.h
 +++ b/OdfFile/Writer/Converter/DocxConverter.h
-@@ -261,7 +261,7 @@ namespace Oox2Odf
+@@ -266,7 +266,7 @@ namespace Oox2Odf
  		void convert(OOX::Logic::CEndnoteReference		*oox_note_ref);
  
  		void convert(OOX::Logic::CTbl					*oox_table);

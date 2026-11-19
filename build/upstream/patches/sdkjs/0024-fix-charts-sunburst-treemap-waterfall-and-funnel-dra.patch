@@ -1,4 +1,4 @@
-From dc3b08e31b3fcbd551130c11a8d4b29655dc23f1 Mon Sep 17 00:00:00 2001
+From 93113d26f57e02d846e14a1addd3e0af17c726c4 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 21:57:20 +0100
 Subject: [PATCH] fix(charts): sunburst, treemap, waterfall and funnel drawn as
@@ -29,7 +29,7 @@ which stopped the editor, is ignored.
  create mode 100644 tests/word/treemap.test.cjs
 
 diff --git a/common/Charts/ChartsDrawer.js b/common/Charts/ChartsDrawer.js
-index dc0100a671..fc9a43b222 100644
+index 697f11ef04..b5ae97b3cd 100644
 --- a/common/Charts/ChartsDrawer.js
 +++ b/common/Charts/ChartsDrawer.js
 @@ -7990,11 +7990,31 @@ drawSunburstChart.prototype = {

@@ -1,4 +1,4 @@
-From a9e2efe5a05c32007e777527ed9dd5aceeb29f6d Mon Sep 17 00:00:00 2001
+From 3360e0e96a877b5344fd26fa0a693c77736bdb1d Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:27:38 +0200
 Subject: [PATCH] OdfFile: presentation master page names are NCNames, shown as

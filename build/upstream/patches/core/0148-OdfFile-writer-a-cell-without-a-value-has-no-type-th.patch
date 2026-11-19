@@ -1,4 +1,4 @@
-From 76a221422ce4847f1e3cff71c707140513a80548 Mon Sep 17 00:00:00 2001
+From a6037774e873ee426efb5e4418ae42fd8a32927b Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 16:55:48 +0200
 Subject: [PATCH] OdfFile writer: a cell without a value has no type that needs
@@ -18,10 +18,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 21 insertions(+)
 
 diff --git a/OdfFile/Writer/Format/ods_table_state.cpp b/OdfFile/Writer/Format/ods_table_state.cpp
-index 5b405b187a..a51d45e202 100644
+index c7d83c04bb..d7fd0243e1 100644
 --- a/OdfFile/Writer/Format/ods_table_state.cpp
 +++ b/OdfFile/Writer/Format/ods_table_state.cpp
-@@ -1536,6 +1536,27 @@ void ods_table_state::end_cell()
+@@ -1575,6 +1575,27 @@ void ods_table_state::end_cell()
  		table_table_cell* cell = dynamic_cast<table_table_cell*>(cells_.back().elm.get());
  		if (cell)cell->attlist_.common_value_and_type_attlist_ = boost::none;
  	}

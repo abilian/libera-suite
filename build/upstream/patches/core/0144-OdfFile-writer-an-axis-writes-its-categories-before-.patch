@@ -1,4 +1,4 @@
-From aa1d0b3bd91cdebb5b65847a88f7e33d100262f4 Mon Sep 17 00:00:00 2001
+From cfba5f4ccd8e13de5f1872ed69cba93060c6aa78 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 16:55:47 +0200
 Subject: [PATCH] OdfFile writer: an axis writes its categories before its

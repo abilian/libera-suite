@@ -1,4 +1,4 @@
-From d3417afe815820ef591f2b39be0e6fa5a2a1cdb3 Mon Sep 17 00:00:00 2001
+From e0d0319b7c44e412c24e7e8376ce66051eca46e0 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 06:56:16 +0200
 Subject: [PATCH] OdfFile writer: a field that starts inside a span starts its
@@ -20,10 +20,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 13 insertions(+), 1 deletion(-)
 
 diff --git a/OdfFile/Writer/Format/odt_conversion_context.cpp b/OdfFile/Writer/Format/odt_conversion_context.cpp
-index ec3a5ac5bf..56732da7b1 100644
+index 09396d2334..3c1960efd7 100644
 --- a/OdfFile/Writer/Format/odt_conversion_context.cpp
 +++ b/OdfFile/Writer/Format/odt_conversion_context.cpp
-@@ -1401,7 +1401,19 @@ void odt_conversion_context::start_run(bool styled)
+@@ -1410,7 +1410,19 @@ void odt_conversion_context::start_run(bool styled)
  	if (!current_fields.empty() && current_fields.back().status == 1 && current_fields.back().in_span)//the field starts in span - needed to save the style
  	{
  		current_fields.back().status = 2;

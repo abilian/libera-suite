@@ -1,4 +1,4 @@
-From 6ab6c5a338ccbbc457193e094a03353556ffdb64 Mon Sep 17 00:00:00 2001
+From 02f59c92cfc8e253deaefcc5d27f8ddfb9ad07cd Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Thu, 10 Sep 2026 17:28:49 +0200
 Subject: [PATCH] openjpeg: use posix_memalign on macOS
@@ -13,7 +13,7 @@ The file already carries a `#ifndef _MAC` for malloc.h.
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/DesktopEditor/raster/Jp2/openjpeg/opj_config_private.h b/DesktopEditor/raster/Jp2/openjpeg/opj_config_private.h
-index 20fee4d58c..8b32856b5f 100644
+index e3437e8cad..4cec305e48 100644
 --- a/DesktopEditor/raster/Jp2/openjpeg/opj_config_private.h
 +++ b/DesktopEditor/raster/Jp2/openjpeg/opj_config_private.h
 @@ -12,11 +12,11 @@

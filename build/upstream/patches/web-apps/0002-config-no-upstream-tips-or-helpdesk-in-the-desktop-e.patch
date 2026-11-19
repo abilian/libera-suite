@@ -1,4 +1,4 @@
-From ce0b7025a10d310df89320c765dc83e38476a194 Mon Sep 17 00:00:00 2001
+From 6bc2c5571d70cddac75a91ab739639798dcdacd7 Mon Sep 17 00:00:00 2001
 From: Libera build <build@libera.invalid>
 Date: Fri, 11 Sep 2026 13:21:26 +0200
 Subject: [PATCH] config: no upstream tips or helpdesk in the desktop editor

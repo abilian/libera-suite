@@ -1,4 +1,4 @@
-From d6c271a60f35994b29f5fea008438288ee9ea648 Mon Sep 17 00:00:00 2001
+From 17009e072465c83a73447985b34f8212cf277471 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 18:55:46 +0100
 Subject: [PATCH] fix(common): an SVG picture's hairlines are drawn a pixel
@@ -207,36 +207,36 @@ index 02a3c8c5db..8f837c2bfa 100644
                  image.src = url;
          };
 diff --git a/configs/cell.json b/configs/cell.json
-index 3cb58920a0..431726133d 100644
+index d966303dd1..d92a44ee2d 100644
 --- a/configs/cell.json
 +++ b/configs/cell.json
-@@ -15,6 +15,7 @@
+@@ -14,6 +14,7 @@
+ 			"common/SerializeCommonWordExcel.js",
  			"vendor/string.js",
- 			"vendor/array.js",
  			"common/editorscommon.js",
 +			"common/EoSvgHairline.js",
            "common/frameManager.js",
            "common/BulletPreviewDrawer.js",
  			"common/HistoryCommon.js",
 diff --git a/configs/slide.json b/configs/slide.json
-index 440f6c6a3f..ac9dd17812 100644
+index 4f5cadb72c..4fe27518e3 100644
 --- a/configs/slide.json
 +++ b/configs/slide.json
-@@ -15,6 +15,7 @@
+@@ -14,6 +14,7 @@
+ 			"common/SerializeCommonWordExcel.js",
  			"vendor/string.js",
- 			"vendor/array.js",
  			"common/editorscommon.js",
 +			"common/EoSvgHairline.js",
  			"common/externalChartCollector.js",
  			"common/frameManager.js",
  			"common/BulletPreviewDrawer.js",
 diff --git a/configs/word.json b/configs/word.json
-index e7341712b8..eea84f4d81 100644
+index abd7dd7cb7..ec4bb549ae 100644
 --- a/configs/word.json
 +++ b/configs/word.json
-@@ -15,6 +15,7 @@
+@@ -14,6 +14,7 @@
+ 			"common/SerializeCommonWordExcel.js",
  			"vendor/string.js",
- 			"vendor/array.js",
  			"common/editorscommon.js",
 +			"common/EoSvgHairline.js",
  			"common/externalChartCollector.js",

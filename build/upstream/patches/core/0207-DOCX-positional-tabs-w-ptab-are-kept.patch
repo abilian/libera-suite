@@ -1,4 +1,4 @@
-From d93da281744d65d0f444d0dd7abd2b388f3d23b4 Mon Sep 17 00:00:00 2001
+From 45031c0913d3b39b9e33215b1f1eed970f181484 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 17:53:57 +0100
 Subject: [PATCH] DOCX: positional tabs (w:ptab) are kept

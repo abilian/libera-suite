@@ -1,4 +1,4 @@
-From ca6eb6bddeb3c383f705fbec78fd585a0efe2775 Mon Sep 17 00:00:00 2001
+From 571009d4991197a8050dba92269147e2502885a4 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 22 Sep 2026 09:52:45 +0200
 Subject: [PATCH] OdfFile: declare the ODF version on the manifest and on
@@ -35,7 +35,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  2 files changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/OdfFile/Writer/Format/object_package.cpp b/OdfFile/Writer/Format/object_package.cpp
-index 130e7108da..a91613a50e 100644
+index 53e8626f0d..aa5feb18c0 100644
 --- a/OdfFile/Writer/Format/object_package.cpp
 +++ b/OdfFile/Writer/Format/object_package.cpp
 @@ -346,6 +346,7 @@ namespace odf_writer

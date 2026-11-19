@@ -1,4 +1,4 @@
-From 2ea29a791d7659cb89071defc921d6a4504a3983 Mon Sep 17 00:00:00 2001
+From 863ed7f34b08a2f3c9244e46d5ea61688a6b75a6 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:43 +0200
 Subject: [PATCH] OdfFile reader: a section's properties are written in the
@@ -18,7 +18,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  2 files changed, 73 insertions(+)
 
 diff --git a/OdfFile/Reader/Format/styles.cpp b/OdfFile/Reader/Format/styles.cpp
-index d9c3e384fd..ca19bb5b37 100644
+index 6762b8842f..8d66b57041 100644
 --- a/OdfFile/Reader/Format/styles.cpp
 +++ b/OdfFile/Reader/Format/styles.cpp
 @@ -23,6 +23,9 @@
@@ -31,7 +31,7 @@ index d9c3e384fd..ca19bb5b37 100644
  
  #include "styles.h"
  
-@@ -1638,7 +1641,76 @@ void style_page_layout_properties::xlsx_serialize(std::wostream & strm, oox::xls
+@@ -1637,7 +1640,76 @@ void style_page_layout_properties::xlsx_serialize(std::wostream & strm, oox::xls
  	}
  }
  
@@ -109,10 +109,10 @@ index d9c3e384fd..ca19bb5b37 100644
  	style_columns * columns = dynamic_cast<style_columns *>( style_columns_.get());
  
 diff --git a/OdfFile/Reader/Format/styles.h b/OdfFile/Reader/Format/styles.h
-index e35f374003..1087c49802 100644
+index f64681e40d..be1ab91492 100644
 --- a/OdfFile/Reader/Format/styles.h
 +++ b/OdfFile/Reader/Format/styles.h
-@@ -953,6 +953,7 @@ public:
+@@ -958,6 +958,7 @@ public:
  	bool docx_background_serialize(std::wostream & strm, oox::docx_conversion_context & Context, oox::_oox_fill & fill, int id);
  	
      void docx_serialize(std::wostream & strm, oox::docx_conversion_context & Context);

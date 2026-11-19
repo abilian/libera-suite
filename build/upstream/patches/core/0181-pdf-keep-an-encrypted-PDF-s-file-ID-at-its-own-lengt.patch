@@ -1,4 +1,4 @@
-From 45f4882824e1230728b7c0222abb256ca36ba685 Mon Sep 17 00:00:00 2001
+From 21ddc0fb4afe287383b86bea40d6c42462f779e7 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 30 Oct 2026 18:06:00 +0100
 Subject: [PATCH] pdf: keep an encrypted PDF's file ID at its own length
@@ -15,7 +15,7 @@ AES-128 could not be saved.
  4 files changed, 22 insertions(+), 17 deletions(-)
 
 diff --git a/PdfFile/SrcWriter/Document.cpp b/PdfFile/SrcWriter/Document.cpp
-index 09b3b333e9..188358935a 100644
+index 906e528fbe..847e4d16b7 100644
 --- a/PdfFile/SrcWriter/Document.cpp
 +++ b/PdfFile/SrcWriter/Document.cpp
 @@ -371,14 +371,14 @@ namespace PdfWriter
@@ -38,7 +38,7 @@ index 09b3b333e9..188358935a 100644
      void CDocument::SetPasswords(const std::wstring & wsOwnerPassword, const std::wstring & wsUserPassword)
  	{
 diff --git a/PdfFile/SrcWriter/Encrypt.cpp b/PdfFile/SrcWriter/Encrypt.cpp
-index 48ccb8a650..1ca05473c9 100644
+index b5a3adc710..f59d081ab5 100644
 --- a/PdfFile/SrcWriter/Encrypt.cpp
 +++ b/PdfFile/SrcWriter/Encrypt.cpp
 @@ -195,8 +195,7 @@ namespace PdfWriter
@@ -84,7 +84,7 @@ index 48ccb8a650..1ca05473c9 100644
              bResult = (memcmp(sTest, pBuffer, 16) == 0);
          }
 diff --git a/PdfFile/SrcWriter/Encrypt.h b/PdfFile/SrcWriter/Encrypt.h
-index 04ae18819c..e681427835 100644
+index 8913a73f1a..16ab1b48f4 100644
 --- a/PdfFile/SrcWriter/Encrypt.h
 +++ b/PdfFile/SrcWriter/Encrypt.h
 @@ -27,6 +27,8 @@
@@ -121,7 +121,7 @@ index 04ae18819c..e681427835 100644
  		friend class CEncryptDict;
  		friend class CDocument;
 diff --git a/PdfFile/SrcWriter/EncryptDictionary.cpp b/PdfFile/SrcWriter/EncryptDictionary.cpp
-index e649ef59a7..c7802158ba 100644
+index 6892d7a156..687aa43864 100644
 --- a/PdfFile/SrcWriter/EncryptDictionary.cpp
 +++ b/PdfFile/SrcWriter/EncryptDictionary.cpp
 @@ -64,10 +64,9 @@ namespace PdfWriter

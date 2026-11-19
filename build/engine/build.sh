@@ -528,7 +528,7 @@ mtime() {
 
 # The Visual C++ runtime, beside the binaries that import it.
 #
-# Core is built against the DLL CRT (core patch 0028), so every module imports
+# Core is built against the DLL CRT (upstream's common.cmake), so every module imports
 # vcruntime140.dll, vcruntime140_1.dll and msvcp140.dll -- counted off the
 # built bin/ with dumpbin, and nothing else from the redistributable. The
 # api-ms-win-crt-* half is the Universal CRT, which Windows 10 and later carry

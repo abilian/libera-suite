@@ -1,4 +1,4 @@
-From 782b5590bb803df763b1fdeaaa04459d26ee09db Mon Sep 17 00:00:00 2001
+From b90d7cee6473362d0e8111314311d1020973ef73 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 19:23:23 +0100
 Subject: [PATCH] fix(word): a document's style ids are written back on save

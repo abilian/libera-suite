@@ -1,4 +1,4 @@
-From f55195d2e454f6d90a02bea37fcd97dea5ea8ff6 Mon Sep 17 00:00:00 2001
+From 03228c5b93440f032cf25b9431288c8fd373985e Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:40 +0200
 Subject: [PATCH] OdfFile reader: a sheet selection names its pane with pane
@@ -13,10 +13,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/OdfFile/Reader/Converter/xlsx_table_state.cpp b/OdfFile/Reader/Converter/xlsx_table_state.cpp
-index 732bf8b0c3..8ede92840a 100644
+index cc683d14eb..6f029a645b 100644
 --- a/OdfFile/Reader/Converter/xlsx_table_state.cpp
 +++ b/OdfFile/Reader/Converter/xlsx_table_state.cpp
-@@ -733,7 +733,7 @@ void xlsx_table_state::serialize_table_format (std::wostream & strm)
+@@ -813,7 +813,7 @@ void xlsx_table_state::serialize_table_format (std::wostream & strm)
  							CP_XML_ATTR(L"activeCell", getCellAddress(col, row));			
  							CP_XML_ATTR(L"activeCellId", 0);			
  							//CP_XML_ATTR(L"pane", ((bXSplit || bYSplit) ? L"bottomLeft" : L"topLeft"));			

@@ -1,4 +1,4 @@
-From 396c6d1b32b489424f8575eb10d01155b9f9e77f Mon Sep 17 00:00:00 2001
+From c08a0bccdd067009d6c29853f61487368d99770c Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:16:10 +0200
 Subject: [PATCH] OdfFile writer: one character in text:bullet-char, the rest

@@ -1,4 +1,4 @@
-From 55f75429fd5b883343abc4e08e1084d2110e7d09 Mon Sep 17 00:00:00 2001
+From 7cb4e064c9c2aaf20a659d49284cf69129751d96 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Sat, 31 Oct 2026 20:49:15 +0100
 Subject: [PATCH] pdf: stop a stream at its end when changing a password
@@ -13,10 +13,10 @@ at the Length or at the end of the stream, whichever comes first.
  1 file changed, 8 insertions(+), 2 deletions(-)
 
 diff --git a/PdfFile/PdfEditor.cpp b/PdfFile/PdfEditor.cpp
-index fed44c0ea0..82d00d0757 100644
+index 49a05ed514..db628d855d 100644
 --- a/PdfFile/PdfEditor.cpp
 +++ b/PdfFile/PdfEditor.cpp
-@@ -740,10 +740,16 @@ HRESULT _ChangePassword(const std::wstring& wsPath, const std::wstring& wsPasswo
+@@ -741,10 +741,16 @@ HRESULT ChangePdfPassword(const std::wstring& wsPath, const std::wstring& wsPass
  			PdfWriter::CStream* pStream = new PdfWriter::CMemoryStream();
  			pDObj->SetStream(m_pXref, pStream, false);
  

@@ -1,4 +1,4 @@
-From 4607be05476565786560092a0af1196b19d75f09 Mon Sep 17 00:00:00 2001
+From 08af0767449d82635cbe1cc6c535fe6edfe1fe36 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 08:59:17 +0200
 Subject: [PATCH] OdfFile writer: a named range without a sheet keeps the dot
@@ -17,7 +17,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 21 insertions(+)
 
 diff --git a/OdfFile/Writer/Format/ods_table_context.cpp b/OdfFile/Writer/Format/ods_table_context.cpp
-index 60d7684a47..7f39042183 100644
+index ec2be6e8e1..0cdefe53dc 100644
 --- a/OdfFile/Writer/Format/ods_table_context.cpp
 +++ b/OdfFile/Writer/Format/ods_table_context.cpp
 @@ -487,6 +487,27 @@ void ods_table_context::add_defined_range(const std::wstring & name, const std::

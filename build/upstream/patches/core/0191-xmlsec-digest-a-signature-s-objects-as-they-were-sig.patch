@@ -1,4 +1,4 @@
-From 8ef155a2cab0cca62cc1dc5b59f9da72ae17642f Mon Sep 17 00:00:00 2001
+From 3e873ef7b6b5fc35fe257356b8084f6c0304a6a6 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 3 Nov 2026 13:54:28 +0100
 Subject: [PATCH] xmlsec: digest a signature's objects as they were signed

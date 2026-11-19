@@ -1,4 +1,4 @@
-From 5da069087331d07ec0a034f785982e52994fc5ec Mon Sep 17 00:00:00 2001
+From 795f7474372b1a8f2f809b094e529b62ece53e69 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 16:55:47 +0200
 Subject: [PATCH] OdfFile writer: a connector has the viewBox the schema

@@ -1,4 +1,4 @@
-From 8115bffdda1e22baf707d282ba43f4db8ffb95ea Mon Sep 17 00:00:00 2001
+From cfeef7f6394fb51b7ef9b98f66b7295442ab6d39 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
 Subject: [PATCH] OdfFile writer: no soft page break directly in a list

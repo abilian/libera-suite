@@ -1,4 +1,4 @@
-From 6b3fdc19690d3652f6282985d8d50a20dd83c33e Mon Sep 17 00:00:00 2001
+From 943c1864b22e3e88517542b5cad91cbd1524a3e4 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Fri, 30 Oct 2026 18:06:00 +0100
 Subject: [PATCH] pdf: an incremental update that cannot start writes nothing
@@ -12,10 +12,10 @@ it. Now each edit fails and closing copies the original.
  2 files changed, 11 insertions(+)
 
 diff --git a/PdfFile/PdfEditor.cpp b/PdfFile/PdfEditor.cpp
-index b53b32bc2b..fed44c0ea0 100644
+index 4fdf022916..49a05ed514 100644
 --- a/PdfFile/PdfEditor.cpp
 +++ b/PdfFile/PdfEditor.cpp
-@@ -1006,6 +1006,16 @@ bool CPdfEditor::IncrementalUpdates()
+@@ -1007,6 +1007,16 @@ bool CPdfEditor::IncrementalUpdates()
  		return true;
  
  	m_nMode = Mode::WriteAppend;
@@ -33,7 +33,7 @@ index b53b32bc2b..fed44c0ea0 100644
  	XRef* xref = pPDFDocument->getXRef();
  	PdfWriter::CDocument* pDoc = m_pWriter->GetDocument();
 diff --git a/PdfFile/PdfEditor.h b/PdfFile/PdfEditor.h
-index b086ac0656..9e164b75a8 100644
+index 9fbc78680b..d90bbbc0f6 100644
 --- a/PdfFile/PdfEditor.h
 +++ b/PdfFile/PdfEditor.h
 @@ -104,6 +104,7 @@ public:
@@ -42,7 +42,7 @@ index b086ac0656..9e164b75a8 100644
  	bool IncrementalUpdates();
 +	bool StartIncrementalUpdates();
  	void NewFrom();
- 	void GetPageTree(XRef* xref, Object* pPagesRefObj, PdfWriter::CPageTree* pPageParent = NULL);
+ 	void GetPageTree(XRef* xref, Object* pPagesRefObj, PdfWriter::CPageTree* pPageParent = nullptr);
  	bool SplitPages(const int* arrPageIndex, unsigned int unLength, PDFDoc* _pDoc, int nStartRefID);
 -- 
 2.55.0

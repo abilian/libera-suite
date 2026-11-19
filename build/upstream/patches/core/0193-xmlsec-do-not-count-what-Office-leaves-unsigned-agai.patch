@@ -1,4 +1,4 @@
-From 192733af45eaf33ae81caacb7ffcc8e772570670 Mon Sep 17 00:00:00 2001
+From a1ef73173cd7bd8daa48313c85a3c1b50e5a6d43 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 3 Nov 2026 13:55:54 +0100
 Subject: [PATCH] xmlsec: do not count what Office leaves unsigned against a

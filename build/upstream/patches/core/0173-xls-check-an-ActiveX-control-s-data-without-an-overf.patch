@@ -1,4 +1,4 @@
-From 94675dcb1b59e2ab4cb78423b89efb3b506d5462 Mon Sep 17 00:00:00 2001
+From e041b12db7fb559f4efbaa38baa30127ae531a2f Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Mon, 19 Oct 2026 14:09:32 +0200
 Subject: [PATCH] xls: check an ActiveX control's data without an overflowing

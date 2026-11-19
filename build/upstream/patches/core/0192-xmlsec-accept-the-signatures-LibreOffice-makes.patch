@@ -1,4 +1,4 @@
-From 4debc97ba5f3d22ec770cf5e3bfb7a034c664946 Mon Sep 17 00:00:00 2001
+From 421d820e6069f174989f68cae8acf611d971ccf7 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Tue, 3 Nov 2026 13:55:30 +0100
 Subject: [PATCH] xmlsec: accept the signatures LibreOffice makes

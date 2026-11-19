@@ -1,4 +1,4 @@
-From c8d0eea8156f8314494746cc2f9c27144eaec3b4 Mon Sep 17 00:00:00 2001
+From e7316dc2602329326ff531ec143aee69afdad101 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 16:55:48 +0200
 Subject: [PATCH] OdfFile writer: a sheet name with a space is quoted in a cell
@@ -16,7 +16,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 10 insertions(+), 2 deletions(-)
 
 diff --git a/OdfFile/Writer/Format/ods_table_context.cpp b/OdfFile/Writer/Format/ods_table_context.cpp
-index 7f39042183..58cee0cc9c 100644
+index 0cdefe53dc..599796e2ac 100644
 --- a/OdfFile/Writer/Format/ods_table_context.cpp
 +++ b/OdfFile/Writer/Format/ods_table_context.cpp
 @@ -45,6 +45,14 @@ namespace cpdoccore {
@@ -43,7 +43,7 @@ index 7f39042183..58cee0cc9c 100644
  	validation->table_name_					= validation_state.name;
  
  	table_content_validations_.root->add_child_element(elm);
-@@ -570,7 +578,7 @@ void ods_table_context::add_defined_expression(const std::wstring & name, const
+@@ -564,7 +572,7 @@ void ods_table_context::add_defined_expression(const std::wstring & name, const
  	
  	if (sheet_id >=0 && sheet_id < table_state_list_.size())
  	{

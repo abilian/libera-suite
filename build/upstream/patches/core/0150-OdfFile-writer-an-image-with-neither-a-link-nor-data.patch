@@ -1,4 +1,4 @@
-From 867e216cd5182f986c63005a29a08c83e89a2b30 Mon Sep 17 00:00:00 2001
+From 0df40076f7332697c67fb644dd714c886023243f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 18:32:42 +0200
 Subject: [PATCH] OdfFile writer: an image with neither a link nor data is not

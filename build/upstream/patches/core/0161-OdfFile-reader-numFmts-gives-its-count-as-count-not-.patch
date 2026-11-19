@@ -1,4 +1,4 @@
-From 94a90792c853620c15491377b59e721c906be5e7 Mon Sep 17 00:00:00 2001
+From 2df9275ba92c508a5b3aca554d378c60ca36df8f Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 21:54:40 +0200
 Subject: [PATCH] OdfFile reader: numFmts gives its count as count, not
@@ -15,7 +15,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/OdfFile/Reader/Converter/xlsx_numFmts.cpp b/OdfFile/Reader/Converter/xlsx_numFmts.cpp
-index 0a7c7686f8..9e80938347 100644
+index ef780754fa..222dff6db0 100644
 --- a/OdfFile/Reader/Converter/xlsx_numFmts.cpp
 +++ b/OdfFile/Reader/Converter/xlsx_numFmts.cpp
 @@ -169,7 +169,10 @@ void xlsx_num_fmts::Impl::serialize(std::wostream & strm) const

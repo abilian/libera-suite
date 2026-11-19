@@ -1,4 +1,4 @@
-From 0f8d2c5263bda7457fc33d70727adc96b3c224bf Mon Sep 17 00:00:00 2001
+From 1e9f135fa6f445de8f7fb1d38968dfe5b8f66d3a Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sfermigier@gmail.com>
 Date: Mon, 5 Oct 2026 22:04:16 +0200
 Subject: [PATCH] unicode: size the UTF-16 buffer for characters outside the
@@ -16,7 +16,7 @@ SASLprepToUtf8 sized its buffer the same way.
  1 file changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/UnicodeConverter/UnicodeConverter.cpp b/UnicodeConverter/UnicodeConverter.cpp
-index 776e0c5941..85417ead04 100644
+index 550dda3b61..06ec90658b 100644
 --- a/UnicodeConverter/UnicodeConverter.cpp
 +++ b/UnicodeConverter/UnicodeConverter.cpp
 @@ -97,7 +97,9 @@ namespace NSUnicodeConverter

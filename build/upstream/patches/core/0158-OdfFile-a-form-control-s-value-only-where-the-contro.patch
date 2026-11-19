@@ -1,4 +1,4 @@
-From 60a4af0269a32dfa23501144aded800081a42d6f Mon Sep 17 00:00:00 2001
+From 4b38f756fe4987f61e8937c757b8acc7c8b122c9 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Fri, 25 Sep 2026 19:24:01 +0200
 Subject: [PATCH] OdfFile: a form control's value only where the control takes

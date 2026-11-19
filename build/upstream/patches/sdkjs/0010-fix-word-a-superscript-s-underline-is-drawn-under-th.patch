@@ -1,4 +1,4 @@
-From 6e4a35155131eace9b5ff77b54b23f0beebbdd36 Mon Sep 17 00:00:00 2001
+From 0846485a879e801cbd94a919b4b493eda935cd94 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 18:13:31 +0100
 Subject: [PATCH] fix(word): a superscript's underline is drawn under the

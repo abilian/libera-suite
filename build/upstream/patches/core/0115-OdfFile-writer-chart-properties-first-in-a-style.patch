@@ -1,4 +1,4 @@
-From 172962634912c63dab08f7fed0f1c912a027447f Mon Sep 17 00:00:00 2001
+From e85fbb1bbfd7842705c5ccfe2c4c53fdf97ac7c3 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:14:23 +0200
 Subject: [PATCH] OdfFile writer: chart properties first in a style

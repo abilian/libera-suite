@@ -1,4 +1,4 @@
-From ba01f09bd5b0efc01f2dd4aabbab03c61319f54d Mon Sep 17 00:00:00 2001
+From 569b4de7b6edc6f555afb587c215a12e04a2f3fd Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 21 Sep 2026 10:35:08 +0200
 Subject: [PATCH] boost: build the Boost.Build engine with a named toolset on
@@ -25,7 +25,7 @@ anyway.
  1 file changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/Common/3dParty/boost/nc-build.py b/Common/3dParty/boost/nc-build.py
-index 32685ca4bc..4a81d3d480 100644
+index fddf0294f9..978cbf8368 100644
 --- a/Common/3dParty/boost/nc-build.py
 +++ b/Common/3dParty/boost/nc-build.py
 @@ -98,15 +98,41 @@ def build_and_install():

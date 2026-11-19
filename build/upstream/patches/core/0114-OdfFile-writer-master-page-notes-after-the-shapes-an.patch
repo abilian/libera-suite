@@ -1,4 +1,4 @@
-From b4ac9bb0a2efbb11aefd340968c4983e0a027235 Mon Sep 17 00:00:00 2001
+From 1fbb911a8c835721ce21cb1500cab046c0623556 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 16:13:20 +0200
 Subject: [PATCH] OdfFile writer: master page notes after the shapes, and only

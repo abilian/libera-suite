@@ -26,10 +26,10 @@ BUILD="$(cd "$HERE/.." && pwd)"
 . "$BUILD/engine/common.sh"
 
 # A static library against the DLL CRT, because the rest of the build is /MD
-# (core patch 0028). Mixing runtimes links and then fails at run time, which is
+# (upstream's common.cmake). Mixing runtimes links and then fails at run time, which is
 # a worse day than a link error. `x64-windows` would make OpenSSL a DLL of its
 # own, and `x64-windows-static` -- the earlier choice, when core was /MT --
-# gives it a private static CRT, which is exactly the fault 0028 removes.
+# gives it a private static CRT, which is exactly the fault the DLL runtime removes.
 TRIPLET="${VCPKG_TRIPLET:-x64-windows-static-md}"
 
 # GitHub's windows images ship vcpkg and set VCPKG_INSTALLATION_ROOT. A desktop

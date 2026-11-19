@@ -1,4 +1,4 @@
-From ce6ca2568ab44a8131960d95792a6f1f9cc76de3 Mon Sep 17 00:00:00 2001
+From 0840617c548e1bf5f2dc9b5ce89a20b7c06f5e22 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 24 Sep 2026 19:30:49 +0200
 Subject: [PATCH] OdfFile writer: form controls carry xml:id as well as form:id
