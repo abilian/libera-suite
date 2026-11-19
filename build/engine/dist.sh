@@ -164,7 +164,7 @@ for d in documenteditor spreadsheeteditor presentationeditor visioeditor pdfedit
     # -- see notes/04-plan.md.
     rm -rf "$STAGE/web-apps/apps/$d/main/resources/help"
 done
-for d in common word cell slide visio pdf vendor; do
+for d in common word cell slide visio pdf; do
     cp -R "$PAYLOAD/sdkjs/$d" "$STAGE/sdkjs/"
 done
 # Internet Explorer's fallbacks, loaded only where there is no WebAssembly

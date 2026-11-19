@@ -89,7 +89,7 @@ if [ ! -f "$PAYLOAD/AllFonts.js" ]; then
     exit 0
 fi
 
-echo "==> x2t docx -> pdf (doctrenderer: sdkjs inside V8)"
+echo "==> x2t docx -> pdf (doctrenderer: sdkjs inside its JavaScript engine)"
 # The params XML, not the three-argument CLI form: only <m_sFontDir> gives x2t's
 # native font manager a font directory. Without it GetFontInfoByParams returns
 # NULL and CPdfWriter::GetFontPath dereferences it -- a segfault, not an error.
