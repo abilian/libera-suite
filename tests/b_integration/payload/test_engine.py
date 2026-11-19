@@ -72,8 +72,13 @@ def test_the_engine_passes_its_tests_in_node(live_payload, tmp_path):
     sources = sdkjs_sources(live_payload)
     if sources is not None:
         env["LIBERA_SDKJS_SRC"] = str(sources)
+    # The files, not a pattern: node --test expands one itself only from
+    # Node 21, and Debian's, in the Linux test image, is 20.
+    tests = sorted(
+        str(p) for p in (repo_root() / "tests" / "engine").glob("*.test.mjs")
+    )
     done = subprocess.run(
-        [node, "--test", "--test-reporter=tap", "tests/engine/*.test.mjs"],
+        [node, "--test", "--test-reporter=tap", *tests],
         cwd=repo_root(),
         env=env,
         capture_output=True,
