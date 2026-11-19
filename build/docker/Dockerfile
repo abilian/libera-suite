@@ -44,6 +44,9 @@ ARG UBUNTU_CODENAME
 ARG BASE_DIGEST
 ARG APT_SNAPSHOT=20260901T000000Z
 ARG LLVM_VERSION
+# What buildbox.py says this image is made of, recorded below and compared
+# before each run, so that an image from another recipe is rebuilt.
+ARG IMAGE_IDENTITY
 ARG LLVM_SHA256_AMD64
 ARG LLVM_SHA256_ARM64
 ARG NODE_VERSION=20.20.2
@@ -100,6 +103,9 @@ RUN set -eu; \
 # clang, lld and llvm-ar for V8 come from the LLVM tarball below; lld links
 # against libxml2, which jammy has, hence libxml2 here.
 #
+# python3.11 for V8's fetch alone: depot_tools refuses jammy's 3.10, and gsutil
+# anything after 3.13. build.sh hands it to CMake as PYTHON_BIN.
+#
 # build-essential covers libstdc++.a, which ICU links against statically and
 # Fedora splits into a package of its own -- see the assertion below.
 #
@@ -126,6 +132,7 @@ RUN apt-get install -y --no-install-recommends --reinstall \
         file \
         python3 \
         python3-venv \
+        python3.11 \
         python-is-python3 \
         autoconf \
         automake \
@@ -225,7 +232,7 @@ RUN set -eu; \
         echo "base:         ubuntu:${UBUNTU_RELEASE}@${BASE_DIGEST}"; \
         echo "arch:         $(dpkg --print-architecture)"; \
         echo "apt-snapshot: ${APT_SNAPSHOT}"; \
-        echo "identity:     ubuntu:${UBUNTU_RELEASE}@${BASE_DIGEST} llvm ${LLVM_VERSION}"; \
+        echo "identity:     ${IMAGE_IDENTITY}"; \
         echo "llvm:         ${LLVM_VERSION}, LLVM's release tarball (V8 only; core builds with gcc)"; \
         echo "built:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
         echo; \

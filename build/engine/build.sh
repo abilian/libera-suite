@@ -369,6 +369,28 @@ cmd_configure() {
     if [ "$(uname -s)" = Darwin ]; then
         set -- "$@" -DUSE_JAVASCRIPT_CORE=1
         echo "==> doctrenderer on JavaScriptCore"
+    else
+        # Everywhere else V8 is built, and its fetch runs depot_tools, which
+        # wants Python 3.11 or later, and gsutil, which refuses anything after
+        # 3.13 ("gsutil requires Python version 3.9-3.13", on a builder whose
+        # python3 was uv's 3.14). CMake takes the first Python it finds, so it
+        # is given one both accept. Its own path, from itself: Windows needs
+        # one CMake can run, and a candidate may be a uv shim. PYTHON_BIN is
+        # cached.
+        v8_python=""
+        for candidate in python3.13 python3.12 python3.11 python3 python; do
+            command -v "$candidate" >/dev/null 2>&1 || continue
+            v8_python="$("$candidate" -c 'import sys
+if (3, 11) <= sys.version_info[:2] <= (3, 13): print(sys.executable)' 2>/dev/null)" || true
+            [ -n "$v8_python" ] && break
+        done
+        [ -n "$v8_python" ] || {
+            echo "FATAL: no Python 3.11 to 3.13, which V8's fetch needs (depot_tools" >&2
+            echo "       wants 3.11 or later, gsutil 3.13 or earlier)" >&2
+            exit 1
+        }
+        set -- "$@" "-DPYTHON_BIN=$(winpath "$v8_python")"
+        echo "==> python for V8's fetch: $v8_python"
     fi
 
     ICU_DATA_FILTER_FILE="$(winpath "$ICU_FILTER")"

@@ -11,6 +11,7 @@ dist.sh, smoke.sh); this is everything around them.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shlex
 import subprocess
@@ -87,9 +88,20 @@ def base() -> str:
     return f"ubuntu:{UBUNTU_RELEASE}@{BASE_DIGEST}"
 
 
+# What the image is built from, besides the base and LLVM: the Dockerfile and
+# the two scripts it copies in. A package added to the Dockerfile changes the
+# image as surely as a new base does.
+RECIPE = (
+    REPO / "build" / "docker" / "Dockerfile",
+    REPO / "build" / "engine" / "toolchain.sh",
+    REPO / "build" / "engine" / "common.sh",
+)
+
+
 def identity() -> str:
-    """What an image is built from: its base and its LLVM."""
-    return f"{base()} llvm {LLVM_VERSION}"
+    """What an image is built from: its base, its LLVM and its recipe."""
+    digest = hashlib.sha256(b"".join(p.read_bytes() for p in RECIPE)).hexdigest()
+    return f"{base()} llvm {LLVM_VERSION} recipe {digest[:12]}"
 
 
 def build_args() -> list[str]:
@@ -100,6 +112,7 @@ def build_args() -> list[str]:
         "LLVM_VERSION": LLVM_VERSION,
         "LLVM_SHA256_AMD64": LLVM_SHA256["amd64"],
         "LLVM_SHA256_ARM64": LLVM_SHA256["arm64"],
+        "IMAGE_IDENTITY": identity(),
     }
     return [flag for k, v in args.items() for flag in ("--build-arg", f"{k}={v}")]
 
