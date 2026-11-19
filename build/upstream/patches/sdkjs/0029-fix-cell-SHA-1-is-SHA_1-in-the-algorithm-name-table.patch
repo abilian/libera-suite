@@ -1,0 +1,41 @@
+From c9333c6a5f8a101142c313717032beb8c51b5af7 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 19 Nov 2026 23:48:19 +0100
+Subject: [PATCH 29/30] fix(cell): SHA-1 is SHA_1 in the algorithm name table
+
+FromXml_ST_AlgorithmName and ToXml_ST_AlgorithmName used
+c_oSerAlgorithmNameTypes.SHA1, which is undefined: the key is SHA_1. A
+protection hashed with SHA-1 was read with no algorithm, and written
+with none.
+
+Assisted-by: ClaudeCode:claude-opus-5-5
+Signed-off-by: Stefane Fermigier <sf@abilian.com>
+---
+ cell/model/WorkbookProtection.js | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/cell/model/WorkbookProtection.js b/cell/model/WorkbookProtection.js
+index 2352dcee45..77a64cdd2a 100644
+--- a/cell/model/WorkbookProtection.js
++++ b/cell/model/WorkbookProtection.js
+@@ -64,7 +64,7 @@
+ 				alg = AscCommon.c_oSerAlgorithmNameTypes.RIPEMD_160;
+ 				break;
+ 			case "SHA-1" :
+-				alg = AscCommon.c_oSerAlgorithmNameTypes.SHA1;
++				alg = AscCommon.c_oSerAlgorithmNameTypes.SHA_1;
+ 				break;
+ 			case "SHA-256" :
+ 				alg = AscCommon.c_oSerAlgorithmNameTypes.SHA_256;
+@@ -100,7 +100,7 @@
+ 			case  AscCommon.c_oSerAlgorithmNameTypes.RIPEMD_160:
+ 				str = "RIPEMD-160";
+ 				break;
+-			case  AscCommon.c_oSerAlgorithmNameTypes.SHA1:
++			case  AscCommon.c_oSerAlgorithmNameTypes.SHA_1:
+ 				str = "SHA-1";
+ 				break;
+ 			case AscCommon.c_oSerAlgorithmNameTypes.SHA_256 :
+-- 
+2.55.0
+

@@ -6,7 +6,9 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "node:test";
+import vm from "node:vm";
 import { openDocument } from "./document.mjs";
+import { load } from "./harness.mjs";
 
 const SAMPLES = process.env.LIBERA_SAMPLES;
 const skip = !SAMPLES && "LIBERA_SAMPLES names no folder of samples";
@@ -95,4 +97,65 @@ test("sdkjs 0022: a document's style ids survive the engine's own save", {
   assert.deepEqual(ids(first.api), ["Heading1", "MyQuote"]);
   const again = await openDocument("word", first.save());
   assert.deepEqual(ids(again.api), ["Heading1", "MyQuote"]);
+});
+
+test("sdkjs 0026: Convert Text to Table checks its lock against a change type", {
+  skip,
+}, async () => {
+  const { engine, api } = await openDocument("word", sample("sample"));
+  const doc = api.WordControl.m_oLogicDocument;
+  const asked = [];
+  doc.IsSelectionLocked = (type) => asked.push(type) > 0; // locked: change nothing
+  doc.SelectAll();
+  doc.ConvertTextToTable({});
+  assert.deepEqual(asked, [engine.AscCommon.changestype_Document_Content]);
+});
+
+// The JSON converters ask the running editor which editor they serve.
+function withEditor(editor, id) {
+  const engine = load(editor);
+  vm.runInContext(
+    `var editor = {editorId: AscCommon.c_oEditorId.${id}}; Asc.editor = editor;`,
+    engine,
+  );
+  return engine;
+}
+
+test("sdkjs 0028: a sheet protection's algorithm goes to JSON and back", () => {
+  const engine = withEditor("cell", "Spreadsheet");
+  const { AscCommon, AscJsonConverter } = engine;
+  for (const [name, value] of Object.entries(AscCommon.c_oSerAlgorithmNameTypes)) {
+    const json = JSON.parse(
+      JSON.stringify(
+        new AscJsonConverter.WriterToJSON().SerSheetProtection({
+          algorithmName: value,
+        }),
+      ),
+    );
+    const sheet = {};
+    new AscJsonConverter.ReaderFromJSON().SheetProtectionFromJSON(json, sheet);
+    assert.equal(sheet.sheetProtection.algorithmName, value, name);
+  }
+});
+
+test("sdkjs 0029: SHA-1 is read from and written to XML", () => {
+  const { AscCommon, AscCommonExcel } = load("cell");
+  const sha1 = AscCommon.c_oSerAlgorithmNameTypes.SHA_1;
+  assert.equal(AscCommonExcel.FromXml_ST_AlgorithmName("SHA-1"), sha1);
+  assert.equal(AscCommonExcel.ToXml_ST_AlgorithmName(sha1), "SHA-1");
+});
+
+test("sdkjs 0030: a 3D shape's contour and extrusion colours go to JSON and back", () => {
+  const engine = withEditor("word", "Word");
+  const back = vm.runInContext(
+    `var sp = new AscFormat.Sp3d();
+     sp.setContourClr(AscFormat.CreateUniColorRGB(255, 0, 0));
+     sp.setExtrusionClr(AscFormat.CreateUniColorRGB(0, 0, 255));
+     var json = JSON.parse(JSON.stringify(new AscJsonConverter.WriterToJSON().SerSp3D(sp)));
+     new AscJsonConverter.ReaderFromJSON().Sp3DFromJSON(json);`,
+    engine,
+  );
+  const rgb = (c) => [c.color.RGBA.R, c.color.RGBA.G, c.color.RGBA.B];
+  assert.deepEqual(rgb(back.contourClr), [255, 0, 0]);
+  assert.deepEqual(rgb(back.extrusionClr), [0, 0, 255]);
 });

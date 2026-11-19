@@ -1,0 +1,33 @@
+From 18155edec7f21b1eca87fb518da44353225a3a68 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 19 Nov 2026 23:47:22 +0100
+Subject: [PATCH 26/30] fix(word): check the lock of Convert Text to Table
+ against a real change type
+
+CDocument.ConvertTextToTable asked IsSelectionLocked about
+AscCommon.changestype_Document_Contentt, a typo that reads undefined,
+instead of changestype_Document_Content. Found by listing the namespace
+members the engine reads that no file defines.
+
+Assisted-by: ClaudeCode:claude-opus-5-5
+Signed-off-by: Stefane Fermigier <sf@abilian.com>
+---
+ word/Editor/Document.js | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/word/Editor/Document.js b/word/Editor/Document.js
+index 90de5cbc72..93d2ab930d 100644
+--- a/word/Editor/Document.js
++++ b/word/Editor/Document.js
+@@ -27155,7 +27155,7 @@ CDocument.prototype.ConvertTextToTable = function(oProps)
+ 	if (!this.IsTextSelectionUse() || this.IsTableCellSelection())
+ 		return;
+ 
+-	if (!this.IsSelectionLocked(AscCommon.changestype_Document_Contentt))
++	if (!this.IsSelectionLocked(AscCommon.changestype_Document_Content))
+ 	{
+ 		this.StartAction(AscDFH.historydescription_Document_ConvertTextToTable);
+ 
+-- 
+2.55.0
+

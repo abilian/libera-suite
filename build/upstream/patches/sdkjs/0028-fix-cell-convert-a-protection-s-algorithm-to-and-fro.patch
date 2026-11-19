@@ -1,0 +1,136 @@
+From e472120d6270488c902972325d5242b4e7916054 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 19 Nov 2026 23:48:19 +0100
+Subject: [PATCH 28/30] fix(cell): convert a protection's algorithm to and from
+ JSON
+
+To_XML_CryptoAlgorithmName and From_XML_CryptoAlgorithmName switched on
+AscCommon.CryptoAlgorithmName, which nothing defines, so converting a
+protected sheet or range to or from JSON threw at the first case. The
+model holds AscCommon.c_oSerAlgorithmNameTypes values (Serialize.js
+reads them from the binary), whose keys are spelt SHA_1, RIPEMD_128 and
+so on; that table has no Unknown, so its case goes, and an unknown value
+gives undefined, as an unmatched one did. A protected range's algorithm
+was also read as oRange.AlgorithmName, which is undefined; it is
+algorithmName. Found by listing the namespace members the engine reads
+that no file defines.
+
+Assisted-by: ClaudeCode:claude-opus-5-5
+Signed-off-by: Stefane Fermigier <sf@abilian.com>
+---
+ cell/fromToJSON.js | 48 ++++++++++++++++++++--------------------------
+ 1 file changed, 21 insertions(+), 27 deletions(-)
+
+diff --git a/cell/fromToJSON.js b/cell/fromToJSON.js
+index 475d419f71..ffb2d90fe2 100644
+--- a/cell/fromToJSON.js
++++ b/cell/fromToJSON.js
+@@ -388,7 +388,7 @@
+ 	WriterToJSON.prototype.SerProtectedRange = function(oRange)
+ 	{
+ 		return {
+-			"algorithmName":      oRange.algorithmName != null ? To_XML_CryptoAlgorithmName(oRange.AlgorithmName) : undefined,
++			"algorithmName":      oRange.algorithmName != null ? To_XML_CryptoAlgorithmName(oRange.algorithmName) : undefined,
+ 			"spinCount":          oRange.spinCount != null ? oRange.spinCount : undefined,
+ 			"hashValue":          oRange.hashValue != null ? oRange.hashValue : undefined,
+ 			"saltValue":          oRange.saltValue != null ? oRange.saltValue : undefined,
+@@ -9174,37 +9174,34 @@
+ 		var sVal = undefined;
+ 		switch(nVal)
+ 		{
+-			case AscCommon.CryptoAlgorithmName.Unknown:
+-				sVal = "Unknown";
+-				break;
+-			case AscCommon.CryptoAlgorithmName.MD2:
++			case AscCommon.c_oSerAlgorithmNameTypes.MD2:
+ 				sVal = "MD2";
+ 				break;
+-			case AscCommon.CryptoAlgorithmName.MD4:
++			case AscCommon.c_oSerAlgorithmNameTypes.MD4:
+ 				sVal = "MD4";
+ 				break;
+-			case AscCommon.CryptoAlgorithmName.MD5:
++			case AscCommon.c_oSerAlgorithmNameTypes.MD5:
+ 				sVal = "MD5";
+ 				break;
+-			case AscCommon.CryptoAlgorithmName.RIPEMD128:
++			case AscCommon.c_oSerAlgorithmNameTypes.RIPEMD_128:
+ 				sVal = "RIPEMD128";
+ 				break;
+-			case AscCommon.CryptoAlgorithmName.RIPEMD160:
++			case AscCommon.c_oSerAlgorithmNameTypes.RIPEMD_160:
+ 				sVal = "RIPEMD160";
+ 				break;
+-			case AscCommon.CryptoAlgorithmName.SHA1:
++			case AscCommon.c_oSerAlgorithmNameTypes.SHA_1:
+ 				sVal = "SHA1";
+ 				break;
+-			case AscCommon.CryptoAlgorithmName.SHA256:
++			case AscCommon.c_oSerAlgorithmNameTypes.SHA_256:
+ 				sVal = "SHA256";
+ 				break;
+-			case AscCommon.CryptoAlgorithmName.SHA384:
++			case AscCommon.c_oSerAlgorithmNameTypes.SHA_384:
+ 				sVal = "SHA384";
+ 				break;
+-			case AscCommon.CryptoAlgorithmName.SHA512:
++			case AscCommon.c_oSerAlgorithmNameTypes.SHA_512:
+ 				sVal = "SHA512";
+ 				break;
+-			case AscCommon.CryptoAlgorithmName.WHIRLPOOL:
++			case AscCommon.c_oSerAlgorithmNameTypes.WHIRLPOOL:
+ 				sVal = "WHIRLPOOL";
+ 				break;
+ 		}
+@@ -9216,38 +9213,35 @@
+ 		var nVal = undefined;
+ 		switch(sVal)
+ 		{
+-			case "Unknown":
+-				nVal = AscCommon.CryptoAlgorithmName.Unknown;
+-				break;
+ 			case "MD2":
+-				nVal = AscCommon.CryptoAlgorithmName.MD2;
++				nVal = AscCommon.c_oSerAlgorithmNameTypes.MD2;
+ 				break;
+ 			case "MD4":
+-				nVal = AscCommon.CryptoAlgorithmName.MD4;
++				nVal = AscCommon.c_oSerAlgorithmNameTypes.MD4;
+ 				break;
+ 			case "MD5":
+-				nVal = AscCommon.CryptoAlgorithmName.MD5;
++				nVal = AscCommon.c_oSerAlgorithmNameTypes.MD5;
+ 				break;
+ 			case "RIPEMD128":
+-				nVal = AscCommon.CryptoAlgorithmName.RIPEMD128;
++				nVal = AscCommon.c_oSerAlgorithmNameTypes.RIPEMD_128;
+ 				break;
+ 			case "RIPEMD160":
+-				nVal = AscCommon.CryptoAlgorithmName.RIPEMD160;
++				nVal = AscCommon.c_oSerAlgorithmNameTypes.RIPEMD_160;
+ 				break;
+ 			case "SHA1":
+-				nVal = AscCommon.CryptoAlgorithmName.SHA1;
++				nVal = AscCommon.c_oSerAlgorithmNameTypes.SHA_1;
+ 				break;
+ 			case "SHA256":
+-				nVal = AscCommon.CryptoAlgorithmName.SHA256;
++				nVal = AscCommon.c_oSerAlgorithmNameTypes.SHA_256;
+ 				break;
+ 			case "SHA384":
+-				nVal = AscCommon.CryptoAlgorithmName.SHA384;
++				nVal = AscCommon.c_oSerAlgorithmNameTypes.SHA_384;
+ 				break;
+ 			case "SHA512":
+-				nVal = AscCommon.CryptoAlgorithmName.SHA512;
++				nVal = AscCommon.c_oSerAlgorithmNameTypes.SHA_512;
+ 				break;
+ 			case "WHIRLPOOL":
+-				nVal = AscCommon.CryptoAlgorithmName.WHIRLPOOL;
++				nVal = AscCommon.c_oSerAlgorithmNameTypes.WHIRLPOOL;
+ 				break;
+ 		}
+ 
+-- 
+2.55.0
+

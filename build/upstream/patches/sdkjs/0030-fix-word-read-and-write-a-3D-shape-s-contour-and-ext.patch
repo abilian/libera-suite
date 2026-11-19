@@ -1,0 +1,72 @@
+From 4dcfe277e62a6142a021acdb3d989399aec06df7 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 19 Nov 2026 23:48:58 +0100
+Subject: [PATCH 30/30] fix(word): read and write a 3D shape's contour and
+ extrusion colours as JSON
+
+ReaderFromJSON built them with new AscFormat.ContourClr() and new
+AscFormat.ExtrusionClr(), classes nothing defines, so a shape with
+either colour threw when read from JSON. Sp3d holds both as CUniColor,
+as the binary reader makes them, and ColorFromJSON already builds one.
+The writer had the mirror slip: it handed SerColor the CUniColor's inner
+colour, where SerColor expects the CUniColor itself, so the colour's
+type was lost. The JSON keeps its shape, {"color": ...}. Found by
+listing the namespace members the engine reads that no file defines.
+
+Assisted-by: ClaudeCode:claude-opus-5-5
+Signed-off-by: Stefane Fermigier <sf@abilian.com>
+---
+ word/fromToJSON.js | 18 ++++++------------
+ 1 file changed, 6 insertions(+), 12 deletions(-)
+
+diff --git a/word/fromToJSON.js b/word/fromToJSON.js
+index bc7adde9d1..e1a98c8b11 100644
+--- a/word/fromToJSON.js
++++ b/word/fromToJSON.js
+@@ -595,7 +595,7 @@
+ 			return undefined;
+ 
+ 		return {
+-			"color": this.SerColor(oExtrusionClr.color)
++			"color": this.SerColor(oExtrusionClr)
+ 		}
+ 	};
+ 	WriterToJSON.prototype.SerContourClr = function(oContourClr)
+@@ -604,7 +604,7 @@
+ 			return undefined;
+ 
+ 		return {
+-			"color": this.SerColor(oContourClr.color)
++			"color": this.SerColor(oContourClr)
+ 		}
+ 	};
+ 	WriterToJSON.prototype.SerBevel = function(oBevel)
+@@ -12655,21 +12655,15 @@
+ 
+ 		return oSp3D;
+ 	};
++	// Sp3d holds both colours as CUniColor, as the binary reader makes them
++	// (common/Drawings/Format/Data.js, Sp3d.prototype.readChild).
+ 	ReaderFromJSON.prototype.ExtrusionClrFromJSON = function(oParsedExtrusionClr)
+ 	{
+-		var oExtrusionClr = new AscFormat.ExtrusionClr();
+-
+-		oParsedExtrusionClr["color"] && oExtrusionClr.setColor(this.ColorFromJSON(oParsedExtrusionClr["color"]));
+-
+-		return oExtrusionClr;
++		return oParsedExtrusionClr["color"] ? this.ColorFromJSON(oParsedExtrusionClr["color"]) : null;
+ 	};
+ 	ReaderFromJSON.prototype.ContourClrFromJSON = function(oParsedContourClr)
+ 	{
+-		var oContourClr = new AscFormat.ContourClr();
+-
+-		oParsedContourClr["color"] && oContourClr.setColor(this.ColorFromJSON(oParsedContourClr["color"]));
+-
+-		return oContourClr;
++		return oParsedContourClr["color"] ? this.ColorFromJSON(oParsedContourClr["color"]) : null;
+ 	};
+ 	ReaderFromJSON.prototype.BevelFromJSON = function(oParsedBevel)
+ 	{
+-- 
+2.55.0
+

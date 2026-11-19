@@ -34,11 +34,9 @@ AscCommon.Base64Encode  dead  slide/Editor/Format/Timing.js: only under GENERATE
 AscCommon.CRoleSettings  add-on  forms add-on (roles)
 AscCommon.CT_OMathPara  add-on  OOXML add-on, read behind typeof
 AscCommon.CZLibEngineJS  outside  common/zlib/engine/zlib.js, the WebAssembly zlib
-AscCommon.CryptoAlgorithmName  defect  cell/fromToJSON.js: the enum is AscCommon.c_oSerAlgorithmNameTypes, whose keys are spelt SHA_1, RIPEMD_128 and have no Unknown; the switches throw
 AscCommon.Editor_Copy  unverified  word/Drawing/HtmlPage.js
 AscCommon.PathBoolean  optional  read behind a test (common/apiBase.js)
 AscCommon.SafariIntervalFocus  dead  slide/api.js: setInterval of undefined, a no-op
-AscCommon.changestype_Document_Contentt  defect  word/Editor/Document.js: a typo for changestype_Document_Content; converting text to a table checks no lock
 AscCommon.g_defaultThemes  optional  slide/Drawing/ThemeLoader.js: `|| []`
 AscCommonExcel.CT_CComments  add-on  OOXML add-on class
 AscCommonExcel.CT_CThreadedComments  add-on  OOXML add-on class
@@ -71,9 +69,7 @@ AscFormat.CT_GraphicalObject  add-on  OOXML add-on class
 AscFormat.CT_GraphicalObjectData  add-on  OOXML add-on class
 AscFormat.ColorsDefHdr  unverified  as AscFormat.BackdropAnchor
 AscFormat.ColorsDefHdrLst  unverified  as above
-AscFormat.ContourClr  defect  word/fromToJSON.js: `new` of undefined, throws when a 3D shape comes from JSON; the binary reader makes a CUniColor (Data.js, Sp3d)
 AscFormat.Coordinate  unverified  as AscFormat.BackdropAnchor
-AscFormat.ExtrusionClr  defect  word/fromToJSON.js: as ContourClr
 AscFormat.FlatTx  unverified  as AscFormat.BackdropAnchor
 AscFormat.StyleDefHdr  unverified  as above
 AscFormat.StyleDefHdrLst  unverified  as above
@@ -81,4 +77,3 @@ AscFormat.TxPr  unverified  as above
 AscFormat.XMLWRITER_DOC_TYPE_DOCX  add-on  OOXML add-on constant
 AscFormat.XMLWRITER_DOC_TYPE_PPTX  add-on  OOXML add-on constant
 AscFormat.XMLWRITER_DOC_TYPE_XLSX  add-on  OOXML add-on constant
-AscPDF.FORMS_TRIGGERS_TYPES  defect  pdf/apiBuilder.js: used 22 times by the PDF builder API; AscPDF.PDF_TRIGGERS_TYPES (pdf/src/forms/formActions.js) has the keys it uses
