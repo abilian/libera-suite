@@ -42,6 +42,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # poppler-utils for the tests that read a PDF: pdftotext for its text, and
 # pdftoppm to draw a page, which is how test_hostile_input.py sees a picture
 # from the user's disk painted into one. Both skip without it, and did here.
+#
+# nodejs for the engine's own tests (tests/engine/, run by
+# tests/b_integration/payload/test_engine.py), which load sdkjs in Node and
+# fail without it, as `make lint`'s biome does.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates curl git make \
@@ -51,6 +55,7 @@ RUN apt-get update \
         xvfb xauth x11-utils scrot xdotool \
         desktop-file-utils \
         poppler-utils \
+        nodejs \
         locales \
     && rm -rf /var/lib/apt/lists/*
 
