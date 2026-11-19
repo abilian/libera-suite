@@ -12,15 +12,20 @@ from libera_build.inventory import Builder
 from libera_build.report import RefusedError
 
 
-def test_an_image_on_another_base_is_stale():
-    assert buildbox.stale(buildbox.base()) is None
-    assert "ubuntu:24.04" in buildbox.stale("ubuntu:24.04@sha256:x")
+def test_an_image_on_another_base_or_llvm_is_stale():
+    assert buildbox.stale(buildbox.identity()) is None
+    assert "ubuntu:24.04" in buildbox.stale("ubuntu:24.04@sha256:x llvm 21.1.8")
+    assert buildbox.stale(f"{buildbox.base()} llvm 14.0.0") is not None
+    # An image from before LLVM was recorded names its base alone.
+    assert buildbox.stale(buildbox.base()) is not None
     assert "too old to say" in buildbox.stale("")
 
 
-def test_the_compiler_follows_the_architecture():
-    assert "CLANG_VERSION=13" in buildbox.build_args("arm64")
-    assert "CLANG_VERSION=14" in buildbox.build_args("amd64")
+def test_the_image_gets_the_pinned_llvm_for_both_architectures():
+    args = buildbox.build_args()
+    assert f"LLVM_VERSION={buildbox.LLVM_VERSION}" in args
+    for digest in buildbox.LLVM_SHA256.values():
+        assert any(a.endswith(f"={digest}") for a in args)
 
 
 def env_and_mounts(options: BoxOptions) -> tuple[dict, list[str]]:

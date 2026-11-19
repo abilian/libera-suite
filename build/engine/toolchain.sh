@@ -45,18 +45,12 @@
 # autoreconf calls.
 set -eu
 
-# V8 8.9 does not compile under clang 16 or later: -Wenum-constexpr-conversion
-# became an error, and src/base/bit-field.h:43 trips it in every
-# torque-generated file -- about a hundred of them, a hundred files into a
-# thirty-minute build. The container pins clang 14 for exactly this reason, so
-# a native build has to be pointed at one too.
-#
-# Checked on Linux alone. The Mac builds V8 with whatever Xcode ships and does
-# not hit this, which is a measurement rather than a theory: that build works.
-V8_CLANG_MAX=15
-# And on Linux arm64 nc-build.py demands 13 exactly, around its
-# `targetarch == "arm64"` check. x86_64 has no such gate, only the ceiling.
-V8_CLANG_ARM64=13
+# V8 14.6, which Euro-Office's main builds, is compiled with clang 21 upstream
+# (AppStream's on Rocky 9, apt.llvm.org's on Ubuntu 24.04), and nothing older
+# has been tried here; nc-build.py itself checks no version any more. The
+# container brings LLVM 21 from its release tarball. Checked on Linux alone:
+# the Mac builds no V8, and Windows uses Visual Studio's clang.
+V8_CLANG_MIN=21
 
 LINUX_TOOLS="gcc g++ make cmake ninja clang clang++ ld.lld llvm-ar git curl
              python python3 perl pkg-config autoconf automake libtoolize patch
@@ -143,6 +137,7 @@ package_for() {
     clang++:*) echo "clang" ;;
     ld.lld:*) echo "lld" ;;
     llvm-ar:*) echo "llvm" ;;
+    compiler-rt:debian) echo "libclang-rt-dev" ;;
     python:debian) echo "python-is-python3" ;;
     python:fedora) echo "python-unversioned-command" ;;
     python:arch) echo "python" ;;
@@ -415,30 +410,20 @@ check_clang_version() {
         sed -n 's/.*clang version \([0-9][0-9]*\).*/\1/p' | head -1)
     [ -n "$major" ] || return 0
 
-    case "$(uname -m)" in
-    aarch64 | arm64) wanted=$V8_CLANG_ARM64 ;;
-    *) wanted="" ;;
-    esac
-
-    if [ -n "$wanted" ] && [ "$major" != "$wanted" ]; then
-        echo "FATAL: clang $major, and V8 8.9 demands exactly $wanted on Linux arm64." >&2
-        echo "       nc-build.py aborts on anything else, around its arm64 check." >&2
+    if [ "$major" -lt "$V8_CLANG_MIN" ]; then
+        echo "FATAL: clang $major, and V8 14.6 is built with clang $V8_CLANG_MIN upstream;" >&2
+        echo "       nothing older has been tried." >&2
         echo >&2
-        echo "  build it in the container instead:  lb container run payload" >&2
-        return 1
-    fi
-
-    if [ "$major" -gt "$V8_CLANG_MAX" ]; then
-        echo "FATAL: clang $major is too new for V8 8.9, which does not compile" >&2
-        echo "       under 16 or later: -Wenum-constexpr-conversion became an" >&2
-        echo "       error, and src/base/bit-field.h:43 trips it in every" >&2
-        echo "       torque-generated file -- a hundred of them, a hundred files" >&2
-        echo "       into a thirty-minute build." >&2
-        echo >&2
-        echo "  the container pins clang 14 and is the supported path:" >&2
+        echo "  the container brings LLVM $V8_CLANG_MIN and is the supported path:" >&2
         echo "      lb container run payload" >&2
         return 1
     fi
+
+    # nc-build.py looks for compiler-rt's builtins before building V8, and
+    # distributions package them apart from clang.
+    builtins=$(clang -print-libgcc-file-name --rtlib=compiler-rt 2>/dev/null)
+    [ -f "$builtins" ] ||
+        want compiler-rt "compiler-rt's builtins ($builtins), which V8 links"
     return 0
 }
 

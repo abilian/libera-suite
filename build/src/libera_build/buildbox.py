@@ -23,24 +23,27 @@ from libera_build.containers import Engine, Mount, Run, interactive
 from libera_build.repo import REPO, build_root
 from libera_build.report import RefusedError, say, step
 
-# One base for both architectures, and a compiler that still differs.
+# One base for both architectures.
 #
-# V8 is why the compiler differs: nc-build.py demands clang exactly 13 on Linux
-# arm64, and Ubuntu has none after 22.04. See the head of build/docker/Dockerfile.
-#
-# The base stopped differing because of the other end of the same problem.
 # amd64 built on noble, which put the shipped binaries at GLIBC 2.38 and
 # GLIBCXX 3.4.32, and the x2t in core-linux-x86_64.tar.gz then refused to load
 # on Ubuntu 22.04 and on Debian 12 -- most of the Linux desktop. arm64 had been
-# on jammy all along, for V8's sake, so the constraint arm64 was stuck with is
-# the portable choice, and taking it for amd64 costs a compiler version nobody
-# was attached to.
+# on jammy all along, for V8 8.9's sake, so the constraint arm64 was stuck with
+# was the portable choice.
 UBUNTU_RELEASE = "22.04"
 UBUNTU_CODENAME = "jammy"
 # One digest for both: an OCI image index carrying linux/amd64 and
 # linux/arm64/v8, checked with `docker buildx imagetools inspect`.
 BASE_DIGEST = "sha256:829f6df217bcbae2b371026e81711d1a787c61b2967ad09d015063663ebafbf7"
-CLANG = {"arm64": "13", "amd64": "14"}
+# V8's compiler, from LLVM's release tarballs: V8 14.6 is built with clang 21
+# upstream, jammy stops at clang 15, and apt.llvm.org keeps only its latest
+# build. The digests are the ones GitHub publishes for each asset. Kept here
+# rather than in the Dockerfile, because the image is stale when this changes.
+LLVM_VERSION = "21.1.8"
+LLVM_SHA256 = {
+    "amd64": "b3b7f2801d15d50736acea3c73982994d025b01c2f035b91ae3b49d1b575732b",
+    "arm64": "65ce0b329514e5643407db2d02a5bd34bf33d159055dafa82825c8385bd01993",
+}
 
 # A full build wants about this much room on the build tree's filesystem.
 ROOM_GB = 30
@@ -84,12 +87,19 @@ def base() -> str:
     return f"ubuntu:{UBUNTU_RELEASE}@{BASE_DIGEST}"
 
 
-def build_args(arch: str) -> list[str]:
+def identity() -> str:
+    """What an image is built from: its base and its LLVM."""
+    return f"{base()} llvm {LLVM_VERSION}"
+
+
+def build_args() -> list[str]:
     args = {
         "UBUNTU_RELEASE": UBUNTU_RELEASE,
         "UBUNTU_CODENAME": UBUNTU_CODENAME,
         "BASE_DIGEST": BASE_DIGEST,
-        "CLANG_VERSION": CLANG[arch],
+        "LLVM_VERSION": LLVM_VERSION,
+        "LLVM_SHA256_AMD64": LLVM_SHA256["amd64"],
+        "LLVM_SHA256_ARM64": LLVM_SHA256["arm64"],
     }
     return [flag for k, v in args.items() for flag in ("--build-arg", f"{k}={v}")]
 
@@ -101,11 +111,12 @@ def stale(had: str) -> str | None:
     which is what happened when amd64 left noble for jammy -- leaves a stale
     image under the right name. A build against it succeeds, takes its hours,
     and produces binaries with the old glibc floor, and nothing downstream says
-    a word. The image records its base, so it is asked.
+    a word. Moving LLVM is the same, failing half an hour into V8 instead. The
+    image records both, so it is asked.
     """
-    if had == base():
+    if had == identity():
         return None
-    return f"it has: {had or 'an image too old to say'}\n    wanted: {base()}"
+    return f"it has: {had or 'an image too old to say'}\n    wanted: {identity()}"
 
 
 def mirror_of(options: BoxOptions) -> Path | None:
@@ -205,18 +216,18 @@ class Box:
 
     def build_image(self) -> int:
         dockerfile = REPO / "build" / "docker" / "Dockerfile"
-        extra = (*build_args(self.options.arch), "-f", str(dockerfile))
+        extra = (*build_args(), "-f", str(dockerfile))
         argv = self.engine.build_argv(
             self.image, REPO / "build", arch=self.options.arch, extra=extra
         )
         return subprocess.call(argv)
 
-    def recorded_base(self) -> str:
+    def recorded_identity(self) -> str:
         done = subprocess.run(
             self.engine.run_argv(
                 Run(
                     self.image,
-                    ("-c", "sed -n 's/^base: *//p' /etc/libera-build-image.txt"),
+                    ("-c", "sed -n 's/^identity: *//p' /etc/libera-build-image.txt"),
                     self.options.arch,
                     extra=("--pull=never",),
                 )
@@ -230,11 +241,10 @@ class Box:
     def ensure_image(self) -> None:
         self.engine.refuse_remote()
         if not self.engine.has_image(self.image):
-            clang = CLANG[self.options.arch]
-            step(f"building the image first ({UBUNTU_CODENAME}, clang {clang})")
-        elif why := stale(self.recorded_base()):
+            step(f"building the image first ({UBUNTU_CODENAME}, LLVM {LLVM_VERSION})")
+        elif why := stale(self.recorded_identity()):
             arch = self.options.arch
-            step(f"the {arch} image was built on a different base; rebuilding it")
+            step(f"the {arch} image was built from something else; rebuilding it")
             say(f"    {why}")
         else:
             return

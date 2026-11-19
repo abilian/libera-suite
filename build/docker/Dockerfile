@@ -15,23 +15,20 @@
 # Moving the toolchain means bumping one of those three ARGs deliberately.
 # Nothing else in here decides what gets installed.
 #
-# **One release, two compilers, and the reason is V8 at both ends.**
+# **One base for both architectures: jammy, for the glibc it ships against.**
 #
-# Common/3dParty/v8/nc-build.py checks the compiler only on Linux arm64, and
-# checks it exactly:
-#
-#     if nc.is_linux() and targetarch == "arm64":
-#         if not version.startswith( "13." ): abort
-#
-# Ubuntu dropped clang-13 after 22.04, so an arm64 build has to be on jammy.
-# amd64 has no such gate, only a ceiling: V8 8.9 stops compiling at clang 16.
-#
-# amd64 used to build on noble anyway, because that is upstream's own CI base
+# amd64 used to build on noble, because that is upstream's own CI base
 # (docker-ci/ds-base), and the binaries it produced needed GLIBC 2.38 and
 # GLIBCXX 3.4.32. Measured in a clean container of each release, the shipped
-# x2t then refused to load on Ubuntu 22.04 and on Debian 12, while the
-# jammy-built arm64 core ran on both. So both architectures build on jammy now
-# and only CLANG_VERSION differs; build/src/libera_build/buildbox.py picks it.
+# x2t then refused to load on Ubuntu 22.04 and on Debian 12. So both
+# architectures build on jammy.
+#
+# **V8's compiler comes from LLVM, not from Ubuntu.** V8 14.6, which
+# Euro-Office's main builds since 2026-11, is compiled with clang 21 upstream,
+# and jammy's archive stops at clang 15. apt.llvm.org has it but keeps only its
+# latest build, which cannot be pinned; LLVM's release tarballs can, by version
+# and SHA-256, as Node is below. build/src/libera_build/buildbox.py holds both
+# and passes them in, since it also needs the version to tell a stale image.
 #
 # Everything that can drift is still pinned per release, and the checks further
 # down run on both, so a toolchain that is wrong for one of them fails here
@@ -46,7 +43,9 @@ ARG UBUNTU_RELEASE
 ARG UBUNTU_CODENAME
 ARG BASE_DIGEST
 ARG APT_SNAPSHOT=20260901T000000Z
-ARG CLANG_VERSION=14
+ARG LLVM_VERSION
+ARG LLVM_SHA256_AMD64
+ARG LLVM_SHA256_ARM64
 ARG NODE_VERSION=20.20.2
 ARG NODE_SHA256_AMD64=df770b2a6f130ed8627c9782c988fda9669fa23898329a61a871e32f965e007d
 ARG NODE_SHA256_ARM64=73093db209e4e9e09dd7d15a47aeaab1b74833830df03efa5f942a1122c5fa71
@@ -98,26 +97,8 @@ RUN set -eu; \
 # -- together they are the only statement anywhere of what a bare Linux box
 # needs.
 #
-# clang and lld are not optional on Linux even though everything else builds
-# with gcc: nc-build.py's check_prequisites aborts with "Tool not found: clang"
-# before it compiles anything, its gn args set is_clang=true and use_lld=true,
-# and it runs ninja with CC=clang CXX=clang++. build-essential provides neither.
-#
-# llvm on top of those two, for one file: is_clang=true makes gcc_toolchain.gni
-# set ar to llvm-ar, which Ubuntu ships in `llvm` and not in `clang`. It fails
-# at the first AR step, a hundred compiles in, with "/usr/bin/llvm-ar: not
-# found" -- a path in the message and no package name anywhere.
-#
-# CLANG_VERSION is 14 and not noble's default 18, because V8 8.9 does not
-# compile under clang 16 or later: -Wenum-constexpr-conversion became an error,
-# and src/base/bit-field.h line 43 trips it in every torque-generated file.
-# Clang is used for V8 and nothing else -- core is a gcc build -- so this pins
-# one dependency's compiler rather than the image's. The unversioned names are
-# what nc-build.py and gn look for, hence update-alternatives.
-#
-# Changing this invalidates V8's object tree, and ninja will not notice: it
-# keys on the command line, and /usr/bin/clang++ is the same string either way.
-# Delete $BUILD_ROOT/out/core/third_party/work/v8/v8/v8/out.gn by hand.
+# clang, lld and llvm-ar for V8 come from the LLVM tarball below; lld links
+# against libxml2, which jammy has, hence libxml2 here.
 #
 # build-essential covers libstdc++.a, which ICU links against statically and
 # Fedora splits into a package of its own -- see the assertion below.
@@ -138,9 +119,6 @@ RUN apt-get install -y --no-install-recommends --reinstall \
         build-essential \
         cmake \
         ninja-build \
-        clang-${CLANG_VERSION} \
-        lld-${CLANG_VERSION} \
-        llvm-${CLANG_VERSION} \
         git \
         curl \
         pkg-config \
@@ -159,12 +137,41 @@ RUN apt-get install -y --no-install-recommends --reinstall \
         lsb-release \
         patch \
         patchelf \
-    && update-alternatives \
-        --install /usr/bin/clang clang /usr/bin/clang-${CLANG_VERSION} 100 \
-        --slave /usr/bin/clang++ clang++ /usr/bin/clang++-${CLANG_VERSION} \
-        --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-${CLANG_VERSION} \
-        --slave /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-${CLANG_VERSION} \
+        libxml2 \
     && rm -rf /var/lib/apt/lists/*
+
+# clang, lld and llvm-ar for V8, and nothing else: core is a gcc build. They
+# are not optional even so: nc-build.py aborts with "Tool not found: clang"
+# before it compiles anything, its gn args set is_clang=true and use_lld=true,
+# and is_clang makes gcc_toolchain.gni set ar to llvm-ar. It also looks for
+# compiler-rt's builtins (clang -print-libgcc-file-name --rtlib=compiler-rt)
+# before building. The tarball is 1.8 GB and 2.6 GB unpacked, most of it tools
+# V8 never runs, so only these are taken out of it; the unversioned names are
+# what nc-build.py and gn look for.
+#
+# Changing LLVM_VERSION invalidates V8's object tree, and ninja will not notice:
+# it keys on the command line, and /usr/local/bin/clang++ is the same string
+# either way. Delete $BUILD_ROOT/out/core/third_party/work/v8/v8/v8/out.gn.
+RUN set -eu; \
+    arch="$(dpkg --print-architecture)"; \
+    case "$arch" in \
+        amd64) llvm_arch=X64;   llvm_sha="${LLVM_SHA256_AMD64}" ;; \
+        arm64) llvm_arch=ARM64; llvm_sha="${LLVM_SHA256_ARM64}" ;; \
+        *) echo "FATAL: no pinned LLVM checksum for $arch" >&2; exit 1 ;; \
+    esac; \
+    tarball="LLVM-${LLVM_VERSION}-Linux-${llvm_arch}.tar.xz"; \
+    curl -fsSLO "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/${tarball}"; \
+    echo "${llvm_sha}  ${tarball}" | sha256sum -c -; \
+    major="${LLVM_VERSION%%.*}"; \
+    mkdir -p /opt/llvm; \
+    tar -xJf "$tarball" -C /opt/llvm --strip-components=1 --wildcards \
+        "*/bin/clang" "*/bin/clang++" "*/bin/clang-${major}" \
+        "*/bin/lld" "*/bin/ld.lld" "*/bin/llvm-ar" "*/bin/llvm-ranlib" "*/bin/llvm-nm" \
+        "*/lib/clang/${major}/include" "*/lib/clang/${major}/lib/*/libclang_rt.builtins.a"; \
+    rm -f "$tarball"; \
+    for tool in clang clang++ ld.lld lld llvm-ar llvm-ranlib llvm-nm; do \
+        ln -s "/opt/llvm/bin/$tool" "/usr/local/bin/$tool"; \
+    done
 
 # Node from nodejs.org rather than NodeSource. `curl | bash` of setup_20.x adds
 # an apt repository carrying whatever 20.x is current that week, so the same
@@ -207,8 +214,9 @@ RUN set -eu; \
     sh /usr/local/bin/toolchain.sh check; \
     [ "v${NODE_VERSION}" = "$(node --version)" ] || { \
         echo "FATAL: wanted node v${NODE_VERSION}, got $(node --version)" >&2; exit 1; }; \
-    clang --version | grep -q "clang version ${CLANG_VERSION}\." || { \
-        echo "FATAL: wanted clang ${CLANG_VERSION}, got $(clang --version | head -1)" >&2; exit 1; }
+    clang --version | grep -q "clang version ${LLVM_VERSION} " || { \
+        echo "FATAL: wanted clang ${LLVM_VERSION}, got $(clang --version | head -1)" >&2; exit 1; }; \
+    ld.lld --version > /dev/null
 
 # What this image is, for the record. `lb container versions payload` prints the
 # first; the second is every package and version, for when that is the question.
@@ -217,7 +225,8 @@ RUN set -eu; \
         echo "base:         ubuntu:${UBUNTU_RELEASE}@${BASE_DIGEST}"; \
         echo "arch:         $(dpkg --print-architecture)"; \
         echo "apt-snapshot: ${APT_SNAPSHOT}"; \
-        echo "clang:        ${CLANG_VERSION} (V8 only; core builds with gcc)"; \
+        echo "identity:     ubuntu:${UBUNTU_RELEASE}@${BASE_DIGEST} llvm ${LLVM_VERSION}"; \
+        echo "llvm:         ${LLVM_VERSION}, LLVM's release tarball (V8 only; core builds with gcc)"; \
         echo "built:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
         echo; \
         gcc --version | head -1; \
