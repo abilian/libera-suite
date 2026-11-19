@@ -19,6 +19,7 @@ import pytest
 from support import ScriptedShell, repo_root
 from support.blank import with_body
 from support.charts import linked_as_chart_docx, sunburst_docx
+from support.documents import PTABS, SET_FIELD
 from support.make_sample_docx import solid_png
 from support.pictures import (
     RELATIONSHIPS,
@@ -1252,13 +1253,6 @@ def test_a_sunburst_colours_its_branches_and_names_them(tmp_path):
 
 
 # A positional tab to the centre of the line, then one to its right margin.
-PTABS = (
-    "<w:p><w:r><w:t>Left</w:t></w:r>"
-    '<w:r><w:ptab w:relativeTo="margin" w:alignment="center" w:leader="none"/>'
-    "<w:t>Mid</w:t></w:r>"
-    '<w:r><w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"/>'
-    "<w:t>End</w:t></w:r></w:p>"
-)
 
 
 def test_a_positional_tab_moves_the_text_to_its_place(tmp_path):
@@ -1294,18 +1288,6 @@ def test_a_positional_tab_moves_the_text_to_its_place(tmp_path):
     mid = sum(found["Mid"]) / 2
     assert abs(mid - (left + right) / 2) < 2, (found, left, right)
     assert abs(found["End"][1] - right) < 2, (found, right)
-
-
-# A SET field holding its last result, as Word writes one.
-SET_FIELD = (
-    '<w:p><w:r><w:t xml:space="preserve">Before </w:t></w:r>'
-    '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'
-    '<w:r><w:instrText xml:space="preserve"> SET year "2001" </w:instrText></w:r>'
-    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'
-    "<w:r><w:t>2001</w:t></w:r>"
-    '<w:r><w:fldChar w:fldCharType="end"/></w:r>'
-    "<w:r><w:t>after</w:t></w:r></w:p>"
-)
 
 
 def test_a_set_fields_result_is_not_drawn(tmp_path):

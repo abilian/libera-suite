@@ -107,6 +107,10 @@ lint.extend-ignore = [
     "S108",  # /tmp/serve.log, in a --rm container with one process in it
 ]
 # The e2e tier installs Playwright's browser the first time it needs one.
+"tests/b_integration/payload/test_engine.py" = [
+    "S404", # subprocess import
+    "S603", # subprocess call -- argv form, no shell: node, on our own test files
+]
 "tests/support/browsers.py" = [
     "S404",  # subprocess import
     "S603",  # subprocess call -- argv form, no shell, this interpreter's playwright

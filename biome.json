@@ -1,7 +1,13 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
   "files": {
-    "includes": ["src/**/*.js", "!**/builddir", "!**/.flatpak-builder", "!build/out"]
+    "includes": [
+      "src/**/*.js",
+      "tests/engine/**/*.mjs",
+      "!**/builddir",
+      "!**/.flatpak-builder",
+      "!build/out"
+    ]
   },
   "formatter": {
     "indentStyle": "space",
