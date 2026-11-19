@@ -61,6 +61,10 @@ def test_the_engine_passes_its_tests_in_node(live_payload, tmp_path):
     layout = locate.Layout.of(live_payload)
     env = {
         **os.environ,
+        # UTC, as upstream's CI: FormulaTests.html compares NOW() with
+        # cDate().getExcelDate(), one local and one UTC, and failed in the
+        # hour after midnight in Paris.
+        "TZ": "UTC",
         "LIBERA_SDKJS": str(layout.sdkjs),
         "LIBERA_WEB_APPS": str(layout.web_apps),
     }
