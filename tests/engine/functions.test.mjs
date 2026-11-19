@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { load } from "./harness.mjs";
+import { roundingOnly } from "./upstream.mjs";
 
 const engine = load("cell");
 const X = engine.AscCommonExcel;
@@ -48,8 +49,12 @@ const CASES = [
 
 for (const [name, args, expected] of CASES) {
   const shown = args.map((a) => JSON.stringify(a.getValue())).join(", ");
+  // Equal, or but for the last digits Math gives differently in each engine
+  // (Node 20's V8 and Node 26's differ on POWER(4, 1.25)), as for upstream's
+  // own pages.
   test(`${name}(${shown}) is ${expected}`, () => {
-    assert.equal(calculate(name, args), expected);
+    const actual = calculate(name, args);
+    assert.ok(actual === expected || roundingOnly(actual, expected), `${actual}`);
   });
 }
 
