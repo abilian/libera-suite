@@ -1,0 +1,52 @@
+From 466ff9c14dc3842cc4ebcc316e1396a4e71f14d6 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Thu, 19 Nov 2026 14:59:18 +0100
+Subject: [PATCH] doctrenderer: with USE_JAVASCRIPT_CORE, build and link no V8
+
+The option compiled doctrenderer against JavaScriptCore but still linked
+libv8_monolith.a, and the third-party builder still built V8 for it.
+Only doctrenderer uses V8: with the option on, V8 is not built and
+doctrenderer links Foundation and JavaScriptCore instead. On macOS 14,
+V8 14.6 cannot be built at all, its libc++ needs the macOS 15.4 SDK.
+---
+ DesktopEditor/doctrenderer/CMakeLists.txt | 7 ++++++-
+ common.cmake                              | 3 +++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/DesktopEditor/doctrenderer/CMakeLists.txt b/DesktopEditor/doctrenderer/CMakeLists.txt
+index e04cb30076..ab0b3b12ed 100644
+--- a/DesktopEditor/doctrenderer/CMakeLists.txt
++++ b/DesktopEditor/doctrenderer/CMakeLists.txt
+@@ -316,9 +316,14 @@ target_link_libraries(doctrenderer INTERFACE
+ target_link_libraries(doctrenderer PRIVATE
+     ${OPENSSL_LIBSSL}
+     ${OPENSSL_LIBCRYPTO}
+-    ${V8_MONOLITH}
+ )
+ 
++if(USE_JAVASCRIPT_CORE)
++    target_link_libraries(doctrenderer PRIVATE "-framework Foundation" "-framework JavaScriptCore")
++else()
++    target_link_libraries(doctrenderer PRIVATE ${V8_MONOLITH})
++endif()
++
+ if(UNIX AND NOT APPLE AND NOT ANDROID)
+     # V8 uses atomics the compiler can't inline everywhere (e.g. clang on
+     # arm64), which call into libatomic. Linked after the V8 library, else
+diff --git a/common.cmake b/common.cmake
+index 55bda49bdc..6ebefc7136 100644
+--- a/common.cmake
++++ b/common.cmake
+@@ -222,6 +222,9 @@ else()
+             if(EO_CORE_PREBUILT_DIR)
+                 # Only doctrenderer links V8, and the package has it built in
+                 set(PREBUILT_EXCLUDE ",v8")
++            elseif(USE_JAVASCRIPT_CORE)
++                # Only doctrenderer links V8, and it runs on JavaScriptCore
++                set(PREBUILT_EXCLUDE ",v8")
+             endif()
+ 
+             # cef and qt need old build environment, cannot be built here
+-- 
+2.55.0
+

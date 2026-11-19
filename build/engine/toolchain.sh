@@ -119,7 +119,7 @@ package_for() {
     case "$1:$FAMILY" in
     # macOS installs three things; Xcode brings the rest, so they map to
     # nothing and drop out of the install line.
-    cmake:macos | ninja:macos | llvm:macos | lld:macos) echo "$1" ;;
+    cmake:macos | ninja:macos) echo "$1" ;;
     node:macos | npm:macos) echo "node" ;;
     *:macos) echo "" ;;
     # winget ids, which are what a fresh Windows has. cmake and ninja also come
@@ -267,19 +267,6 @@ cmd_check() {
     if [ "$FAMILY" = windows ]; then
         check_visual_studio || return 1
         check_cygwin || return 1
-    fi
-
-    # V8 14.6 builds on the Mac with Homebrew's LLVM, against Xcode's SDK and
-    # libc++: Xcode's clang has no llvm-ar and no lld, which Chromium's build
-    # uses, and nc-build.py stops without them. lld is a formula of its own.
-    if [ "$FAMILY" = macos ]; then
-        brew_opt="$(brew --prefix 2>/dev/null)/opt"
-        [ -x "${LLVM_DIR:-$brew_opt/llvm}/bin/llvm-ar" ] ||
-            want llvm "Homebrew's LLVM (llvm-ar), which V8 is built with"
-        # build.sh takes the newest versioned keg (lld@21) when there is no lld.
-        [ -x "${LLVM_DIR:-$brew_opt/llvm}/bin/ld64.lld" ] || [ -x "${LLD_DIR:-$brew_opt/lld}/bin/ld64.lld" ] ||
-            ls "$brew_opt"/lld@*/bin/ld64.lld >/dev/null 2>&1 ||
-            want lld "lld (ld64.lld), which V8 is linked with"
     fi
 
     # The three below are Linux's: the Mac builds ICU against what Xcode

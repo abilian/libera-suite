@@ -39,18 +39,11 @@ Set `BUILD_ROOT` to somewhere with room. It defaults to `$HOME/euro-office-build
 export BUILD_ROOT=/somewhere/with/room
 ```
 
-## Does the Mac need V8?
+## The Mac does not build V8
 
-Maybe not. One script exists to find out:
+doctrenderer, the part of x2t that runs the editors' code (PDF, HTML, Markdown and EPUB export, and printing), runs it in macOS's own JavaScriptCore. Upstream abstracts the engine behind `js_internal/js_base.h` and ships two implementations, `v8` and `jsc`; its CMake build has `USE_JAVASCRIPT_CORE` for the second, and core `0210` makes the option leave V8 out of the build and the link. `build.sh` sets it on macOS.
 
-```sh
-sh build/engine/doctrenderer-jsc.sh build    # build doctrenderer against macOS's JavaScriptCore
-sh build/engine/doctrenderer-jsc.sh check    # convert a document with each engine, and compare the PDF
-```
-
-Upstream abstracts the JS engine behind `js_internal/js_base.h` and ships two implementations, `v8` and `jsc`. The second is Objective-C++ against Apple's JavaScriptCore framework, and upstream's own qmake build turns it on for macOS. The CMake port we use defaults it off, so we build V8 on the Mac too: half an hour, and five of the `core` patches.
-
-Measured so far: it compiles with no patches, links the system framework, and renders the smoke document to a PDF with the same page, font and text-operator counts as V8. That is one four-line document, so it says the integration holds. Whether every document renders identically is a separate question.
+It is not a preference: V8 14.6, which Euro-Office's `main` builds, needs a libc++ with `std::atomic_ref`, which only the macOS 15.4 SDK has, and Xcode 16.3 needs macOS 15. Measured on 30 documents against V8 (`lb fidelity`), it prints the same pages, and each such conversion takes about 0.7 s longer, the time JavaScriptCore takes to compile sdkjs with no code cache. See `notes/19-js-engine.md` in the development repository for the numbers.
 
 None of this reaches Linux, where `jsc_base.mm` does not apply: it is Objective-C++ and links a framework. WebKitGTK ships a JavaScriptCore with a C API, which would be a third implementation of `js_base.h`, written from scratch against that API.
 

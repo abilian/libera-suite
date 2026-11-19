@@ -114,14 +114,6 @@ setup_env() {
     # Keep V8's object files between runs so an interrupted build resumes
     # rather than restarting from nothing.
     export V8_KEEP_BUILD_DIR="${V8_KEEP_BUILD_DIR:-1}"
-    # V8 links with lld on the Mac (core 0210). Where Homebrew has no bottle of
-    # the current lld, it builds LLVM's whole chain from source and fails on
-    # macOS 14; a versioned keg (lld@21) still has one, and the newest is taken.
-    if [ "$(uname -s)" = Darwin ] && [ -z "${LLD_DIR:-}" ] &&
-        [ ! -x "$(brew --prefix)/opt/lld/bin/ld64.lld" ]; then
-        LLD_DIR="$(ls -d "$(brew --prefix)"/opt/lld@* 2>/dev/null | sort -V | tail -1)"
-        [ -n "$LLD_DIR" ] && export LLD_DIR
-    fi
 
     BOTO_CONFIG="$BUILD_ROOT/.boto-empty"
     # Unlink before creating. `: >` truncates, which needs write permission on
@@ -369,17 +361,15 @@ cmd_configure() {
         echo "==> link jobs: $link_jobs (link.exe peaks near 3 GB)"
     fi
 
-    # V8's fetch runs depot_tools, which wants Python 3.11 or later, and
-    # gsutil, which refuses anything after 3.13 ("gsutil requires Python
-    # version 3.9-3.13", on this Mac's 3.15). CMake takes the first python3 it
-    # finds; give it one both accept where there is one. PYTHON_BIN is cached.
-    for py in python3.13 python3.12 python3.11; do
-        if command -v "$py" >/dev/null 2>&1; then
-            set -- "$@" "-DPYTHON_BIN=$(command -v "$py")"
-            echo "==> python for the third-party builders: $py"
-            break
-        fi
-    done
+    # The Mac runs the editors' code in JavaScriptCore, not V8 (core 0210).
+    # V8 14.6 cannot be built on macOS 14 at all: its libc++ needs std::atomic_ref,
+    # which only the macOS 15.4 SDK has, and Xcode 16.3 needs macOS 15.
+    # JavaScriptCore is the system's, which also takes half an hour off the
+    # build. See notes/19-js-engine.md.
+    if [ "$(uname -s)" = Darwin ]; then
+        set -- "$@" -DUSE_JAVASCRIPT_CORE=1
+        echo "==> doctrenderer on JavaScriptCore"
+    fi
 
     ICU_DATA_FILTER_FILE="$(winpath "$ICU_FILTER")"
     export ICU_DATA_FILTER_FILE
