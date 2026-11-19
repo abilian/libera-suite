@@ -5,5 +5,5 @@
 # payload.
 *
 !docker/
-!toolchain.sh
-!common.sh
+!engine/toolchain.sh
+!engine/common.sh

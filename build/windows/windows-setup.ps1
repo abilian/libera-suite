@@ -99,6 +99,9 @@ $tools = @(
     @{ id = 'StrawberryPerl.StrawberryPerl'; file = 'C:\Strawberry\perl\bin\perl.exe';             why = 'OpenSSL and ICU tooling; Git''s perl is trimmed' },
     @{ id = 'OpenJS.NodeJS.LTS';             file = 'C:\Program Files\nodejs\node.exe';            why = 'the sdkjs and web-apps pipelines' },
     @{ id = 'NASM.NASM';                     file = 'C:\Program Files\NASM\nasm.exe';              why = 'OpenSSL assembly' },
+    # V8 14.6 is built with clang-cl; nc-build.py also takes Visual Studio's
+    # "C++ Clang tools" component, but this is the one it finds without help.
+    @{ id = 'LLVM.LLVM';                     file = 'C:\Program Files\LLVM\bin\clang-cl.exe';      why = 'V8, which is built with clang-cl' },
     @{ id = 'astral-sh.uv';                  cmd  = 'uv';                                          why = 'the repository''s tests and lint' },
     # winget installs Inno Setup under the user's own Programs when it can, so
     # either place will do; build/windows/windows-app.sh looks in both.

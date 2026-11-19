@@ -127,6 +127,7 @@ package_for() {
     perl:windows) echo "StrawberryPerl.StrawberryPerl" ;;
     node:windows | npm:windows) echo "OpenJS.NodeJS.LTS" ;;
     nasm:windows) echo "NASM.NASM" ;;
+    llvm:windows) echo "LLVM.LLVM" ;;
     perlmod:windows) echo "StrawberryPerl.StrawberryPerl" ;;
     *:windows) echo "$1" ;;
     # Same name everywhere it is not listed below.
@@ -262,6 +263,12 @@ cmd_check() {
     if [ "$FAMILY" = windows ]; then
         check_visual_studio || return 1
         check_cygwin || return 1
+        # V8 14.6 is built with clang-cl, which nc-build.py finds in LLVM_DIR,
+        # in Program Files' LLVM, or in Visual Studio's C++ Clang tools, and
+        # otherwise stops after the fetch.
+        [ -f "${LLVM_DIR:-$PROGRAMFILES/LLVM}/bin/clang-cl.exe" ] ||
+            [ -f "$vsdir/VC/Tools/Llvm/x64/bin/clang-cl.exe" ] ||
+            want llvm "LLVM's clang-cl, which V8 is built with"
     fi
 
     # The three below are Linux's: the Mac builds ICU against what Xcode
