@@ -530,12 +530,12 @@ member Asc.PDFEditorApi.asc_setPdfViewer(isPdfViewer)  word
 member Asc.PDFEditorApi.asc_setRtlTextDirection(isRtl)  word
 member Asc.PDFEditorApi.asc_setSkin(theme)  word
 member Asc.PDFEditorApi.asc_setViewerTargetType(type)  word
-member Asc.PDFEditorApi.asc_setViewerThumbnailsUsePageRect(value)  word
-member Asc.PDFEditorApi.asc_setViewerThumbnailsZoom(value)  word
+member Asc.PDFEditorApi.asc_setViewerThumbnailsUsePageRect(value2)  word
+member Asc.PDFEditorApi.asc_setViewerThumbnailsZoom(value2)  word
 member Asc.PDFEditorApi.asc_showComment(Id)  word
 member Asc.PDFEditorApi.asc_showComments()  word
 member Asc.PDFEditorApi.asc_undoAllChanges()  word
-member Asc.PDFEditorApi.asc_viewerNavigateTo(value)  word
+member Asc.PDFEditorApi.asc_viewerNavigateTo(value2)  word
 member Asc.PDFEditorApi.asc_viewerThumbnailsResize()  word
 member Asc.PivotContextMenu.asc_canExpandCollapse()  cell
 member Asc.PivotContextMenu.asc_canGroup()  cell
@@ -621,7 +621,7 @@ member Asc.VisioEditorApi.asc_coAuthoringDisconnect()  visio
 member Asc.VisioEditorApi.asc_coAuthoringGetUsers()  visio
 member Asc.VisioEditorApi.asc_decodeBuffer(buffer, codePage, callback)  visio
 member Asc.VisioEditorApi.asc_drawPrintPreview(index, paperSize)  visio
-member Asc.VisioEditorApi.asc_enableKeyEvents(value, isFromInput)  visio
+member Asc.VisioEditorApi.asc_enableKeyEvents(value2, isFromInput)  visio
 member Asc.VisioEditorApi.asc_getAppProps()  visio
 member Asc.VisioEditorApi.asc_getCanRedo()  visio
 member Asc.VisioEditorApi.asc_getCanUndo()  visio
@@ -1807,6 +1807,7 @@ member Asc.asc_CVersionHistory.asc_setToken(val)  cell slide visio word
 member Asc.asc_CVersionHistory.asc_setUrl(val)  cell slide visio word
 member Asc.asc_CVersionHistory.asc_setUrlChanges(val)  cell slide visio word
 member Asc.asc_CellXfs.asc_getAngle()  cell slide visio word
+member Asc.asc_CellXfs.asc_getCheckbox()  cell slide visio word
 member Asc.asc_CellXfs.asc_getFill()  cell slide visio word
 member Asc.asc_CellXfs.asc_getFillColor()  cell slide visio word
 member Asc.asc_CellXfs.asc_getFontBold()  cell slide visio word
@@ -2029,7 +2030,7 @@ member Asc.asc_docs_api.asc_InputClearKeyboardElement()  slide word
 member Asc.asc_docs_api.asc_IsAllRequiredFormsFilled(checkAll)  word
 member Asc.asc_docs_api.asc_IsContentControl()  word
 member Asc.asc_docs_api.asc_IsContentControlCheckBoxChecked(sId)  word
-member Asc.asc_docs_api.asc_IsCurrentNumberingPreset(value, singleLevel)  word
+member Asc.asc_docs_api.asc_IsCurrentNumberingPreset(value2, singleLevel)  word
 member Asc.asc_docs_api.asc_IsCursorInEndnote()  word
 member Asc.asc_docs_api.asc_IsCursorInFootnote()  word
 member Asc.asc_docs_api.asc_IsDefaultStyleChanged(sName)  word
@@ -2231,11 +2232,11 @@ member Asc.asc_docs_api.asc_editChartInFrameEditor()  slide word
 member Asc.asc_docs_api.asc_editOleObjectAction(oOleObject, sImageUrl, sData, fWidthMM, fHeightMM, nPixWidth, nPixHeight, arrImagesForAddToHistory)  slide word
 member Asc.asc_docs_api.asc_editOleTableInFrameEditor()  slide word
 member Asc.asc_docs_api.asc_editPointsGeometry()  slide word
-member Asc.asc_docs_api.asc_enableKeyEvents(value, isFromInput)  slide word
+member Asc.asc_docs_api.asc_enableKeyEvents(value2, isFromInput)  slide word
 member Asc.asc_docs_api.asc_endEditCrop()  slide word
 member Asc.asc_docs_api.asc_endFindText()  slide word
 member Asc.asc_docs_api.asc_enterText(codePoints)  slide
-member Asc.asc_docs_api.asc_enterText(value)  word
+member Asc.asc_docs_api.asc_enterText(value2)  word
 member Asc.asc_docs_api.asc_findText(oProps, isNext, callback)  slide word
 member Asc.asc_docs_api.asc_generateTableStylesPreviews(bUseDefault)  slide word
 member Asc.asc_docs_api.asc_getAllSignatures()  slide word
@@ -2352,7 +2353,7 @@ member Asc.asc_docs_api.asc_pluginsRegister(basePath, plugins)  slide word
 member Asc.asc_docs_api.asc_prepareUrl(url)  slide word
 member Asc.asc_docs_api.asc_putPageColor(color)  word
 member Asc.asc_docs_api.asc_putSmartParagraphSelection(isSmart)  word
-member Asc.asc_docs_api.asc_putSpellCheckCurrentWord(value)  slide word
+member Asc.asc_docs_api.asc_putSpellCheckCurrentWord(value2)  slide word
 member Asc.asc_docs_api.asc_registerCallback(name, callback)  slide word
 member Asc.asc_docs_api.asc_removeComment(Id)  slide word
 member Asc.asc_docs_api.asc_removeExternalReferences(arrExternalReferences)  slide word
@@ -2403,8 +2404,8 @@ member Asc.asc_docs_api.asc_setSpellCheckSettings(oSettings)  slide word
 member Asc.asc_docs_api.asc_setViewMode(isViewMode)  slide word
 member Asc.asc_docs_api.asc_setViewerTargetType(mode)  slide
 member Asc.asc_docs_api.asc_setViewerTargetType(type)  word
-member Asc.asc_docs_api.asc_setViewerThumbnailsUsePageRect(value)  word
-member Asc.asc_docs_api.asc_setViewerThumbnailsZoom(value)  word
+member Asc.asc_docs_api.asc_setViewerThumbnailsUsePageRect(value2)  word
+member Asc.asc_docs_api.asc_setViewerThumbnailsZoom(value2)  word
 member Asc.asc_docs_api.asc_showComment(Id)  slide word
 member Asc.asc_docs_api.asc_showComments()  slide
 member Asc.asc_docs_api.asc_showComments(isShowSolved)  word
@@ -2418,7 +2419,7 @@ member Asc.asc_docs_api.asc_stopSaving()  slide word
 member Asc.asc_docs_api.asc_undoAllChanges()  slide word
 member Asc.asc_docs_api.asc_unregisterCallback(name, callback)  slide word
 member Asc.asc_docs_api.asc_updateExternalReferences(arrExternalReferences, fCallback)  slide word
-member Asc.asc_docs_api.asc_viewerNavigateTo(value)  word
+member Asc.asc_docs_api.asc_viewerNavigateTo(value2)  word
 member Asc.asc_docs_api.asc_viewerThumbnailsResize()  word
 member Asc.sparklineGroup.asc_getColorAxis()  cell slide visio word
 member Asc.sparklineGroup.asc_getColorFirst()  cell slide visio word
@@ -2545,7 +2546,7 @@ member Asc.spreadsheet_api.asc_SelectSearchElement(sId)  cell
 member Asc.spreadsheet_api.asc_SelectionCut()  cell
 member Asc.spreadsheet_api.asc_SendControlColors()  cell
 member Asc.spreadsheet_api.asc_SendThemeColors(colors, standart_colors)  cell
-member Asc.spreadsheet_api.asc_SetAutoCorrectHyperlinks(value)  cell
+member Asc.spreadsheet_api.asc_SetAutoCorrectHyperlinks(value2)  cell
 member Asc.spreadsheet_api.asc_SetDocumentPlaceChangedEnabled(val)  cell
 member Asc.spreadsheet_api.asc_SetFastCollaborative(bFast)  cell
 member Asc.spreadsheet_api.asc_SetIsSupportDynamicArrays(val, addToLS)  cell
@@ -2631,7 +2632,7 @@ member Asc.spreadsheet_api.asc_changePageOrient(isPortrait, index)  cell
 member Asc.spreadsheet_api.asc_changePrintTitles(cols, rows, index)  cell
 member Asc.spreadsheet_api.asc_changeSelectionFormatTable(tableName, optionType)  cell
 member Asc.spreadsheet_api.asc_changeShapeImageFromFile(type)  cell
-member Asc.spreadsheet_api.asc_changeShapeType(value)  cell
+member Asc.spreadsheet_api.asc_changeShapeType(value2)  cell
 member Asc.spreadsheet_api.asc_changeTableRange(tableName, range)  cell
 member Asc.spreadsheet_api.asc_changeUserProtectedRange(oldObj, newObj)  cell
 member Asc.spreadsheet_api.asc_checkActiveCellPassword(val, callback)  cell
@@ -2745,7 +2746,7 @@ member Asc.spreadsheet_api.asc_getFormulasInfo()  cell
 member Asc.spreadsheet_api.asc_getFrameChartSettings()  cell
 member Asc.spreadsheet_api.asc_getFrozenPaneBorderType()  cell
 member Asc.spreadsheet_api.asc_getFullCFIcons()  cell
-member Asc.spreadsheet_api.asc_getFullHyperlinkLength(str)  cell
+member Asc.spreadsheet_api.asc_getFullHyperlinkLength(str2)  cell
 member Asc.spreadsheet_api.asc_getFunctionArgumentSeparator()  cell
 member Asc.spreadsheet_api.asc_getGraphicObjectProps()  cell
 member Asc.spreadsheet_api.asc_getGroupSeparator(culture)  cell
@@ -2758,7 +2759,7 @@ member Asc.spreadsheet_api.asc_getIsTrackShape()  cell
 member Asc.spreadsheet_api.asc_getKeyboardLanguage()  cell
 member Asc.spreadsheet_api.asc_getLocale()  cell
 member Asc.spreadsheet_api.asc_getLocaleCurrency(val)  cell
-member Asc.spreadsheet_api.asc_getLocaleExample(format, value, culture)  cell
+member Asc.spreadsheet_api.asc_getLocaleExample(format, value2, culture)  cell
 member Asc.spreadsheet_api.asc_getNamedSheetViews()  cell
 member Asc.spreadsheet_api.asc_getOpeningDocumentsList(callback)  cell
 member Asc.spreadsheet_api.asc_getOriginalImageSize()  cell
@@ -2773,7 +2774,7 @@ member Asc.spreadsheet_api.asc_getPropertyEditorTextArts()  cell
 member Asc.spreadsheet_api.asc_getProtectedRanges()  cell
 member Asc.spreadsheet_api.asc_getProtectedSheet()  cell
 member Asc.spreadsheet_api.asc_getProtectedWorkbook()  cell
-member Asc.spreadsheet_api.asc_getR1C1Mode(value)  cell
+member Asc.spreadsheet_api.asc_getR1C1Mode(value2)  cell
 member Asc.spreadsheet_api.asc_getRecommendedChartData()  cell
 member Asc.spreadsheet_api.asc_getRemoveDuplicates(bExpand)  cell
 member Asc.spreadsheet_api.asc_getRequestSignatures()  cell
@@ -2814,6 +2815,7 @@ member Asc.spreadsheet_api.asc_initPrintPreview(containerId, options)  cell
 member Asc.spreadsheet_api.asc_insertArgumentsInFormula(val, argNum, argType, name, bEndInsertArg)  cell
 member Asc.spreadsheet_api.asc_insertCells(options)  cell
 member Asc.spreadsheet_api.asc_insertCellsInTable(tableName, optionType)  cell
+member Asc.spreadsheet_api.asc_insertCheckbox()  cell
 member Asc.spreadsheet_api.asc_insertHyperlink(options)  cell
 member Asc.spreadsheet_api.asc_insertInCell(functionName, type, autoComplete)  cell
 member Asc.spreadsheet_api.asc_insertPivotExistingWorksheet(dataRef, pivotRef, confirmation)  cell
@@ -2866,11 +2868,12 @@ member Asc.spreadsheet_api.asc_pluginRun(guid, variation, pluginData)  cell
 member Asc.spreadsheet_api.asc_pluginStop(guid)  cell
 member Asc.spreadsheet_api.asc_pluginsRegister(basePath, plugins)  cell
 member Asc.spreadsheet_api.asc_prepareUrl(url)  cell
-member Asc.spreadsheet_api.asc_putLineSpacingBeforeAfter(type, value)  cell
-member Asc.spreadsheet_api.asc_putPrLineSpacing(type, value)  cell
+member Asc.spreadsheet_api.asc_putLineSpacingBeforeAfter(type, value2)  cell
+member Asc.spreadsheet_api.asc_putPrLineSpacing(type, value2)  cell
 member Asc.spreadsheet_api.asc_reapplyAutoFilter(displayName, sheetId)  cell
 member Asc.spreadsheet_api.asc_refreshAllPivots(opt_confirmation)  cell
 member Asc.spreadsheet_api.asc_registerCallback(name, callback, replaceOldCallback)  cell
+member Asc.spreadsheet_api.asc_removeCheckbox()  cell
 member Asc.spreadsheet_api.asc_removeComment(id)  cell
 member Asc.spreadsheet_api.asc_removeExternalReferences(arr)  cell
 member Asc.spreadsheet_api.asc_removeHyperlink()  cell
@@ -2916,12 +2919,12 @@ member Asc.spreadsheet_api.asc_setColumnWidth(width)  cell
 member Asc.spreadsheet_api.asc_setCoreProps(oProps)  cell
 member Asc.spreadsheet_api.asc_setData(oData)  cell
 member Asc.spreadsheet_api.asc_setDataValidation(props, switchApplySameSettings)  cell
-member Asc.spreadsheet_api.asc_setDate1904(value)  cell
-member Asc.spreadsheet_api.asc_setDefaultDirection(value)  cell
+member Asc.spreadsheet_api.asc_setDate1904(value2)  cell
+member Asc.spreadsheet_api.asc_setDefaultDirection(value2)  cell
 member Asc.spreadsheet_api.asc_setDefaultLanguage(val)  cell
 member Asc.spreadsheet_api.asc_setDefinedNames(defName)  cell
-member Asc.spreadsheet_api.asc_setDisplayGridlines(value)  cell
-member Asc.spreadsheet_api.asc_setDisplayHeadings(value)  cell
+member Asc.spreadsheet_api.asc_setDisplayGridlines(value2)  cell
+member Asc.spreadsheet_api.asc_setDisplayHeadings(value2)  cell
 member Asc.spreadsheet_api.asc_setDocInfo(oDocInfo)  cell
 member Asc.spreadsheet_api.asc_setDrawImagePlaceParagraph(element_id, props)  cell
 member Asc.spreadsheet_api.asc_setFilteringMode(mode)  cell
@@ -2929,7 +2932,7 @@ member Asc.spreadsheet_api.asc_setFontRenderingMode(mode)  cell
 member Asc.spreadsheet_api.asc_setFrozenPaneBorderType(nType)  cell
 member Asc.spreadsheet_api.asc_setGraphicObjectProps(props)  cell
 member Asc.spreadsheet_api.asc_setGroupSummary(val, bCol)  cell
-member Asc.spreadsheet_api.asc_setIncludeNewRowColTable(value)  cell
+member Asc.spreadsheet_api.asc_setIncludeNewRowColTable(value2)  cell
 member Asc.spreadsheet_api.asc_setInterfaceDrawImagePlaceShape(elementId)  cell
 member Asc.spreadsheet_api.asc_setInterfaceDrawImagePlaceTextArt(elementId)  cell
 member Asc.spreadsheet_api.asc_setIsForceSaveOnUserSave(val)  cell
@@ -2942,16 +2945,16 @@ member Asc.spreadsheet_api.asc_setPageOptions(options, index)  cell
 member Asc.spreadsheet_api.asc_setProtectedRanges(arr, deleteArr)  cell
 member Asc.spreadsheet_api.asc_setProtectedSheet(props)  cell
 member Asc.spreadsheet_api.asc_setProtectedWorkbook(props)  cell
-member Asc.spreadsheet_api.asc_setR1C1Mode(value)  cell
+member Asc.spreadsheet_api.asc_setR1C1Mode(value2)  cell
 member Asc.spreadsheet_api.asc_setRemoveDuplicates(props, bCancel)  cell
-member Asc.spreadsheet_api.asc_setRightToLeft(value)  cell
+member Asc.spreadsheet_api.asc_setRightToLeft(value2)  cell
 member Asc.spreadsheet_api.asc_setRowHeight(height)  cell
 member Asc.spreadsheet_api.asc_setSelectedDrawingObjectAlign(alignType)  cell
 member Asc.spreadsheet_api.asc_setSelectedDrawingObjectLayer(layerType)  cell
 member Asc.spreadsheet_api.asc_setSelectionDialogMode(selectionDialogType, selectRange)  cell
-member Asc.spreadsheet_api.asc_setShowFormulas(value)  cell
-member Asc.spreadsheet_api.asc_setShowZeros(value)  cell
-member Asc.spreadsheet_api.asc_setSlicers(names, obj)  cell
+member Asc.spreadsheet_api.asc_setShowFormulas(value2)  cell
+member Asc.spreadsheet_api.asc_setShowZeros(value2)  cell
+member Asc.spreadsheet_api.asc_setSlicers(names2, obj)  cell
 member Asc.spreadsheet_api.asc_setSortProps(props, bCancel)  cell
 member Asc.spreadsheet_api.asc_setSparklineGroup(id, oSparklineGroup)  cell
 member Asc.spreadsheet_api.asc_setThumbnailStylesSizes(width, height)  cell
@@ -3178,7 +3181,7 @@ member AscCommon.baseEditorsApi.asc_StartInkEraser()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_StartTextAroundSearch()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_StopInkDrawer()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_ViewCertificate(id)  cell slide visio word
-member AscCommon.baseEditorsApi.asc_addCustomProperty(name, type, value)  cell slide visio word
+member AscCommon.baseEditorsApi.asc_addCustomProperty(name, type, value2)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_addCustomShortcutInsertSymbol(nCharCode, sFont, sShortcut)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_addImage(obj)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_addOleObject(oPluginData, bPlugin)  cell slide visio word
@@ -3216,7 +3219,7 @@ member AscCommon.baseEditorsApi.asc_editTableOleObject(oleBinary)  cell slide vi
 member AscCommon.baseEditorsApi.asc_enableKeyEvents(isEnabled, isFromInput)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_endEditCrop()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_endFindText()  cell slide visio word
-member AscCommon.baseEditorsApi.asc_enterText(value)  cell slide visio word
+member AscCommon.baseEditorsApi.asc_enterText(value2)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_findText(oProps, isNext, callback)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_finishEyedropper()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_generateChartPreviews(chartType, arrId)  cell slide visio word
@@ -3243,7 +3246,7 @@ member AscCommon.baseEditorsApi.asc_getInformationBetweenFrameAndGeneralEditor(o
 member AscCommon.baseEditorsApi.asc_getInputLanguage()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_getLocalRestrictions()  cell slide visio word  desktop
 member AscCommon.baseEditorsApi.asc_getLocale()  cell slide visio word
-member AscCommon.baseEditorsApi.asc_getLocaleExample(format, value, culture)  cell slide visio word
+member AscCommon.baseEditorsApi.asc_getLocaleExample(format, value2, culture)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_getLocaleLCID()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_getMacros()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_getMacrosByGuid(sGuid)  cell slide visio word
@@ -3274,6 +3277,7 @@ member AscCommon.baseEditorsApi.asc_isCrypto()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_isDocumentCanSave()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_isFinal()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_isFinalizedVersion()  cell slide visio word
+member AscCommon.baseEditorsApi.asc_isLocalNetworkAccessAllowed()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_isOffline()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_isProtectionSupport()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_isRtlTextDirection()  cell slide visio word
@@ -3285,7 +3289,7 @@ member AscCommon.baseEditorsApi.asc_loadLocalImageAndAction(sLocalImage, fCallba
 member AscCommon.baseEditorsApi.asc_markAsFinal(isFinal)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_mergeSelectedShapes(operation)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_mergeSelectedShapesAction(operation)  cell slide visio word
-member AscCommon.baseEditorsApi.asc_modifyCustomProperty(idx, name, type, value)  cell slide visio word
+member AscCommon.baseEditorsApi.asc_modifyCustomProperty(idx, name, type, value2)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_nativeCheckPdfRenderer(_memory1, _memory2)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_nativeInitBuilder()  cell slide visio word
 member AscCommon.baseEditorsApi.asc_onCloseFrameEditor()  cell slide visio word
@@ -3328,7 +3332,7 @@ member AscCommon.baseEditorsApi.asc_setContentDarkMode(isDarkMode)  cell slide v
 member AscCommon.baseEditorsApi.asc_setCoreProps(oProps)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_setCurrentPassword(password, isOnOpen)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_setCurrentPasswordBase(password, isOnOpen)  word  desktop
-member AscCommon.baseEditorsApi.asc_setDefaultBlitMode(value)  cell slide visio word
+member AscCommon.baseEditorsApi.asc_setDefaultBlitMode(value2)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_setDocInfo(oDocInfo)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_setInterfaceDrawImagePlaceShape(elementId)  cell slide visio word
 member AscCommon.baseEditorsApi.asc_setIsForceSaveOnUserSave(val)  cell slide visio word
@@ -3452,6 +3456,7 @@ member AscCommonExcel.asc_CBorders.asc_getRight()  cell slide visio word
 member AscCommonExcel.asc_CBorders.asc_getTop()  cell slide visio word
 member AscCommonExcel.asc_CCellInfo.asc_getAutoFilterInfo()  cell slide visio word
 member AscCommonExcel.asc_CCellInfo.asc_getBorders()  cell slide visio word
+member AscCommonExcel.asc_CCellInfo.asc_getCheckbox()  cell slide visio word
 member AscCommonExcel.asc_CCellInfo.asc_getComments()  cell slide visio word
 member AscCommonExcel.asc_CCellInfo.asc_getDataValidation()  cell slide visio word
 member AscCommonExcel.asc_CCellInfo.asc_getFormatTableInfo()  cell slide visio word
@@ -4379,6 +4384,7 @@ calls asc_GetCurrentContentControl
 calls asc_GetCurrentLevelTOC
 calls asc_GetCurrentNumberingId
 calls asc_GetCurrentNumberingLvl
+calls asc_GetCurrentWord
 calls asc_GetDefaultCertificate
 calls asc_GetDocumentOutlineManager
 calls asc_GetEndnoteProps
@@ -4862,6 +4868,7 @@ calls asc_getChartProperties
 calls asc_getChartSettings
 calls asc_getChartType
 calls asc_getCheckBoxProps
+calls asc_getCheckbox
 calls asc_getCheckboxStyle
 calls asc_getClass
 calls asc_getCodePage
@@ -5502,6 +5509,7 @@ calls asc_initPrintPreview
 calls asc_insertArgumentsInFormula
 calls asc_insertCells
 calls asc_insertCellsInTable
+calls asc_insertCheckbox
 calls asc_insertHyperlink
 calls asc_insertInCell
 calls asc_insertPivotExistingWorksheet
@@ -5691,6 +5699,7 @@ calls asc_registerCallback
 calls asc_registerPlaceholderCallback
 calls asc_remove
 calls asc_removeCalculatedItem
+calls asc_removeCheckbox
 calls asc_removeComment
 calls asc_removeConstraint
 calls asc_removeCustomProperty

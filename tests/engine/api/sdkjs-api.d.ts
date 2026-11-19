@@ -600,12 +600,12 @@ declare namespace Asc {
     asc_setRtlTextDirection(isRtl?: unknown): unknown;
     asc_setSkin(theme?: unknown): unknown;
     asc_setViewerTargetType(type?: unknown): unknown;
-    asc_setViewerThumbnailsUsePageRect(value?: unknown): unknown;
-    asc_setViewerThumbnailsZoom(value?: unknown): unknown;
+    asc_setViewerThumbnailsUsePageRect(value2?: unknown): unknown;
+    asc_setViewerThumbnailsZoom(value2?: unknown): unknown;
     asc_showComment(Id?: unknown): unknown;
     asc_showComments(): unknown;
     asc_undoAllChanges(): unknown;
-    asc_viewerNavigateTo(value?: unknown): unknown;
+    asc_viewerNavigateTo(value2?: unknown): unknown;
     asc_viewerThumbnailsResize(): unknown;
   }
   interface PivotContextMenu {
@@ -703,7 +703,7 @@ declare namespace Asc {
     asc_coAuthoringGetUsers(): unknown;
     asc_decodeBuffer(buffer?: unknown, codePage?: unknown, callback?: unknown): unknown;
     asc_drawPrintPreview(index?: unknown, paperSize?: unknown): unknown;
-    asc_enableKeyEvents(value?: unknown, isFromInput?: unknown): unknown;
+    asc_enableKeyEvents(value2?: unknown, isFromInput?: unknown): unknown;
     asc_getAppProps(): unknown;
     asc_getCanRedo(): unknown;
     asc_getCanUndo(): unknown;
@@ -2037,6 +2037,7 @@ declare namespace Asc {
   }
   interface asc_CellXfs {
     asc_getAngle(): unknown;
+    asc_getCheckbox(): unknown;
     asc_getFill(): unknown;
     asc_getFillColor(): unknown;
     asc_getFontBold(): unknown;
@@ -2263,7 +2264,7 @@ declare namespace Asc {
     asc_IsAllRequiredFormsFilled(checkAll?: unknown): unknown;
     asc_IsContentControl(): unknown;
     asc_IsContentControlCheckBoxChecked(sId?: unknown): unknown;
-    asc_IsCurrentNumberingPreset(value?: unknown, singleLevel?: unknown): unknown;
+    asc_IsCurrentNumberingPreset(value2?: unknown, singleLevel?: unknown): unknown;
     asc_IsCursorInEndnote(): unknown;
     asc_IsCursorInFootnote(): unknown;
     asc_IsDefaultStyleChanged(sName?: unknown): unknown;
@@ -2465,11 +2466,11 @@ declare namespace Asc {
     asc_editOleObjectAction(oOleObject?: unknown, sImageUrl?: unknown, sData?: unknown, fWidthMM?: unknown, fHeightMM?: unknown, nPixWidth?: unknown, nPixHeight?: unknown, arrImagesForAddToHistory?: unknown): unknown;
     asc_editOleTableInFrameEditor(): unknown;
     asc_editPointsGeometry(): unknown;
-    asc_enableKeyEvents(value?: unknown, isFromInput?: unknown): unknown;
+    asc_enableKeyEvents(value2?: unknown, isFromInput?: unknown): unknown;
     asc_endEditCrop(): unknown;
     asc_endFindText(): unknown;
     asc_enterText(codePoints?: unknown): unknown;
-    asc_enterText(value?: unknown): unknown;
+    asc_enterText(value2?: unknown): unknown;
     asc_findText(oProps?: unknown, isNext?: unknown, callback?: unknown): unknown;
     asc_generateTableStylesPreviews(bUseDefault?: unknown): unknown;
     asc_getAllSignatures(): unknown;
@@ -2586,7 +2587,7 @@ declare namespace Asc {
     asc_prepareUrl(url?: unknown): unknown;
     asc_putPageColor(color?: unknown): unknown;
     asc_putSmartParagraphSelection(isSmart?: unknown): unknown;
-    asc_putSpellCheckCurrentWord(value?: unknown): unknown;
+    asc_putSpellCheckCurrentWord(value2?: unknown): unknown;
     asc_registerCallback(name?: unknown, callback?: unknown): unknown;
     asc_removeComment(Id?: unknown): unknown;
     asc_removeExternalReferences(arrExternalReferences?: unknown): unknown;
@@ -2637,8 +2638,8 @@ declare namespace Asc {
     asc_setViewMode(isViewMode?: unknown): unknown;
     asc_setViewerTargetType(mode?: unknown): unknown;
     asc_setViewerTargetType(type?: unknown): unknown;
-    asc_setViewerThumbnailsUsePageRect(value?: unknown): unknown;
-    asc_setViewerThumbnailsZoom(value?: unknown): unknown;
+    asc_setViewerThumbnailsUsePageRect(value2?: unknown): unknown;
+    asc_setViewerThumbnailsZoom(value2?: unknown): unknown;
     asc_showComment(Id?: unknown): unknown;
     asc_showComments(): unknown;
     asc_showComments(isShowSolved?: unknown): unknown;
@@ -2652,7 +2653,7 @@ declare namespace Asc {
     asc_undoAllChanges(): unknown;
     asc_unregisterCallback(name?: unknown, callback?: unknown): unknown;
     asc_updateExternalReferences(arrExternalReferences?: unknown, fCallback?: unknown): unknown;
-    asc_viewerNavigateTo(value?: unknown): unknown;
+    asc_viewerNavigateTo(value2?: unknown): unknown;
     asc_viewerThumbnailsResize(): unknown;
   }
   interface sparklineGroup {
@@ -2783,7 +2784,7 @@ declare namespace Asc {
     asc_SelectionCut(): unknown;
     asc_SendControlColors(): unknown;
     asc_SendThemeColors(colors?: unknown, standart_colors?: unknown): unknown;
-    asc_SetAutoCorrectHyperlinks(value?: unknown): unknown;
+    asc_SetAutoCorrectHyperlinks(value2?: unknown): unknown;
     asc_SetDocumentPlaceChangedEnabled(val?: unknown): unknown;
     asc_SetFastCollaborative(bFast?: unknown): unknown;
     asc_SetIsSupportDynamicArrays(val?: unknown, addToLS?: unknown): unknown;
@@ -2869,7 +2870,7 @@ declare namespace Asc {
     asc_changePrintTitles(cols?: unknown, rows?: unknown, index?: unknown): unknown;
     asc_changeSelectionFormatTable(tableName?: unknown, optionType?: unknown): unknown;
     asc_changeShapeImageFromFile(type?: unknown): unknown;
-    asc_changeShapeType(value?: unknown): unknown;
+    asc_changeShapeType(value2?: unknown): unknown;
     asc_changeTableRange(tableName?: unknown, range?: unknown): unknown;
     asc_changeUserProtectedRange(oldObj?: unknown, newObj?: unknown): unknown;
     asc_checkActiveCellPassword(val?: unknown, callback?: unknown): unknown;
@@ -2983,7 +2984,7 @@ declare namespace Asc {
     asc_getFrameChartSettings(): unknown;
     asc_getFrozenPaneBorderType(): unknown;
     asc_getFullCFIcons(): unknown;
-    asc_getFullHyperlinkLength(str?: unknown): unknown;
+    asc_getFullHyperlinkLength(str2?: unknown): unknown;
     asc_getFunctionArgumentSeparator(): unknown;
     asc_getGraphicObjectProps(): unknown;
     asc_getGroupSeparator(culture?: unknown): unknown;
@@ -2996,7 +2997,7 @@ declare namespace Asc {
     asc_getKeyboardLanguage(): unknown;
     asc_getLocale(): unknown;
     asc_getLocaleCurrency(val?: unknown): unknown;
-    asc_getLocaleExample(format?: unknown, value?: unknown, culture?: unknown): unknown;
+    asc_getLocaleExample(format?: unknown, value2?: unknown, culture?: unknown): unknown;
     asc_getNamedSheetViews(): unknown;
     asc_getOpeningDocumentsList(callback?: unknown): unknown;
     asc_getOriginalImageSize(): unknown;
@@ -3011,7 +3012,7 @@ declare namespace Asc {
     asc_getProtectedRanges(): unknown;
     asc_getProtectedSheet(): unknown;
     asc_getProtectedWorkbook(): unknown;
-    asc_getR1C1Mode(value?: unknown): unknown;
+    asc_getR1C1Mode(value2?: unknown): unknown;
     asc_getRecommendedChartData(): unknown;
     asc_getRemoveDuplicates(bExpand?: unknown): unknown;
     asc_getRequestSignatures(): unknown;
@@ -3052,6 +3053,7 @@ declare namespace Asc {
     asc_insertArgumentsInFormula(val?: unknown, argNum?: unknown, argType?: unknown, name?: unknown, bEndInsertArg?: unknown): unknown;
     asc_insertCells(options?: unknown): unknown;
     asc_insertCellsInTable(tableName?: unknown, optionType?: unknown): unknown;
+    asc_insertCheckbox(): unknown;
     asc_insertHyperlink(options?: unknown): unknown;
     asc_insertInCell(functionName?: unknown, type?: unknown, autoComplete?: unknown): unknown;
     asc_insertPivotExistingWorksheet(dataRef?: unknown, pivotRef?: unknown, confirmation?: unknown): unknown;
@@ -3104,11 +3106,12 @@ declare namespace Asc {
     asc_pluginStop(guid?: unknown): unknown;
     asc_pluginsRegister(basePath?: unknown, plugins?: unknown): unknown;
     asc_prepareUrl(url?: unknown): unknown;
-    asc_putLineSpacingBeforeAfter(type?: unknown, value?: unknown): unknown;
-    asc_putPrLineSpacing(type?: unknown, value?: unknown): unknown;
+    asc_putLineSpacingBeforeAfter(type?: unknown, value2?: unknown): unknown;
+    asc_putPrLineSpacing(type?: unknown, value2?: unknown): unknown;
     asc_reapplyAutoFilter(displayName?: unknown, sheetId?: unknown): unknown;
     asc_refreshAllPivots(opt_confirmation?: unknown): unknown;
     asc_registerCallback(name?: unknown, callback?: unknown, replaceOldCallback?: unknown): unknown;
+    asc_removeCheckbox(): unknown;
     asc_removeComment(id?: unknown): unknown;
     asc_removeExternalReferences(arr?: unknown): unknown;
     asc_removeHyperlink(): unknown;
@@ -3154,12 +3157,12 @@ declare namespace Asc {
     asc_setCoreProps(oProps?: unknown): unknown;
     asc_setData(oData?: unknown): unknown;
     asc_setDataValidation(props?: unknown, switchApplySameSettings?: unknown): unknown;
-    asc_setDate1904(value?: unknown): unknown;
-    asc_setDefaultDirection(value?: unknown): unknown;
+    asc_setDate1904(value2?: unknown): unknown;
+    asc_setDefaultDirection(value2?: unknown): unknown;
     asc_setDefaultLanguage(val?: unknown): unknown;
     asc_setDefinedNames(defName?: unknown): unknown;
-    asc_setDisplayGridlines(value?: unknown): unknown;
-    asc_setDisplayHeadings(value?: unknown): unknown;
+    asc_setDisplayGridlines(value2?: unknown): unknown;
+    asc_setDisplayHeadings(value2?: unknown): unknown;
     asc_setDocInfo(oDocInfo?: unknown): unknown;
     asc_setDrawImagePlaceParagraph(element_id?: unknown, props?: unknown): unknown;
     asc_setFilteringMode(mode?: unknown): unknown;
@@ -3167,7 +3170,7 @@ declare namespace Asc {
     asc_setFrozenPaneBorderType(nType?: unknown): unknown;
     asc_setGraphicObjectProps(props?: unknown): unknown;
     asc_setGroupSummary(val?: unknown, bCol?: unknown): unknown;
-    asc_setIncludeNewRowColTable(value?: unknown): unknown;
+    asc_setIncludeNewRowColTable(value2?: unknown): unknown;
     asc_setInterfaceDrawImagePlaceShape(elementId?: unknown): unknown;
     asc_setInterfaceDrawImagePlaceTextArt(elementId?: unknown): unknown;
     asc_setIsForceSaveOnUserSave(val?: unknown): unknown;
@@ -3180,16 +3183,16 @@ declare namespace Asc {
     asc_setProtectedRanges(arr?: unknown, deleteArr?: unknown): unknown;
     asc_setProtectedSheet(props?: unknown): unknown;
     asc_setProtectedWorkbook(props?: unknown): unknown;
-    asc_setR1C1Mode(value?: unknown): unknown;
+    asc_setR1C1Mode(value2?: unknown): unknown;
     asc_setRemoveDuplicates(props?: unknown, bCancel?: unknown): unknown;
-    asc_setRightToLeft(value?: unknown): unknown;
+    asc_setRightToLeft(value2?: unknown): unknown;
     asc_setRowHeight(height?: unknown): unknown;
     asc_setSelectedDrawingObjectAlign(alignType?: unknown): unknown;
     asc_setSelectedDrawingObjectLayer(layerType?: unknown): unknown;
     asc_setSelectionDialogMode(selectionDialogType?: unknown, selectRange?: unknown): unknown;
-    asc_setShowFormulas(value?: unknown): unknown;
-    asc_setShowZeros(value?: unknown): unknown;
-    asc_setSlicers(names?: unknown, obj?: unknown): unknown;
+    asc_setShowFormulas(value2?: unknown): unknown;
+    asc_setShowZeros(value2?: unknown): unknown;
+    asc_setSlicers(names2?: unknown, obj?: unknown): unknown;
     asc_setSortProps(props?: unknown, bCancel?: unknown): unknown;
     asc_setSparklineGroup(id?: unknown, oSparklineGroup?: unknown): unknown;
     asc_setThumbnailStylesSizes(width?: unknown, height?: unknown): unknown;
@@ -3457,7 +3460,7 @@ declare namespace AscCommon {
     asc_StartTextAroundSearch(): unknown;
     asc_StopInkDrawer(): unknown;
     asc_ViewCertificate(id?: unknown): unknown;
-    asc_addCustomProperty(name?: unknown, type?: unknown, value?: unknown): unknown;
+    asc_addCustomProperty(name?: unknown, type?: unknown, value2?: unknown): unknown;
     asc_addCustomShortcutInsertSymbol(nCharCode?: unknown, sFont?: unknown, sShortcut?: unknown): unknown;
     asc_addImage(obj?: unknown): unknown;
     asc_addOleObject(oPluginData?: unknown, bPlugin?: unknown): unknown;
@@ -3495,7 +3498,7 @@ declare namespace AscCommon {
     asc_enableKeyEvents(isEnabled?: unknown, isFromInput?: unknown): unknown;
     asc_endEditCrop(): unknown;
     asc_endFindText(): unknown;
-    asc_enterText(value?: unknown): unknown;
+    asc_enterText(value2?: unknown): unknown;
     asc_findText(oProps?: unknown, isNext?: unknown, callback?: unknown): unknown;
     asc_finishEyedropper(): unknown;
     asc_generateChartPreviews(chartType?: unknown, arrId?: unknown): unknown;
@@ -3522,7 +3525,7 @@ declare namespace AscCommon {
     asc_getInputLanguage(): unknown;
     asc_getLocalRestrictions(): unknown;
     asc_getLocale(): unknown;
-    asc_getLocaleExample(format?: unknown, value?: unknown, culture?: unknown): unknown;
+    asc_getLocaleExample(format?: unknown, value2?: unknown, culture?: unknown): unknown;
     asc_getLocaleLCID(): unknown;
     asc_getMacros(): unknown;
     asc_getMacrosByGuid(sGuid?: unknown): unknown;
@@ -3553,6 +3556,7 @@ declare namespace AscCommon {
     asc_isDocumentCanSave(): unknown;
     asc_isFinal(): unknown;
     asc_isFinalizedVersion(): unknown;
+    asc_isLocalNetworkAccessAllowed(): unknown;
     asc_isOffline(): unknown;
     asc_isProtectionSupport(): unknown;
     asc_isRtlTextDirection(): unknown;
@@ -3564,7 +3568,7 @@ declare namespace AscCommon {
     asc_markAsFinal(isFinal?: unknown): unknown;
     asc_mergeSelectedShapes(operation?: unknown): unknown;
     asc_mergeSelectedShapesAction(operation?: unknown): unknown;
-    asc_modifyCustomProperty(idx?: unknown, name?: unknown, type?: unknown, value?: unknown): unknown;
+    asc_modifyCustomProperty(idx?: unknown, name?: unknown, type?: unknown, value2?: unknown): unknown;
     asc_nativeCheckPdfRenderer(_memory1?: unknown, _memory2?: unknown): unknown;
     asc_nativeInitBuilder(): unknown;
     asc_onCloseFrameEditor(): unknown;
@@ -3607,7 +3611,7 @@ declare namespace AscCommon {
     asc_setCoreProps(oProps?: unknown): unknown;
     asc_setCurrentPassword(password?: unknown, isOnOpen?: unknown): unknown;
     asc_setCurrentPasswordBase(password?: unknown, isOnOpen?: unknown): unknown;
-    asc_setDefaultBlitMode(value?: unknown): unknown;
+    asc_setDefaultBlitMode(value2?: unknown): unknown;
     asc_setDocInfo(oDocInfo?: unknown): unknown;
     asc_setInterfaceDrawImagePlaceShape(elementId?: unknown): unknown;
     asc_setIsForceSaveOnUserSave(val?: unknown): unknown;
@@ -3762,6 +3766,7 @@ declare namespace AscCommonExcel {
   interface asc_CCellInfo {
     asc_getAutoFilterInfo(): unknown;
     asc_getBorders(): unknown;
+    asc_getCheckbox(): unknown;
     asc_getComments(): unknown;
     asc_getDataValidation(): unknown;
     asc_getFormatTableInfo(): unknown;

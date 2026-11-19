@@ -40,7 +40,6 @@ AscCommon.PathBoolean  optional  read behind a test (common/apiBase.js)
 AscCommon.SafariIntervalFocus  dead  slide/api.js: setInterval of undefined, a no-op
 AscCommon.changestype_Document_Contentt  defect  word/Editor/Document.js: a typo for changestype_Document_Content; converting text to a table checks no lock
 AscCommon.g_defaultThemes  optional  slide/Drawing/ThemeLoader.js: `|| []`
-AscCommon.isDisableRawPaste  optional  common/clipboard_base.js: `true ===`
 AscCommonExcel.CT_CComments  add-on  OOXML add-on class
 AscCommonExcel.CT_CThreadedComments  add-on  OOXML add-on class
 AscCommonExcel.CT_CTimelines  add-on  OOXML add-on class
@@ -65,7 +64,6 @@ AscDFH.historyitem_type_StyleDefHdr  unverified  as above
 AscDFH.historyitem_type_StyleDefHdrLst  unverified  as above
 AscDFH.historyitem_type_TxPr  unverified  as above
 AscDFH.historyitem_type_XmlColumnPr  unverified  as above
-AscFonts.Hyphen_Init  outside  the hyphenation engine's own script
 AscFormat.BackdropAnchor  unverified  a class registered in the change factory (common/TableId.js), never defined
 AscFormat.BackdropNorm  unverified  as above
 AscFormat.BackdropUp  unverified  as above

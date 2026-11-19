@@ -46,7 +46,10 @@ export function upstreamPages(sources = SOURCES) {
 // order, each relative to sdkjs's sources; and which editor's engine it wants,
 // from the develop/sdkjs/<editor>/scripts.js it would have loaded the engine
 // with. A path that does not resolve from the page's folder is tried from the
-// root of the sources, where some pages' paths point when served.
+// root of the sources, where some pages' paths point when served. The page's
+// QUnit and jQuery (tests/node_modules, since upstream serves them locally)
+// are left out: qunit.mjs stands in for the one, and of the other the pages
+// use only $(fn), which runUpstream gives them.
 export function pageScripts(page, sources = SOURCES) {
   const html = fs.readFileSync(path.join(sources, "tests", page), "utf8");
   const editor = /develop\/sdkjs\/(\w+)\/scripts\.js/.exec(html)?.[1];
@@ -54,7 +57,10 @@ export function pageScripts(page, sources = SOURCES) {
   const folder = path.dirname(path.join("tests", page));
   const files = [...html.matchAll(/src="([^"]+)"/g)]
     .map((m) => m[1])
-    .filter((src) => !/^https?:|scripts\.js$|\+ item \+/.test(src))
+    .filter(
+      (src) =>
+        !/^https?:|scripts\.js$|\+ item \+|node_modules\/(qunit|jquery)\//.test(src),
+    )
     .map((src) => {
       const near = path.normalize(path.join(folder, src));
       if (fs.existsSync(path.join(sources, near))) return near;
@@ -71,6 +77,15 @@ export async function runUpstream(files, editor = "cell", sources = SOURCES) {
   // Upstream's pages load the sources one file at a time, so each file's
   // top-level names are globals there, and the tests read them as such.
   const engine = load(editor, undefined, { pageScope: true });
+  // x2t's jQuery stub, up to 9.3.8, gave the engine all of jQuery; since,
+  // the pages' $(fn), which runs fn once the page is ready, is all there is.
+  if (!engine.$) {
+    const queued = [];
+    engine.$ = (fn) => queued.push(fn);
+    engine.$.ready = () => {
+      for (const fn of queued.splice(0)) fn();
+    };
+  }
   const run = install(engine);
   engine.setTimeout = setTimeout;
   engine.clearTimeout = clearTimeout;
@@ -79,7 +94,7 @@ export async function runUpstream(files, editor = "cell", sources = SOURCES) {
     vm.runInContext(fs.readFileSync(full, "utf8"), engine, { filename: full });
   }
   // Pages register their tests in $(function () { ... }), which jQuery runs
-  // once the page is ready: x2t's jQuery stub only when told so.
+  // once the page is ready, told so here.
   vm.runInContext("$.ready()", engine);
   return run();
 }
