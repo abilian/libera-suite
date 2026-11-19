@@ -1,20 +1,23 @@
-From 9f462a910ccc8926569eb23fdb30b75a6b321191 Mon Sep 17 00:00:00 2001
+From f68d75a64f173982a2312386d74d7036f91bd800 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Thu, 19 Nov 2026 20:12:33 +0100
-Subject: [PATCH] v8: build V8 against the DLL C runtime on Windows
+Subject: [PATCH] v8, doctrenderer: the DLL C runtime on Windows, as the rest
+ of core
 
 Chromium links the static C runtime into every non-component desktop
-build. Core is built against the DLL runtime, and so is an OpenSSL from
-vcpkg's static-md triplet: doctrenderer.dll pulled in libucrt.lib from
-V8's library and could not resolve libcrypto's __imp__time64,
-__imp_strspn and three more (LNK1120). Core's libraries also hand FILE*
-handles to one another, which needs one runtime. There is no gn arg for
-it, so build/config/win/BUILD.gn is patched like the functor fix, and the
-version names the runtime on Windows so that a V8 built before is built
-again.
+build, and doctrenderer asked for the static one to match. Core is built
+against the DLL runtime, and so is an OpenSSL from vcpkg's static-md
+triplet: doctrenderer.dll pulled in libucrt.lib and could not resolve
+libcrypto's __imp__time64, __imp_strspn and three more (LNK1120). Core's
+libraries also hand FILE* handles to one another, which needs one
+runtime. There is no gn arg for it, so build/config/win/BUILD.gn is
+patched like the functor fix, the version names the runtime on Windows
+so that a V8 built before is built again, and doctrenderer takes the DLL
+runtime common.cmake gives every other target.
 ---
- Common/3dParty/v8/nc-build.py | 25 ++++++++++++++++++++++++-
- 1 file changed, 24 insertions(+), 1 deletion(-)
+ Common/3dParty/v8/nc-build.py             | 25 ++++++++++++++++++++++-
+ DesktopEditor/doctrenderer/CMakeLists.txt |  2 +-
+ 2 files changed, 25 insertions(+), 2 deletions(-)
 
 diff --git a/Common/3dParty/v8/nc-build.py b/Common/3dParty/v8/nc-build.py
 index eeabe484ec..bfc8f49f70 100644
@@ -66,6 +69,19 @@ index eeabe484ec..bfc8f49f70 100644
  
      targetarch = get_cpu()
      output_path = v8_src_path / "out.gn" / f"{targetarch}.release"
+diff --git a/DesktopEditor/doctrenderer/CMakeLists.txt b/DesktopEditor/doctrenderer/CMakeLists.txt
+index ab0b3b12ed..577e621c6e 100644
+--- a/DesktopEditor/doctrenderer/CMakeLists.txt
++++ b/DesktopEditor/doctrenderer/CMakeLists.txt
+@@ -121,7 +121,7 @@ add_library(doctrenderer SHARED
+ set_default_options(doctrenderer)
+ 
+ if( MSVC )
+-    set_property(TARGET doctrenderer PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
++    # The DLL runtime, as the rest of core (common.cmake) and V8 (nc-build.py).
+ 
+     target_compile_definitions( doctrenderer PRIVATE
+         _UNICODE
 -- 
 2.55.0
 
