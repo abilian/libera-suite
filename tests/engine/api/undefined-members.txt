@@ -1,0 +1,86 @@
+# Namespace members the engine reads that no engine defines and no line of
+# the bundles assigns (tests/engine/names.mjs). Each is undefined when read.
+# One per line: the name, its class, a note. names.test.mjs fails on a name
+# not listed here, and on a listed name that is no longer found.
+#
+#   defect      wrong when its line runs: a typo, a constant never defined
+#   add-on      the forms or OOXML add-on's, which we do not build
+#   outside     defined by a script outside the bundles, or set by a host
+#   optional    read behind a test, set from outside when at all
+#   dead        on a path nothing calls, or a debug switch
+#   unverified  not yet looked at line by line
+Asc.CT_Error  add-on  OOXML add-on class, in cell/fromToJSON.js instanceof tests
+Asc.CT_Missing  add-on  OOXML add-on class
+Asc.CT_Number  add-on  OOXML add-on class
+Asc.CT_String  add-on  OOXML add-on class
+Asc.crc32  dead  cell/model/Serialize.js: in a function nothing calls
+Asc.g_debug_mode  dead  a debug switch, undefined is off
+AscCH.historyitem_DataValidation_AllowBlank  defect  cell/model/DataValidation.js: data validation changes recorded with no type, so undo and co-editing cannot replay them
+AscCH.historyitem_DataValidation_Error  defect  as above
+AscCH.historyitem_DataValidation_ErrorStyle  defect  as above
+AscCH.historyitem_DataValidation_ErrorTitle  defect  as above
+AscCH.historyitem_DataValidation_Formula1  defect  as above
+AscCH.historyitem_DataValidation_Formula12  defect  as above
+AscCH.historyitem_DataValidation_Formula2  defect  as above
+AscCH.historyitem_DataValidation_ImeMode  defect  as above
+AscCH.historyitem_DataValidation_Operator  defect  as above
+AscCH.historyitem_DataValidation_Prompt  defect  as above
+AscCH.historyitem_DataValidation_PromptTotle  defect  as above
+AscCH.historyitem_DataValidation_ShowDropDown  defect  as above
+AscCH.historyitem_DataValidation_ShowErrorMessage  defect  as above
+AscCH.historyitem_DataValidation_ShowInputMessage  defect  as above
+AscCH.historyitem_DataValidation_Type  defect  as above
+AscCommon.Base64Encode  defect  slide/Editor/Format/Timing.js: the function is AscCommon.Base64.encode; throws when reached
+AscCommon.CRoleSettings  add-on  forms add-on (roles)
+AscCommon.CT_OMathPara  add-on  OOXML add-on, read behind typeof
+AscCommon.CZLibEngineJS  outside  common/zlib/engine/zlib.js, the WebAssembly zlib
+AscCommon.CryptoAlgorithmName  defect  cell/fromToJSON.js: a switch over it throws when a protected sheet is converted to JSON
+AscCommon.Editor_Copy  unverified  word/Drawing/HtmlPage.js
+AscCommon.PathBoolean  optional  read behind a test (common/apiBase.js)
+AscCommon.SafariIntervalFocus  dead  slide/api.js: setInterval of undefined, a no-op
+AscCommon.changestype_Document_Contentt  defect  word/Editor/Document.js: a typo for changestype_Document_Content; converting text to a table checks no lock
+AscCommon.g_defaultThemes  optional  slide/Drawing/ThemeLoader.js: `|| []`
+AscCommon.isDisableRawPaste  optional  common/clipboard_base.js: `true ===`
+AscCommonExcel.CT_CComments  add-on  OOXML add-on class
+AscCommonExcel.CT_CThreadedComments  add-on  OOXML add-on class
+AscCommonExcel.CT_CTimelines  add-on  OOXML add-on class
+AscCommonExcel.CT_DrawingWS  add-on  OOXML add-on class
+AscCommonExcel.CT_ExternalReference  add-on  OOXML add-on class
+AscCommonExcel.CT_PersonList  add-on  OOXML add-on class
+AscCommonExcel.CT_SharedStrings  add-on  OOXML add-on class
+AscCommonExcel.CT_SheetData  add-on  OOXML add-on class
+AscCommonExcel.CT_Value  add-on  OOXML add-on class
+AscCommonExcel.PrepareComments  add-on  OOXML add-on
+AscCommonExcel.cFormulaLocaleInfo  unverified  cell/view/WorksheetView.js: assembleLocale(undefined, ...)
+AscDFH.historyitem_FieldContent_AddItem  unverified  a change type registered and never defined
+AscDFH.historyitem_FieldContent_RemoveItem  unverified  as above
+AscDFH.historyitem_MathContent_TextPr  unverified  as above
+AscDFH.historyitem_Pdf_Annot_In_Reply_To  unverified  as above
+AscDFH.historyitem_TableId_Reset  unverified  as above
+AscDFH.historyitem_type_ColorsDefHdr  unverified  a class type for the change factory, never defined
+AscDFH.historyitem_type_ColorsDefHdrLst  unverified  as above
+AscDFH.historyitem_type_DataBinding  unverified  as above
+AscDFH.historyitem_type_FlatTx  unverified  as above
+AscDFH.historyitem_type_StyleDefHdr  unverified  as above
+AscDFH.historyitem_type_StyleDefHdrLst  unverified  as above
+AscDFH.historyitem_type_TxPr  unverified  as above
+AscDFH.historyitem_type_XmlColumnPr  unverified  as above
+AscFonts.Hyphen_Init  outside  the hyphenation engine's own script
+AscFormat.BackdropAnchor  unverified  a class registered in the change factory (common/TableId.js), never defined
+AscFormat.BackdropNorm  unverified  as above
+AscFormat.BackdropUp  unverified  as above
+AscFormat.CT_GraphicalObject  add-on  OOXML add-on class
+AscFormat.CT_GraphicalObjectData  add-on  OOXML add-on class
+AscFormat.ColorsDefHdr  unverified  as AscFormat.BackdropAnchor
+AscFormat.ColorsDefHdrLst  unverified  as above
+AscFormat.ContourClr  defect  word/fromToJSON.js: `new` of undefined, throws when a 3D shape comes from JSON
+AscFormat.Coordinate  unverified  as AscFormat.BackdropAnchor
+AscFormat.ExtrusionClr  defect  word/fromToJSON.js: as ContourClr
+AscFormat.FlatTx  unverified  as AscFormat.BackdropAnchor
+AscFormat.StyleDefHdr  unverified  as above
+AscFormat.StyleDefHdrLst  unverified  as above
+AscFormat.TxPr  unverified  as above
+AscFormat.XMLWRITER_DOC_TYPE_DOCX  add-on  OOXML add-on constant
+AscFormat.XMLWRITER_DOC_TYPE_PPTX  add-on  OOXML add-on constant
+AscFormat.XMLWRITER_DOC_TYPE_XLSX  add-on  OOXML add-on constant
+AscPDF.FORMS_TRIGGERS_TYPES  defect  pdf/apiBuilder.js: used 22 times by the PDF builder API, defined nowhere
