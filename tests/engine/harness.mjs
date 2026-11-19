@@ -59,8 +59,32 @@ function unwrapped(text, file) {
 
 // The engine's global object: `window`, as its code calls it. `native` is
 // declared because native.js tests it; x2t gives an object, we give none.
-export function load(editor, paths, { pageScope = false } = {}) {
+// `desktop` loads the engine as our desktop application sees it: the desktop
+// layer is guarded by window.AscDesktopEditor (sdkjs 0025), which the host's
+// bridge defines and a browser does not. Here it gives every answer the
+// bridge gives as a constant, read from the bridge itself
+// (src/libera/host/server/bridge-desktop.js: `Name: () => "value",`), and
+// undefined for the rest, which need a window or a host.
+const BRIDGE = new URL(
+  "../../src/libera/host/server/bridge-desktop.js",
+  import.meta.url,
+);
+const CONSTANT_ANSWER =
+  /^ {4}(\w+): \(\) => (true|false|null|-?[\d.]+|"[^"]*"|\[\]|\{\}),$/gm;
+
+function desktopStandIn() {
+  const answers = {};
+  for (const [, name, value] of fs
+    .readFileSync(BRIDGE, "utf8")
+    .matchAll(CONSTANT_ANSWER)) {
+    answers[name] = () => JSON.parse(value);
+  }
+  return new Proxy({}, { get: (_, name) => answers[name] ?? (() => undefined) });
+}
+
+export function load(editor, paths, { pageScope = false, desktop = false } = {}) {
   const engine = { native: undefined };
+  if (desktop) engine.AscDesktopEditor = desktopStandIn();
   engine.window = engine;
   vm.createContext(engine);
   const files = scripts(editor, paths);
