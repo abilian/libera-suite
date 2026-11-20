@@ -49,3 +49,4 @@ htmlcov/
 .mypy_cache/
 
 .hop3-local.toml
+.envrc
