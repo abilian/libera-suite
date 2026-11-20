@@ -39,6 +39,10 @@ Set `BUILD_ROOT` to somewhere with room. It defaults to `$HOME/euro-office-build
 export BUILD_ROOT=/somewhere/with/room
 ```
 
+## Each machine builds V8 once
+
+V8, ICU, Boost and the other third-party libraries are built once per machine and kept in `~/.cache/libera/3rdparty` (`LIBERA_3RDPARTY_CACHE` moves it; the Linux build container mounts it). Every build tree on the machine takes them from there, the release's included: a brand-new tree on the Linux builder fetches in a minute and a half and configures in a minute, where V8 alone took an hour. Nothing is downloaded: the cache holds only what that machine built. Its key is the library's version, the git tree of `Common/3dParty` (the pins and our patches to the build scripts) and the compilers, so changing any of them builds again. Core patch `0212` adds the local cache to upstream's remote ones; `build/engine/build.sh` sets it up. To start afresh, delete the directory.
+
 ## The Mac does not build V8
 
 doctrenderer, the part of x2t that runs the editors' code (PDF, HTML, Markdown and EPUB export, and printing), runs it in macOS's own JavaScriptCore. Upstream abstracts the engine behind `js_internal/js_base.h` and ships two implementations, `v8` and `jsc`; its CMake build has `USE_JAVASCRIPT_CORE` for the second, and core `0210` makes the option leave V8 out of the build and the link. `build.sh` sets it on macOS.
