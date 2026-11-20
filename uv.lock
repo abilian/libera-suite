@@ -786,7 +786,7 @@ wheels = [
 
 [[package]]
 name = "libera"
-version = "0.7.2"
+version = "0.7.3"
 source = { editable = "." }
 default-groups = ["dev", "e2e"]
 dependencies = [
@@ -851,12 +851,12 @@ requires-dist = [{ name = "libera", editable = "." }]
 
 [[package]]
 name = "libera-core"
-version = "0.7.2"
+version = "0.7.3"
 source = { directory = "components/core" }
 
 [[package]]
 name = "libera-web"
-version = "0.7.2"
+version = "0.7.3"
 source = { directory = "components/web" }
 
 [[package]]

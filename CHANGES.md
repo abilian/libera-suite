@@ -4,7 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 The **application** is this package, `libera`. The **editor payload** is the Euro-Office build, from 0.7 as two more packages (`libera-core` and `libera-web`). Up to 0.7.0 the two were versioned separately; from 0.7.2 the three packages share one version. `libera --version` prints both.
 
-## [Unreleased]
+## [0.7.2] - 2026-11-20
 
 ### Added
 
