@@ -144,9 +144,19 @@ def mirror_of(options: BoxOptions) -> Path | None:
     return found if found.is_dir() else None
 
 
+def third_party_cache() -> Path:
+    """This machine's cache of built third-party libraries (core 0212), shared
+    by every build tree here, inside the container or not. build.sh reads the
+    same variable."""
+    return Path(
+        os.environ.get("LIBERA_3RDPARTY_CACHE")
+        or Path.home() / ".cache" / "libera" / "3rdparty"
+    )
+
+
 def run_spec(options: BoxOptions, image: str, script: str) -> Run:
     """The container a build step runs in, every flag with its reason."""
-    mounts = [Mount(REPO, "/repo")]
+    mounts = [Mount(REPO, "/repo"), Mount(third_party_cache(), "/3rdparty-cache")]
     env = {
         "BUILD_ROOT": "/build",
         # Temporaries onto the build tree's filesystem. In the container's own
@@ -160,6 +170,8 @@ def run_spec(options: BoxOptions, image: str, script: str) -> Run:
         # fails on every entry, and tar exits 2 under a traceback that names
         # neither uids nor engines. GNU tar reads TAR_OPTIONS, so no patch.
         "TAR_OPTIONS": "--no-same-owner",
+        # V8, ICU and Boost as this machine last built them, for every tree.
+        "LIBERA_3RDPARTY_CACHE": "/3rdparty-cache",
     }
     mounts.append(
         Mount(options.volume, "/build")
@@ -268,6 +280,8 @@ class Box:
     def run(self, script: str) -> int:
         """A shell script in the container, from the repository's root."""
         self.ensure_image()
+        # Made here, as you: a mount source docker creates is owned by root.
+        third_party_cache().mkdir(parents=True, exist_ok=True)
         if not self.options.volume:
             tree = self.options.tree
             tree.mkdir(parents=True, exist_ok=True)

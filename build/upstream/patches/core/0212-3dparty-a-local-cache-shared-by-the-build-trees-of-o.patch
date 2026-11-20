@@ -1,0 +1,169 @@
+From a5ea7436cc8d2b210bd3e5b1c93ff3bac7427972 Mon Sep 17 00:00:00 2001
+From: Stefane Fermigier <sf@abilian.com>
+Date: Fri, 20 Nov 2026 15:41:23 +0100
+Subject: [PATCH] 3dparty: a local cache, shared by the build trees of one
+ machine
+
+REMOTE_CACHE_TYPE=local with REMOTE_CACHE_DIR keeps each dependency's
+archive in a directory, under the paths the remote caches use, so that
+a new build tree on the same machine takes V8, ICU or Boost from it
+instead of building them again. A dependency already built in a tree
+is stored too, which a remote cache does not do. Archives are written
+under a temporary name and renamed.
+---
+ Common/3dParty/build_3rdparty_common.py      | 19 ++++++++-
+ Common/3dParty/test_build_3rdparty_common.py | 18 ++++++++
+ scripts/remote_cache.py                      | 43 ++++++++++++++++++++
+ 3 files changed, 78 insertions(+), 2 deletions(-)
+
+diff --git a/Common/3dParty/build_3rdparty_common.py b/Common/3dParty/build_3rdparty_common.py
+index c4e3154aa4..fd97ff5ce4 100644
+--- a/Common/3dParty/build_3rdparty_common.py
++++ b/Common/3dParty/build_3rdparty_common.py
+@@ -369,7 +369,7 @@ class MeasurementObj:
+ # on the remote, where <version> is the version passed to init_for_dep(). An
+ # archive is never overwritten: bump the version to publish a new build.
+ #
+-#   REMOTE_CACHE_TYPE       "s3" (default) | "nextcloud" | "none".
++#   REMOTE_CACHE_TYPE       "s3" (default) | "nextcloud" | "local" | "none".
+ #   BASE_REMOTE_PATH        Folder / key prefix on the remote (default "3rdparty").
+ #   REMOTE_CACHE_READ_ONLY  "1" to only download, never upload. Implied for S3
+ #                           without credentials.
+@@ -385,6 +385,11 @@ class MeasurementObj:
+ #                           Credentials for uploads. Without them, requests are
+ #                           sent unsigned.
+ #
++# Local, a directory shared by the build trees of one machine:
++#   REMOTE_CACHE_DIR        The directory. A dependency built or already present
++#                           in a tree is stored there, so that the next tree on
++#                           this machine takes it instead of building it again.
++#
+ # Nextcloud / WebDAV ('curl' must be on PATH):
+ #   NEXTCLOUD_REMOTE        WebDAV root (default
+ #                           "https://cloud.nextcloud.com/remote.php/dav/files").
+@@ -423,6 +428,10 @@ if REMOTE_CACHE_TYPE == "s3":
+         print( "  [WARN]  REMOTE_CACHE_S3_URL must look like https://<endpoint>/<bucket>, remote cache disabled" )
+     if not ( S3_ACCESS_KEY and S3_SECRET_KEY ):
+         REMOTE_CACHE_READ_ONLY = True
++elif REMOTE_CACHE_TYPE == "local":
++    USE_REMOTE_CACHE = bool( _env( "REMOTE_CACHE_DIR" ) )
++    if not USE_REMOTE_CACHE:
++        print( "  [WARN]  REMOTE_CACHE_TYPE local needs REMOTE_CACHE_DIR, cache disabled" )
+ elif REMOTE_CACHE_TYPE == "nextcloud":
+     USE_REMOTE_CACHE = bool( ( NEXTCLOUD_USER and NEXTCLOUD_PASS )
+                              or _env( "NEXTCLOUD_REMOTE" ) )
+@@ -522,7 +531,9 @@ _backend_instance = None
+ def _backend():
+     global _backend_instance
+     if _backend_instance is None:
+-        if REMOTE_CACHE_TYPE == "s3":
++        if REMOTE_CACHE_TYPE == "local":
++            _backend_instance = remote_cache.LocalBackend( _env( "REMOTE_CACHE_DIR" ) )
++        elif REMOTE_CACHE_TYPE == "s3":
+             _backend_instance = remote_cache.S3Backend( S3_URL, S3_REGION, S3_ACCESS_KEY,
+                                                         S3_SECRET_KEY, S3_SESSION_TOKEN )
+         else:
+@@ -594,6 +605,10 @@ def ensure_dep( build_fn, forceredo=None ):
+     #    a forced redo, so this correctly does NOT skip in that case.
+     if install_dir_looks_ok():
+         print( f"  [OK] { name } already present locally, skipping" )
++        # A local cache keeps what this tree has, for the next tree here.
++        if REMOTE_CACHE_TYPE == "local" and USE_REMOTE_CACHE and _remote_upload_needed():
++            print( f"  [PUT]  Keeping { name } in the local cache..." )
++            _remote_upload()
+         return
+ 
+     # 1. Prebuilt archive on the remote (skipped on a forced redo, which always
+diff --git a/Common/3dParty/test_build_3rdparty_common.py b/Common/3dParty/test_build_3rdparty_common.py
+index 9bf3c4829e..b541aefb98 100644
+--- a/Common/3dParty/test_build_3rdparty_common.py
++++ b/Common/3dParty/test_build_3rdparty_common.py
+@@ -135,6 +135,24 @@ class RemoteCacheTest( unittest.TestCase ):
+             "Signature=34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7" ) )
+ 
+ 
++class LocalBackendTest( unittest.TestCase ):
++    def test_an_archive_put_is_found_listed_and_got_back( self ):
++        with tempfile.TemporaryDirectory() as tmp:
++            root, src, dest = Path( tmp ) / "cache", Path( tmp ) / "v8.tar.bz2", Path( tmp ) / "back"
++            src.write_bytes( b"archive" )
++            cache = remote_cache.LocalBackend( root )
++            path = "3rdparty/linux-x86_64/v8/14.6/v8-glibc2.35.tar.bz2"
++            self.assertFalse( cache.exists( path ) )
++            self.assertFalse( cache.get( path, dest ) )
++            self.assertTrue( cache.put( src, path ) )
++            self.assertTrue( cache.exists( path ) )
++            self.assertIn( "v8-glibc2.35.tar.bz2", cache.list( "3rdparty/linux-x86_64/v8/14.6" ) )
++            self.assertEqual( cache.list( "3rdparty/nothing" ), "" )
++            self.assertTrue( cache.get( path, dest ) )
++            self.assertEqual( dest.read_bytes(), b"archive" )
++            self.assertEqual( list( ( root / path ).parent.glob( "*.partial" ) ), [] )
++
++
+ class BaselineArchFlagsTest( unittest.TestCase ):
+     def setUp( self ):
+         for name, value in { "is_linux": lambda: True, "is_android": lambda: False,
+diff --git a/scripts/remote_cache.py b/scripts/remote_cache.py
+index 3f0ad1ffa4..616a1dcc47 100644
+--- a/scripts/remote_cache.py
++++ b/scripts/remote_cache.py
+@@ -22,6 +22,7 @@ import os
+ import re
+ import shutil
+ import subprocess
++from pathlib import Path
+ 
+ DEFAULT_S3_URL = "https://s3.eu-central-4.ionoscloud.com/eo-build-assets"
+ DEFAULT_NEXTCLOUD_REMOTE = "https://cloud.nextcloud.com/remote.php/dav/files"
+@@ -101,6 +102,48 @@ class WebDavBackend:
+         return self._curl( "-f", "-X", "DELETE", self._url( path ) ).returncode == 0
+ 
+ 
++class LocalBackend:
++    # A directory on this machine: the cache shared by every build tree here,
++    # with the same archive paths as the remote ones. Files are written to a
++    # temporary name and renamed, so a build stopped half-way never leaves an
++    # archive another build would take for whole.
++
++    def __init__( self, root ):
++        self.root = Path( root )
++
++    def exists( self, path ):
++        return ( self.root / path ).is_file()
++
++    def list( self, dir ):
++        folder = self.root / dir
++        return "\n".join( sorted( p.name for p in folder.iterdir() ) ) if folder.is_dir() else ""
++
++    def keys( self, dir ):
++        folder = self.root / dir
++        return sorted( f"{ dir }/{ p.name }" for p in folder.iterdir() ) if folder.is_dir() else []
++
++    def read( self, path ):
++        return ( self.root / path ).read_bytes()
++
++    def get( self, path, dest_file ):
++        if not self.exists( path ):
++            return False
++        shutil.copyfile( self.root / path, dest_file )
++        return True
++
++    def put( self, src_file, path ):
++        target = self.root / path
++        target.parent.mkdir( parents=True, exist_ok=True )
++        partial = target.with_name( target.name + ".partial" )
++        shutil.copyfile( src_file, partial )
++        os.replace( partial, target )
++        return True
++
++    def delete( self, path ):
++        ( self.root / path ).unlink( missing_ok=True )
++        return True
++
++
+ class S3Backend:
+     # Plain urllib + AWS Signature V4, so no boto3 / aws cli is needed.
+     # Path-style requests against <endpoint>/<bucket>. Without credentials,
+-- 
+2.55.0
+

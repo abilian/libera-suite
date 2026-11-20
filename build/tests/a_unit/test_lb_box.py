@@ -39,7 +39,8 @@ def test_the_build_container_gets_its_tree_temporaries_and_tar(tmp_path):
     env, mounts = env_and_mounts(
         BoxOptions(build_dir=tmp_path, mirror=tmp_path / "none")
     )
-    assert mounts == ["/repo", "/build"]
+    assert mounts == ["/repo", "/3rdparty-cache", "/build"]
+    assert env["LIBERA_3RDPARTY_CACHE"] == "/3rdparty-cache"
     assert env["TMPDIR"] == "/build/tmp"
     assert env["TAR_OPTIONS"] == "--no-same-owner"
     assert "V8_BUILD_JOBS" not in env

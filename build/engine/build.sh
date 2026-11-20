@@ -107,9 +107,21 @@ setup_env() {
     # Nextcloud credentials and so found nothing; v9.3.8 made it an anonymous
     # S3 bucket by default, and the first build on those pins took Euro-Office's
     # Boost, libxml2 and zlib-ng from it on the Mac and on Windows. Not an
-    # option: there is no case for turning it back on. V8 is half an hour
-    # from source, on Linux too.
-    export REMOTE_CACHE_TYPE=none
+    # option: there is no case for turning it back on.
+    #
+    # What this machine built, it keeps (core 0212): a local cache shared by
+    # every build tree here, the release's included, so that a new tree takes
+    # V8, ICU and Boost instead of building them again, an hour and more. The
+    # key adds what upstream's leaves out: the scripts that build them, with
+    # our patches (the git tree of Common/3dParty), and the compilers. Either
+    # changing builds them again. LIBERA_3RDPARTY_CACHE moves the cache, which
+    # the build container mounts there.
+    export REMOTE_CACHE_TYPE=local
+    export REMOTE_CACHE_DIR="${LIBERA_3RDPARTY_CACHE:-$HOME/.cache/libera/3rdparty}"
+    recipe="$(git -C "$SRC/core" rev-parse HEAD:Common/3dParty 2>/dev/null || echo unfetched)"
+    compilers="$({ uname -sm; cc --version; c++ --version; clang --version; cmake --version
+        echo "${VCToolsVersion:-}"; } 2>/dev/null | cksum | cut -d' ' -f1)"
+    export BASE_REMOTE_PATH="3rdparty/$(printf %.12s "$recipe")-$compilers"
     export V8_BUILD_JOBS="${V8_BUILD_JOBS:-$(v8_jobs)}"
     # Keep V8's object files between runs so an interrupted build resumes
     # rather than restarting from nothing.
