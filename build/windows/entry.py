@@ -47,6 +47,21 @@ def _streams_for_a_windowed_process() -> None:
     sys.stderr = sys.stderr or stream
 
 
+def _release_the_dll_directory() -> None:
+    """Let the programs we start find their own DLLs.
+
+    PyInstaller's bootloader calls SetDllDirectory on _internal, and a child
+    process inherits it, so x2t and allfontsgen loaded the copies of core's
+    DLLs PyInstaller puts there rather than the ones beside them. From
+    upstream's main those copies ask for the "converter" side-by-side
+    assembly, whose manifest is only in libera_core\\bin, and allfontsgen
+    died with 0xC0150002 on every first start. PyInstaller's documentation
+    gives this reset for launching external programs; the extension modules
+    load through AddDllDirectory, which it does not touch.
+    """
+    ctypes.windll.kernel32.SetDllDirectoryW(None)
+
+
 def _identify() -> None:
     with contextlib.suppress(Exception):
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
@@ -54,6 +69,7 @@ def _identify() -> None:
 
 if __name__ == "__main__":
     _streams_for_a_windowed_process()
+    _release_the_dll_directory()
     _identify()
 
     from libera.cli import main

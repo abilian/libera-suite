@@ -30,14 +30,10 @@ for package in ("libera", "webview", "pythonnet", "clr_loader"):
 # freezes: the host finds them by import, as it does in site-packages, and
 # their DoctRenderer.config names the editors by a relative path that holds
 # here too. Data only, nothing imports them, so the analysis would not follow.
-# Their DLLs and executables too: as binaries, PyInstaller analysed them and
-# copied core's DLLs a second time into _internal itself, where a child of the
-# frozen app found them first. From upstream's main those copies ask for the
-# "converter" side-by-side assembly, which only libera_core/bin has, and
-# allfontsgen died with 0xC0150002 on every first start (0.7.3's stage).
 for package in ("libera_core", "libera_web"):
     d, b, _ = collect_all(package)
-    datas += d + b
+    datas += d
+    binaries += b
 hiddenimports += ["libera_core", "libera_web"]
 # `libera -V` reads its own version with importlib.metadata, which needs the
 # dist-info that a frozen tree does not carry unless asked; the components'
