@@ -19,7 +19,7 @@ The whole of a release, in order. Each step says what to run and what has to be 
 **2. Make the tree release-ready.**
 
 ```sh
-git switch devel && git pull
+git switch main && git pull
 make verify                         # lint, the whole suite, docs links, the patch queue, the converter
 lb payload check                  # the queue still applies to the pinned SHAs
 ```
@@ -53,7 +53,7 @@ lb release status                   # after any pause: where the release has got
 
 **6. The channels that follow.** `publish`'s last two phases move the Homebrew tap (`tap`: the tap's generator, `make update FORMULA=libera` in its clone, then a commit and a push to the branch brew reads) and deploy the site with the news post and the pages from step 2 (`docs`: `make -C docs publish`, then the site's `build.json` read back until it names this checkout's `docs/`). Both are refused before anything is published when they could not run: a tap clone with uncommitted changes or no upstream, no `hop3`. Neither runs for a pre-release. The tap's clone is `~/projects/homebrew-tap` unless `--tap DIR` (`TAP`) says otherwise. What `make ship` does not move is the public mirror and the upstream mirrors, at the same moment as the binaries (see *Publish* below).
 
-**7. Open the next cycle.** `pyproject.toml` goes to the next version on `devel`, `CHANGES.md` gets a new `Unreleased` section, and the release plan gets its outcome in a line, with what moved to the next one.
+**7. Open the next cycle.** `pyproject.toml` goes to the next version on `main`, `CHANGES.md` gets a new `Unreleased` section, and the release plan gets its outcome in a line, with what moved to the next one.
 
 ## make ship
 
