@@ -84,6 +84,17 @@ def check_builder(ctx: Context, b: Builder) -> list[str]:
     host = ctx.host_for(b)
     script = f"""
         echo "ARCH=$(uname -m)"
+        # What the phases run there: uv builds the wheels, git takes the
+        # commit, python runs libera_build, and Linux builds in a container.
+        missing=""
+        for t in uv git; do command -v $t >/dev/null 2>&1 || missing="$missing $t"; done
+        command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1 \
+            || missing="$missing python3"
+        if [ "$(uname -s)" = Linux ]; then
+            command -v docker >/dev/null 2>&1 || command -v podman >/dev/null 2>&1 \
+                || missing="$missing docker-or-podman"
+        fi
+        echo "MISSING=$missing"
         if cd {remote_path(b.repo)} 2>/dev/null; then
             echo "DIRTY=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
             echo "HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo '?')"

@@ -79,6 +79,8 @@ def test_a_builder_of_the_wrong_architecture_or_dirty_is_refused():
     (wrong,) = plan.builder_problems(ARM, {"ARCH": "x86_64", "DIRTY": "0"})
     assert "wants arm64" in wrong
     (dirty,) = plan.builder_problems(ARM, {"ARCH": "aarch64", "DIRTY": "2"})
+    (tools,) = plan.builder_problems(ARM, {"ARCH": "aarch64", "MISSING": " uv git"})
+    assert "has no uv, git" in tools
     assert "2 uncommitted" in dirty
 
 

@@ -142,6 +142,12 @@ def builder_problems(b: Builder, facts: dict[str, str]) -> list[str]:
             f"{b.platform}: wants {b.arch} and {b.target} reports "
             f"{facts['ARCH']}. Assign it a machine of that architecture."
         )
+    # Found here, not when a phase spawns it: the arm64 builder had no uv, and
+    # its components job died at the end of the wheel build.
+    if missing := facts.get("MISSING", "").split():
+        problems.append(
+            f"{b.platform}: {b.target} has no {', '.join(missing)}. Install it there."
+        )
     # Before the update, not after: checking out over somebody's edits does
     # not belong in a script that is about to run for two hours.
     if facts.get("DIRTY", "0") != "0":
