@@ -85,9 +85,12 @@ def check_builder(ctx: Context, b: Builder) -> list[str]:
     script = f"""
         echo "ARCH=$(uname -m)"
         # What the phases run there: uv builds the wheels, git takes the
-        # commit, python runs libera_build, and Linux builds in a container.
+        # commit, python runs libera_build, node and npm build the editors
+        # on the host (libera-web), and Linux builds core in a container.
         missing=""
-        for t in uv git; do command -v $t >/dev/null 2>&1 || missing="$missing $t"; done
+        for t in uv git node npm; do
+            command -v $t >/dev/null 2>&1 || missing="$missing $t"
+        done
         command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1 \
             || missing="$missing python3"
         if [ "$(uname -s)" = Linux ]; then
