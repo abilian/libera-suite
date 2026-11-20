@@ -6,8 +6,19 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 
 ## [Unreleased]
 
+### Added
+
+From Euro-Office, with the move to its main branch:
+
+- **Checkboxes in spreadsheet cells.** Insert > Checkbox puts one in the selected cells, and the cell's menu removes it; they are kept in `.xlsx`.
+- **A Pageless view in Words**, and the text follows the indent markers while they are dragged on the ruler.
+- **Ctrl+Shift+V pastes text only in Tables.**
+- **HEIC, AVIF and WebP pictures, and colour emoji**, in documents, drawn by the converter.
+
 ### Changed
 
+- **The payload is built from Euro-Office's main branch of 2026-11-19**, from v9.3.8: 359 commits, 172 of them fixes, many to OpenDocument conversion. Linux and Windows now run the editors' code in the converter with V8 14.6 instead of 8.9. Nine of our patches are retired, upstream having made the same fix, among them a chapter field written as a bibliography, a spreadsheet header's text outside any section, and an `.ods` page's margins growing at each save. The Linux converter needs nothing newer than glibc 2.34, on x86-64 and arm64 alike.
+- **On macOS, the converter runs the editors' code in the system's JavaScriptCore instead of V8.** V8 14.6 cannot be built for macOS 14. It is used for PDF, HTML, Markdown and EPUB exports and for printing: on the 30 documents of ElixirOffice's corpus the pages are the same as with V8, and each such conversion takes about 0.7 seconds longer. The converter's library is 5 MB instead of 25.
 - **A large OpenDocument spreadsheet opens faster.** The conversion every opening starts with did the same style work for each cell; a workbook of 10 sheets that took 5.1 seconds to convert now takes 1.8. A core patch, ours.
 
 ### Fixed
@@ -25,6 +36,7 @@ The **application** is this package, `libera`. The **editor payload** is the Eur
 - **A workbook with a sunburst, treemap, waterfall or funnel chart opens with all its sheets.** When the chart read its data from another sheet, the workbook opened with its first sheet only, and a save kept only that one. An editor patch, after ElixirOffice's fix.
 - **The title of a sunburst, treemap, waterfall or funnel chart is drawn regular**, as in Word, not bold. An editor patch.
 - **A Slides table set to "No Border" stays without borders.** Saved and reopened, it came back with black lines half a point wide. An editor patch, after ElixirOffice's fix.
+- **Macros and plugins that read or write a sheet's protection, a 3D shape's colours or a PDF field's actions no longer fail.** Each went through a name that nothing in the editor defines and stopped there. A workbook protection hashed with SHA-1 also lost its algorithm when read from or written to XML, and Convert Text to Table checked the wrong lock. Five editor patches, ours, offered to Euro-Office.
 - **A document saved after an edit no longer gains an empty protection setting.** Its settings gained `<w:documentProtection />`, which protects nothing and which Word never writes. A core patch, the same guard ElixirOffice has.
 
 ## [0.7.2] - 2026-11-16
