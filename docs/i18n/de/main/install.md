@@ -1,6 +1,6 @@
 # Installieren
 
-Libera Suite läuft unter **Windows 10 und 11 (x64)**, **Linux (x86_64 und arm64)** und **macOS 14 oder neuer (Apple Silicon)**. Die Installation braucht kein Administratorkennwort: Sie gilt nur für Ihr Benutzerkonto. Unter Linux arm64 installiert das Installationsskript 0.4.1, die letzte dafür gebaute Version, bis wieder eine neuere gebaut wird.
+Libera Suite läuft unter **Windows 10 und 11 (x64)**, **Linux (x86_64 und arm64)** und **macOS 14 oder neuer (Apple Silicon)**. Die Installation braucht kein Administratorkennwort: Sie gilt nur für Ihr Benutzerkonto.
 
 ## Windows {#windows}
 

@@ -1,6 +1,6 @@
 # Instalar
 
-Libera Suite funciona en **Windows 10 y 11 (x64)**, **Linux (x86_64 y arm64)** y **macOS 14 o posterior (Apple Silicon)**. La instalación no pide contraseña de administrador: se instala solo para tu cuenta. En Linux arm64, el script de instalación instala la 0.4.1, la última versión compilada para esa plataforma, hasta que vuelva a haber una más reciente.
+Libera Suite funciona en **Windows 10 y 11 (x64)**, **Linux (x86_64 y arm64)** y **macOS 14 o posterior (Apple Silicon)**. La instalación no pide contraseña de administrador: se instala solo para tu cuenta.
 
 ## Windows {#windows}
 

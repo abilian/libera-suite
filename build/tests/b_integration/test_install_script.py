@@ -1,4 +1,4 @@
-"""What install.sh installs on Linux arm64, which 0.5 does not build.
+"""What install.sh installs on Linux, arm64 the same as x86_64 since 0.7.3.
 
 Run for real, with `uname`, `curl`, `flatpak` and Python replaced by scripts
 that record what they are asked for and then fail, which stops the install
@@ -86,32 +86,25 @@ def run(tmp_path: Path, machine: str, *args: str, installs: bool = False) -> lis
 @pytest.mark.parametrize(
     ("machine", "bundle"),
     [
-        ("aarch64", "libera-0.4.1-arm64.flatpak"),
+        ("aarch64", "libera-0.5.0-arm64.flatpak"),
         ("x86_64", "libera-0.5.0-amd64.flatpak"),
     ],
 )
-def test_the_flatpak_on_arm64_is_the_last_release_that_has_one(
-    tmp_path, machine, bundle
-):
+def test_the_flatpak_is_the_latest_on_both_architectures(tmp_path, machine, bundle):
+    """arm64 was held at 0.4.1 until 0.7.3, which builds it again."""
     (asked,) = run(tmp_path, machine)
     assert asked.endswith(f"/bundles/{bundle}")
 
 
-@pytest.mark.parametrize(
-    ("machine", "spec"), [("aarch64", "libera==0.4.1"), ("x86_64", "libera")]
-)
-def test_pip_on_arm64_installs_the_last_release_that_has_editors(
-    tmp_path, machine, spec
-):
-    assert run(tmp_path, machine, "--channel", "pip") == ["pip", spec]
+@pytest.mark.parametrize("machine", ["aarch64", "x86_64"])
+def test_pip_installs_the_latest_on_both_architectures(tmp_path, machine):
+    assert run(tmp_path, machine, "--channel", "pip") == ["pip", "libera"]
 
 
-@pytest.mark.parametrize(("machine", "fetches"), [("aarch64", True), ("x86_64", False)])
-def test_only_the_release_before_the_component_packages_fetches_them(
-    tmp_path, machine, fetches
-):
+@pytest.mark.parametrize("machine", ["aarch64", "x86_64"])
+def test_pip_brings_the_components_and_nothing_fetches_them(tmp_path, machine):
     asked = run(tmp_path, machine, "--channel", "pip", installs=True)
-    assert ("--payload-install" in asked) is fetches
+    assert "--payload-install" not in asked
     assert "--help" in asked, "the command ran"
 
 

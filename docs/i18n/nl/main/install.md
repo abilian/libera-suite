@@ -1,6 +1,6 @@
 # Installeren
 
-Libera Suite draait op **Windows 10 en 11 (x64)**, **Linux (x86_64 en arm64)** en **macOS 14 of nieuwer (Apple Silicon)**. Voor de installatie heb je geen beheerderswachtwoord nodig: ze geldt alleen voor jouw account. Op Linux arm64 installeert het installatiescript versie 0.4.1, de laatste die ervoor gebouwd is, tot er weer een nieuwere wordt gebouwd.
+Libera Suite draait op **Windows 10 en 11 (x64)**, **Linux (x86_64 en arm64)** en **macOS 14 of nieuwer (Apple Silicon)**. Voor de installatie heb je geen beheerderswachtwoord nodig: ze geldt alleen voor jouw account.
 
 ## Windows {#windows}
 

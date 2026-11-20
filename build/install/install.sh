@@ -174,17 +174,10 @@ fi
 
 say "Libera Suite, on $os/$arch."
 
-# Linux arm64 stops at 0.4.1 for now: 0.5 had no arm64 builder, so it has no
-# arm64 Flatpak and no arm64 editors behind the wheel. Both paths below install
-# that version there instead of the latest; the wheel's installer names it
-# too (installer.LAST_RELEASE_FOR). Empty once a release builds arm64 again.
-PINNED=""
-if [ "$os" = linux ] && [ "$arch" = arm64 ] && [ -z "$VERSION" ]; then
-    PINNED=0.4.1
-    say "Linux arm64 stays on $PINNED: later releases have no arm64 build yet."
-fi
-# A version asked for is installed as such; otherwise the pin, if any.
-WANTED="${VERSION:-$PINNED}"
+# A version asked for is installed as such; otherwise the latest. Linux arm64
+# was held at 0.4.1 from 0.5 to 0.7.2, which had no arm64 build; from 0.7.3 it
+# gets the latest like every other platform.
+WANTED="$VERSION"
 
 # --- Linux gets the Flatpak, because the Python package cannot bring GTK -------
 #
@@ -420,16 +413,6 @@ install_pip() {
     say "    $(describe "$BIN/libera")"
 }
 
-# The release PINNED names is older than the component packages, so pip
-# brought the application alone and it fetches its components itself.
-install_old_payload() {
-    [ -n "$PINNED" ] || return 0
-    step "fetching its components (about 90 MB)"
-    "$BIN/libera" --payload-install || die \
-        "the payload did not install.
-       The command is there; run \`libera --payload-install\` to retry."
-}
-
 check_linux_toolkit() {
     # The one thing pip cannot fix, checked before it is needed rather than
     # discovered at the first blank window.
@@ -472,8 +455,6 @@ if [ "$os" = linux ] && ! check_linux_toolkit; then
     say ""
     say "    Meanwhile \`libera --serve FILE\` opens the editor in your browser."
 fi
-
-install_old_payload
 
 step "done"
 say "    $(describe "$BIN/libera")"
