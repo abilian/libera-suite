@@ -67,6 +67,14 @@ From Euro-Office, with the move to its main branch:
 - **The release tooling.** `make publish` stops on a `libera` with no `libera-core` and `libera-web` on PyPI: 0.7.0b1 and 0.7.0 both reached PyPI before them, and `uvx libera` installed 0.6.0 without a word. `lb release publish`'s `downloads` phase installs what the CDN serves before it opens a window, with `install.sh` on Linux and `install.ps1` on Windows; it had tested whatever was installed on the builder, and passed 0.7.0 on a 0.5.0. And a release is now installed on all three platforms before any of it is published (`lb release check`): each builder serves the release's files to itself as the CDN would and runs the install page's command against them, then opens, edits, saves and reopens a document in each editor; `install.sh`'s pip path is tried in seven distributions. `lb release publish` uploads exactly those files, then moves the Homebrew tap and deploys the documentation site.
 - **The documentation.** A certified PDF cannot be saved even when the certification permits comments, so the save gives only a general error. The pages covered a PDF certified against any change alone, and claimed that a failed save gave a reason.
 
+## [0.7.1] - 2026-11-10
+
+The editor payload alone: `libera-core` and `libera-web` 0.7.1, published to PyPI the same day as the application 0.7.0, which requires them. There is no application 0.7.1; from 0.7.2 the three packages share one version.
+
+### Fixed
+
+What payload 0.7.1 fixed since 0.7 is listed under 0.7.0, the release that brought it to users: the converter no longer copies pieces of memory into the files it makes; signatures made in LibreOffice, and some made by Office, are shown as valid; a presentation signed here no longer holds a missing handout master's leftovers; and "Close file" on a password dialog closes the window.
+
 ## [0.7.0] - 2026-11-10
 
 0.7.0 brings PDFs, passwords and signatures, on payload **0.7.1**. Everything 0.7.0b1 lists below is part of this release too, plus what has been fixed since. The Flatpak bundles are signed. The macOS application and the Windows installer are not, although 0.7.0b1 promised they would be: those accounts move to a later release.
