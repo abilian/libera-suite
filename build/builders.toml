@@ -20,10 +20,11 @@ target = "local"
 platform = "linux-x86_64"
 target = "fedora.abilian.net"
 
-# Parked 2026-10-15: its 38 GB disk is full; 0.5 goes out without it.
-# [[builders]]
-# platform = "linux-arm64"
-# target = "builder-arm64"
+# A new machine since 2026-11-20 (Ubuntu 26.04, 4 cores, 7 GB, 75 GB); the
+# old one was parked on 2026-10-15 with its 38 GB disk full.
+[[builders]]
+platform = "linux-arm64"
+target = "builder-arm64"
 
 [[builders]]
 platform = "windows-x86_64"
