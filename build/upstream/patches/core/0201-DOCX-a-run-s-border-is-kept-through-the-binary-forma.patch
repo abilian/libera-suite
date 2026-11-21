@@ -1,4 +1,4 @@
-From 1eac90fbcf0467b59bb9fcf82ec94b753f6ec385 Mon Sep 17 00:00:00 2001
+From 15d8988800a45bb8d270fd1e627c1327f0f64c43 Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 17:12:21 +0100
 Subject: [PATCH] DOCX: a run's border is kept through the binary format
@@ -22,7 +22,7 @@ that carries character borders; sdkjs 0008 draws them.
  4 files changed, 74 insertions(+), 54 deletions(-)
 
 diff --git a/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp b/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
-index ec23523869..49685cfd46 100644
+index de382090..5dd9625d 100644
 --- a/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
 +++ b/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
 @@ -317,6 +317,62 @@ template<typename T> int Binary_CommonReader2::ReadTrackRevision2(long length, T
@@ -88,7 +88,7 @@ index ec23523869..49685cfd46 100644
  int Binary_CommonReader2::ReadShdComplexType(BYTE type, long length, void* poResult)
  {
  	if (length < 0)
-@@ -641,6 +697,11 @@ int Binary_rPrReader::ReadContent(BYTE type, long length, void* poResult)
+@@ -643,6 +699,11 @@ int Binary_rPrReader::ReadContent(BYTE type, long length, void* poResult)
  			pRPr->m_oShd.Init();
  			READ2_DEF(length, res, oBinary_CommonReader2.ReadShdComplexType, pRPr->m_oShd.GetPointer());			
  		}break;
@@ -100,7 +100,7 @@ index ec23523869..49685cfd46 100644
  		case c_oSerProp_rPrType::RStyle:
  		{
  			pRPr->m_oRStyle.Init();
-@@ -1331,59 +1392,7 @@ int Binary_pPrReader::ReadBorders(BYTE type, long length, void* poResult)
+@@ -1333,59 +1394,7 @@ int Binary_pPrReader::ReadBorders(BYTE type, long length, void* poResult)
  }
  int Binary_pPrReader::ReadBorder(BYTE type, long length, void* poResult)
  {
@@ -159,10 +159,10 @@ index ec23523869..49685cfd46 100644
 -	return res;
 +	return oBinary_CommonReader2.ReadBorder(type, length, poResult);
  }
- int Binary_pPrReader::ReadFramePr(BYTE type, long length, void* poResult)
+ int Binary_pPrReader::ReadFramePr(BYTE type, long  /*length*/, void* poResult)
  {
 diff --git a/OOXML/Binary/Document/BinReader/BinaryReaderD.h b/OOXML/Binary/Document/BinReader/BinaryReaderD.h
-index 204ba6be87..e46a338644 100644
+index b0adee63..6b568d52 100644
 --- a/OOXML/Binary/Document/BinReader/BinaryReaderD.h
 +++ b/OOXML/Binary/Document/BinReader/BinaryReaderD.h
 @@ -56,6 +56,7 @@ public:
@@ -174,7 +174,7 @@ index 204ba6be87..e46a338644 100644
  	template<typename T> int ReadTrackRevisionInner(BYTE type, long length, T* poResult);
  	template<typename T> int ReadTrackRevisionInner2(BYTE type, long length, T* poResult);
 diff --git a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
-index 5b8f8a4a95..95384eb4c1 100644
+index cb05db46..97b29ee6 100644
 --- a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
 +++ b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
 @@ -412,7 +412,8 @@ extern int g_nCurFormatVersion;
@@ -188,7 +188,7 @@ index 5b8f8a4a95..95384eb4c1 100644
  	namespace c_oSerProp_rowPrType{enum c_oSerProp_rowPrType
  	{
 diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
-index 4bbdac7a2d..25a6c1103b 100644
+index 56cb34b9..2a1c7fc7 100644
 --- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
 +++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
 @@ -658,6 +658,15 @@ void Binary_rPrWriter::Write_rPr(OOX::Logic::CRunProperty* rPr)
@@ -205,7 +205,7 @@ index 4bbdac7a2d..25a6c1103b 100644
 +		m_oBcw.WriteItemWithLengthEnd(nCurPos);
 +	}
  	//RStyle
- 	if ((false != rPr->m_oRStyle.IsInit()) && (rPr->m_oRStyle->m_sVal.IsInit()))
+ 	if ((rPr->m_oRStyle.IsInit()) && (rPr->m_oRStyle->m_sVal.IsInit()))
  	{
 -- 
 2.55.0

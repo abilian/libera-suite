@@ -1,4 +1,4 @@
-From 45031c0913d3b39b9e33215b1f1eed970f181484 Mon Sep 17 00:00:00 2001
+From e6fbde6d302725d878ef747f56a9e0657a34df48 Mon Sep 17 00:00:00 2001
 From: Stefane Fermigier <sf@abilian.com>
 Date: Mon, 16 Nov 2026 17:53:57 +0100
 Subject: [PATCH] DOCX: positional tabs (w:ptab) are kept
@@ -11,15 +11,15 @@ both ways. After ElixirOffice 0.7.3 (leag1234/core 561a9a85f).
  .../Document/BinReader/BinaryReaderD.cpp      | 35 +++++++++++++++++++
  .../Binary/Document/BinReader/BinaryReaderD.h |  1 +
  .../BinWriter/BinReaderWriterDefines.h        |  8 +++++
- .../Document/BinWriter/BinaryWriterD.cpp      | 24 +++++++++++++
+ .../Document/BinWriter/BinaryWriterD.cpp      | 25 +++++++++++++
  .../Binary/Document/BinWriter/BinaryWriterD.h |  1 +
- 5 files changed, 69 insertions(+)
+ 5 files changed, 70 insertions(+)
 
 diff --git a/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp b/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
-index 68f3a10dc8..772764ad7d 100644
+index 924bd447..03488e8d 100644
 --- a/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
 +++ b/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
-@@ -8371,6 +8371,20 @@ int Binary_DocumentTableReader::ReadRun(BYTE type, long length, void* poResult)
+@@ -8405,6 +8405,20 @@ int Binary_DocumentTableReader::ReadRun(BYTE type, long length, void*  /*poResul
  		res = c_oSerConstants::ReadUnknown;
  	return res;
  }
@@ -40,7 +40,7 @@ index 68f3a10dc8..772764ad7d 100644
  int Binary_DocumentTableReader::ReadRunContent(BYTE type, long length, void* poResult)
  {
  	int res = c_oSerConstants::ReadOk;
-@@ -8395,6 +8409,27 @@ int Binary_DocumentTableReader::ReadRunContent(BYTE type, long length, void* poR
+@@ -8429,6 +8443,27 @@ int Binary_DocumentTableReader::ReadRunContent(BYTE type, long length, void* poR
  	{
          GetCurrentStringWriter().WriteString(std::wstring(_T("<w:tab/>")));
  	}
@@ -69,7 +69,7 @@ index 68f3a10dc8..772764ad7d 100644
  	{
          GetCurrentStringWriter().WriteString(std::wstring(_T("<w:cr/>")));
 diff --git a/OOXML/Binary/Document/BinReader/BinaryReaderD.h b/OOXML/Binary/Document/BinReader/BinaryReaderD.h
-index 900a1fb6c9..e2a83bfab5 100644
+index e158d6c5..05eb40d4 100644
 --- a/OOXML/Binary/Document/BinReader/BinaryReaderD.h
 +++ b/OOXML/Binary/Document/BinReader/BinaryReaderD.h
 @@ -442,6 +442,7 @@ public:
@@ -81,7 +81,7 @@ index 900a1fb6c9..e2a83bfab5 100644
  	int ReadFootnoteRef(BYTE type, long length, void* poResult);
  	int ReadEndnoteRef(BYTE type, long length, void* poResult);
 diff --git a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
-index 262ad1a069..5c52d44887 100644
+index 1f09464d..ccec4acb 100644
 --- a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
 +++ b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
 @@ -626,8 +626,16 @@ extern int g_nCurFormatVersion;
@@ -102,20 +102,21 @@ index 262ad1a069..5c52d44887 100644
  	{
  		Name = 0
 diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
-index 32e3ab60ad..b2c137c9e3 100644
+index 8791acad..dcb755ce 100644
 --- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
 +++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
-@@ -6758,6 +6758,9 @@ void BinaryDocumentTableWriter::WriteRunContent(std::vector<OOX::WritingElement*
+@@ -6759,6 +6759,10 @@ void BinaryDocumentTableWriter::WriteRunContent(std::vector<OOX::WritingElement*
  			}
  			break;
  		case OOX::et_w_ptab:
 +			{
 +				WritePTab(static_cast<OOX::Logic::CPTab*>(item));
 +			}
- 			break;
++			break;
  		case OOX::et_w_rPr:
  			break;
-@@ -6875,6 +6878,27 @@ void BinaryDocumentTableWriter::WriteNoteRef(const nullable<SimpleTypes::COnOff>
+ 		case OOX::et_w_softHyphen:
+@@ -6875,6 +6879,27 @@ void BinaryDocumentTableWriter::WriteNoteRef(const nullable<SimpleTypes::COnOff>
  		m_oBcw.WriteItemEnd(nCurPos);
  	}
  }
@@ -144,7 +145,7 @@ index 32e3ab60ad..b2c137c9e3 100644
  {
  	if (!text.empty())
 diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.h b/OOXML/Binary/Document/BinWriter/BinaryWriterD.h
-index 779a6ef91b..b8c7157f00 100644
+index 779a6ef9..b8c7157f 100644
 --- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.h
 +++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.h
 @@ -453,6 +453,7 @@ namespace BinDocxRW

@@ -4,6 +4,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 The **application** is this package, `libera`. The **editor payload** is the Euro-Office build, from 0.7 as two more packages (`libera-core` and `libera-web`). Up to 0.7.0 the two were versioned separately; from 0.7.2 the three packages share one version. `libera --version` prints both.
 
+## [Unreleased]
+
+### Changed
+
+- **The payload follows Euro-Office's main branch of 2026-11-21**, two days on from 0.7.3's: nine commits to the converter and nine translation updates to the editors. Our Crypto++ fix for Visual Studio 18 is now upstream's own (Euro-Office/core#411), so it leaves our patch queue, and three of our DOCX patches were rebased on upstream's clean-up of the same code.
+- **The editors' translations are updated** in Danish, German, Dutch, Spanish, Polish, Hungarian and Korean, from Euro-Office. Estonian, which upstream added without any translated text yet, is left out until it has some.
+
+### Fixed
+
+- **An older Word drawing shape that gives its size only by its margins is drawn at that size.** The fallback that reads the margins never ran. From Euro-Office.
+- **Text stored in UTF-16 is decoded correctly** where an operator-precedence slip in the decoder read some characters wrongly. From Euro-Office.
+
 ## [0.7.3] - 2026-11-20
 
 ### Added

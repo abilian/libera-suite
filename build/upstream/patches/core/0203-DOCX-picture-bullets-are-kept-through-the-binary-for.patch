@@ -1,4 +1,4 @@
-From 21b6765da487cf4f0d089a0f5074b8ea4166a251 Mon Sep 17 00:00:00 2001
+From 6e6bd947cb3ddd9a623851544d390f8067232c7c Mon Sep 17 00:00:00 2001
 From: ElixirOffice contributors <noreply@elixiroffice.org>
 Date: Sat, 14 Nov 2026 20:49:16 +0100
 Subject: [PATCH] DOCX: picture bullets are kept through the binary format
@@ -26,10 +26,10 @@ that carries picture bullets; sdkjs 0011 reads and draws them.
  9 files changed, 375 insertions(+), 12 deletions(-)
 
 diff --git a/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp b/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
-index 49685cfd46..68f3a10dc8 100644
+index 5dd9625d..924bd447 100644
 --- a/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
 +++ b/OOXML/Binary/Document/BinReader/BinaryReaderD.cpp
-@@ -2992,6 +2992,7 @@ Binary_NumberingTableReader::Binary_NumberingTableReader(NSBinPptxRW::CBinaryFil
+@@ -3009,6 +3009,7 @@ Binary_NumberingTableReader::Binary_NumberingTableReader(NSBinPptxRW::CBinaryFil
  	Binary_CommonReader(poBufferedStream), 
  	oBinary_pPrReader(poBufferedStream, oFileWriter), 
  	oBinary_rPrReader(poBufferedStream, oFileWriter),
@@ -37,7 +37,7 @@ index 49685cfd46..68f3a10dc8 100644
  	m_pNumbering(numbering)
  {
  }
-@@ -3012,6 +3013,80 @@ int Binary_NumberingTableReader::ReadNumberingContent(BYTE type, long length, vo
+@@ -3029,6 +3030,80 @@ int Binary_NumberingTableReader::ReadNumberingContent(BYTE type, long length, vo
  	{
  		READ1_DEF(length, res, this->ReadNums, poResult);
  	}
@@ -118,7 +118,7 @@ index 49685cfd46..68f3a10dc8 100644
  	else
  		res = c_oSerConstants::ReadUnknown;
  	return res;
-@@ -3228,6 +3303,11 @@ int Binary_NumberingTableReader::ReadLevel(BYTE type, long length, void* poResul
+@@ -3242,6 +3317,11 @@ int Binary_NumberingTableReader::ReadLevel(BYTE type, long length, void* poResul
  		odocLvl->m_oLegacy.Init();
  		READ1_DEF(length, res, this->ReadLvlLegacy, odocLvl->m_oLegacy.GetPointer());
  	}
@@ -131,7 +131,7 @@ index 49685cfd46..68f3a10dc8 100644
  		res = c_oSerConstants::ReadUnknown;
  	return res;
 diff --git a/OOXML/Binary/Document/BinReader/BinaryReaderD.h b/OOXML/Binary/Document/BinReader/BinaryReaderD.h
-index e46a338644..900a1fb6c9 100644
+index 6b568d52..e158d6c5 100644
 --- a/OOXML/Binary/Document/BinReader/BinaryReaderD.h
 +++ b/OOXML/Binary/Document/BinReader/BinaryReaderD.h
 @@ -168,11 +168,23 @@ class Binary_NumberingTableReader : public Binary_CommonReader
@@ -159,7 +159,7 @@ index e46a338644..900a1fb6c9 100644
  	int ReadNum(BYTE type, long length, void* poResult);
  	int ReadLvlOverride(BYTE type, long length, void* poResult);
 diff --git a/OOXML/Binary/Document/BinReader/NumberingWriter.cpp b/OOXML/Binary/Document/BinReader/NumberingWriter.cpp
-index d2f6f20504..847faecaf8 100644
+index d2f6f205..847faeca 100644
 --- a/OOXML/Binary/Document/BinReader/NumberingWriter.cpp
 +++ b/OOXML/Binary/Document/BinReader/NumberingWriter.cpp
 @@ -30,6 +30,41 @@ namespace Writers
@@ -213,7 +213,7 @@ index d2f6f20504..847faecaf8 100644
  		m_oWriter.Write(m_oNumList);
  		m_oWriter.WriteString(g_string_n_End);
 diff --git a/OOXML/Binary/Document/BinReader/NumberingWriter.h b/OOXML/Binary/Document/BinReader/NumberingWriter.h
-index 07a8d8b70d..0c4484ec8f 100644
+index 07a8d8b7..0c4484ec 100644
 --- a/OOXML/Binary/Document/BinReader/NumberingWriter.h
 +++ b/OOXML/Binary/Document/BinReader/NumberingWriter.h
 @@ -37,12 +37,17 @@ namespace Writers
@@ -235,7 +235,7 @@ index 07a8d8b70d..0c4484ec8f 100644
  	};
  }
 diff --git a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
-index 95384eb4c1..4d9a73d61d 100644
+index 97b29ee6..0966f513 100644
 --- a/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
 +++ b/OOXML/Binary/Document/BinWriter/BinReaderWriterDefines.h
 @@ -178,7 +178,15 @@ extern int g_nCurFormatVersion;
@@ -256,7 +256,7 @@ index 95384eb4c1..4d9a73d61d 100644
  	namespace c_oSerOtherTableTypes{enum c_oSerOtherTableTypes
  	{
 diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
-index 25a6c1103b..f009f0569c 100644
+index 2a1c7fc7..a09c9c38 100644
 --- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
 +++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.cpp
 @@ -3025,6 +3025,77 @@ void BinaryNumberingTableWriter::Write(const OOX::CNumbering& numbering)
@@ -353,7 +353,7 @@ index 25a6c1103b..f009f0569c 100644
  void BinaryNumberingTableWriter::WriteLvlLegacy(const ComplexTypes::Word::CLvlLegacy& lvlLegacy)
  {
 diff --git a/OOXML/Binary/Document/BinWriter/BinaryWriterD.h b/OOXML/Binary/Document/BinWriter/BinaryWriterD.h
-index 6d97cb2185..779a6ef91b 100644
+index 6d97cb21..779a6ef9 100644
 --- a/OOXML/Binary/Document/BinWriter/BinaryWriterD.h
 +++ b/OOXML/Binary/Document/BinWriter/BinaryWriterD.h
 @@ -249,6 +249,7 @@ namespace BinDocxRW
@@ -365,7 +365,7 @@ index 6d97cb2185..779a6ef91b 100644
  		BinaryNumberingTableWriter(ParamsWriter& oParamsWriter);
  		void Write(const OOX::CNumbering& numbering);
 diff --git a/OOXML/DocxFormat/Numbering.cpp b/OOXML/DocxFormat/Numbering.cpp
-index eceb0b2ffa..403ebe9977 100644
+index e088af9c..7380f1eb 100644
 --- a/OOXML/DocxFormat/Numbering.cpp
 +++ b/OOXML/DocxFormat/Numbering.cpp
 @@ -24,6 +24,7 @@
@@ -376,7 +376,7 @@ index eceb0b2ffa..403ebe9977 100644
  #include "Docx.h"
  #include "../../DesktopEditor/common/File.h"
  
-@@ -689,7 +690,108 @@ namespace OOX
+@@ -683,7 +684,108 @@ namespace OOX
  		// NumPicBullet 17.9.21 (Part 1)
  		//--------------------------------------------------------------------------------
  
@@ -486,7 +486,7 @@ index eceb0b2ffa..403ebe9977 100644
  		{
  		}
  		CNumPicBullet::~CNumPicBullet()
-@@ -703,6 +805,24 @@ namespace OOX
+@@ -697,6 +799,24 @@ namespace OOX
  
  			WritingElement_ReadNode( oNode, oChild, _T("w:drawing"), m_oDrawing );
  		}
@@ -511,7 +511,7 @@ index eceb0b2ffa..403ebe9977 100644
  		void CNumPicBullet::fromXML(XmlUtils::CXmlLiteReader& oReader)
  		{
  			ReadAttributes( oReader );
-@@ -714,13 +834,18 @@ namespace OOX
+@@ -708,13 +828,18 @@ namespace OOX
  			while( oReader.ReadNextSiblingNode( nParentDepth ) )
  			{
  				std::wstring sName = oReader.GetName();
@@ -530,9 +530,9 @@ index eceb0b2ffa..403ebe9977 100644
  				}
  			}
  		}
-@@ -728,10 +853,19 @@ namespace OOX
+@@ -722,10 +847,19 @@ namespace OOX
  		{
- 			if (false == m_oNumPicBulletId.IsInit()) return L"";
+ 			if (!m_oNumPicBulletId.IsInit()) return L"";
  
 -			std::wstring sResult = L"<w:numPicBullet ";
 -
@@ -554,7 +554,7 @@ index eceb0b2ffa..403ebe9977 100644
  			sResult += L"</w:numPicBullet>";
  
  			return sResult;
-@@ -905,6 +1039,13 @@ xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" \
+@@ -903,6 +1037,13 @@ xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" \
  xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" \
  mc:Ignorable=\"w14 w15\">");
  
@@ -568,7 +568,7 @@ index eceb0b2ffa..403ebe9977 100644
  		for (unsigned int nIndex = 0; nIndex < m_arrAbstractNum.size(); nIndex++ )
  		{
  			if (m_arrAbstractNum[nIndex])
-@@ -924,12 +1065,6 @@ mc:Ignorable=\"w14 w15\">");
+@@ -922,12 +1063,6 @@ mc:Ignorable=\"w14 w15\">");
  			sXml += _T("/>");
  		}
  
@@ -582,7 +582,7 @@ index eceb0b2ffa..403ebe9977 100644
  		return sXml;
  	}
 diff --git a/OOXML/DocxFormat/Numbering.h b/OOXML/DocxFormat/Numbering.h
-index 0db1e32c80..4dd4095bf3 100644
+index 0db1e32c..4dd4095b 100644
 --- a/OOXML/DocxFormat/Numbering.h
 +++ b/OOXML/DocxFormat/Numbering.h
 @@ -278,12 +278,19 @@ namespace OOX
