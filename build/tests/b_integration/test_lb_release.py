@@ -430,6 +430,26 @@ def test_a_tree_off_its_pin_or_missing_is_refused(tmp_path):
     assert "no source tree" in problem
 
 
+def test_a_pin_the_clone_does_not_have_yet_is_refused(tmp_path):
+    """The pin moved since the last fetch: git's "no such commit" is a no."""
+    root, src, _ = sources(tmp_path, 0)
+    (root / "build" / "upstream" / "pins.toml").write_text(
+        f'[repos]\ncore = "{"1" * 40}"\n'
+    )
+    (problem,) = source_problems(root, src)
+    assert "is not on its pin" in problem
+
+
+def test_a_tree_git_cannot_read_is_not_taken_for_a_stale_one(tmp_path):
+    """git refusing to look (a rootful Docker's tree, "dubious ownership", on
+    the arm64 builder) read as "not on its pin", and every build there fetched
+    again and recompiled the whole core."""
+    root, src, _ = sources(tmp_path, 0)
+    (src / "core" / ".git" / "HEAD").write_text("garbage\n")
+    with pytest.raises(RefusedError, match="failed"):
+        source_problems(root, src)
+
+
 class Flaky:
     """A builder whose polls go unanswered `misses` times, as builder-windows'
     did when it dropped off the network, while the job itself goes on."""

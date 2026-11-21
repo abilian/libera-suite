@@ -50,12 +50,14 @@ def source_problems(
         if not (tree / ".git").exists():
             found.append(f"{name}: no source tree at {tree}")
             continue
-        on_pin = subprocess.run(
-            ["git", "-C", str(tree), "merge-base", "--is-ancestor", pin, "HEAD"],
-            capture_output=True,
-            check=False,
-        )
-        if on_pin.returncode != 0:
+        # Exit 1, from either, is the answer "no": the pin is not in the
+        # clone (it moved since the last fetch), or HEAD is not built on it.
+        # Anything else is git unable to look, which was once read as the
+        # same "no", and fetched and rebuilt the whole core on every run.
+        if not (
+            answers(tree, "rev-parse", "--verify", "--quiet", f"{pin}^{{commit}}")
+            and answers(tree, "merge-base", "--is-ancestor", pin, "HEAD")
+        ):
             found.append(f"{name}: {tree} is not on its pin, {pin[:9]}")
             continue
         queue = sorted((root / repo.PATCHES / name).glob("*.patch"))
@@ -69,30 +71,59 @@ def source_problems(
 
 
 def queued_tree(tree: Path, pin: str, queue: list[Path]) -> bytes | None:
-    """The tree the queue makes of the pin, built in a scratch index and
-    leaving the working tree alone; None if the queue does not apply, which
-    the fetch that follows then says patch by patch."""
+    """The tree the queue makes of the pin, built in a scratch index and a
+    scratch object store, so the clone is only read: the arm64 builder's are
+    root's, and git apply could not write a blob into them. None if the queue
+    does not apply, which the fetch that follows then says patch by patch."""
+    objects = Path(git_out(tree, "rev-parse", "--absolute-git-dir").decode().strip())
     with tempfile.TemporaryDirectory() as scratch:
-        env = os.environ | {"GIT_INDEX_FILE": str(Path(scratch, "index"))}
+        env = os.environ | {
+            "GIT_INDEX_FILE": str(Path(scratch, "index")),
+            "GIT_OBJECT_DIRECTORY": scratch,
+            "GIT_ALTERNATE_OBJECT_DIRECTORIES": str(objects / "objects"),
+        }
         git_out(tree, "read-tree", pin, env=env)
         if queue:
             applied = subprocess.run(
-                ["git", "-C", str(tree), "apply", "--cached", "--whitespace=nowarn"],
+                [*git(tree), "apply", "--cached", "--whitespace=nowarn"],
                 input=b"".join(p.read_bytes() for p in queue),
                 env=env,
                 capture_output=True,
                 check=False,
             )
-            if applied.returncode != 0:
+            # 1 is a patch that does not apply; anything else, git failing.
+            if applied.returncode == 1:
                 return None
+            if applied.returncode != 0:
+                said = applied.stderr.decode(errors="replace").strip()
+                msg = f"git apply in {tree} failed ({applied.returncode}): {said}"
+                raise RefusedError(msg)
         return git_out(tree, "write-tree", env=env)
+
+
+def answers(tree: Path, *args: str) -> bool:
+    """A git question's yes (0) or no (1); a refusal for anything else."""
+    done = subprocess.run([*git(tree), *args], capture_output=True, check=False)
+    if done.returncode not in {0, 1}:
+        said = done.stderr.decode(errors="replace").strip()
+        msg = f"git {args[0]} in {tree} failed ({done.returncode}): {said}"
+        raise RefusedError(msg)
+    return done.returncode == 0
+
+
+def git(tree: Path) -> list[str]:
+    """git, in `tree`, whoever owns it. A rootful Docker (the arm64 builder's)
+    leaves the trees owned by root, and git then refuses to read them
+    ("dubious ownership") to the user who checks them. They are our own
+    build's trees, so they are trusted here, for these commands alone."""
+    return ["git", "-c", f"safe.directory={tree.resolve()}", "-C", str(tree)]
 
 
 def git_out(tree: Path, *args: str, env: dict[str, str] | None = None) -> bytes:
     """What git printed, as bytes; or a refusal carrying what git said
     instead."""
     done = subprocess.run(
-        ["git", "-C", str(tree), *args], env=env, capture_output=True, check=False
+        [*git(tree), *args], env=env, capture_output=True, check=False
     )
     if done.returncode != 0:
         said = done.stderr.decode(errors="replace").strip()
