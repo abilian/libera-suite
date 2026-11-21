@@ -59,10 +59,16 @@ NEEDLE = "Second paragraph"
 PYTHON_FLOOR = 312
 REFUSAL = "no Python 3.12 or newer"
 
+# What a container writes is read by the matrix outside it. A rootful Docker
+# (the arm64 builder's) writes as root, and x2t makes its output 0640: the
+# document was there and read as "no output". Readable by all, on the way out.
+READABLE = 'trap \'chmod a+r ${LOG:+"/w/$LOG"} "/w/$OUT" 2>/dev/null\' EXIT'
+
 # A user's desktop has python3 and curl, and the image has neither; venv too,
 # which install.sh names when it is missing. Then the install page's command,
 # with the pip channel, and a document converted by what it installed.
-PIP_PATH = """
+PIP_PATH = f"""
+{READABLE}
 if command -v apt-get > /dev/null; then
     apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \\
         python3 python3-venv curl ca-certificates > /dev/null
@@ -84,7 +90,9 @@ def holds_text(odt: Path, needle: str) -> bool:
     before (CLAUDE.md, "things that fail silently")."""
     try:
         xml = zipfile.ZipFile(odt).read("content.xml").decode("utf-8", "replace")
-    except (OSError, KeyError, zipfile.BadZipFile):
+    except (FileNotFoundError, KeyError, zipfile.BadZipFile):
+        # Absent or not a document. A file that cannot be read (PermissionError)
+        # is not "no text": it raises, rather than read as x2t having failed.
         return False
     return needle in re.sub(r"<[^>]+>", "", xml)
 
@@ -137,10 +145,14 @@ def convert_in(
     out = f"out-{arch}-{image.replace(':', '-').replace('/', '-')}.odt"
     run_ = Run(
         image,
-        ("/core/bin/x2t", "/w/in.docx", f"/w/{out}"),
+        ("sh", "-c", f'{READABLE}\n/core/bin/x2t /w/in.docx "/w/$OUT"'),
         arch,
         mounts=(Mount(core, "/core", read_only=True), Mount(work, "/w")),
-        env={"LD_LIBRARY_PATH": "/core/bin", "APPLICATION_NAME": "Libera Suite"},
+        env={
+            "LD_LIBRARY_PATH": "/core/bin",
+            "APPLICATION_NAME": "Libera Suite",
+            "OUT": out,
+        },
         extra=("--quiet",),
     )
     done = subprocess.run(
