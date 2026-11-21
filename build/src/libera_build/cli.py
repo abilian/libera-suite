@@ -31,6 +31,7 @@ from unittest import mock
 from libera_build import (
     bench as bench_,
     buildbox,
+    canary,
     components,
     fidelity as fidelity_,
     flatpak,
@@ -336,6 +337,14 @@ def payload_test(args: argparse.Namespace) -> Steps:
 
 def payload_check(_args: argparse.Namespace) -> Steps:
     return [sh("engine/check-patches.sh")]
+
+
+def payload_canary(args: argparse.Namespace) -> Steps:
+    """Upstream's main against our queues, built and tested, in a build root
+    beside the main one (canary.py)."""
+    main = build_root()
+    into = Path(args.into) if args.into else main.with_name(f"{main.name}-canary")
+    return [Call(canary.run, (main, into, args.branch))]
 
 
 def payload_status(_args: argparse.Namespace) -> Steps:
@@ -694,6 +703,26 @@ def add_payload(groups: Groups) -> None:
         "check",
         "whether the patch queue still applies to the pinned SHAs (~20 s)",
         payload_check,
+    )
+    p = g.command(
+        "canary",
+        "our queues on upstream's main: do they apply, does it build and pass",
+        payload_canary,
+        BUILD_ROOT,
+        epilog="In <build root>-canary, beside the trees releases use: fetch with\n"
+        "core, sdkjs and web-apps at upstream's main, our queues applied; the\n"
+        "JavaScript built, with x2t from the main build root (core is not\n"
+        "compiled); then the engine's tests in Node. Weekly, so that a sync\n"
+        "meets a week's drift (notes/plans/euro-office-sync.md).\n\n"
+        + examples("payload canary", "payload canary --branch release/v9.4"),
+    )
+    p.add_argument(
+        "--branch", default="main", help="upstream's branch to try (default: main)"
+    )
+    p.add_argument(
+        "--into",
+        metavar="DIR",
+        help="the canary's build root (default: <build root>-canary)",
     )
     g.command(
         "status", "which payload this checkout runs, and where from", payload_status

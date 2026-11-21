@@ -75,13 +75,8 @@ def queued_tree(tree: Path, pin: str, queue: list[Path]) -> bytes | None:
     scratch object store, so the clone is only read: the arm64 builder's are
     root's, and git apply could not write a blob into them. None if the queue
     does not apply, which the fetch that follows then says patch by patch."""
-    objects = Path(git_out(tree, "rev-parse", "--absolute-git-dir").decode().strip())
     with tempfile.TemporaryDirectory() as scratch:
-        env = os.environ | {
-            "GIT_INDEX_FILE": str(Path(scratch, "index")),
-            "GIT_OBJECT_DIRECTORY": scratch,
-            "GIT_ALTERNATE_OBJECT_DIRECTORIES": str(objects / "objects"),
-        }
+        env = scratch_env(tree, Path(scratch))
         git_out(tree, "read-tree", pin, env=env)
         if queue:
             applied = subprocess.run(
@@ -99,6 +94,18 @@ def queued_tree(tree: Path, pin: str, queue: list[Path]) -> bytes | None:
                 msg = f"git apply in {tree} failed ({applied.returncode}): {said}"
                 raise RefusedError(msg)
         return git_out(tree, "write-tree", env=env)
+
+
+def scratch_env(tree: Path, scratch: Path) -> dict[str, str]:
+    """git's environment for working on `tree` without writing to it: an
+    index and an object store in `scratch`, the clone's objects read through
+    as an alternate."""
+    git_dir = Path(git_out(tree, "rev-parse", "--absolute-git-dir").decode().strip())
+    return os.environ | {
+        "GIT_INDEX_FILE": str(scratch / "index"),
+        "GIT_OBJECT_DIRECTORY": str(scratch),
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES": str(git_dir / "objects"),
+    }
 
 
 def answers(tree: Path, *args: str) -> bool:

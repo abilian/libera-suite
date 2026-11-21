@@ -90,3 +90,19 @@ Most of these are upstream's own bugs and should go back.
 The `web-apps` fixes are small and self-contained, so they can go as soon as the mirrors exist. The `core` patches are the valuable contribution and have to wait: two of them change platform defines globally, so the Linux build has to confirm they are inert there before we offer a series that could break somebody else's build.
 
 Three patches never leave our tree. `0002` turns off upstream's feature tips and removes their helpdesk links; `0004` retitles the wrapper page; `0008` turns macros off, until there is a macro language worth offering (see [the roadmap](roadmap.md)). They are configuration for a different product.
+
+## Following upstream
+
+`lb payload canary` tries the queue on upstream's `main` without moving a pin. In a build root of its own (`<build root>-canary`, beside the one releases use), it fetches `core`, `sdkjs` and `web-apps` at the head of `main` and judges each patch against it:
+
+- **applies**;
+- **already upstream**: it applies in reverse, so upstream has merged it (often our own pull request), and it leaves the queue at the next sync;
+- **conflicts**: it needs rebasing.
+
+Then it builds the JavaScript with the patches that apply, taking `x2t` from the main build root rather than compiling `core`, and runs the engine's tests in Node on the result: upstream's own suites, the API snapshot, the names check, and our patches' tests. It takes about six minutes on the Mac, and fails when a sync would need more than dropping what upstream merged. `--branch` tries another branch.
+
+Run weekly, it makes a sync a week's drift rather than five weeks' at once, which is what the 2026-11-19 sync was. A crontab line on the Mac that builds; cron reads neither `.envrc` nor your shell's `PATH`, so the build root is named and the command runs in a login shell:
+
+```sh
+0 7 * * 1  cd /path/to/libera-suite && BUILD_ROOT=/path/to/build-root zsh -lc 'git pull -q && uv run --no-sync lb payload canary' > tmp/canary.log 2>&1
+```

@@ -13,6 +13,11 @@ BUILD="$(cd "$HERE/.." && pwd)"
 . "$HERE/common.sh"
 # Defines msvc_env(), which is a no-op off Windows.
 . "$BUILD/windows/msvc-env.sh"
+# The revisions to fetch. `lb payload canary` names a copy with upstream's
+# main in place of the pins; nothing else should.
+PINS="${PINS:-$BUILD/upstream/pins.toml}"
+# The patch queues, a folder per repository; the canary names its own too.
+PATCHES="${PATCHES:-$BUILD/upstream/patches}"
 # A local clone to copy objects from, so iterating does not refetch 1.5 GB.
 MIRROR="${MIRROR:-$HOME/ghorg/euro-office}"
 
@@ -24,23 +29,23 @@ MIRROR="${MIRROR:-$HOME/ghorg/euro-office}"
 v8_jobs() { build_jobs; }
 
 pin() {
-    sed -n "s/^$1 *= *\"\([0-9a-f]*\)\".*/\1/p" "$BUILD/upstream/pins.toml" | head -1
+    sed -n "s/^$1 *= *\"\([0-9a-f]*\)\".*/\1/p" "$PINS" | head -1
 }
 
 # The repo names under [repos], so `fetch` and pins.toml cannot drift apart.
 pinned_repos() {
-    sed -n '/^\[repos\]/,/^\[[a-z]/p' "$BUILD/upstream/pins.toml" |
+    sed -n '/^\[repos\]/,/^\[[a-z]/p' "$PINS" |
         sed -n 's/^\([A-Za-z0-9_-]*\) *=.*/\1/p'
 }
 
 remote_base() {
-    sed -n 's/^base *= *"\(.*\)".*/\1/p' "$BUILD/upstream/pins.toml" | head -1
+    sed -n 's/^base *= *"\(.*\)".*/\1/p' "$PINS" | head -1
 }
 
 # Where a repository is fetched from: its own address under [urls], else
 # Euro-Office's.
 repo_url() {
-    url="$(sed -n '/^\[urls\]/,/^\[[a-z]/p' "$BUILD/upstream/pins.toml" |
+    url="$(sed -n '/^\[urls\]/,/^\[[a-z]/p' "$PINS" |
         sed -n "s/^$1 *= *\"\(.*\)\".*/\1/p" | head -1)"
     echo "${url:-$(remote_base)/$1.git}"
 }
@@ -249,7 +254,7 @@ fetch_repo() {
     # there rewrote all 146 files the queue touches, 41 of them headers: make
     # goes by modification time, so one changed patch recompiled most of core.
     target="$sha"
-    patches="$BUILD/upstream/patches/$repo"
+    patches="$PATCHES/$repo"
     if [ -d "$patches" ] && [ -n "$(ls -A "$patches" 2>/dev/null)" ]; then
         echo "==> applying $(ls "$patches" | wc -l | tr -d ' ') patch(es) to $repo, to one side"
         work="$SRC/.$repo-patching"
