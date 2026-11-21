@@ -11,7 +11,7 @@ build/upstream/patches/sdkjs/
 
 The pins followed Euro-Office's own desktop releases, the revisions its `DesktopEditors` repository names for a release, up to v9.3.8 on 2026-11-15. Since 2026-11-19 they are on Euro-Office's `main` (V8 14.6 in place of 8.9, and third-party libraries fetched and built rather than vendored), so that our fixes are made against what upstream is changing; eight core patches and one `web-apps` patch left the queue then, upstream having made the same fix. Up to v9.3.5-2, core carried a copy of libxml2, the XML parser the converter reads every document with, about release 2.9.4, and a 6 KB document of nested entities took that copy to 3.9 GB of memory; we built core against libxml2 2.9.14 instead, from a pin of its own, with two patches. Since v9.3.8 core builds libxml2 2.15.4 itself, from its own fetch script (`Common/3dParty/libxml2`), and the pin, its patches and core `0172` are gone.
 
-`build/engine/build.sh fetch` resets each repository to its pinned hash, cleans it, and applies the series with `git am`, which does not fuzz. A patch that has stopped applying is news: investigate it.
+`build/engine/build.sh fetch` applies the series with `git am`, which does not fuzz, to the pinned hash in a scratch worktree beside the repository, then checks the repository out at the result and cleans it. Only the files whose content changed are rewritten, so a build after one patch changed recompiles what that patch touches, not everything the series touches. A patch that has stopped applying is news: investigate it. The fetch then stops and leaves the build tree as it was, and the scratch worktree (`src/.<repo>-patching`) mid-`am` for a look; the next fetch removes it.
 
 ## Why a queue
 

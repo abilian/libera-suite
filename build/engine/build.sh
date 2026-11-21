@@ -235,29 +235,43 @@ fetch_repo() {
             echo "       Run ssh -T git@github.com once, by hand, and check the key." >&2
             exit 1
         }
-    # Hard reset, so a re-run starts from pristine upstream rather than from
-    # whatever the last patch attempt left behind.
     # A series that stopped halfway leaves git am's state behind, and the next
     # am then refuses to start ("previous rebase directory still exists"),
-    # which is not the error that matters.
+    # which is not the error that matters. Trees patched in place, as they
+    # were before the queue was applied to one side, can carry it.
     if [ -d "$dst/.git/rebase-apply" ]; then
         git -C "$dst" am --abort 2>/dev/null || rm -rf "$dst/.git/rebase-apply"
     fi
-    git -C "$dst" checkout --quiet --force --detach "$sha"
-    git -C "$dst" clean -qfdx
 
+    # The queue is applied in a scratch worktree, and the build tree then moves
+    # to the result with one checkout, which rewrites only the files whose
+    # content differs. Resetting the tree to the pin and applying the queue
+    # there rewrote all 146 files the queue touches, 41 of them headers: make
+    # goes by modification time, so one changed patch recompiled most of core.
+    target="$sha"
     patches="$BUILD/upstream/patches/$repo"
     if [ -d "$patches" ] && [ -n "$(ls -A "$patches" 2>/dev/null)" ]; then
-        echo "==> applying $(ls "$patches" | wc -l | tr -d ' ') patch(es) to $repo"
+        echo "==> applying $(ls "$patches" | wc -l | tr -d ' ') patch(es) to $repo, to one side"
+        work="$SRC/.$repo-patching"
+        git -C "$dst" worktree remove --force "$work" 2>/dev/null || rm -rf "$work"
+        git -C "$dst" worktree prune
+        git -C "$dst" worktree add --quiet --detach "$work" "$sha"
         # No fuzz: a patch that stopped applying is news, not something to guess at.
         # --keep-cr because upstream keeps CRLF files (every .desktop HTML, for
         # one): git am parses a patch as mail, and mailinfo strips the trailing
         # CR from every line, after which no context matches and the patch is
         # rejected with nothing to suggest line endings were involved.
-        git -C "$dst" am --keep-non-patch --keep-cr "$patches"/*.patch
+        # The worktree is left behind on a failure, mid-am, for a look.
+        git -C "$work" am --keep-non-patch --keep-cr "$patches"/*.patch
+        target="$(git -C "$work" rev-parse HEAD)"
+        git -C "$dst" worktree remove --force "$work"
     else
         echo "==> no patches for $repo yet"
     fi
+    # --force over anything edited by hand; clean for what a build or a patch
+    # left untracked. Neither touches a file that is already as it should be.
+    git -C "$dst" checkout --quiet --force --detach "$target"
+    git -C "$dst" clean -qfdx
 }
 
 # git am makes a commit per patch. Without an identity it applies the series,
