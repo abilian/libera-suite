@@ -34,7 +34,21 @@ def check(session: nox.Session):
 # Utils
 #
 def uv_sync(session: nox.Session):
-    session.run("uv", "sync", "-q", "--active", external=True)
+    # Not the payload's components (libera-core, libera-web): uv builds them
+    # from source, which is the converter compiled, hours; CI has no container
+    # engine to do it in. The tiers that need a payload skip, or find one
+    # through LIBERA_PAYLOAD or a build tree.
+    session.run(
+        "uv",
+        "sync",
+        "-q",
+        "--active",
+        "--no-install-package",
+        "libera-core",
+        "--no-install-package",
+        "libera-web",
+        external=True,
+    )
     # session.run(
     #     "uv", "sync", "-q", "--all-groups", "--all-extras", "--active",
     #     external=True,

@@ -2,6 +2,7 @@ image: alpine/latest
 packages:
   - uv
   - gcc
+  - make
   - python3-dev
 
 secrets:
@@ -17,11 +18,14 @@ sources:
 tasks:
   - install: |
       cd muchado
-      uv sync
+      # Not the payload's components: uv builds them from source, which is
+      # the converter compiled in a container, hours, and CI has no engine.
+      # The tiers that need them skip.
+      uv sync --no-install-package libera-core --no-install-package libera-web
   - test: |
       cd muchado
-      uv run pytest -q --tb=short --ignore=tests/c_e2e
+      uv run --no-sync pytest -q --tb=short --ignore=tests/c_e2e
   - lint: |
       cd muchado
-      uv run ruff check
-      uv run ty check src
+      uv run --no-sync ruff check
+      uv run --no-sync ty check src

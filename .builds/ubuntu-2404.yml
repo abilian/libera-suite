@@ -25,15 +25,18 @@ tasks:
       echo "Building on Ubuntu 2404"
       sudo pip install --break-system-packages -U uv nox
       cd muchado
-      uv sync
+      # Not the payload's components: uv builds them from source, which is
+      # the converter compiled in a container, hours, and CI has no engine.
+      # The tiers that need them skip.
+      uv sync --no-install-package libera-core --no-install-package libera-web
 
   - test: |
       cd muchado
-      uv run pytest -q --tb=short
+      uv run --no-sync pytest -q --tb=short
   - lint: |
       cd muchado
-      uv run ruff check
-      # uv run ty check src
+      uv run --no-sync ruff check
+      # uv run --no-sync ty check src
   - nox: |
       cd muchado
       uvx nox -e tests-3.12 check
