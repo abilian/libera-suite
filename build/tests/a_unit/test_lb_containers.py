@@ -110,6 +110,24 @@ def test_the_suite_takes_the_wheels_of_its_architecture_only(tmp_path):
     assert linux.choose_payload(options, "amd64") == (tmp_path, None)
 
 
+def test_the_suite_falls_back_to_the_stage_a_release_check_sent(tmp_path, monkeypatch):
+    """`lb release check` leaves both components in ~/libera-stage/<version>
+    on each builder, and `lb linux test --gui` after it refused, looking only
+    where `lb components build` writes."""
+    monkeypatch.setenv("BUILD_ROOT", str(tmp_path / "build"))
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(linux.versions, "payload_version", lambda _: "0.7")
+    stage = tmp_path / "libera-stage" / "0.7"
+    stage.mkdir(parents=True)
+    options = linux.LinuxOptions("test")
+
+    with pytest.raises(RefusedError, match=r"libera-stage/0\.7"):
+        linux.choose_payload(options, "amd64")
+
+    (stage / "libera_core-0.7-py3-none-manylinux_2_34_x86_64.whl").touch()
+    assert linux.choose_payload(options, "amd64") == (stage, None)
+
+
 def test_the_suite_installs_the_core_of_its_architecture_only(tmp_path):
     """A folder of wheels keeps what earlier builds left, and uv refuses to
     install two wheels of one package: `lb linux test` stopped on a core built

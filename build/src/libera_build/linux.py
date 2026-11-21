@@ -20,7 +20,7 @@ from __future__ import annotations
 import shlex
 import subprocess
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from libera_build import components, versions
 from libera_build.containers import (
@@ -31,11 +31,9 @@ from libera_build.containers import (
     interactive,
     linux_platform,
 )
+from libera_build.release.phases import staging
 from libera_build.repo import REPO, build_root
 from libera_build.report import RefusedError, say, step
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 # uv sync into /venv, and the components installed the way a user installs
 # them: from their wheels. The workspace's own would be built in here, which
@@ -158,16 +156,26 @@ def choose_payload(options: LinuxOptions, arch: str) -> tuple[Path | None, Path 
 
     The wheels by default, because installing them is what a user does: the
     folder asked for, else the one `lb components build` writes, which on a
-    Linux machine of this architecture holds its core.
+    Linux machine of this architecture holds its core, else the stage `lb
+    release check` sent this builder, which holds both components.
     """
     if options.payload:
         return None, options.payload
     version = versions.payload_version(REPO)
-    wheels = options.wheels or build_root() / "out" / "wheels" / version
-    if list(wheels.glob(core_wheels(arch))):
-        return wheels, None
+    tried = (
+        [options.wheels]
+        if options.wheels
+        else [
+            build_root() / "out" / "wheels" / version,
+            Path.home() / staging.remote_stage(version),
+        ]
+    )
+    for wheels in tried:
+        if list(wheels.glob(core_wheels(arch))):
+            return wheels, None
     msg = (
-        f"no libera-core wheel for {linux_platform(arch)} in {wheels}\n"
+        f"no libera-core wheel for {linux_platform(arch)} in "
+        f"{' or '.join(map(str, tried))}\n"
         f"  build them on Linux:  lb on {linux_platform(arch)} components build\n"
         "  or point at them: --wheels DIR, or at a payload: --payload DIR"
     )
