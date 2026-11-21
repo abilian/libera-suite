@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from libera_build import detached
@@ -92,7 +93,7 @@ fi
         )
     if "ATTACHED" in begun:
         say(f"    {b.platform:<14} still running there from before: watching it")
-    verdict = watch(ctx, b, name, log, started)
+    verdict = watch(ctx, b, name, log)
     elapsed = mmss(time.monotonic() - started)
     if problem := plan.build_problem(b.platform, verdict, elapsed):
         return f"{problem}\n       {log}\n{tail(log)}"
@@ -102,18 +103,47 @@ fi
     return None
 
 
-def watch(ctx: Context, b: Builder, name: str, log: Path, started: float) -> str:
+@dataclass
+class Seen:
+    """What a watch has read of a job's output so far."""
+
+    echo: Callable[[str], None] | None = None
+    lines: int = 0
+    verdict: str = ""
+    said: str = ""  # the last line that said something
+
+    def take(self, text: str) -> None:
+        for line in text.splitlines():
+            self.lines += 1
+            if line.startswith(f"{MARK}="):
+                self.verdict = line.split("=", 1)[1].strip()
+            elif self.echo:
+                self.echo(line)
+            # A heartbeat that lands on a blank line otherwise reports "115
+            # lines" and nothing else.
+            self.said = line if line.strip() else self.said
+
+
+def watch(
+    ctx: Context,
+    b: Builder,
+    name: str,
+    log: Path,
+    echo: Callable[[str], None] | None = None,
+) -> str:
     """Poll a detached job until it ends; its verdict line, "" for none.
 
     A heartbeat rather than the output itself: `lb container run payload` is
     tens of thousands of lines and two of them interleaved is noise; silence
-    for two hours is worse. The log has everything. A builder that does not
-    answer for `ctx.unreachable_seconds` ends the watch, saying the job may
-    still be running there: the same phase, run again, picks it up.
+    for two hours is worse. The log has everything. With `echo` (one job,
+    followed by `lb on`), each line goes to it instead, the verdict's aside.
+    A builder that does not answer for `ctx.unreachable_seconds` ends the
+    watch, saying the job may still be running there: the same phase, run
+    again, picks it up.
     """
     host = ctx.host_for(b)
-    offset, lines, verdict, said = 0, 0, "", ""
-    last_beat = last_heard = time.monotonic()
+    offset, seen = 0, Seen(echo)
+    started = last_beat = last_heard = time.monotonic()
     with log.open("w", encoding="utf-8") as fh:
         while True:
             poll = detached.parse_poll(host.capture(detached.poll_script(name, offset)))
@@ -126,34 +156,20 @@ def watch(ctx: Context, b: Builder, name: str, log: Path, started: float) -> str
                         "still be running there, and the same phase, run again, "
                         "watches it"
                     )
-                if now - last_beat >= HEARTBEAT_SECONDS:
-                    say(
-                        f"    {b.platform:<14} {mmss(now - started)}"
-                        f"  no answer for {mmss(silent)}"
-                    )
-                    last_beat = now
-                time.sleep(ctx.poll_seconds)
-                continue
-            last_heard = now
-            if poll.gone:
-                return ""
-            fh.write(poll.text)
-            fh.flush()
-            offset = poll.size
-            for line in poll.text.splitlines():
-                lines += 1
-                if line.startswith(f"{MARK}="):
-                    verdict = line.split("=", 1)[1].strip()
-                # The last line that said something: a heartbeat that lands on
-                # a blank line otherwise reports "115 lines" and nothing else.
-                said = line if line.strip() else said
-            if poll.done or not poll.alive:
-                return verdict
-            if now - last_beat >= HEARTBEAT_SECONDS:
-                say(
-                    f"    {b.platform:<14} {mmss(now - started)}"
-                    f"  {lines} lines  {shorten(said)}"
-                )
+                beat = f"no answer for {mmss(silent)}"
+            else:
+                last_heard = now
+                if poll.gone:
+                    return ""
+                fh.write(poll.text)
+                fh.flush()
+                offset = poll.size
+                seen.take(poll.text)
+                if poll.done or not poll.alive:
+                    return seen.verdict
+                beat = "" if echo else f"{seen.lines} lines  {shorten(seen.said)}"
+            if beat and now - last_beat >= HEARTBEAT_SECONDS:
+                say(f"    {b.platform:<14} {mmss(now - started)}  {beat}")
                 last_beat = now
             time.sleep(ctx.poll_seconds)
 

@@ -322,6 +322,9 @@ def test_on_runs_a_command_there_and_returns_its_status(driver, home, capsys):
     )
     assert on(replace(options, root=driver)) == 0
     assert "stand-in lb ok x" in capsys.readouterr().out
+    # Detached there, and followed: what it printed is kept here too.
+    log = driver / "tmp" / "remote" / "on-linux-arm64.log"
+    assert "stand-in lb ok x" in log.read_text()
     failing = replace(options, root=driver, command=("fail",), update=False)
     assert on(failing) == 3
 
