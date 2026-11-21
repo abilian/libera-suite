@@ -204,18 +204,26 @@ fi
 # en.json alone. A missing one is undefined, and one of those, the toolbar's
 # tipSmartPicker, throws while Words is loading: in French, Italian, Spanish
 # and Portuguese it never becomes editable. See notes/24-interface-language.md.
+# A locale that translates nothing is not shipped: Weblate adds a language as
+# an empty file (Estonian, `{}`, 2026-11-19), which filled with English would
+# have the payload claim a language it does not speak, and the host offer it.
 echo "==> locales, English where a translation is missing"
 py - "$PAYLOAD"/web-apps/apps/*/main/locale <<'FILL'
 import json, pathlib, sys
 for folder in map(pathlib.Path, sys.argv[1:]):
     english = json.loads((folder / "en.json").read_text(encoding="utf-8"))
-    filled = 0
+    filled, dropped = 0, []
     for path in folder.glob("*.json"):
         strings = json.loads(path.read_text(encoding="utf-8"))
+        if path.stem != "en" and all(english.get(k) == v for k, v in strings.items()):
+            path.unlink()
+            dropped.append(path.stem)
+            continue
         if english.keys() - strings.keys():
             path.write_text(json.dumps({**english, **strings}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             filled += 1
-    print(f"  {folder.parent.parent.name}: {filled} languages filled in")
+    left_out = f", left out (nothing translated): {' '.join(sorted(dropped))}" if dropped else ""
+    print(f"  {folder.parent.parent.name}: {filled} languages filled in{left_out}")
 FILL
 
 # The blank documents, from document-templates: new/<locale>/new.docx and its
