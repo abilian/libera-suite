@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from support.browsers import launch
+# Not support.browsers: it imports Playwright, which the e2e group alone
+# installs, and Alpine's CI leaves that group out (no musl wheels). Imported
+# here, it made every tier fail to collect there. Take it from its module.
 from support.make_sample_pdf import (
     FORM_FIELDS,
     NESTED,
@@ -21,7 +23,6 @@ __all__ = [
     "find_free_port",
     "key_cookie",
     "keyed",
-    "launch",
     "make_form_pdf",
     "make_nested_pdf",
     "make_pdf",

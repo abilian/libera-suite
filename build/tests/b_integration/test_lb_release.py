@@ -10,6 +10,7 @@ libera_build` there, as on a builder.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from dataclasses import replace
@@ -96,11 +97,24 @@ def driver(tmp_path) -> Path:
     return root
 
 
+# What precheck asks a builder for, beyond git and python, which these tests
+# run for real. A bare CI image has none of them, and the preflight then
+# refused the stand-in builder for what the machine running the tests lacked.
+TOOLS = ("uv", "node", "npm", "docker")
+
+
 @pytest.fixture
-def home(tmp_path) -> Path:
-    """A builder's `~`."""
+def home(tmp_path, monkeypatch) -> Path:
+    """A builder's `~`, and the tools a builder has: stand-ins at the end of
+    PATH, so that a machine with the real ones keeps using them."""
     found = tmp_path / "builder-home"
     found.mkdir()
+    tools = tmp_path / "builder-tools"
+    tools.mkdir()
+    for tool in TOOLS:
+        (tools / tool).write_text("#!/bin/sh\nexit 0\n")
+        (tools / tool).chmod(0o755)
+    monkeypatch.setenv("PATH", f"{os.environ['PATH']}{os.pathsep}{tools}")
     return found
 
 

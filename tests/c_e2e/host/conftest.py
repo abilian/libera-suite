@@ -23,7 +23,8 @@ from urllib.parse import urlparse
 
 import pytest
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-from support import find_free_port, keyed, launch
+from support import find_free_port, keyed
+from support.browsers import launch
 
 from c_e2e.conftest import SYNC_REPORTS, flush_reports
 from libera import payload as payload_mod
