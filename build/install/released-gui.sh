@@ -30,7 +30,8 @@
 # not load in it. The second is the interesting one, and a script that stopped
 # at "the process is still running" would call it a pass.
 #
-# Requires: xvfb-run, xwininfo, and ImageMagick (`import` and `identify`).
+# Requires: xvfb-run, dbus-run-session, xwininfo, and ImageMagick (`import` and
+# `identify`).
 # Deliberately not scrot and PIL, which is what build/test-linux/gui-smoke.py
 # uses: those are in the test image, and this has to run on a plain host.
 set -eu
@@ -83,12 +84,12 @@ OUT="${OUT:-${PWD}/released-gui.png}"
 # --- what this machine can do -------------------------------------------------
 
 missing=
-for tool in xvfb-run xwininfo import identify; do
+for tool in xvfb-run dbus-run-session xwininfo import identify; do
     command -v "$tool" >/dev/null 2>&1 || missing="$missing $tool"
 done
 [ -z "$missing" ] || die "this machine has no$missing
-       Debian, Ubuntu:  sudo apt install xvfb x11-utils imagemagick
-       Fedora:          sudo dnf install xorg-x11-server-Xvfb xorg-x11-utils ImageMagick"
+       Debian, Ubuntu:  sudo apt install xvfb dbus-daemon x11-utils imagemagick
+       Fedora:          sudo dnf install xorg-x11-server-Xvfb dbus-daemon xorg-x11-utils ImageMagick"
 
 # --- what to run, and on what document ----------------------------------------
 
@@ -178,7 +179,12 @@ rm -f "$OUT"
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 
-xvfb-run -a --server-args='-screen 0 1600x1000x24' sh -c "
+# Each Xvfb gets a session bus of its own. On the login's bus, systemd starts
+# the desktop portal without a DISPLAY, its GTK backend times out on every
+# call, and WebKit, which asks the portal first, never loaded the page: a
+# black window on Ubuntu 26.04 (linux-arm64, 0.7.3's stage), where the same
+# bundle on a private bus drew the editor in 15 s.
+xvfb-run -a --server-args='-screen 0 1600x1000x24' dbus-run-session -- sh -c "
     # xvfb-run starts Xvfb, sleeps three seconds and runs this whether Xvfb
     # listens or not, with its errors sent to /dev/null. An Xvfb that cannot
     # start (Linuxbrew's, missing its libLLVM, on 2026-11-10) then shows up as
@@ -253,7 +259,7 @@ if [ -n "$python" ]; then
     rm -rf "$five"
     # shellcheck disable=SC2086  # $python is a command of several words
     said=$(xvfb-run -a --server-args='-screen 0 1600x1000x24' \
-        env WEBKIT_DISABLE_COMPOSITING_MODE=1 LIBGL_ALWAYS_SOFTWARE=1 \
+        dbus-run-session -- env WEBKIT_DISABLE_COMPOSITING_MODE=1 LIBGL_ALWAYS_SOFTWARE=1 \
         sh "$here/five-minutes.sh" "$here/released-gui-driver.py" "$five" $python)
     printf '%s\n' "$said" | sed 's/^/    /'
     for editor in DOCX XLSX PPTX; do
