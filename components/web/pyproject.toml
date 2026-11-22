@@ -4,7 +4,7 @@
 [project]
 name = "libera-web"
 # The payload version, which libera pins exactly; a test holds the three equal.
-version = "0.7.3"
+version = "0.7.4"
 description = "Libera Suite's editors, fonts and dictionaries, built from Euro-Office sources"
 readme = "README.md"
 license = "AGPL-3.0-only"
@@ -14,7 +14,7 @@ requires-python = ">=3.12"
 Source = "https://github.com/abilian/libera-suite"
 
 [build-system]
-requires = ["hatchling>=1.27", "libera-core==0.7.3"]
+requires = ["hatchling>=1.27", "libera-core==0.7.4"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
