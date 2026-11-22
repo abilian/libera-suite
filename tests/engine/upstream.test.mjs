@@ -49,9 +49,11 @@ const NOT_IN_NODE = {
     "needs the sdkjs-ooxml add-on, which we do not build",
 };
 
-// Failures seen in Node and not yet explained, by page and test name; their
-// assertions are reported, not failed, until someone runs the page in a
-// browser to see whether they fail there too.
+// Failures seen in Node only, by page and test name; their assertions are
+// reported, not failed. The one here passes in Chromium, alone and in its page,
+// and fails in Node alone too, on the bundle or the sources, with native.js's
+// engine flags off and the same locale: something in the browser-less
+// environment, not yet found (notes/experiments/e1-engine-tests-in-node.md).
 const UNEXPLAINED = {
   "cell/spreadsheet-calculation/whatIfAnalysisTests.html": [
     "Test: Example - Delivery goods in stores. Linear programming. Minimize",

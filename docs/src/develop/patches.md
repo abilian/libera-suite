@@ -104,5 +104,7 @@ Then it builds the JavaScript with the patches that apply, taking `x2t` from the
 Run weekly, it makes a sync a week's drift rather than five weeks' at once, which is what the 2026-11-19 sync was. A crontab line on the Mac that builds; cron reads neither `.envrc` nor your shell's `PATH`, so the build root is named and the command runs in a login shell:
 
 ```sh
-0 7 * * 1  cd /path/to/libera-suite && BUILD_ROOT=/path/to/build-root zsh -lc 'git pull -q && uv run --no-sync lb payload canary' > tmp/canary.log 2>&1
+0 7 * * 1  cd /path/to/libera-suite && BUILD_ROOT=/path/to/build-root zsh -lc 'uv run --no-sync lb payload canary' > tmp/canary.log 2>&1
 ```
+
+It tries the queue the checkout holds, and pulls nothing: an unattended `git pull` into a working copy ahead of its remote merges or stops, unseen. On macOS, check once that cron may read the drive the build root is on, which the system can refuse for a removable volume: a test line that lists it, a minute ahead, then its output.
