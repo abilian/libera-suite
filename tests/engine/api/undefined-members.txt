@@ -34,7 +34,7 @@ AscCommon.Base64Encode  dead  slide/Editor/Format/Timing.js: only under GENERATE
 AscCommon.CRoleSettings  add-on  forms add-on (roles)
 AscCommon.CT_OMathPara  add-on  OOXML add-on, read behind typeof
 AscCommon.CZLibEngineJS  outside  common/zlib/engine/zlib.js, the WebAssembly zlib
-AscCommon.Editor_Copy  unverified  word/Drawing/HtmlPage.js
+AscCommon.Editor_Copy  dead  word/Drawing/HtmlPage.js: checkViewerModeKeys, whose only call is commented out
 AscCommon.PathBoolean  optional  read behind a test (common/apiBase.js)
 AscCommon.SafariIntervalFocus  dead  slide/api.js: setInterval of undefined, a no-op
 AscCommon.g_defaultThemes  optional  slide/Drawing/ThemeLoader.js: `|| []`
@@ -48,32 +48,32 @@ AscCommonExcel.CT_SharedStrings  add-on  OOXML add-on class
 AscCommonExcel.CT_SheetData  add-on  OOXML add-on class
 AscCommonExcel.CT_Value  add-on  OOXML add-on class
 AscCommonExcel.PrepareComments  add-on  OOXML add-on
-AscCommonExcel.cFormulaLocaleInfo  unverified  cell/view/WorksheetView.js: assembleLocale(undefined, ...)
-AscDFH.historyitem_FieldContent_AddItem  unverified  a change type registered and never defined
-AscDFH.historyitem_FieldContent_RemoveItem  unverified  as above
-AscDFH.historyitem_MathContent_TextPr  unverified  as above
-AscDFH.historyitem_Pdf_Annot_In_Reply_To  unverified  as above
-AscDFH.historyitem_TableId_Reset  unverified  as above
-AscDFH.historyitem_type_ColorsDefHdr  unverified  a class type for the change factory, never defined
-AscDFH.historyitem_type_ColorsDefHdrLst  unverified  as above
-AscDFH.historyitem_type_DataBinding  unverified  as above
-AscDFH.historyitem_type_FlatTx  unverified  as above
-AscDFH.historyitem_type_StyleDefHdr  unverified  as above
-AscDFH.historyitem_type_StyleDefHdrLst  unverified  as above
-AscDFH.historyitem_type_TxPr  unverified  as above
-AscDFH.historyitem_type_XmlColumnPr  unverified  as above
-AscFormat.BackdropAnchor  unverified  a class registered in the change factory (common/TableId.js), never defined
-AscFormat.BackdropNorm  unverified  as above
-AscFormat.BackdropUp  unverified  as above
+AscCommonExcel.cFormulaLocaleInfo  defect  cell/view/WorksheetView.js: Ctrl+Enter filling a range with a dynamic-array formula assembles it with no locale (English names, local separators) and parses it as local; the nine other callers pass cFormulaFunctionToLocale
+AscDFH.historyitem_FieldContent_AddItem  dead  CChangesFormFieldAddItem, which nothing creates; registered under the factory's `undefined` key
+AscDFH.historyitem_FieldContent_RemoveItem  dead  as above, CChangesFormFieldRemoveItem
+AscDFH.historyitem_MathContent_TextPr  defect  CMathContent.setCtrPrp records it (linear equations built up, NamesOfLiterals.js); written to the change log as type 0, read back as a bare CChangesBase, so a save or a recovery replaying the log drops it
+AscDFH.historyitem_Pdf_Annot_In_Reply_To  defect  as above, recorded by CAnnotationBase.SetInReplyTo when a PDF comment gets a reply
+AscDFH.historyitem_TableId_Reset  dead  only in changesRelationMap, under the `undefined` key; no change has the type
+AscDFH.historyitem_type_ColorsDefHdr  dead  the class type of a class never defined (AscFormat.ColorsDefHdr); the change types derived from it, `undefined | n`, are registered nowhere
+AscDFH.historyitem_type_ColorsDefHdrLst  dead  the class type of a class never defined (AscFormat.ColorsDefHdrLst); the change types derived from it, `undefined | n`, are registered nowhere
+AscDFH.historyitem_type_DataBinding  dead  CDataBinding.getType's answer; a plain holder, never in the TableId or the history, and no caller reads getType
+AscDFH.historyitem_type_FlatTx  dead  the class type of a class never defined (AscFormat.FlatTx); the change types derived from it, `undefined | n`, are registered nowhere
+AscDFH.historyitem_type_StyleDefHdr  dead  the class type of a class never defined (AscFormat.StyleDefHdr); the change types derived from it, `undefined | n`, are registered nowhere
+AscDFH.historyitem_type_StyleDefHdrLst  dead  the class type of a class never defined (AscFormat.StyleDefHdrLst); the change types derived from it, `undefined | n`, are registered nowhere
+AscDFH.historyitem_type_TxPr  dead  the class type of a class never defined (AscFormat.TxPr); the change types derived from it, `undefined | n`, are registered nowhere
+AscDFH.historyitem_type_XmlColumnPr  dead  as above, CXmlColumnPr
+AscFormat.BackdropAnchor  defect  word/fromToJSON.js: ReaderFromJSON builds a 3D scene's backdrop from classes renamed Point3D and Vector3D, so FromJSON of one throws (measured: `AscFormat.BackdropAnchor is not a constructor`); the builder API's JSON, a SmartArt style's scene3d
+AscFormat.BackdropNorm  defect  as AscFormat.BackdropAnchor
+AscFormat.BackdropUp  defect  as AscFormat.BackdropAnchor
 AscFormat.CT_GraphicalObject  add-on  OOXML add-on class
 AscFormat.CT_GraphicalObjectData  add-on  OOXML add-on class
-AscFormat.ColorsDefHdr  unverified  as AscFormat.BackdropAnchor
-AscFormat.ColorsDefHdrLst  unverified  as above
-AscFormat.Coordinate  unverified  as AscFormat.BackdropAnchor
-AscFormat.FlatTx  unverified  as AscFormat.BackdropAnchor
-AscFormat.StyleDefHdr  unverified  as above
-AscFormat.StyleDefHdrLst  unverified  as above
-AscFormat.TxPr  unverified  as above
+AscFormat.ColorsDefHdr  dead  a SmartArt class registered in the change factory (common/TableId.js), never defined nor built: no object of it exists
+AscFormat.ColorsDefHdrLst  dead  a SmartArt class registered in the change factory (common/TableId.js), never defined nor built: no object of it exists
+AscFormat.Coordinate  dead  a SmartArt class registered in the change factory (common/TableId.js), never defined nor built: no object of it exists
+AscFormat.FlatTx  dead  a SmartArt class registered in the change factory (common/TableId.js), never defined nor built: no object of it exists
+AscFormat.StyleDefHdr  dead  a SmartArt class registered in the change factory (common/TableId.js), never defined nor built: no object of it exists
+AscFormat.StyleDefHdrLst  dead  a SmartArt class registered in the change factory (common/TableId.js), never defined nor built: no object of it exists
+AscFormat.TxPr  dead  a SmartArt class registered in the change factory (common/TableId.js), never defined nor built: no object of it exists
 AscFormat.XMLWRITER_DOC_TYPE_DOCX  add-on  OOXML add-on constant
 AscFormat.XMLWRITER_DOC_TYPE_PPTX  add-on  OOXML add-on constant
 AscFormat.XMLWRITER_DOC_TYPE_XLSX  add-on  OOXML add-on constant
