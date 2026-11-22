@@ -23,7 +23,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { EDITORS, load } from "./harness.mjs";
+import { bundles, EDITORS, load } from "./harness.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const SNAPSHOT = path.join(HERE, "api", "sdkjs-api.txt");
@@ -73,8 +73,8 @@ const ASSIGNED = /(?:\[\s*["'](asc_\w+)["']\s*\]|\.(asc_\w+))\s*=(?!=)/g;
 
 function bundleText(editor) {
   const sdkjs = process.env.LIBERA_SDKJS;
-  return ["sdk-all-min.js", "sdk-all.js"]
-    .map((f) => fs.readFileSync(path.join(sdkjs, editor, f), "utf8"))
+  return bundles(sdkjs, editor)
+    .map((f) => fs.readFileSync(f, "utf8"))
     .join("\n");
 }
 

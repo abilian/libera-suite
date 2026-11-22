@@ -41,6 +41,18 @@ export function scripts(editor, { sdkjs, webApps } = payloadPaths()) {
     path.join(sdkjs, "common/Native/native.js"),
     ...(fs.existsSync(stub) ? [stub] : []),
     path.join(webApps, "vendor/xregexp/xregexp-all-min.js"),
+    ...bundles(sdkjs, editor),
+  ];
+}
+
+/** An editor's engine, in the order it loads: the library the four editors
+ * share where a payload has one (E5; x2t loads it from DoctRenderer.config,
+ * after xregexp), then the editor's two bundles. The one list of them: the
+ * names check and the API inventory read their text. */
+export function bundles(sdkjs, editor) {
+  const shared = path.join(sdkjs, "common/sdk-shared.js");
+  return [
+    ...(fs.existsSync(shared) ? [shared] : []),
     path.join(sdkjs, editor, "sdk-all-min.js"),
     path.join(sdkjs, editor, "sdk-all.js"),
   ];

@@ -343,7 +343,7 @@ lint.extend-ignore = [
 #
 # Tests
 #
-"{tests,build/tests}/**/*.py" = [
+"{tests,build/tests,notes/experiments}/**/*.py" = [  # the experiments keep their tests beside their code
     "SLF001", # reaching into a module to check its wiring is the point
     "ARG001", # pytest matches hook parameters by name; they cannot be renamed
     "BLE001", #  blind-except

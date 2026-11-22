@@ -9,8 +9,7 @@
 // Asc.editor or AscCommon.CollaborativeEditing, is assigned somewhere). What
 // is read, held by no namespace and assigned nowhere is reported.
 import fs from "node:fs";
-import path from "node:path";
-import { EDITORS, load } from "./harness.mjs";
+import { bundles, EDITORS, load } from "./harness.mjs";
 
 // A name ends where its characters do ((?![\w$])): without it, a member
 // followed by `=` would backtrack one character short of the assignment and
@@ -35,10 +34,8 @@ export function undefinedMembers() {
         for (const member of Object.keys(engine[ns])) held.get(ns).add(member);
       }
     }
-    const text = ["sdk-all-min.js", "sdk-all.js"]
-      .map((f) =>
-        fs.readFileSync(path.join(process.env.LIBERA_SDKJS, editor, f), "utf8"),
-      )
+    const text = bundles(process.env.LIBERA_SDKJS, editor)
+      .map((f) => fs.readFileSync(f, "utf8"))
       .join("\n");
     for (const [, a, b] of text.matchAll(ASSIGNED)) assigned.add(a ?? b);
     for (const [, ns, a, b] of text.matchAll(READ)) {

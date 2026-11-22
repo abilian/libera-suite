@@ -1,0 +1,19 @@
+# Namespace members an editor's files read while they load, before the file
+# that defines them has run (tests/engine/deps-observed.mjs, which runs the
+# sources file by file and watches). Each is undefined at that moment. One per
+# line: the editor, the member, the file reading it, a note. deps.test.mjs
+# fails on one not listed here, and on a listed one no longer found.
+#
+# The list is short, and the static map finds no cycle among the files' load
+# order: E4's codemod can write imports in an order that works.
+word   AscFormat.CBlipFill            word/api.js                        a default built while the file loads
+word   AscFormat.CGraphicFrame        common/wordcopypaste.js            the same
+word   AscWord.fonthint_Default       word/Editor/Styles.js              read by a constructor run while the file loads
+word   AscCommonWord.CDocProtect      word/Editor/DocumentSettings.js    guarded by `undefined !==`: expected absent
+cell   AscFormat.CGraphicFrame        common/wordcopypaste.js            as in word
+cell   AscWord.fonthint_Default       word/Editor/Styles.js              as in word
+slide  AscWord.fonthint_Default       word/Editor/Styles.js              as in word
+slide  Asc.CAscSlideTransition       slide/Editor/Format/Slide.js       read before slide/apiCommon.js defines it
+slide  Asc.CAscSlideTransition       slide/Editor/Format/SlideMaster.js the same
+slide  Asc.CAscSlideTransition       slide/Editor/Format/Layout.js      the same
+visio  AscWord.fonthint_Default       word/Editor/Styles.js              as in word
