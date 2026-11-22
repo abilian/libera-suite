@@ -51,8 +51,10 @@ IN_SANDBOX = """
 set -eu
 root=$(libera --payload-status | sed -n 's/^payload: *//p')
 [ -n "$root" ] || { echo "libera --payload-status named no payload" >&2; exit 1; }
-blank=$(find "$root" -name new.docx | head -1)
-[ -n "$blank" ] || { echo "no new.docx under $root" >&2; exit 1; }
+# The default (US English) blank, by name: `find | head -1` takes whichever
+# locale the filesystem lists first, Galician on the arm64 builder.
+blank="$root/empty/new.docx"
+[ -f "$blank" ] || { echo "no $blank" >&2; exit 1; }
 cp "$blank" "$HOME/smoke.docx"
 exec libera --serve "$HOME/smoke.docx"
 """

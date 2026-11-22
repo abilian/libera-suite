@@ -157,8 +157,11 @@ if [ -z "$DOC" ]; then
         set -eu
         root=$(libera --payload-status | sed -n "s/^payload: *//p")
         [ -n "$root" ] || { echo "no payload" >&2; exit 1; }
-        blank=$(find "$root" -name new.docx | head -1)
-        [ -n "$blank" ] || { echo "no new.docx under $root" >&2; exit 1; }
+        # empty/new.docx, the default (US English) blank, by name: `find |
+        # head -1` took whichever locale the filesystem listed first, Galician
+        # on the arm64 builder, and its window said "Galego" on an A4 page.
+        blank="$root/empty/new.docx"
+        [ -f "$blank" ] || { echo "no $blank" >&2; exit 1; }
         cp "$blank" "$HOME/released-gui.docx"
     ' || die "could not take a blank document out of the payload"
     [ -f "$DOC" ] || die "the blank was not written to $DOC
