@@ -279,7 +279,17 @@ CHECK
 # MSYS2_ARG_CONV_EXCL, because MSYS rewrites any argument that looks like a
 # path, and `/J` does: mklink then gets a drive path where its switch was and
 # answers `Invalid switch`. With conversion off, `/c` is spelled plainly too.
-if [ -n "$EXE" ]; then
+#
+# A core borrowed from another build tree (CORE_BIN outside this one, as the
+# canary and the experiments do) is copied instead, and the copy is the
+# CORE_BIN from here on: DoctRenderer.config is written beside x2t below, and
+# x2t reads it when it makes the slide themes. Linked, both went to the other
+# tree, whose x2t then ran this tree's engine.
+if [ "$(cd "$CORE_BIN" && pwd -P)" != "$(mkdir -p "$OUT/core/bin" && cd "$OUT/core/bin" && pwd -P)" ]; then
+    rm -rf "$PAYLOAD/bin"
+    cp -R "$CORE_BIN" "$PAYLOAD/bin"
+    CORE_BIN="$PAYLOAD/bin"
+elif [ -n "$EXE" ]; then
     rm -rf "$PAYLOAD/bin"
     MSYS2_ARG_CONV_EXCL='*' cmd /c mklink /J \
         "$(cygpath -w "$PAYLOAD/bin")" "$(cygpath -w "$CORE_BIN")" >/dev/null
