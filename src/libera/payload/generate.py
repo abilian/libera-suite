@@ -42,7 +42,9 @@ def write_config(layout: locate.Layout) -> None:
     when it starts with "./". So the core wheel ships it, written for
     libera_web beside libera_core in one site-packages. It names no
     AllFonts.js: every conversion passes the index's own as m_sAllFontsPath,
-    which x2t takes over the config's.
+    which x2t takes over the config's. Nor jquery_native.js, which upstream
+    removed with the `$.ready()` core called (Euro-Office/core#311): named,
+    it was a missing file doctrenderer skipped.
     """
 
     def relative(path: Path) -> str:
@@ -53,7 +55,6 @@ def write_config(layout: locate.Layout) -> None:
     layout.doctrenderer_config.write_text(
         "<Settings>\n"
         f"<file>{relative(native / 'native.js')}</file>\n"
-        f"<file>{relative(native / 'jquery_native.js')}</file>\n"
         f"<file>{relative(xregexp)}</file>\n"
         f"<sdkjs>./{relative(layout.sdkjs)}</sdkjs>\n"
         "</Settings>\n",

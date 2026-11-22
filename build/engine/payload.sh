@@ -373,7 +373,9 @@ else
 fi
 
 # x2t looks for DoctRenderer.config beside its own binary, and the one shipped
-# in upstream packages has relative paths for the DocumentServer tree.
+# in upstream packages has relative paths for the DocumentServer tree. No
+# jquery_native.js: upstream removed it, once core stopped calling $.ready()
+# (Euro-Office/core#311); doctrenderer skipped the missing file in silence.
 echo "==> DoctRenderer.config"
 # winpath, because x2t.exe reads this file and MSYS only rewrites arguments,
 # never file contents: /c/b/... in here is a path no Windows program can open.
@@ -381,7 +383,6 @@ P="$(winpath "$PAYLOAD")"
 cat > "$CORE_BIN/DoctRenderer.config" <<CONF
 <Settings>
 <file>$P/sdkjs/common/Native/native.js</file>
-<file>$P/sdkjs/common/Native/jquery_native.js</file>
 <allfonts>$P/AllFonts.js</allfonts>
 <file>$P/web-apps/vendor/xregexp/xregexp-all-min.js</file>
 <sdkjs>$P/sdkjs</sdkjs>

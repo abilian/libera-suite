@@ -138,6 +138,7 @@ def test_the_converter_configuration_names_the_payload_relatively(tmp_path):
     assert "<sdkjs>./../sdkjs</sdkjs>" in config
     assert str(tmp_path) not in config
     assert "<allfonts>" not in config
+    assert "jquery_native" not in config, "upstream removed it"
 
 
 def test_each_converter_has_a_code_cache_of_its_own(tmp_path, state):
