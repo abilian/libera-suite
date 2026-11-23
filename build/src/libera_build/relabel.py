@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import shutil
 import zipfile
 from typing import TYPE_CHECKING
 
@@ -45,6 +46,9 @@ def relabel(wheel: Path, version: str, into: Path) -> Path:
     name, old, rest = wheel.name.split("-", 2)
     into.mkdir(parents=True, exist_ok=True)
     made = into / f"{name}-{version}-{rest}"
+    if old == version:
+        shutil.copy2(wheel, made)
+        return made
     old_info, new_info = f"{name}-{old}.dist-info/", f"{name}-{version}.dist-info/"
     record = []
     with zipfile.ZipFile(wheel) as src, zipfile.ZipFile(made, "w") as dst:

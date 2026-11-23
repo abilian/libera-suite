@@ -10,6 +10,7 @@ same way.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -18,10 +19,12 @@ from pathlib import Path
 
 from libera.manifest import Manifest
 from libera.payload import generate, locate
-from libera_build import buildbox
+from libera_build import buildbox, versions
+from libera_build.artifacts import core_wheel_name, web_wheel_name
 from libera_build.containers import host_arch
 from libera_build.process import run_here
-from libera_build.repo import build_root
+from libera_build.relabel import relabel
+from libera_build.repo import build_root, git
 from libera_build.report import RefusedError, say, step
 from libera_build.sources import source_problems
 
@@ -162,12 +165,80 @@ def unpack_web(into: Path, dist: Path) -> None:
     )
 
 
+# What the two wheels are built from, as paths in the repository, and what
+# under them is not: the release's own tooling, the install scripts, the
+# bundles' recipes and the tests. Generous on purpose: a change that cannot
+# affect the wheels costs one build, a change missed here ships a stale one.
+CACHE_INPUTS = (
+    "build",
+    "components",
+    "src/libera/__init__.py",
+    "src/libera/manifest.py",
+    "src/libera/payload",
+)
+CACHE_OUTSIDE = (
+    "build/src/libera_build/release",
+    "build/src/libera_build/origin",
+    "build/install",
+    "build/flatpak",
+    "build/tests",
+    "build/test-linux",
+)
+
+
+def _is_input(path: str) -> bool:
+    return not path.startswith(tuple(f"{outside}/" for outside in CACHE_OUTSIDE))
+
+
+def cache_key(repo: Path) -> str | None:
+    """What this machine's two wheels are built from, as one hash: the
+    commit's blobs under CACHE_INPUTS, and the platform. None when one of
+    them has uncommitted changes, which the commit does not describe.
+
+    The version is left out, where it is written in a file that is an input:
+    it is a label (relabel), and a release bump would otherwise build both
+    again for nothing.
+    """
+    changed = git(repo, "status", "--porcelain", "--", *CACHE_INPUTS).splitlines()
+    if any(_is_input(line[3:]) for line in changed):
+        say("    uncommitted changes to what the components are built from: no cache")
+        return None
+    version = versions.payload_version(repo)
+    labelled = {path for path, _ in versions.PLACES}
+    key = hashlib.sha256(locate.get_current_platform().encode())
+    listing = git(repo, "ls-tree", "-r", "HEAD", "--", *CACHE_INPUTS).splitlines()
+    for blob, path in (line.split("\t", 1) for line in listing):
+        if not _is_input(path):
+            continue
+        said = blob
+        if path in labelled:
+            text = (repo / path).read_text(encoding="utf-8")
+            said = hashlib.sha256(text.replace(version, "{}").encode()).hexdigest()
+        key.update(f"{said}\t{path}\n".encode())
+    return key.hexdigest()[:16]
+
+
 def wheels(repo: Path, out: Path) -> int:
     """This machine's core wheel, and the editors': `uv build` of the two
     projects, whose hooks build them from the pinned sources. The core's sdist
     too, which is what builds the wheel, so that every run tests it: it is
     what pip builds where PyPI has no wheel. The editors' build takes the core
-    wheel just made, not the workspace's, which uv would build a second time."""
+    wheel just made, not the workspace's, which uv would build a second time.
+
+    Unless they were built before from the same inputs (cache_key): then the
+    two wheels kept from that build, labelled with this tree's version, in
+    seconds. They are under $BUILD_ROOT/cache/components/, which is safe to
+    delete.
+    """
+    key = cache_key(repo)
+    platform = locate.get_current_platform()
+    cached = build_root() / "cache" / "components" / f"{platform}-{key}"
+    version = versions.payload_version(repo)
+    if key and cached.is_dir():
+        step(f"libera-core and libera-web, as built before from these inputs ({key})")
+        for wheel in sorted(cached.glob("*.whl")):
+            say(f"    {relabel(wheel, version, out).name}")
+        return 0
     step("libera-core")
     run_here(_uv_build(repo / CORE, out), "building libera-core", cwd=repo)
     step("libera-web")
@@ -175,6 +246,13 @@ def wheels(repo: Path, out: Path) -> int:
         repo / WEB, out, "--wheel", "--no-sources", "--find-links", str(out)
     )
     run_here(argv, "building libera-web", cwd=repo)
+    if key:
+        keep = cached.with_name(cached.name + ".tmp")
+        shutil.rmtree(keep, ignore_errors=True)
+        keep.mkdir(parents=True)
+        for name in (core_wheel_name(version, TAGS[platform]), web_wheel_name(version)):
+            shutil.copy2(out / name, keep / name)
+        keep.rename(cached)
     say(f"\n    the wheels are in {out}")
     return 0
 
