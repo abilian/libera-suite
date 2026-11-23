@@ -59,6 +59,9 @@ class ReleasedGuiOptions:
     # sent its part and serves it to itself, instead of what the CDN serves.
     origin: Path | None = None
     root: Path = REPO
+    # The version the staged origin holds: a release's, or a check's
+    # candidate (0.7.4+69906cd), which the tree's version is not.
+    version: str = ""
     host_for: Callable[[str], Host] = field(default=SshHost)
 
 
@@ -92,7 +95,7 @@ def on_host(host: Host, name: str, options: ReleasedGuiOptions) -> bool:
         script, shot_there = SCRIPT, SHOT
         command = f"sh {SCRIPT} --out {SHOT}"
     if options.origin:
-        app = versions.app_version(options.root)
+        app = options.version or versions.app_version(options.root)
         if not send_origin(host, name, options.origin, app):
             return False
         command = staged.serve(f'"$HOME/{staged.remote(app)}"', app) + command

@@ -108,7 +108,7 @@ def run(ctx: Context) -> None:
         host = ctx.host_for(b) if b.remote else LocalHost(Path.home())
         found += installs(host, b, dest, app, ctx.root)
     for b in inventory.gui_remotes(ctx.builders):
-        options = ReleasedGuiOptions(origin=zone, root=ctx.root)
+        options = ReleasedGuiOptions(origin=zone, root=ctx.root, version=app)
         if not released_gui.on_host(ctx.host_for(b), b.platform, options):
             found.append(f"{b.platform}: the staged bundle did not draw a window")
     problems(found, "nothing was stamped, and publish will refuse.")

@@ -502,3 +502,23 @@ class Shipping(Answering):
     @staticmethod
     def fetch(_there, _local):
         return 1, "no screenshot here"
+
+
+def test_a_candidate_is_sent_and_served_under_its_own_version(tmp_path):
+    """The tree says 9.9.9; the staged origin holds the check's candidate,
+    whose bundles carry its label."""
+    path = "bundles/libera-9.9.9+abc1234-amd64.flatpak"
+    for sent in ("install.sh", "bundles/latest", path):
+        (tmp_path / "zone" / sent).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / "zone" / sent).write_text(sent)
+    (tmp_path / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
+    host = Shipping("uname: Linux\n__LIBERA__=ok\n")
+    options = released_gui.ReleasedGuiOptions(
+        origin=tmp_path / "zone",
+        root=tmp_path,
+        version="9.9.9+abc1234",
+        host_for=lambda _: host,
+    )
+    released_gui.on_host(host, "linux-x86_64", options)
+    assert f"libera-stage/9.9.9+abc1234/origin/{path}" in [t for _, t in host.sent]
+    assert "export LIBERA_VERSION=9.9.9+abc1234" in host.scripts[-1]
