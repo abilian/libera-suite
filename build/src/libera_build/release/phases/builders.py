@@ -1,13 +1,14 @@
 """`bundles`: what users download, made by `lb` on the remote builders, in
 parallel.
 
-Every remote builder alike: each is told what its platform makes, each result
-is looked for there and then brought here. A Linux builder bundles a Flatpak,
-the Windows one makes the installer. Each builds the components it ships from
-the pins as it goes (the Flatpak through `lb components`, the installer
-through `uv sync`), so neither reads a core an earlier run left there. Windows
-used to be built and published by hand, from the Windows machine, as a release
-of its own.
+Every remote builder alike: each is sent this run's wheels for its platform
+(libera, its core, the editors, labelled with the run's version), told what
+its platform makes of them, and the result is looked for there and then
+brought here. A Linux builder bundles a Flatpak, the Windows one makes the
+installer. Packaging only: neither builds a component, so each ships the very
+files the stage installs, and a release makes its bundles again from its own
+labelled files in minutes. Windows used to be built and published by hand,
+from the Windows machine, as a release of its own.
 """
 
 from __future__ import annotations
@@ -15,16 +16,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from libera_build import versions
 from libera_build.artifacts import (
     BUNDLES_DIR,
     MIN_BUNDLE_BYTES,
     bundle_name,
     installer_name,
-    run_bundles,
 )
 from libera_build.hosts import remote_path
 from libera_build.release.builds import check_remote_file, run_builds
+from libera_build.release.phases import staging
 from libera_build.report import problems, say, step
 
 if TYPE_CHECKING:
@@ -48,18 +48,24 @@ class Bundle:
     files: tuple[str, ...]
 
 
+def wheels_there(app: str) -> str:
+    """Where a builder is sent the wheels it packages, under its home."""
+    return f"{staging.remote_stage(app)}/wheels"
+
+
 def bundle_of(b: Builder, app: str) -> Bundle | None:
     """A Flatpak per Linux architecture; the installer on Windows, with the
     SHA-256 that install.ps1 checks the download against. None for a Mac:
     macOS ships through Homebrew, which builds from source."""
+    wheels = f' --wheels "$HOME/{wheels_there(app)}"'
     if b.os == "linux":
         return Bundle(
-            f"app build flatpak{arch_suffix(b)}",
+            f"app build flatpak{arch_suffix(b)}{wheels}",
             (f"build/out/{bundle_name(app, b.arch)}",),
         )
     if b.os == "windows":
         setup = f"{BUNDLES_DIR}/{installer_name(app)}"
-        return Bundle("app build windows", (setup, f"{setup}.sha256"))
+        return Bundle(f"app build windows{wheels}", (setup, f"{setup}.sha256"))
     return None
 
 
@@ -69,20 +75,36 @@ def bundles(ctx: Context) -> None:
     whose seccomp filter is built for the architecture it runs on, and
     qemu-user does not carry one across. See notes/15-builders.md.
     """
-    app = versions.app_version(ctx.root)
+    app = ctx.version
     made = {b: bundle for b in ctx.remotes if (bundle := bundle_of(b, app))}
     if not made:
         say("    no remote builders that make a bundle; nothing to do")
         return
+    step(f"sending the {app} wheels to the builders")
+    found = []
+    for b in made:
+        host = ctx.host_for(b)
+        # Only this version's, so nothing else can be packaged; and every
+        # other candidate's goes, which a check a day would otherwise pile
+        # up there, 160 MB each (the arm64 builder's /tmp filled once).
+        there = wheels_there(app)
+        host.capture(
+            f'find "$HOME/{staging.STAGE_ROOT}" -mindepth 1 -maxdepth 1'
+            f" -name '*+*' ! -name '{app}' -exec rm -rf {{}} + 2>/dev/null;"
+            f' rm -rf "$HOME/{there}"'
+        )
+        if problem := staging.send_wheels(host, b, ctx.files / "pypi", app, there):
+            found.append(problem)
+        else:
+            say(f"    {b.platform:<14} {there}")
+    problems(found, "no bundle was started.")
 
     def verify_bundle(b: Builder, host: Host) -> str | None:
         path = f"{remote_path(b.repo)}/{made[b].files[0]}"
         return check_remote_file(b, host, path, MIN_BUNDLE_BYTES)
 
-    # Read once, at the commit the builds start from, as components does.
-    dest = run_bundles(ctx.root)
     run_builds(ctx, list(made), lambda b: made[b].command, verify_bundle, "bundling")
-    fetch_bundles(ctx, made, dest)
+    fetch_bundles(ctx, made, ctx.files / "bundles")
 
 
 def fetch_bundles(ctx: Context, made: dict[Builder, Bundle], dest: Path) -> None:
@@ -105,7 +127,11 @@ def fetch_bundles(ctx: Context, made: dict[Builder, Bundle], dest: Path) -> None
                     f"{b.platform}: {b.target}:{source} did not arrive\n"
                     f"       {out.strip()}"
                 )
-            elif first:
+                continue
+            if first:
                 size = landed.stat().st_size // 1048576
                 say(f"    {b.platform:<14} {landed.name}  {size} MB")
+            # Here now, so gone from there: a bundle per check would
+            # otherwise pile up on the builder.
+            ctx.host_for(b).capture(f"rm -f {remote_path(b.repo)}/{path}")
     problems(found, "the bundles are not all here.")

@@ -16,10 +16,13 @@ commit), and from there:
   the installer (released_gui). Each opens a document in a window;
 
 and only when all of that passed is the directory stamped, with each file's
-hash. `publish` uploads that directory and refuses anything else: a file
-changed or added after the stamp. Another commit's stage is another
-directory, so nothing from it can be published. `stage` runs as often as
-wanted; nothing leaves the builders.
+hash. A check stages its candidate (phases.labels), which `publish VERSION`
+refuses to start from unless the stamp still holds; then it stages the
+release, the same files labelled VERSION and the bundles made again from
+them, and uploads that directory and nothing else: a file changed or added
+after the stamp is refused. Another commit's stage is another directory, so
+nothing from it can be published. `stage` runs as often as wanted; nothing
+leaves the builders.
 """
 
 from __future__ import annotations
@@ -30,14 +33,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from libera.manifest import hash_file
-from libera_build import inventory, matrix, released_gui, repo, versions
+from libera_build import inventory, matrix, released_gui, versions
 from libera_build.artifacts import (
+    STAMP,
     app_wheel_name,
     bundle_name,
     core_wheel_name,
     installer_name,
-    run_bundles,
-    run_dir,
     web_wheel_name,
 )
 from libera_build.components import TAGS
@@ -55,28 +57,19 @@ if TYPE_CHECKING:
 # A window's picture of a page with a document on it; an empty canvas posts a
 # few kilobytes. The GUI tests measure the ink; this has no imaging library.
 MIN_SHOT_BYTES = 20_000
-STAMP = "STAGED.json"
-
-
-def folder(root: Path) -> Path:
-    return run_dir(root) / "staged"
-
-
-def origin_folder(root: Path) -> Path:
-    """The stage as the CDN zone holds it, beside it: links, not copies."""
-    return origin_of(folder(root))
+# Under a builder's home: what it is sent, a directory per version.
+STAGE_ROOT = "libera-stage"
 
 
 def origin_of(staged: Path) -> Path:
-    """The zone beside a stage, found from the stage rather than the commit:
-    a phase reads the run directory once, at its start."""
+    """The stage as the CDN zone holds it, beside it: links, not copies."""
     return staged.with_name("origin")
 
 
 def bundle_files(ctx: Context) -> list[Path]:
     """The bundles the builders of this run make, as `bundles` left them here."""
-    app = versions.app_version(ctx.root)
-    bundles = run_bundles(ctx.root)
+    app = ctx.version
+    bundles = ctx.files / "bundles"
     found = []
     for b in ctx.builders:
         if b.os == "linux":
@@ -88,10 +81,9 @@ def bundle_files(ctx: Context) -> list[Path]:
 
 
 def run(ctx: Context) -> None:
-    app = versions.app_version(ctx.root)
+    app = ctx.version
     step(f"staging {app}")
-    components, own = publishing.upload_files(ctx)
-    files = [*components, *own, *bundle_files(ctx)]
+    files = [*publishing.upload_files(ctx), *bundle_files(ctx)]
     problems(
         [
             f"{f} is not here: run the phase that makes it"
@@ -100,8 +92,7 @@ def run(ctx: Context) -> None:
         ],
         "nothing was staged.",
     )
-    head = repo.head(ctx.root)
-    dest = folder(ctx.root)
+    dest = ctx.files / "staged"
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
@@ -123,7 +114,10 @@ def run(ctx: Context) -> None:
     problems(found, "nothing was stamped, and publish will refuse.")
 
     stamp = {
-        "commit": head,
+        "commit": ctx.run.name,
+        "version": app,
+        # A check without the suite and the distributions: no release.
+        "fast": ctx.fast,
         "files": {
             f.name: hash_file(f) for f in sorted(dest.iterdir()) if f.name != STAMP
         },
@@ -144,9 +138,9 @@ def distros(ctx: Context) -> None:
     if not linux:
         say("    no Linux builder; nothing to check")
         return
-    problems(stamp_problems(ctx.root), "no distribution was tried.")
-    app = versions.app_version(ctx.root)
-    zone = origin_folder(ctx.root)
+    problems(stamp_problems(ctx.files / "staged"), "no distribution was tried.")
+    app = ctx.version
+    zone = origin_of(ctx.files / "staged")
     step(f"the staged release in {len(matrix.DISTROS)} distributions")
     found = []
     for b in linux:
@@ -191,7 +185,7 @@ def distros_on(
 
 def remote_stage(app: str) -> str:
     """Where a builder is sent the staged files, under its home directory."""
-    return f"libera-stage/{app}"
+    return f"{STAGE_ROOT}/{app}"
 
 
 def installs(host: Host, b: Builder, dest: Path, app: str, root: Path) -> list[str]:
@@ -265,12 +259,12 @@ def send_wheels(host: Host, b: Builder, dest: Path, app: str, stage: str) -> str
     return ""
 
 
-def stamp_problems(root: Path) -> list[str]:
-    """Why the staged directory is not what `publish` may upload, if it is not."""
-    dest = folder(root)
+def stamp_problems(dest: Path) -> list[str]:
+    """Why the staged directory `dest` is not what may be uploaded, or
+    released from, if it is not."""
     stamped = dest / STAMP
     if not stamped.is_file():
-        return [f"nothing is staged at {repo.head(root)[:9]}: run stage"]
+        return [f"nothing is staged in {dest}: run stage"]
     stamp = json.loads(stamped.read_text(encoding="utf-8"))
     found = []
     # The bundles' signatures are made by `publish`, beside them, after.
@@ -287,14 +281,18 @@ def stamp_problems(root: Path) -> list[str]:
 
 def publish(ctx: Context) -> None:
     """What `stage` stamped, uploaded; refused if it no longer holds."""
-    publishing.publish(ctx, folder(ctx.root), staged(ctx.root))
+    dest = ctx.files / "staged"
+    publishing.publish(ctx, dest, staged(dest))
 
 
-def staged(root: Path) -> list[Path]:
-    """The staged files, refused unless the stamp still holds."""
-    found = stamp_problems(root)
+def staged(dest: Path) -> list[Path]:
+    """The files staged in `dest`, refused unless the stamp still holds."""
+    found = stamp_problems(dest)
     if found:
         raise RefusedError("\n  ".join(["the stage does not hold:", *found]))
-    return sorted(
-        f for f in folder(root).iterdir() if f.name != STAMP and f.suffix != ".asc"
-    )
+    return sorted(f for f in dest.iterdir() if f.name != STAMP and f.suffix != ".asc")
+
+
+def stamp_of(dest: Path) -> dict:
+    """What `stage` wrote of the stage in `dest`."""
+    return json.loads((dest / STAMP).read_text(encoding="utf-8"))

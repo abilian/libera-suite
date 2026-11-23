@@ -176,6 +176,7 @@ payload: ## build the editor payload here (lb payload --help for the steps)
 	$(LB) payload build
 
 # The release, on the builders. Phases and --only: lb release --help.
-ship: ## the whole release: lb release check, then lb release publish
+ship: ## the whole release, as VERSION: lb release check, then lb release publish
+	@test -n "$(VERSION)" || { echo "make ship VERSION=X.Y.Z"; exit 1; }
 	$(LB) release check
-	$(LB) release publish
+	$(LB) release publish $(VERSION)

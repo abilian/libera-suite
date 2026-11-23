@@ -39,7 +39,7 @@ def test_a_check_never_publishes():
     with pytest.raises(RefusedError, match="a phase of `lb release publish`"):
         plan.choose_phases("check", ["publish"], narrowed=False)
     with pytest.raises(RefusedError, match="a phase of `lb release check`"):
-        plan.choose_phases("publish", ["stage"], narrowed=False)
+        plan.choose_phases("publish", ["components"], narrowed=False)
 
 
 def test_an_unknown_phase_is_refused():
@@ -106,13 +106,16 @@ MAC = Builder("macos-x86_64", "mac", "~/r")
 
 def test_each_platform_bundles_what_its_users_download():
     flatpak = builders.bundle_of(ARM, "0.4.0")
+    wheels = '--wheels "$HOME/libera-stage/0.4.0/wheels"'
     assert flatpak == builders.Bundle(
-        "app build flatpak --arch arm64",
+        f"app build flatpak --arch arm64 {wheels}",
         ("build/out/libera-0.4.0-arm64.flatpak",),
     )
     installer = builders.bundle_of(WINDOWS, "0.4.0")
     setup = "build/out/bundles/Libera-Suite-Setup-0.4.0.exe"
-    assert installer == builders.Bundle("app build windows", (setup, f"{setup}.sha256"))
+    assert installer == builders.Bundle(
+        f"app build windows {wheels}", (setup, f"{setup}.sha256")
+    )
     assert builders.bundle_of(MAC, "0.4.0") is None
 
 
@@ -166,7 +169,7 @@ def test_a_libera_that_pins_another_payload_does_not_go_up():
 def test_every_phase_has_an_action_and_every_action_a_phase():
     # Two tables kept in step by hand: one missing a key is a KeyError found
     # after the hours of building, not before.
-    assert list(run.ACTIONS) == list(plan.PHASES)
+    assert set(run.ACTIONS) == set(plan.PHASES)
 
 
 def test_every_lb_command_a_release_runs_is_one_lb_has():

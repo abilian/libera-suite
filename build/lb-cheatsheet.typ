@@ -66,7 +66,7 @@ Each command prints the script it runs before running it; the scripts stay usabl
   cmd("lb linux test --gui", [the gui tier, a real GTK window under Xvfb]),
   cmd("lb linux lint", [the type checkers with the Linux branches live (`make lint-linux`)]),
 )
-#note[`make verify`: lint, the whole suite, docs links, `lb payload check`, `lb payload test`. `make test`, `make lint`, `make test-gui`: as in any Python project. `make payload` is `lb payload build`; `make ship` is `lb release check`, then `lb release publish`.]
+#note[`make verify`: lint, the whole suite, docs links, `lb payload check`, `lb payload test`. `make test`, `make lint`, `make test-gui`: as in any Python project. `make payload` is `lb payload build`; `make ship VERSION=0.8.0` is `lb release check`, then `lb release publish 0.8.0`.]
 
 = The payload
 #commands(
@@ -122,22 +122,22 @@ Each command prints the script it runs before running it; the scripts stay usabl
 
 = A release
 #commands(
-  cmd("lb release bump 0.8.0", [the version of `libera`, `libera-core` and `libera-web`, in all six places; `0.8.0rc1` is a pre-release]),
   cmd("lb release check --dry-run", [the plan, running nothing]),
-  cmd("lb release check", [build and install everything as users will; publishes nothing]),
+  cmd("lb release check", [build and install everything as users will, as a candidate `0.7.4+<commit>`; publishes nothing]),
+  cmd("lb release check --fast", [the same without the suite and the distributions; no release starts from it]),
   cmd("lb release check stage", [one phase, or several; they always run in their order]),
   cmd("lb release check components bundles --only linux-x86_64", [one builder: narrows `update`, `components`, `bundles`]),
   cmd("lb release status", [where the release has got to: the tree, the run directory, PyPI]),
-  cmd("lb release publish", [the stage, as stamped, to PyPI and the CDN, then read back. No undo: asks on the terminal unless `--yes`]),
-  cmd("lb release publish downloads", [what users download, installed and photographed on the builders]),
+  cmd("lb release publish 0.8.0", [the checked commit as 0.8.0: the version committed (not pushed), the checked files labelled, the bundles made again, staged, then to PyPI and the CDN and read back. No undo: asks on the terminal unless `--yes`; `0.8.0rc1` is a pre-release]),
+  cmd("lb release publish 0.8.0 downloads", [what users download, installed and photographed on the builders]),
 )
 #table(
   columns: (auto, 1fr),
   stroke: none,
   inset: (x: 0pt, y: 1.4pt),
   column-gutter: 0.6em,
-  [*check*], raw("update  components  bundles  wheel  stage  distros"),
-  [*publish*], raw("publish  verify  downloads  tap  docs"),
+  [*check*], raw("update  components  wheel  label  bundles  stage  distros"),
+  [*publish*], raw("release  update  bundles  stage  publish  verify  downloads  tap  docs"),
 )
 #note[
   *Run directory* `build/out/release/<commit>/`: `pypi/`, `bundles/`, `staged/` with `STAGED.json`. A new commit is a new, empty run: run the phases again. *Don't commit during a run*: it stops after the phase that saw HEAD move.

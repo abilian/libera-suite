@@ -42,7 +42,7 @@ def tap(ctx: Context) -> None:
     """The formula moved to this release by the tap's own generator, which
     reads it from PyPI (`make update`, with brew's style check and audit),
     then committed and pushed to the branch brew reads."""
-    app = versions.app_version(ctx.root)
+    app = ctx.version
     if versions.is_prerelease(app):
         say(f"    {app} is a pre-release: the tap stays on the last release")
         return
@@ -86,7 +86,7 @@ def docs(ctx: Context) -> None:
     """The documentation site built and deployed (docs/Makefile's publish,
     through hop3), then read back: the site must serve the stamp of this
     checkout's docs/, which takes a moment to go live."""
-    app = versions.app_version(ctx.root)
+    app = ctx.version
     if versions.is_prerelease(app):
         say(f"    {app} is a pre-release: the site stays on the last release")
         return

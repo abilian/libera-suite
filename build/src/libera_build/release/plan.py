@@ -18,23 +18,34 @@ if TYPE_CHECKING:
 
 # The phases of each verb, in the only order they work in, with what each
 # does. `check` builds the release and installs it as users will, and
-# publishes nothing, so it runs at any commit, as often as wanted. `publish`
-# is the part with no undo: PyPI refuses a version it has already seen, so a
-# mistaken publish costs a version number rather than a retry. `stage`
-# follows everything that makes a file; `verify` and `downloads` follow
-# `publish`, because what they check is what users get. The macOS core is
-# built by `components`, into libera-core's wheel.
+# publishes nothing, so it runs at any commit, as often as wanted: what it
+# builds carries no release's version, only a candidate's (phases.labels).
+# `publish VERSION` turns a checked commit into that release: the version
+# committed, the checked files labelled with it, the bundles made again from
+# them, staged again, and only then the part with no undo. PyPI refuses a
+# version it has already seen, so a mistaken publish costs a version number
+# rather than a retry. `stage` follows everything that makes a file;
+# `verify` and `downloads` follow `publish`, because what they check is what
+# users get. The macOS core is built by `components`, into libera-core's
+# wheel.
 CHECK = {
     "update": "send this commit to each builder and check it out there",
     "components": "libera-core's wheel on each builder, in parallel, and libera-web"
-    " here, for PyPI: built from the pins (hours the first time)",
-    "bundles": "the Flatpaks and the Windows installer, each on its builder",
-    "wheel": "make verify, then the wheel",
-    "stage": "every file publish uploads, gathered and installed on every platform",
+    " here: built from the pins, or kept from a build of the same inputs",
+    "wheel": "make verify (not with --fast), then the wheel",
+    "label": "the wheels labelled as this commit's candidate, X.Y.Z+<commit>",
+    "bundles": "the Flatpaks and the Windows installer, each on its builder,"
+    " from the labelled wheels",
+    "stage": "every file, gathered and installed on every platform",
     "distros": "the staged Linux converter in a clean container of each"
-    " distribution the install page names, on each Linux builder",
+    " distribution the install page names, on each Linux builder (not with --fast)",
 }
 PUBLISH = {
+    "release": "the version committed on the checked commit (not pushed), the"
+    " checked files labelled with it, the sources built",
+    "update": "send that commit to each builder",
+    "bundles": "the Flatpaks and the Windows installer again, from those files",
+    "stage": "every file, gathered and installed on every platform again",
     "publish": "the staged files: the packages to PyPI, the bundles to the CDN",
     "verify": "libera installed from PyPI alone on each platform, a document converted",
     "downloads": "the published Flatpak and Windows installer, installed on the"
@@ -51,14 +62,22 @@ PHASES = {**CHECK, **PUBLISH}
 PER_BUILDER = ("update", "components", "bundles")
 
 
-def choose_phases(verb: str, asked: Sequence[str], *, narrowed: bool) -> list[str]:
+# What `check --fast` leaves out unless asked for: the suite (`wheel` then
+# builds the wheel alone) and the distributions, about half an hour of the
+# hour. What it keeps is every file built and installed on every platform.
+SLOW = ("distros",)
+
+
+def choose_phases(
+    verb: str, asked: Sequence[str], *, narrowed: bool, fast: bool = False
+) -> list[str]:
     """The phases of `verb` to run, in the order they work in, whatever order
     they were asked in: `stage wheel` means `wheel stage`, because there is
     only one order that works and a command line is a poor place to discover
     that.
 
     Asked for none, all of them; or, narrowed to some builders, those that
-    narrow with them.
+    narrow with them; or, fast, all but the slow ones.
     """
     own = VERBS[verb]
     if unknown := sorted(set(asked) - set(PHASES)):
@@ -69,6 +88,8 @@ def choose_phases(verb: str, asked: Sequence[str], *, narrowed: bool) -> list[st
         msg = f"{', '.join(other)}: a phase of `lb release {theirs}`, not of {verb}"
         raise RefusedError(msg)
     default = [p for p in own if p in PER_BUILDER] if narrowed else list(own)
+    if fast:
+        default = [p for p in default if p not in SLOW]
     wanted = set(asked) or set(default)
     phases = [p for p in own if p in wanted]
     if narrowed and (spanning := [p for p in phases if p not in PER_BUILDER]):
@@ -202,7 +223,7 @@ def upload_problems(
     which were nowhere: every install of it failed to resolve.
     """
     found = [
-        f"{name} is not here: run the components phase, or wheel"
+        f"{name} is not here: run the phase that makes it (label, or release)"
         for name in wanted
         if name not in present
     ]

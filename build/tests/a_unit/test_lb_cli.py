@@ -122,10 +122,17 @@ def test_check_is_called_here_with_its_phases_and_options():
 
 
 def test_publish_asks_unless_yes_and_narrows_nothing():
-    (call,) = cli.plan(["release", "publish", "--yes"])
-    assert call == cli.Call(run, (RunOptions("publish", yes=True),))
+    (call,) = cli.plan(["release", "publish", "0.7.5", "--yes"])
+    assert call == cli.Call(run, (RunOptions("publish", version="0.7.5", yes=True),))
     with pytest.raises(SystemExit):
-        cli.plan(["release", "publish", "--only", "linux-arm64"])
+        cli.plan(["release", "publish", "0.7.5", "--only", "linux-arm64"])
+    with pytest.raises(SystemExit):
+        cli.plan(["release", "publish"])
+
+
+def test_check_fast_is_passed_on():
+    (call,) = cli.plan(["release", "check", "--fast"])
+    assert call == cli.Call(run, (RunOptions("check", fast=True),))
 
 
 def test_dry_run_runs_nothing():
@@ -134,7 +141,7 @@ def test_dry_run_runs_nothing():
 
 
 def test_the_old_commands_are_gone():
-    for old in ("ship", "plan", "upload"):
+    for old in ("ship", "plan", "upload", "bump"):
         with pytest.raises(SystemExit):
             cli.plan(["release", old])
 
@@ -142,7 +149,7 @@ def test_the_old_commands_are_gone():
 # Commands that need arguments, and a line for each to plan with.
 NEEDS_ARGUMENTS = {
     "on": ["linux-arm64", "app", "test", "flatpak"],
-    "release bump": ["0.7.2"],
+    "release publish": ["0.7.5"],
     "app build": ["macos"],
     "app check": ["flatpak"],
     "app test": ["flatpak"],

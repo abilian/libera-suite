@@ -15,7 +15,7 @@ import urllib.request
 from typing import TYPE_CHECKING
 
 from libera_build import repo, versions
-from libera_build.artifacts import bundle_name, installer_name, run_bundles, run_pypi
+from libera_build.artifacts import STAMP, run_dir
 from libera_build.report import say, step
 
 if TYPE_CHECKING:
@@ -36,21 +36,23 @@ def status(root: Path) -> int:
     say(f"    commit       {repo.head(root)[:7]}  ({dirty} file(s) modified)")
     say(f"    tag          {tag.splitlines()[0] if tag.strip() else 'none on HEAD'}")
 
-    step(f"the release's files here, for {version}")
-    wheels = run_pypi(root)
-    bundles = run_bundles(root)
-    files = sorted(wheels.glob("*")) if wheels.is_dir() else []
-    files += [
-        f
-        for f in (
-            bundles / bundle_name(version, "amd64"),
-            bundles / installer_name(version),
-        )
-        if f.is_file()
-    ]
-    for f in files:
-        say(f"    {f.name:56} {f.stat().st_size / 1e6:6.1f} MB")
-    if not files:
+    # A run directory per commit, a directory in it per version its files
+    # carry: the check's candidate, and the release a publish made of it.
+    run = run_dir(root)
+    step(f"this commit's files, in {run.relative_to(root)}")
+    found = (
+        sorted(p for p in run.iterdir() if p.is_dir() and p.name != "pypi")
+        if run.is_dir()
+        else []
+    )
+    for labelled in found:
+        state = "staged" if (labelled / "staged" / STAMP).is_file() else "not staged"
+        files = [*sorted((labelled / "pypi").glob("*"))]
+        files += sorted((labelled / "bundles").glob("*"))
+        say(f"    {labelled.name}  ({len(files)} files, {state})")
+        for f in files:
+            say(f"        {f.name:56} {f.stat().st_size / 1e6:6.1f} MB")
+    if not found:
         say("    none yet: lb release check")
 
     step("PyPI")

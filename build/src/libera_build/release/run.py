@@ -21,6 +21,7 @@ from libera_build.release.phases import (
     chores,
     components,
     here,
+    labels,
     publishing,
     staging,
     update,
@@ -40,7 +41,9 @@ class RunOptions:
     verb: str  # check or publish
     phases: tuple[str, ...] = ()
     only: tuple[str, ...] = ()
+    version: str = ""  # publish's: the release's
     yes: bool = False
+    fast: bool = False
     dry_run: bool = False
     tap: Path = DEFAULT_TAP
     root: Path = repo.REPO
@@ -52,6 +55,8 @@ ACTIONS: dict[str, Callable[[Context], None]] = {
     "components": components.run,
     "bundles": builders.bundles,
     "wheel": here.wheel,
+    "label": labels.label,
+    "release": labels.release,
     "stage": staging.run,
     "distros": staging.distros,
     "publish": staging.publish,
@@ -69,13 +74,25 @@ def run(options: RunOptions) -> int:
     # of disk should not be handed a build just because its neighbour is free.
     chosen = inventory.narrow(builders_, list(options.only))
     phases = plan.choose_phases(
-        options.verb, options.phases, narrowed=bool(options.only)
+        options.verb, options.phases, narrowed=bool(options.only), fast=options.fast
     )
+    # What this run is about: for a check, this commit, under its candidate's
+    # label; for a publish, the commit that was checked, under the release's.
+    if options.verb == "publish":
+        versions.check_version(options.version)
+        checked = labels.checked_commit(options.root, options.version)
+        version = options.version
+    else:
+        checked = repo.head(options.root)
+        version = labels.candidate_version(options.root, checked)
     ctx = Context(
         root=options.root,
         builders=chosen,
         phases=phases,
+        version=version,
+        run=options.root / artifacts.RELEASE_DIR / checked,
         yes=options.yes,
+        fast=options.fast,
         host_for=options.host_for,
         tap=options.tap,
     )
@@ -87,9 +104,17 @@ def run(options: RunOptions) -> int:
     head = repo.head(options.root)
     for phase in ctx.phases:
         ACTIONS[phase](ctx)
+        if phase == "release":  # the one phase that commits, on purpose
+            head = repo.head(options.root)
         moved_problem(options.root, head, phase)
     step(f"done in {mmss(time.monotonic() - started)}")
-    app = versions.app_version(options.root)
+    app = ctx.version
+    if "stage" in phases and options.verb == "check":
+        if options.fast:
+            say("    checked with --fast, which no release starts from")
+        else:
+            say(f"    {app} checked; to release it: lb release publish X.Y.Z")
+        return 0
     prerelease = versions.is_prerelease(app)
     if "publish" in phases and prerelease:
         say(f"    {app} is a pre-release: pip, the install scripts and the")
@@ -127,8 +152,8 @@ def moved_problem(root: Path, head: str, phase: str) -> None:
 def show_plan(ctx: Context) -> None:
     step("the plan")
     say(f"    phases   {', '.join(ctx.phases)}")
-    say(f"    libera   {versions.app_version(ctx.root)}")
-    say(f"    payload  {versions.payload_version(ctx.root)}")
+    say(f"    version  {ctx.version}")
+    say(f"    checked  {ctx.run.name[:9]}")
     say(f"    here     {repo.branch(ctx.root)} at {repo.head(ctx.root)[:9]}")
     for b in ctx.builders:
         where = f"{b.target}:{b.repo}" if b.remote else "local"

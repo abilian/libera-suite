@@ -7,14 +7,8 @@ import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from libera_build import released_gui, report, versions
-from libera_build.artifacts import (
-    app_wheel_name,
-    core_sdist_name,
-    core_wheel_name,
-    run_pypi,
-    web_wheel_name,
-)
+from libera_build import released_gui, repo, report, versions
+from libera_build.artifacts import app_wheel_name, release_files
 from libera_build.components import TAGS
 from libera_build.hosts import LocalHost, facts_from
 from libera_build.origin import place, publish as cdn, staged as staged_origin
@@ -45,7 +39,7 @@ def publish(ctx: Context, folder: Path, staged: list[Path]) -> None:
     redirected, and a prompt nobody can see is a hang. Whatever the CDN could
     refuse is refused before PyPI is asked anything.
     """
-    app = versions.app_version(ctx.root)
+    app = ctx.version
     step(f"publishing libera {app}")
     pypi = [f for f in staged if f.name.endswith((".whl", ".tar.gz"))]
     components = [f for f in pypi if f.name.startswith(COMPONENTS)]
@@ -67,26 +61,25 @@ def publish(ctx: Context, folder: Path, staged: list[Path]) -> None:
             cwd=ctx.root,
         )
     cdn.extras(ctx.root, where, dry=False, bundles=folder)
+    # Here only, on the release's commit, which the person pushes, with it.
+    if not repo.git(ctx.root, "tag", "--list", app).strip():
+        repo.git(ctx.root, "tag", app)
+    say(f"    tagged {app} here: git push sourcehut main {app}")
 
 
-def upload_files(ctx: Context) -> tuple[list[Path], list[Path]]:
-    """The components and `libera` itself, as files here, or a refusal that
-    names what is missing before anything is staged."""
-    app = versions.app_version(ctx.root)
-    payload = versions.payload_version(ctx.root)
-    pypi = run_pypi(ctx.root)
-    names = [core_wheel_name(payload, TAGS[b.platform]) for b in ctx.builders]
-    names += [core_sdist_name(payload), web_wheel_name(payload)]
-    own = [pypi / app_wheel_name(app), pypi / f"libera-{app}.tar.gz"]
-    present = {p.name for p in pypi.glob("*")}
+def upload_files(ctx: Context) -> list[Path]:
+    """The components and `libera` itself at this run's version, as files
+    here, or a refusal that names what is missing before anything is staged."""
+    pypi = ctx.files / "pypi"
+    names = release_files(ctx.version, [TAGS[b.platform] for b in ctx.builders])
     found = plan.upload_problems(
-        present,
-        wanted=[*names, *(p.name for p in own)],
-        payload_version=payload,
-        requires=requires_of(own[0]),
+        {p.name for p in pypi.glob("*")},
+        wanted=names,
+        payload_version=ctx.version,
+        requires=requires_of(pypi / app_wheel_name(ctx.version)),
     )
     problems(found, "nothing was staged.")
-    return [pypi / name for name in names], own
+    return [pypi / name for name in names]
 
 
 def requires_of(wheel: Path) -> list[str]:
@@ -120,7 +113,7 @@ def verify(ctx: Context) -> None:
     every one of its installs failed, PyPI having no libera-core. PyPI's
     index can lag an upload by minutes, so each platform tries for a while.
     """
-    app = versions.app_version(ctx.root)
+    app = ctx.version
     step(f"libera {app} installed from PyPI, on each platform")
     script = install_script(app)
     found = []
@@ -144,7 +137,7 @@ def downloads(ctx: Context) -> None:
     Windows builder the way users get them, a window opened from each and
     photographed (released_gui). A pre-release moves no pointer, so there is
     nothing new for them to download."""
-    app = versions.app_version(ctx.root)
+    app = ctx.version
     if versions.is_prerelease(app):
         say(f"    {app} is a pre-release: the downloads stay on the last release")
         return

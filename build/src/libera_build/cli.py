@@ -38,7 +38,6 @@ from libera_build import (
     linux,
     report,
     tidy,
-    versions,
 )
 from libera_build.buildbox import BoxOptions
 from libera_build.containers import host_arch
@@ -506,17 +505,15 @@ def ask(question: str, refused: str) -> int:
     return 0
 
 
-def release_bump(args: argparse.Namespace) -> Steps:
-    return [Call(versions.bump, (REPO, args.version)), Step(("uv", "lock"))]
-
-
 def release_run(args: argparse.Namespace) -> Steps:
     """`check` and `publish`: the verb, and the phases of it asked for."""
     options = RunOptions(
         verb=args.verb,
         phases=tuple(args.phases),
         only=tuple(getattr(args, "only", None) or ()),
+        version=getattr(args, "version", ""),
         yes=getattr(args, "yes", False),
+        fast=getattr(args, "fast", False),
         dry_run=args.dry_run,
         tap=path_given(args, TAP) or DEFAULT_TAP,
     )
@@ -938,19 +935,26 @@ def add_release(groups: Groups) -> None:
         "release",
         "a release: built and tested on every platform, then published",
         "`check` builds the release and installs it as users will, publishing\n"
-        "nothing: run it at any commit, as often as wanted. `publish` is the one\n"
-        "that cannot be undone. `make ship` runs both. The builders are\n"
-        "build/builders.toml.\n\n"
+        "nothing: run it at any commit, as often as wanted. What it builds is\n"
+        "labelled as a candidate, X.Y.Z+<commit>, which PyPI refuses.\n"
+        "`publish VERSION` makes a checked commit that release: the version\n"
+        "committed (not pushed), the checked files labelled with it, then the\n"
+        "part that cannot be undone. `make ship VERSION=X.Y.Z` runs both. The\n"
+        "builders are build/builders.toml.\n\n"
         + examples(
             "release check",
+            "release check --fast",
             "release check components --only macos-arm64",
-            "release publish",
+            "release publish 0.7.5",
             "release status",
         ),
     )
     for verb, summary in (
         ("check", "build and test the release on every platform; publishes nothing"),
-        ("publish", "the checked release to PyPI and the CDN, then read back (asks)"),
+        (
+            "publish",
+            "a checked commit as VERSION, to PyPI and the CDN, read back (asks)",
+        ),
     ):
         p = g.command(
             verb,
@@ -959,16 +963,29 @@ def add_release(groups: Groups) -> None:
             *((TAP,) if verb == "publish" else ()),
             epilog=f"phases, always run in this order:\n{phase_list(VERBS[verb])}\n\n"
             + examples(
-                f"release {verb}",
-                f"release {verb} --dry-run",
                 *(
-                    ("release check components bundles --only linux-x86_64",)
+                    (
+                        "release check",
+                        "release check --dry-run",
+                        "release check --fast",
+                        "release check components bundles --only linux-x86_64",
+                    )
                     if verb == "check"
-                    else ()
+                    else (
+                        "release publish 0.7.5",
+                        "release publish 0.7.5 --dry-run",
+                        "release publish 0.7.5 tap docs",
+                    )
                 ),
             ),
         )
         p.set_defaults(verb=verb)
+        if verb == "publish":
+            p.add_argument(
+                "version",
+                metavar="VERSION",
+                help="the release's version, digits and dots, or a pre-release",
+            )
         # No `choices`: the refusal that names the other verb is plan's.
         p.add_argument(
             "phases",
@@ -986,6 +1003,12 @@ def add_release(groups: Groups) -> None:
                 metavar="PLATFORM",
                 help="one builder, by its platform in build/builders.toml; repeatable",
             )
+            p.add_argument(
+                "--fast",
+                action="store_true",
+                help="without the suite and the distributions; no release starts"
+                " from such a check",
+            )
         else:
             # The flag alone, not the YES knob: its variable, set for a tidy,
             # would skip the one question PyPI's no-undo is worth asking.
@@ -993,17 +1016,6 @@ def add_release(groups: Groups) -> None:
                 "--yes", action="store_true", help="do not ask before publishing"
             )
 
-    p = g.command(
-        "bump",
-        "the release's version, for libera, libera-core and libera-web alike",
-        release_bump,
-        epilog=examples("release bump 0.7.2", "release bump 0.8.0rc1"),
-    )
-    p.add_argument(
-        "version",
-        metavar="VERSION",
-        help="the new version, digits and dots, or a pre-release",
-    )
     g.command(
         "status",
         "where this release has got to, here and on PyPI (read-only)",
@@ -1074,9 +1086,8 @@ what is usually run:
   lb on linux-x86_64 COMMAND      any of these, on a builder (--update first)
 
   a release:
-  lb release bump X.Y.Z           the version, in all six places
   lb release check                built and installed everywhere, nothing published
-  lb release publish              the checked files to PyPI and the CDN (asks first)
+  lb release publish X.Y.Z        the checked commit as X.Y.Z, published (asks)
 
   lb help GROUP [COMMAND]         a group's commands, or one command's options"""
 

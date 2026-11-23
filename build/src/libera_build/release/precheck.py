@@ -14,7 +14,7 @@ from libera_build import repo, versions
 from libera_build.hosts import facts_from, remote_path
 from libera_build.origin import publish
 from libera_build.release import plan
-from libera_build.release.phases import chores, staging
+from libera_build.release.phases import chores, labels, staging
 from libera_build.report import problems, say, step
 
 if TYPE_CHECKING:
@@ -32,10 +32,7 @@ def run(ctx: Context) -> None:
     found += plan.signing_problems(ctx.phases, have_key=publish.signing_key_here())
 
     head = repo.head(ctx.root)
-    say(
-        f"    libera {versions.app_version(ctx.root)},"
-        f" payload {versions.payload_version(ctx.root)}"
-    )
+    say(f"    {ctx.version}, of {ctx.run.name[:9]}")
     say(f"    here at {head[:9]} on {repo.branch(ctx.root)}")
     dirty = len(repo.dirty(ctx.root))
     refused = plan.dirty_problems(
@@ -45,19 +42,26 @@ def run(ctx: Context) -> None:
         say(f"    note: {dirty} uncommitted file(s) here, which no builder sees")
     found += refused
 
-    # A publish without a stage in the same run uploads the one this commit
-    # staged before, which must still hold: found now, not after hours of
-    # building.
+    # A release starts from a candidate a full check staged, which must still
+    # hold, and writes the changelog's section, which must be there: found
+    # before its commit is made.
+    if "release" in ctx.phases:
+        found += release_problems(ctx)
+    # A publish without a stage in the same run uploads the one staged
+    # before, which must still hold.
     if "publish" in ctx.phases and "stage" not in ctx.phases:
-        found += staging.stamp_problems(ctx.root)
+        found += staging.stamp_problems(ctx.files / "staged")
     if "publish" in ctx.phases:
+        checked = ctx.run.name
         found += plan.unpushed_problems(
-            ctx.phases, on_a_remote=repo.on_a_remote(ctx.root), head=head
+            ctx.phases,
+            on_a_remote=repo.on_a_remote(ctx.root, checked),
+            head=checked,
         )
     # The chores after PyPI, refused now rather than after it, which has no
     # undo: a release up with its tap or its site left behind is the state
     # these phases exist to end. Not for a pre-release, which skips both.
-    if not versions.is_prerelease(versions.app_version(ctx.root)):
+    if not versions.is_prerelease(ctx.version):
         if "tap" in ctx.phases:
             found += chores.tap_problems(ctx.tap)
         if "docs" in ctx.phases:
@@ -69,6 +73,18 @@ def run(ctx: Context) -> None:
         else:
             say(f"    {b.platform:<14} local, left alone")
     problems(found, "nothing was started.")
+
+
+def release_problems(ctx: Context) -> list[str]:
+    """Why the checked commit cannot become the release, if it cannot."""
+    staged = labels.candidate(ctx.run) / "staged"
+    if found := staging.stamp_problems(staged):
+        return found
+    if staging.stamp_of(staged).get("fast"):
+        return [f"{staged.parent.name} was checked with --fast: check it in full"]
+    if repo.head(ctx.root) == ctx.run.name:  # not committed yet
+        return labels.changelog_problems(ctx.root)
+    return []
 
 
 ANSWER_TRIES = 4

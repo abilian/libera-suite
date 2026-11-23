@@ -61,7 +61,14 @@ def release(tmp_path: Path, version: str, tap_dir: Path) -> Context:
     root = tmp_path / "repo"
     root.mkdir(exist_ok=True)
     (root / "pyproject.toml").write_text(f'[project]\nversion = "{version}"\n')
-    return Context(root=root, builders=[], phases=["tap"], tap=tap_dir)
+    return Context(
+        root=root,
+        builders=[],
+        phases=["tap"],
+        version=version,
+        run=root / "run",
+        tap=tap_dir,
+    )
 
 
 def test_the_tap_moves_to_the_release_and_is_pushed(tmp_path, tap):
@@ -127,7 +134,9 @@ def test_the_site_is_believed_by_the_stamp_it_serves(
         chores, "deployed_commit", lambda: this if served == "this" else "f" * 40
     )
     monkeypatch.setattr(chores, "DEPLOYED_SECONDS", 0)
-    ctx = Context(root=root, builders=[], phases=["docs"])
+    ctx = Context(
+        root=root, builders=[], phases=["docs"], version="9.9.9", run=root / "run"
+    )
     if passes:
         chores.docs(ctx)
     else:

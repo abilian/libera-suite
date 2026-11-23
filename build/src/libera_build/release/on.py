@@ -20,11 +20,11 @@ import shlex
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from libera_build import detached, inventory, repo
+from libera_build import artifacts, detached, inventory, repo
 from libera_build.hosts import LB, MARK, facts_from, remote_path, ssh_host
 from libera_build.release import builds
 from libera_build.release.context import Context
-from libera_build.release.phases import update
+from libera_build.release.phases import labels, update
 from libera_build.repo import REPO
 from libera_build.report import RefusedError, say, step
 
@@ -76,24 +76,21 @@ def on(options: OnOptions) -> int:
             f"{b.platform} is this machine: run `lb {shlex.join(options.command)}` here"
         )
         raise RefusedError(msg)
-    if options.update:
-        update.run(
-            Context(
-                root=options.root,
-                builders=[b],
-                phases=["update"],
-                host_for=options.host_for,
-            )
-        )
+    # `lb on` makes no release files; the context names this commit's
+    # candidate and run directory only because every Context carries them.
     here = repo.head(options.root)
-    step(f"lb {shlex.join(options.command)}, on {b.platform} ({b.target})")
     ctx = Context(
         root=options.root,
         builders=[b],
         phases=[],
+        version=labels.candidate_version(options.root, here),
+        run=options.root / artifacts.RELEASE_DIR / here,
         host_for=options.host_for,
         poll_seconds=options.poll_seconds,
     )
+    if options.update:
+        update.run(ctx)
+    step(f"lb {shlex.join(options.command)}, on {b.platform} ({b.target})")
     name = f"on {shlex.join(options.command)}"
     host = options.host_for(b)
     begun = facts_from(

@@ -93,7 +93,7 @@ def dirty(root: Path) -> list[str]:
     return [line for line in out.splitlines() if line.strip()]
 
 
-def on_a_remote(root: Path) -> bool:
-    """Whether a remote has this commit, after asking every remote."""
+def on_a_remote(root: Path, commit: str = "HEAD") -> bool:
+    """Whether a remote has `commit`, after asking every remote."""
     git(root, "fetch", "--quiet", "--all")
-    return bool(git(root, "branch", "-r", "--contains", "HEAD").strip())
+    return bool(git(root, "branch", "-r", "--contains", commit).strip())

@@ -13,17 +13,13 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import zipfile
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from libera_build import detached, repo
-from libera_build.artifacts import (
-    MIN_BUNDLE_BYTES,
-    MIN_CORE_BYTES,
-    run_bundles,
-    run_pypi,
-)
+from libera_build.artifacts import MIN_BUNDLE_BYTES, MIN_CORE_BYTES, RELEASE_DIR
 from libera_build.containers import host_arch, linux_platform
 from libera_build.hosts import LocalHost
 from libera_build.inventory import Builder
@@ -85,7 +81,7 @@ def driver(tmp_path) -> Path:
     (root / "build" / "src" / "libera_build" / "__main__.py").write_text(STAND_IN)
     (root / "src" / "libera" / "payload").mkdir(parents=True)
     (root / "src" / "libera" / "payload" / "payload.version").write_text(
-        'version = "9.9"\n'
+        'version = "9.9.9"\n'
     )
     (root / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
     (root / ".gitignore").write_text("tmp/\nbuild/builders.toml\n__pycache__/\n")
@@ -129,9 +125,23 @@ def context(driver: Path, home: Path, phases: list[str]) -> Context:
         root=driver,
         builders=[ARM],
         phases=phases,
+        version="9.9.9",
+        run=driver / RELEASE_DIR / repo.head(driver),
         host_for=lambda _: LocalHost(home),
         poll_seconds=0.05,
     )
+
+
+def labelled(pypi: Path, *names: str) -> None:
+    """libera's wheel at 9.9.9 in `pypi`, pinning its components, and `names`."""
+    pypi.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(pypi / "libera-9.9.9-py3-none-any.whl", "w") as wheel:
+        wheel.writestr(
+            "libera-9.9.9.dist-info/METADATA",
+            "Requires-Dist: libera-core==9.9.9\nRequires-Dist: libera-web==9.9.9\n",
+        )
+    for name in names:
+        (pypi / name).write_bytes(b"w")
 
 
 def test_update_makes_the_checkout_and_puts_this_commit_in_it(driver, home):
@@ -255,11 +265,19 @@ def test_an_artifact_under_its_floor_fails_the_build(driver, home):
 
 
 def test_bundles_makes_the_installer_on_windows_and_brings_it_here(driver, home):
-    """The whole phase against a Windows builder: `lb app build windows` run there,
-    the installer looked for there, then it and its SHA-256 fetched here."""
+    """The whole phase against a Windows builder: the labelled wheels sent
+    there, `lb app build windows` run on them, the installer looked for there,
+    then it and its SHA-256 fetched here, and gone from there."""
     win = Builder("windows-x86_64", "win", "~/checkout")
     ctx = replace(context(driver, home, ["update", "bundles"]), builders=[win])
     update.run(ctx)
+    labelled(
+        ctx.files / "pypi",
+        "libera_core-9.9.9-py3-none-win_amd64.whl",
+        "libera_web-9.9.9-py3-none-any.whl",
+    )
+    old = home / "libera-stage" / "9.9.8+0000000"
+    old.mkdir(parents=True)
     made = home / "checkout" / "build" / "out" / "bundles"
     made.mkdir(parents=True)
     setup = made / "Libera-Suite-Setup-9.9.9.exe"
@@ -268,16 +286,29 @@ def test_bundles_makes_the_installer_on_windows_and_brings_it_here(driver, home)
     (made / f"{setup.name}.sha256").write_text(f"0  {setup.name}\n")
     builders.bundles(ctx)
     log = (driver / "tmp" / "remote" / "windows-x86_64.log").read_text()
-    assert "stand-in lb app build windows" in log
-    here = run_bundles(driver)
+    sent = home / "libera-stage" / "9.9.9" / "wheels"
+    assert f"stand-in lb app build windows --wheels {sent}" in log
+    assert sorted(p.name for p in sent.iterdir()) == [
+        "libera-9.9.9-py3-none-any.whl",
+        "libera_core-9.9.9-py3-none-win_amd64.whl",
+        "libera_web-9.9.9-py3-none-any.whl",
+    ]
+    assert not old.exists(), "another candidate's wheels stayed there"
+    here = ctx.files / "bundles"
     assert (here / setup.name).stat().st_size == MIN_BUNDLE_BYTES
     assert (here / f"{setup.name}.sha256").read_text() == f"0  {setup.name}\n"
+    assert not setup.exists(), "the installer stayed on the builder"
 
 
 def test_bundles_fails_when_the_installer_was_not_made(driver, home):
     win = Builder("windows-x86_64", "win", "~/checkout")
     ctx = replace(context(driver, home, ["update", "bundles"]), builders=[win])
     update.run(ctx)
+    labelled(
+        ctx.files / "pypi",
+        "libera_core-9.9.9-py3-none-win_amd64.whl",
+        "libera_web-9.9.9-py3-none-any.whl",
+    )
     with pytest.raises(RefusedError, match="1 of 1 builder"):
         builders.bundles(ctx)
 
@@ -292,7 +323,11 @@ def test_publish_refuses_a_tree_it_cannot_vouch_for(driver, home, capsys, monkey
     builders_toml(driver)
     (driver / "dirty.txt").write_text("uncommitted")
     options = RunOptions(
-        "publish", ("publish",), root=driver, host_for=lambda _: LocalHost(home)
+        "publish",
+        ("publish",),
+        version="9.9.10",
+        root=driver,
+        host_for=lambda _: LocalHost(home),
     )
     monkeypatch.delenv("ALLOW_DIRTY", raising=False)
     with pytest.raises(RefusedError, match="nothing was started"):
@@ -320,7 +355,11 @@ def test_a_commit_made_during_a_run_stops_it(driver, home, monkeypatch):
 def test_a_dry_run_names_the_builders_and_runs_nothing(driver, home, capsys):
     builders_toml(driver)
     options = RunOptions(
-        "publish", root=driver, dry_run=True, host_for=lambda _: LocalHost(home)
+        "publish",
+        version="9.9.10",
+        root=driver,
+        dry_run=True,
+        host_for=lambda _: LocalHost(home),
     )
     assert run(options) == 0
     out = capsys.readouterr().out
@@ -578,17 +617,17 @@ def test_the_components_phase_brings_each_builders_core_wheel_here(driver, home)
     fetched into this commit's run directory here, where stage gathers from."""
     ctx = replace(context(driver, home, ["update", "components"]), builders=[WIN])
     update.run(ctx)
-    made = home / "checkout" / "build" / "out" / "pypi" / "9.9"
+    made = home / "checkout" / "build" / "out" / "pypi" / "9.9.9"
     made.mkdir(parents=True)
-    wheel = made / "libera_core-9.9-py3-none-win_amd64.whl"
+    wheel = made / "libera_core-9.9.9-py3-none-win_amd64.whl"
     with wheel.open("wb") as f:
         f.truncate(MIN_CORE_BYTES)
 
     components.run(ctx)
 
     log = (driver / "tmp" / "remote" / "windows-x86_64.log").read_text()
-    assert "stand-in lb components build --out build/out/pypi/9.9" in log
-    here = run_pypi(driver) / wheel.name
+    assert "stand-in lb components build --out build/out/pypi/9.9.9" in log
+    here = ctx.run / "pypi" / wheel.name
     assert here.stat().st_size == MIN_CORE_BYTES
 
 
@@ -605,13 +644,13 @@ def test_stage_refuses_before_copying_when_the_components_are_missing(
 ):
     """Before anything is copied, and so long before anything goes up."""
     ctx = replace(context(driver, home, ["stage"]), builders=[WIN], yes=False)
-    run_pypi(driver).mkdir(parents=True)
-    (run_pypi(driver) / "libera-9.9.9-py3-none-any.whl").write_bytes(b"")
+    (ctx.files / "pypi").mkdir(parents=True)
+    (ctx.files / "pypi" / "libera-9.9.9-py3-none-any.whl").write_bytes(b"")
 
     with pytest.raises(RefusedError, match="nothing was staged"):
         staging.run(ctx)
-    assert not staging.folder(driver).exists()
+    assert not (ctx.files / "staged").exists()
 
     said = capsys.readouterr().out
-    assert "libera_core-9.9-py3-none-win_amd64.whl is not here" in said
+    assert "libera_core-9.9.9-py3-none-win_amd64.whl is not here" in said
     assert "asks for nothing" in said

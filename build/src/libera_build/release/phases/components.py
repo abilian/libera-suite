@@ -9,9 +9,10 @@ uploaded the wheel `make build` made, and no phase knew of the others.
 
 So each builder runs `lb components build`, which builds its core wheel from
 the core's source at the pins, its build tree kept as a compile cache (hours
-the first time), and the editors' wheel. Every platform's wheel, the Mac's
-source and the Mac's editors' wheel are then brought to one folder here, the
-run's `pypi/` (artifacts.run_pypi), which `stage` gathers from.
+the first time), and the editors' wheel, or takes both from a build of the
+same inputs (components.cache_key). Every platform's core wheel and the Mac's
+editors' wheel are then brought to one folder here, the run's `pypi/`, which
+`label` labels.
 """
 
 from __future__ import annotations
@@ -23,9 +24,7 @@ from libera_build import repo, versions
 from libera_build.artifacts import (
     MIN_CORE_BYTES,
     PYPI_DIR,
-    core_sdist_name,
     core_wheel_name,
-    run_pypi,
     web_wheel_name,
 )
 from libera_build.components import TAGS
@@ -50,12 +49,10 @@ if TYPE_CHECKING:
 
 
 def run(ctx: Context) -> None:
-    """Every selected builder's core wheel; the Mac's source and editors."""
+    """Every selected builder's core wheel; the Mac's editors."""
     payload = versions.payload_version(ctx.root)
     out = f"{PYPI_DIR}/{payload}"
-    # Read once, at the commit the builds start from: one made during them
-    # would send what they made to another commit's directory.
-    dest = run_pypi(ctx.root)
+    dest = ctx.run / "pypi"
     if ctx.remotes:
 
         def verify(b: Builder, host: Host) -> str | None:
@@ -102,8 +99,8 @@ def release_env() -> dict[str, str]:
 
 
 def fetch(ctx: Context, payload: str, out: str, dest: Path) -> None:
-    """Each remote builder's core wheel, here. Not its source or editors'
-    wheel: one of each goes up, the Mac's."""
+    """Each remote builder's core wheel, here. Not its editors' wheel: one
+    goes up, the Mac's."""
     step("collecting the components")
     dest.mkdir(parents=True, exist_ok=True)
     found = []
@@ -126,7 +123,7 @@ def missing(ctx: Context, payload: str, dest: Path) -> list[str]:
     """What the selected builders should have left in `dest` and did not."""
     wanted = [core_wheel_name(payload, TAGS[b.platform]) for b in ctx.builders]
     if [b for b in ctx.builders if not b.remote]:
-        wanted += [core_sdist_name(payload), web_wheel_name(payload)]
+        wanted.append(web_wheel_name(payload))
     return [
         f"{name} is not in {dest}" for name in wanted if not (dest / name).is_file()
     ]

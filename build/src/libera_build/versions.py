@@ -55,12 +55,18 @@ PLACES = (
 )
 
 
+def check_version(version: str) -> None:
+    """Refused unless `version` is one a release can have: digits and dots,
+    perhaps a pre-release; not a candidate's local label, which PyPI refuses."""
+    if not re.fullmatch(r"\d+(\.\d+)*([a-z]+\d+)?", version):
+        msg = f"not a version a release can have: {version}"
+        raise RefusedError(msg)
+
+
 def bump(root: Path, version: str) -> int:
     """Write `version` everywhere the release's version is, checking every
     place first: a bump that stopped half way would be a tree no test passes."""
-    if not re.fullmatch(r"\d+(\.\d+)*([a-z]+\d+)?", version):
-        msg = f"not a version: {version}"
-        raise RefusedError(msg)
+    check_version(version)
     old_app, old_payload = app_version(root), payload_version(root)
     places = [("pyproject.toml", 'version = "{}"', old_app)]
     places += [(path, pattern, old_payload) for path, pattern in PLACES]

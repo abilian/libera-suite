@@ -49,6 +49,8 @@ PYPI_DIR = "build/out/pypi"
 BUNDLES_DIR = "build/out/bundles"
 
 RELEASE_DIR = "build/out/release"
+# What `stage` writes beside the files it staged: their hashes, once installed.
+STAMP = "STAGED.json"
 
 
 def run_dir(root: Path) -> Path:
@@ -87,3 +89,20 @@ def core_sdist_name(payload_version: str) -> str:
 def web_wheel_name(payload_version: str) -> str:
     """libera-web's wheel, the same on every platform."""
     return f"libera_web-{payload_version}-py3-none-any.whl"
+
+
+def release_wheels(version: str, tags: list[str]) -> list[str]:
+    """The wheels of a release at `version`: a core per platform tag, the
+    editors, libera."""
+    cores = [core_wheel_name(version, tag) for tag in tags]
+    return [*cores, web_wheel_name(version), app_wheel_name(version)]
+
+
+def release_files(version: str, tags: list[str]) -> list[str]:
+    """Every file of a release at `version` that goes to PyPI: the wheels, and
+    the two sources, which a candidate (a local version, 0.7.4+69906cd) has
+    none of, since it never goes there."""
+    wheels = release_wheels(version, tags)
+    if "+" in version:
+        return wheels
+    return [*wheels, core_sdist_name(version), f"libera-{version}.tar.gz"]

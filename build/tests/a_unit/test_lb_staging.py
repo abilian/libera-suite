@@ -4,32 +4,51 @@ from __future__ import annotations
 
 import json
 import zipfile
-from pathlib import Path
+from dataclasses import replace
+from typing import TYPE_CHECKING
 
 import pytest
 from libera_build import released_gui
-from libera_build.artifacts import run_pypi
 from libera_build.inventory import Builder
 from libera_build.origin import staged as origin
 from libera_build.release.context import Context
-from libera_build.release.phases import here, publishing, staging
+from libera_build.release.phases import publishing, staging
 from libera_build.report import RefusedError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 HEAD = "c" * 40
 
 
+def context(root: Path, **kw) -> Context:
+    """A run of 9.9.9 at HEAD, its files under root/run/."""
+    return Context(
+        root=root,
+        builders=kw.pop("builders", []),
+        phases=kw.pop("phases", []),
+        version="9.9.9",
+        run=root / "run" / HEAD,
+        **kw,
+    )
+
+
+def folder(root: Path) -> Path:
+    """Where `context(root)` stages."""
+    return context(root).files / "staged"
+
+
 @pytest.fixture
-def stage(tmp_path, monkeypatch):
-    """A staged 9.9.9, stamped at HEAD."""
+def stage(tmp_path):
+    """A staged 9.9.9, stamped; its staged directory."""
     (tmp_path / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
-    monkeypatch.setattr(staging.repo, "head", lambda _root: HEAD)
-    dest = staging.folder(tmp_path)
+    dest = folder(tmp_path)
     dest.mkdir(parents=True)
     for name in ("libera-9.9.9-py3-none-any.whl", "libera-9.9.9-amd64.flatpak"):
         (dest / name).write_bytes(name.encode())
     files = {f.name: staging.hash_file(f) for f in dest.iterdir()}
     (dest / staging.STAMP).write_text(json.dumps({"commit": HEAD, "files": files}))
-    return tmp_path
+    return dest
 
 
 def test_a_stamp_holds_while_nothing_changed(stage):
@@ -39,7 +58,7 @@ def test_a_stamp_holds_while_nothing_changed(stage):
 
 
 def test_the_bundles_signatures_made_by_publish_are_not_a_change(stage):
-    (staging.folder(stage) / "libera-9.9.9-amd64.flatpak.asc").write_text("signed")
+    (stage / "libera-9.9.9-amd64.flatpak.asc").write_text("signed")
     assert staging.stamp_problems(stage) == []
     assert all(f.suffix != ".asc" for f in staging.staged(stage))
 
@@ -53,26 +72,24 @@ def test_the_bundles_signatures_made_by_publish_are_not_a_change(stage):
     ],
 )
 def test_publish_refuses_a_stage_that_moved(stage, change, says):
-    change(staging.folder(stage))
+    change(stage)
     (problem,) = staging.stamp_problems(stage)
     assert says in problem
     with pytest.raises(RefusedError, match="the stage does not hold"):
         staging.staged(stage)
 
 
-def test_another_commit_finds_nothing_staged(stage, monkeypatch):
-    """Each commit stages into a directory of its own, so a stage from the
-    commit before is not this one's to publish."""
-    monkeypatch.setattr(staging.repo, "head", lambda _root: "d" * 40)
-    (problem,) = staging.stamp_problems(stage)
-    assert "nothing is staged at ddddddddd: run stage" in problem
+def test_another_version_finds_nothing_staged(stage):
+    """Each version, a candidate's or a release's, stages into a directory of
+    its own, so the candidate's stage is not the release's to publish."""
+    other = stage.parent.with_name("9.9.10") / "staged"
+    (problem,) = staging.stamp_problems(other)
+    assert f"nothing is staged in {other}: run stage" in problem
 
 
-def test_each_builder_stages_the_bundle_its_users_download(tmp_path, monkeypatch):
-    monkeypatch.setattr(staging.repo, "head", lambda _root: HEAD)
-    (tmp_path / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
-    ctx = Context(
-        root=tmp_path,
+def test_each_builder_stages_the_bundle_its_users_download(tmp_path):
+    ctx = context(
+        tmp_path,
         builders=[
             Builder("macos-arm64", "local", "~/r"),
             Builder("linux-x86_64", "x", "~/r"),
@@ -127,7 +144,8 @@ def release_tree(root):
     payload = root / "src" / "libera" / "payload"
     payload.mkdir(parents=True)
     (payload / "payload.version").write_text('version = "9.9.9"\n')
-    pypi = run_pypi(root)
+    ctx = context(root, phases=["stage"])
+    pypi = ctx.files / "pypi"
     pypi.mkdir(parents=True)
     for name in ("libera_core-9.9.9.tar.gz", "libera_web-9.9.9-py3-none-any.whl"):
         (pypi / name).write_bytes(name.encode())
@@ -137,27 +155,28 @@ def release_tree(root):
             "libera-9.9.9.dist-info/METADATA",
             "Requires-Dist: libera-core==9.9.9\nRequires-Dist: libera-web==9.9.9\n",
         )
-    return Context(root=root, builders=[], phases=["stage"])
+    return ctx
 
 
-def test_stage_stamps_what_this_commit_gathered(tmp_path, monkeypatch):
-    monkeypatch.setattr(staging.repo, "head", lambda _root: HEAD)
+def test_stage_stamps_what_this_run_gathered(tmp_path):
     ctx = release_tree(tmp_path)
     staging.run(ctx)
-    assert staging.stamp_problems(tmp_path) == []
-    assert "libera-9.9.9-py3-none-any.whl" in [f.name for f in staging.staged(tmp_path)]
+    dest = ctx.files / "staged"
+    assert staging.stamp_problems(dest) == []
+    assert "libera-9.9.9-py3-none-any.whl" in [f.name for f in staging.staged(dest)]
+    assert staging.stamp_of(dest)["version"] == "9.9.9"
+    assert staging.stamp_of(dest)["fast"] is False
 
 
-def test_stage_refuses_what_another_commit_gathered(tmp_path, monkeypatch, capsys):
+def test_stage_refuses_what_another_commit_gathered(tmp_path, capsys):
     """A run directory is a commit's: the files the commit before gathered
     are not this one's to stage."""
-    monkeypatch.setattr(staging.repo, "head", lambda _root: HEAD)
-    ctx = release_tree(tmp_path)
-    monkeypatch.setattr(staging.repo, "head", lambda _root: "d" * 40)
+    release_tree(tmp_path)
+    ctx = replace(context(tmp_path, phases=["stage"]), run=tmp_path / "run" / "d")
     with pytest.raises(RefusedError, match="nothing was staged"):
         staging.run(ctx)
-    assert "is not here: run the components phase" in capsys.readouterr().out
-    assert not staging.folder(tmp_path).exists()
+    assert "is not here: run the phase that makes it" in capsys.readouterr().out
+    assert not (ctx.files / "staged").exists()
 
 
 STAGED = (
@@ -188,14 +207,19 @@ def uploads(tmp_path, monkeypatch):
         publishing.cdn, "extras", lambda *_a, **_k: done.append("extras")
     )
     monkeypatch.setattr(publishing.place, "here", lambda: None)
+
+    def git(_root, *args):
+        if args[0] == "tag" and args[1] != "--list":
+            done.append(["git", *args])
+        return ""
+
+    monkeypatch.setattr(publishing.repo, "git", git)
     return tmp_path, sorted(tmp_path / name for name in STAGED), done
 
 
 def test_publish_sends_the_components_before_libera_and_the_cdn_last(uploads):
     root, staged, done = uploads
-    publishing.publish(
-        Context(root=root, builders=[], phases=[], yes=True), root, staged
-    )
+    publishing.publish(context(root, yes=True), root, staged)
     assert done == [
         "ready",
         [
@@ -205,6 +229,8 @@ def test_publish_sends_the_components_before_libera_and_the_cdn_last(uploads):
         ],
         ["libera-9.9.9-py3-none-any.whl", "libera-9.9.9.tar.gz"],
         "extras",
+        # Tagged here once it is up, and not pushed.
+        ["git", "tag", "9.9.9"],
     ]
 
 
@@ -217,7 +243,7 @@ def test_publish_uploads_nothing_until_asked(uploads, monkeypatch):
 
     monkeypatch.setattr(publishing, "confirm", no)
     with pytest.raises(RefusedError):
-        publishing.publish(Context(root=root, builders=[], phases=[]), root, staged)
+        publishing.publish(context(root), root, staged)
     assert done == ["ready"]
 
 
@@ -230,9 +256,7 @@ def test_publish_uploads_nothing_the_cdn_would_refuse(uploads, monkeypatch):
 
     monkeypatch.setattr(publishing.cdn, "ready", refused)
     with pytest.raises(RefusedError):
-        publishing.publish(
-            Context(root=root, builders=[], phases=[], yes=True), root, staged
-        )
+        publishing.publish(context(root, yes=True), root, staged)
     assert done == []
 
 
@@ -279,18 +303,15 @@ FIVE = "FIVE_DOCX=ok\nFIVE_XLSX=ok\nFIVE_PPTX=ok\n"
 def test_a_platform_passes_the_stage_only_installed_converted_and_drawn(
     tmp_path, monkeypatch, platform, said, passes
 ):
-    monkeypatch.setattr(staging.repo, "head", lambda _root: HEAD)
-    staging.folder(tmp_path).mkdir(parents=True)
-    wheel_path = staging.folder(tmp_path) / "libera-9.9.9-py3-none-any.whl"
+    folder(tmp_path).mkdir(parents=True)
+    wheel_path = folder(tmp_path) / "libera-9.9.9-py3-none-any.whl"
     with zipfile.ZipFile(wheel_path, "w") as wheel:
         wheel.writestr(
             "libera-9.9.9.dist-info/METADATA",
             "Requires-Dist: libera-core==9.9.9\nRequires-Dist: libera-web==9.9.9\n",
         )
     b = Builder(platform, "x", "~/r")
-    found = staging.installs(
-        Answering(said), b, staging.folder(tmp_path), "9.9.9", tmp_path
-    )
+    found = staging.installs(Answering(said), b, folder(tmp_path), "9.9.9", tmp_path)
     assert (found == []) is passes, found
 
 
@@ -312,9 +333,8 @@ class Recording(Answering):
         return self.said
 
 
-def restamp(stage: Path, *names: str) -> None:
+def restamp(dest: Path, *names: str) -> None:
     """`names` added to the staged files, and the stage stamped again."""
-    dest = staging.folder(stage)
     for name in names:
         (dest / name).write_bytes(name.encode())
     files = {
@@ -343,10 +363,10 @@ def test_distros_runs_the_matrix_on_each_linux_builder(
         "libera_core-9.9.9-py3-none-manylinux_2_34_aarch64.whl",
         "libera_web-9.9.9-py3-none-any.whl",
     )
-    zone = staging.origin_folder(stage)
+    zone = staging.origin_of(stage)
     (zone / "pypi").mkdir(parents=True)
     (zone / "install.sh").write_text("install")
-    for f in staging.folder(stage).glob("*.whl"):
+    for f in stage.glob("*.whl"):
         (zone / "pypi" / f.name).write_bytes(f.read_bytes())
     hosts = {"x": Recording(said), "y": Recording(said)}
     monkeypatch.setattr(staging.matrix, "run", lambda *_: pytest.fail("ran here"))
@@ -355,8 +375,8 @@ def test_distros_runs_the_matrix_on_each_linux_builder(
         Builder("linux-x86_64", "x", "~/r"),
         Builder("linux-arm64", "y", "~/r"),
     ]
-    ctx = Context(
-        root=stage,
+    ctx = context(
+        stage.parents[3],
         builders=builders,
         phases=["distros"],
         host_for=lambda b: hosts[b.target],
@@ -381,10 +401,12 @@ def test_distros_runs_the_matrix_on_each_linux_builder(
 
 
 def test_distros_refuses_a_stage_that_was_never_stamped(stage, monkeypatch):
-    (staging.folder(stage) / staging.STAMP).unlink()
+    (stage / staging.STAMP).unlink()
     monkeypatch.setattr(staging.matrix, "run", lambda *_: pytest.fail("ran"))
-    ctx = Context(
-        root=stage, builders=[Builder("linux-x86_64", "x", "~/r")], phases=["distros"]
+    ctx = context(
+        stage.parents[3],
+        builders=[Builder("linux-x86_64", "x", "~/r")],
+        phases=["distros"],
     )
     with pytest.raises(RefusedError, match="no distribution was tried"):
         staging.distros(ctx)
@@ -480,29 +502,3 @@ class Shipping(Answering):
     @staticmethod
     def fetch(_there, _local):
         return 1, "no screenshot here"
-
-
-def test_a_commit_made_during_make_verify_does_not_move_the_wheel(
-    tmp_path, monkeypatch
-):
-    """The wheel phase named its directory after `make verify`, half an hour
-    in, and a commit made meanwhile sent the wheel to the next commit's."""
-    heads = iter(["a" * 40, "b" * 40])
-    head = next(heads)
-    monkeypatch.setattr(staging.repo, "head", lambda _root: head)
-    (tmp_path / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
-    out = []
-
-    def run_here(argv, *_args, **_kwargs):
-        nonlocal head
-        if argv[:2] == ["make", "verify"]:
-            head = next(heads)
-        else:
-            dist = Path(argv[argv.index("--out-dir") + 1])
-            dist.mkdir(parents=True)
-            (dist / "libera-9.9.9-py3-none-any.whl").write_bytes(b"w")
-            out.append(dist)
-
-    monkeypatch.setattr(here, "run_here", run_here)
-    here.wheel(Context(root=tmp_path, builders=[], phases=["wheel"]))
-    assert out == [tmp_path / "build" / "out" / "release" / ("a" * 40) / "pypi"]
