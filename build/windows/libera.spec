@@ -17,7 +17,9 @@ import os
 from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 ICON = os.environ["LIBERA_ICON"]
-SRC = os.environ["LIBERA_SRC"]
+# The checkout's src/, or nothing when the environment frozen holds libera
+# itself (windows-app.sh with BUNDLE_WHEELS).
+SRC = os.environ.get("LIBERA_SRC", "")
 VERSION_FILE = os.environ["LIBERA_VERSION_FILE"]
 
 datas, binaries, hiddenimports = [], [], []
@@ -43,7 +45,7 @@ for dist in ("libera", "pywebview", "libera-core", "libera-web"):
 
 a = Analysis(
     [os.path.join(SPECPATH, "entry.py")],
-    pathex=[SRC],
+    pathex=[SRC] if SRC else [],
     datas=datas,
     binaries=binaries,
     hiddenimports=hiddenimports,
