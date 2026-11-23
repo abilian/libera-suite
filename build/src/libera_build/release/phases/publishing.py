@@ -175,7 +175,9 @@ echo "WINDOW=${size:-0}"
 
 def install_script(app: str, *, staged: str = "", deps: Sequence[str] = ()) -> str:
     """bash, the same on every builder, that installs `app` into a new
-    environment and converts a line of text to a .docx.
+    environment and converts a line of text to a .docx. The environment, in
+    a directory of its own, goes when the script ends: 414 MB a run, they
+    filled the arm64 builder's /tmp, a tmpfs with a quota per user.
 
     From PyPI alone, or, given `staged` (a directory under $HOME there),
     libera and its components from that directory and nothing else: `deps`,
@@ -199,7 +201,8 @@ for try in $(seq 10); do
 done"""
     return (
         f"""
-T=$(mktemp -d); cd "$T" || exit
+T=$(mktemp -d "${{TMPDIR:-/tmp}}/libera-check.XXXXXX"); cd "$T" || exit
+trap 'rm -rf "$T"' EXIT
 uv venv -q -p 3.12 v || exit
 bin=v/bin; [ -d "$bin" ] || bin=v/Scripts
 installed=0
@@ -222,9 +225,11 @@ def origin_install_script(app: str, zone: Path, root: Path, platform: str) -> st
     driver = shlex.quote(str(root / "tests" / "d_gui" / "driver.py"))
     pictures = shlex.quote(str(root / "build" / "out" / "five-minutes"))
     return (
-        'T=$(mktemp -d); cd "$T" || exit\n'
+        'T=$(mktemp -d "${TMPDIR:-/tmp}/libera-check.XXXXXX"); cd "$T" || exit\n'
         + staged_origin.serve(shlex.quote(str(zone)), app)
+        # After serve, whose trap stops the server: this one does that too.
         + """
+trap 'kill $server 2>/dev/null; rm -rf "$T"' EXIT
 export HOME="$T/home" PIP_FIND_LINKS="$LIBERA_ORIGIN/pypi/"
 mkdir -p "$HOME"
 installed=0
