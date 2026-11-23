@@ -13,9 +13,11 @@ from the Windows machine, as a release of its own.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from libera.manifest import hash_file
 from libera_build.artifacts import (
     BUNDLES_DIR,
     MIN_BUNDLE_BYTES,
@@ -76,9 +78,15 @@ def bundles(ctx: Context) -> None:
     qemu-user does not carry one across. See notes/15-builders.md.
     """
     app = ctx.version
+    dest = ctx.files / "bundles"
     made = {b: bundle for b in ctx.remotes if (bundle := bundle_of(b, app))}
+    sources = {b: made_from(ctx.files / "pypi", app, b) for b in made}
+    for b in list(made):
+        if already_made(dest, made[b], sources[b]):
+            say(f"    {b.platform:<14} made before from these very wheels")
+            del made[b]
     if not made:
-        say("    no remote builders that make a bundle; nothing to do")
+        say("    no bundle to make")
         return
     step(f"sending the {app} wheels to the builders")
     found = []
@@ -104,10 +112,37 @@ def bundles(ctx: Context) -> None:
         return check_remote_file(b, host, path, MIN_BUNDLE_BYTES)
 
     run_builds(ctx, list(made), lambda b: made[b].command, verify_bundle, "bundling")
-    fetch_bundles(ctx, made, ctx.files / "bundles")
+    fetch_bundles(ctx, made, dest, sources)
 
 
-def fetch_bundles(ctx: Context, made: dict[Builder, Bundle], dest: Path) -> None:
+def made_from(pypi: Path, app: str, b: Builder) -> str:
+    """What `b` packages, as one hash: the wheels it is sent."""
+    digest = hashlib.sha256()
+    for name in staging.wheels_for(pypi, app, b):
+        digest.update(hash_file(pypi / name).encode())
+    return digest.hexdigest()
+
+
+def from_file(dest: Path, bundle: Bundle) -> Path:
+    """Beside a bundle here, the hash of the wheels it was made from."""
+    return dest / (bundle.files[0].rsplit("/", 1)[-1] + ".from")
+
+
+def already_made(dest: Path, bundle: Bundle, source: str) -> bool:
+    """A check run again at the same commit packages the same wheels: what it
+    made then is what it would make now."""
+    here = [dest / path.rsplit("/", 1)[-1] for path in bundle.files]
+    said = from_file(dest, bundle)
+    return (
+        all(f.is_file() for f in here)
+        and said.is_file()
+        and (said.read_text(encoding="utf-8").strip() == source)
+    )
+
+
+def fetch_bundles(
+    ctx: Context, made: dict[Builder, Bundle], dest: Path, sources: dict[Builder, str]
+) -> None:
     """Bring every bundle here, into the run's directory, where `stage`
     gathers the whole release."""
     step("collecting the bundles")
@@ -129,6 +164,7 @@ def fetch_bundles(ctx: Context, made: dict[Builder, Bundle], dest: Path) -> None
                 )
                 continue
             if first:
+                from_file(dest, bundle).write_text(sources[b] + "\n", encoding="utf-8")
                 size = landed.stat().st_size // 1048576
                 say(f"    {b.platform:<14} {landed.name}  {size} MB")
             # Here now, so gone from there: a bundle per check would

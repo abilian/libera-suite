@@ -299,6 +299,16 @@ def test_bundles_makes_the_installer_on_windows_and_brings_it_here(driver, home)
     assert (here / f"{setup.name}.sha256").read_text() == f"0  {setup.name}\n"
     assert not setup.exists(), "the installer stayed on the builder"
 
+    # Run again on the same wheels, it makes nothing: the builder has no
+    # installer to give any more, and none is asked of it.
+    builders.bundles(ctx)
+    assert (here / setup.name).stat().st_size == MIN_BUNDLE_BYTES
+    # Other wheels, another installer.
+    labelled(ctx.files / "pypi", "libera_web-9.9.9-py3-none-any.whl")
+    (ctx.files / "pypi" / "libera_web-9.9.9-py3-none-any.whl").write_bytes(b"other")
+    with pytest.raises(RefusedError, match="1 of 1 builder"):
+        builders.bundles(ctx)
+
 
 def test_bundles_fails_when_the_installer_was_not_made(driver, home):
     win = Builder("windows-x86_64", "win", "~/checkout")

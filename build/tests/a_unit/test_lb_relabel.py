@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import time
+import types
 import zipfile
 from typing import TYPE_CHECKING
 
@@ -67,3 +69,15 @@ def test_a_file_that_says_its_version_another_way_is_refused(tmp_path):
     files = {**FILES, "libera/payload/payload.version": b"version = '1.0'\n"}
     with pytest.raises(RefusedError, match=r"payload\.version"):
         relabel(wheel(tmp_path, files), "2.0", tmp_path / "out")
+
+
+def test_the_same_wheel_relabelled_later_is_the_same_file(tmp_path, monkeypatch):
+    """What lets a check run again reuse the bundles made of its wheels."""
+    original = wheel(tmp_path)
+    first = relabel(original, "1.0+abc1234", tmp_path / "first")
+    # An hour on, for zipfile alone, which dates an entry it is given by name.
+    later = time.time() + 3600
+    clock = types.SimpleNamespace(time=lambda: later, localtime=time.localtime)
+    monkeypatch.setattr(zipfile, "time", clock)
+    second = relabel(original, "1.0+abc1234", tmp_path / "second")
+    assert first.read_bytes() == second.read_bytes()

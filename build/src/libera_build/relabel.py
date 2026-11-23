@@ -51,9 +51,13 @@ def relabel(wheel: Path, version: str, into: Path) -> Path:
         return made
     old_info, new_info = f"{name}-{old}.dist-info/", f"{name}-{version}.dist-info/"
     record = []
+    # Dated as the wheel's own RECORD below, or as zip's epoch: a bare name
+    # is dated now, and the same wheel relabelled twice would be two files.
+    kept = zipfile.ZipInfo(date_time=(1980, 1, 1, 0, 0, 0))
     with zipfile.ZipFile(wheel) as src, zipfile.ZipFile(made, "w") as dst:
         for item in src.infolist():
             if item.filename == f"{old_info}RECORD":
+                kept = item
                 continue
             data = src.read(item)
             path = item.filename
@@ -68,7 +72,8 @@ def relabel(wheel: Path, version: str, into: Path) -> Path:
             digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest())
             record.append(f"{path},sha256={digest.rstrip(b'=').decode()},{len(data)}")
         record.append(f"{new_info}RECORD,,")
-        dst.writestr(f"{new_info}RECORD", "\n".join(record) + "\n")
+        kept.filename = f"{new_info}RECORD"
+        dst.writestr(kept, "\n".join(record) + "\n")
     return made
 
 

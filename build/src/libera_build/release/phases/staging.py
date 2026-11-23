@@ -260,13 +260,7 @@ def five_problems(facts: dict[str, str]) -> list[str]:
 def send_wheels(host: Host, b: Builder, dest: Path, app: str, stage: str) -> str:
     """libera and the components it pins for this platform, copied there; a
     problem, or nothing."""
-    pins = publishing.requires_of(dest / app_wheel_name(app))
-    components = {r.split("==")[0]: r.split("==")[1] for r in pins if "==" in r}
-    wanted = [
-        app_wheel_name(app),
-        core_wheel_name(components["libera-core"], TAGS[b.platform]),
-        web_wheel_name(components["libera-web"]),
-    ]
+    wanted = wheels_for(dest, app, b)
     # Overwritten file by file: the names carry the version, so nothing left
     # from another one can stand in for these.
     host.capture(f'mkdir -p "$HOME/{stage}"')
@@ -275,6 +269,17 @@ def send_wheels(host: Host, b: Builder, dest: Path, app: str, stage: str) -> str
         if host.send(dest / name, f"{stage}/{name}")[0]:
             return f"{b.platform}: could not copy {name} there"
     return ""
+
+
+def wheels_for(dest: Path, app: str, b: Builder) -> list[str]:
+    """libera's wheel in `dest`, and the components' it pins for `b`."""
+    pins = publishing.requires_of(dest / app_wheel_name(app))
+    components = {r.split("==")[0]: r.split("==")[1] for r in pins if "==" in r}
+    return [
+        app_wheel_name(app),
+        core_wheel_name(components["libera-core"], TAGS[b.platform]),
+        web_wheel_name(components["libera-web"]),
+    ]
 
 
 def stamp_problems(dest: Path) -> list[str]:
