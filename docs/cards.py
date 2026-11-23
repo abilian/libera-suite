@@ -3,20 +3,21 @@
 
     uv run --project .. --with playwright python cards.py
 
-One per edition, in its own language, from `card_tagline`, `card_line`,
-`card_version` and `card_now_in` in editions.toml, written to
+One per edition, in its own language, from `card_badge`, `card_tagline`,
+`card_line`, `card_promise` and `card_languages` in editions.toml, written to
 src/assets/og/card-<lang>.jpg, which is where overrides/main.html points
 og:image. 1200 by 630 is the size the networks crop least.
 
-The badge carries the application's version, from pyproject.toml, and the
-last line the languages its interface speaks: English, and one per catalogue
-in src/libera/host/locale/. Both are read when the cards are drawn, so they
-are as current as the last run.
+The card names no version and no exact count of languages: a shared link
+keeps its picture for months, and a card that ages with each release is
+wrong by the next one. `card_languages` says "more than 40", which stays true
+while the interface has at least 41 catalogues (counting English); main()
+checks it.
 
 The wordmark is figures/brand/wordmark-suite.svg, copied from the branding
 repository like the application's icon; do not edit it here. Lato comes from
 Google Fonts, so drawing the cards needs the network. Regenerate after changing
-a tagline, the brand or the Words screenshot, and at each minor release.
+the text, the brand or the Words screenshot.
 """
 
 from __future__ import annotations
@@ -33,16 +34,8 @@ DOCS = Path(__file__).parent
 OUT = DOCS / "src" / "assets" / "og"
 LOCALES = DOCS.parent / "src" / "libera" / "host" / "locale"
 
-# Each interface language under its own name. A catalogue with no name here
-# stops the drawing: add it.
-ENDONYMS = {
-    "en": "English",
-    "fr": "Français",
-    "de": "Deutsch",
-    "it": "Italiano",
-    "es": "Español",
-    "nl": "Nederlands",
-}
+# `card_languages` claims more than this many interface languages.
+LANGUAGES_CLAIMED = 40
 
 CARD = Template("""<!doctype html>
 <meta charset="utf-8">
@@ -60,9 +53,10 @@ CARD = Template("""<!doctype html>
   .words { background: #6F6BAD; }
   .tables { background: #00877C; }
   .slides { background: #A28137; }
+  .pdf { background: #B5462B; }
   .url { position: absolute; left: 72px; bottom: 40px;
          font-size: 22px; font-weight: 700; }
-  .version { position: absolute; left: 330px; top: 22px; padding: 6px 14px;
+  .badge { position: absolute; left: 330px; top: 22px; padding: 6px 14px;
              border-radius: 999px; background: #B5462B; color: #F6F1E9;
              font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
   .langs { margin-top: 22px; font-size: 21px; color: #5E554E; }
@@ -71,7 +65,7 @@ CARD = Template("""<!doctype html>
           box-shadow: 0 24px 64px rgba(30, 26, 23, 0.28); }
 </style>
 <div class="text">
-  <span class="version">$version</span>
+  <span class="badge">$badge</span>
   <img class="wordmark" src="$wordmark" alt="">
   <h1>$tagline</h1>
   <p>$line</p>
@@ -79,8 +73,9 @@ CARD = Template("""<!doctype html>
     <span class="words">.docx</span><span class="words">.odt</span>
     <span class="tables">.xlsx</span><span class="tables">.ods</span>
     <span class="slides">.pptx</span><span class="slides">.odp</span>
+    <span class="pdf">.pdf</span>
   </div>
-  <p class="langs"><b>$now_in</b> $languages</p>
+  <p class="langs"><b>$promise</b> $languages</p>
 </div>
 <img class="shot" src="$shot" alt="">
 <div class="url">docs.liberasuite.eu</div>
@@ -91,20 +86,14 @@ def data_uri(path: Path, mime: str) -> str:
     return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
 
 
-def minor_version() -> str:
-    """0.5 for 0.5.0: a patch release does not need a new card."""
-    pyproject = tomllib.loads((DOCS.parent / "pyproject.toml").read_text("utf-8"))
-    return ".".join(pyproject["project"]["version"].split(".")[:2])
-
-
-def interface_languages() -> str:
-    codes = ["en", *sorted(p.stem for p in LOCALES.glob("*.json"))]
-    return " · ".join(ENDONYMS[code] for code in codes)
-
-
 def main() -> None:
+    languages = 1 + len(list(LOCALES.glob("*.json")))  # English has no catalogue
+    if languages <= LANGUAGES_CLAIMED:
+        raise SystemExit(
+            f"cards: the interface has {languages} languages, but card_languages"
+            f" claims more than {LANGUAGES_CLAIMED}: change the text"
+        )
     editions = tomllib.loads((DOCS / "editions.toml").read_text("utf-8"))
-    version, languages = minor_version(), interface_languages()
     images = {
         "wordmark": data_uri(
             DOCS / "figures/brand/wordmark-suite.svg", "image/svg+xml"
@@ -119,11 +108,11 @@ def main() -> None:
             page.set_content(
                 CARD.substitute(
                     images,
+                    badge=html.escape(strings["card_badge"]),
                     tagline=html.escape(strings["card_tagline"]),
                     line=html.escape(strings["card_line"]),
-                    version=html.escape(f"{strings['card_version']} {version}"),
-                    now_in=html.escape(strings["card_now_in"]),
-                    languages=html.escape(languages),
+                    promise=html.escape(strings["card_promise"]),
+                    languages=html.escape(strings["card_languages"]),
                 ),
                 wait_until="networkidle",
             )
