@@ -89,10 +89,11 @@ def data_uri(path: Path, mime: str) -> str:
 def main() -> None:
     languages = 1 + len(list(LOCALES.glob("*.json")))  # English has no catalogue
     if languages <= LANGUAGES_CLAIMED:
-        raise SystemExit(
+        msg = (
             f"cards: the interface has {languages} languages, but card_languages"
             f" claims more than {LANGUAGES_CLAIMED}: change the text"
         )
+        raise SystemExit(msg)
     editions = tomllib.loads((DOCS / "editions.toml").read_text("utf-8"))
     images = {
         "wordmark": data_uri(
