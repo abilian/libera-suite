@@ -121,11 +121,9 @@ def test_check_is_called_here_with_its_phases_and_options():
     assert call == cli.Call(run, (options,))
 
 
-def test_publish_asks_unless_yes_and_narrows_nothing():
+def test_publish_asks_unless_yes_and_wants_its_version():
     (call,) = cli.plan(["release", "publish", "0.7.5", "--yes"])
     assert call == cli.Call(run, (RunOptions("publish", version="0.7.5", yes=True),))
-    with pytest.raises(SystemExit):
-        cli.plan(["release", "publish", "0.7.5", "--only", "linux-arm64"])
     with pytest.raises(SystemExit):
         cli.plan(["release", "publish"])
 

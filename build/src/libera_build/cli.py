@@ -996,13 +996,13 @@ def add_release(groups: Groups) -> None:
         p.add_argument(
             "--dry-run", action="store_true", help="say what would run, run nothing"
         )
+        p.add_argument(
+            "--only",
+            action="append",
+            metavar="PLATFORM",
+            help="one builder, by its platform in build/builders.toml; repeatable",
+        )
         if verb == "check":
-            p.add_argument(
-                "--only",
-                action="append",
-                metavar="PLATFORM",
-                help="one builder, by its platform in build/builders.toml; repeatable",
-            )
             p.add_argument(
                 "--fast",
                 action="store_true",

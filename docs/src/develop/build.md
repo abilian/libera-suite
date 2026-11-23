@@ -175,14 +175,13 @@ Every item is checked on the file the build uses, whoever installed it, so a mac
 
 The first line takes hours, V8 alone about one, with OpenSSL from vcpkg. `windows-app.sh` freezes the environment `uv run` syncs, whose components `uv sync` builds from the pins (an hour the first time, minutes after), and refuses a frozen tree that cannot find them. It writes the frozen application and `Libera-Suite-Setup-<version>.exe`, and copies the installer into `build/out/bundles/` with its SHA-256. Unlike the macOS `.app`, it embeds its own interpreter, because a Windows user has no Python.
 
-`make ship` builds Windows with the rest. Its `components` phase runs `components build` there; `bundles` runs `app build windows` there, which freezes the components `uv sync` builds from the pins, and brings the installer and its `.sha256` here, into the run directory (`build/out/release/<commit>/bundles/`), where `stage` gathers them with the Flatpaks. The upload checks the hash first and each stored size after, and moves `bundles/latest-windows`, the version `install.ps1` installs, last, so the installer is on the origin before any user is sent to it.
+`make ship` builds Windows with the rest. Its `components` phase runs `components build` there; `bundles` sends it the release's three wheels and runs `app build windows --wheels` there, which freezes a new environment of exactly those (`BUNDLE_WHEELS`; without it, the environment `uv sync` builds from the pins), and brings the installer and its `.sha256` here, into the version's directory in the run directory (`build/out/release/<commit>/<version>/bundles/`), where `stage` gathers them with the Flatpaks. The upload checks the hash first and each stored size after, and moves `bundles/latest-windows`, the version `install.ps1` installs, last, so the installer is on the origin before any user is sent to it.
 
-A Windows build that comes after the release's Flatpaks is checked like the rest, then published again, PyPI skipping the files it already has:
+A Windows build that comes after the release's Flatpaks is made, staged and published again, PyPI skipping the files it already has:
 
 ```sh
-lb release check bundles --only windows-x86_64   # the installer, made there and brought here
-lb release check stage                           # installed and opened there, with the rest
-lb release publish                               # the new files; latest-windows moves last
+lb release publish X.Y.Z bundles --only windows-x86_64   # the installer, packaged there and brought here
+lb release publish X.Y.Z stage publish                   # installed and opened there, with the rest; latest-windows moves last
 ```
 
 The Flatpaks have their own pointer, `bundles/latest`, so either can go first. `publish` refuses to move it while `latest-windows` names no installer on the origin, unless it brings one itself. Publishing is never done from the Windows machine: Git for Windows once turned `install.sh` to CRLF in a checkout there, and an upload from it broke `curl | sh` for everyone.
