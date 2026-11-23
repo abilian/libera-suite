@@ -121,6 +121,10 @@ if [ -n "$VENV" ]; then
     uv venv -q -p 3.12 "$VENV"
     uv pip install -q --python "$VENV" --find-links "$WHEELS_DIR" "$LIBERA_WHEEL" "$PYINSTALLER"
     SRC="$VENV/Lib/site-packages"
+    # lb runs this with PYTHONPATH naming the checkout's src/, and a libera
+    # found there first is the checkout's, at its own version, not the
+    # wheel's: the frozen tree said payload 0.7.4 to wheels of 0.7.4+9d5f75f.
+    unset PYTHONPATH
 fi
 py() {
     if [ -n "$VENV" ]; then "$VENV/Scripts/python.exe" "$@"
