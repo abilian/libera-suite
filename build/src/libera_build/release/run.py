@@ -102,12 +102,16 @@ def run(options: RunOptions) -> int:
     precheck.run(ctx)
     started = time.monotonic()
     head = repo.head(options.root)
+    took = []
     for phase in ctx.phases:
+        begun = time.monotonic()
         ACTIONS[phase](ctx)
+        took.append(f"{phase} {mmss(time.monotonic() - begun)}")
         if phase == "release":  # the one phase that commits, on purpose
             head = repo.head(options.root)
         moved_problem(options.root, head, phase)
     step(f"done in {mmss(time.monotonic() - started)}")
+    say(f"    {', '.join(took)}")
     app = ctx.version
     if "stage" in phases and options.verb == "check":
         if options.fast:

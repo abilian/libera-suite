@@ -27,6 +27,8 @@ leaves the builders.
 
 from __future__ import annotations
 
+import concurrent.futures
+import functools
 import json
 import shutil
 from pathlib import Path
@@ -47,7 +49,7 @@ from libera_build.hosts import LB, LocalHost, facts_from, remote_path
 from libera_build.origin import staged as origin
 from libera_build.release.phases import publishing
 from libera_build.released_gui import ReleasedGuiOptions
-from libera_build.report import RefusedError, problems, say, step
+from libera_build.report import RefusedError, held, problems, say, step
 
 if TYPE_CHECKING:
     from libera_build.hosts import Host
@@ -103,14 +105,30 @@ def run(ctx: Context) -> None:
         [dest / f.name for f in files], origin_of(dest), app, ctx.root
     )
 
-    found = []
-    for b in ctx.builders:
+    windows = inventory.gui_remotes(ctx.builders)
+
+    def on(b: Builder) -> list[str]:
+        """One machine's part, in order: the installs, then a window."""
         host = ctx.host_for(b) if b.remote else LocalHost(Path.home())
-        found += installs(host, b, dest, app, ctx.root)
-    for b in inventory.gui_remotes(ctx.builders):
+        found = installs(host, b, dest, app, ctx.root)
         options = ReleasedGuiOptions(origin=zone, root=ctx.root, version=app)
-        if not released_gui.on_host(ctx.host_for(b), b.platform, options):
+        if b in windows and not released_gui.on_host(host, b.platform, options):
             found.append(f"{b.platform}: the staged bundle did not draw a window")
+        return found
+
+    def told(b: Builder) -> tuple[list[str], str]:
+        return held(functools.partial(on, b))
+
+    # Every machine at once, each one's lines said when it is done: one after
+    # the other, the waits of seven jobs on four machines added up.
+    step(f"installing on {len(ctx.builders)} machine(s), in parallel")
+    found: list[str] = []
+    with concurrent.futures.ThreadPoolExecutor(len(ctx.builders) or 1) as pool:
+        jobs = [pool.submit(told, b) for b in ctx.builders]
+        for job in concurrent.futures.as_completed(jobs):
+            there, said = job.result()
+            say(said.rstrip("\n"))
+            found += there
     problems(found, "nothing was stamped, and publish will refuse.")
 
     stamp = {

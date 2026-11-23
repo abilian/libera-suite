@@ -8,7 +8,21 @@ caller, and no test, could see a refusal happen.
 
 from __future__ import annotations
 
+import contextvars
+import io
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, TypeVar
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+T = TypeVar("T")
+
+# Where say and step write in this thread, when `held` collects it.
+_held: contextvars.ContextVar[io.StringIO | None] = contextvars.ContextVar(
+    "held", default=None
+)
 
 
 class RefusedError(Exception):
@@ -16,11 +30,22 @@ class RefusedError(Exception):
 
 
 def say(message: str = "") -> None:
-    print(message, flush=True)
+    print(message, file=_held.get() or sys.stdout, flush=True)
 
 
 def step(message: str) -> None:
-    print(f"\n==> {message}", flush=True)
+    say(f"\n==> {message}")
+
+
+def held(work: Callable[[], T]) -> tuple[T, str]:
+    """`work`'s result and what it said, said nowhere yet: for work run
+    beside other work, whose lines would otherwise interleave."""
+    out = io.StringIO()
+    token = _held.set(out)
+    try:
+        return work(), out.getvalue()
+    finally:
+        _held.reset(token)
 
 
 def confirm(question: str, refused: str) -> None:
