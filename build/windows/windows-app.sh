@@ -6,6 +6,9 @@
 # Freezes the environment `uv run` syncs, which holds the components that
 # `uv sync` builds (an hour the first time, minutes after a `payload build`),
 # and needs build/windows/windows-setup.ps1's tools, Inno Setup among them.
+# With BUNDLE_WHEELS, a folder holding libera, libera-core and libera-web as
+# wheels, it freezes a new environment of those instead, under the version
+# they carry: what a release does, which builds them once and labels them.
 # Writes:
 #
 #   $OUT/windows/Libera Suite/                the frozen application
@@ -24,9 +27,20 @@ REPO="$(cd "$BUILD/.." && pwd)"
 
 [ -n "$EXE" ] || { echo "FATAL: this builds the Windows application; run it on Windows" >&2; exit 1; }
 
-PAYLOAD_VERSION="$(payload_version "$REPO")"
 WORK="$OUT/windows"
-APP_VERSION="$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$REPO/pyproject.toml" | head -1)"
+VENV=""
+if [ -n "${BUNDLE_WHEELS:-}" ]; then
+    WHEELS_DIR="$(cygpath -u "$BUNDLE_WHEELS")"
+    set -- "$WHEELS_DIR"/libera-*.whl
+    [ $# = 1 ] && [ -f "$1" ] || { echo "FATAL: not one libera wheel in $WHEELS_DIR: $*" >&2; exit 1; }
+    LIBERA_WHEEL="$1"
+    APP_VERSION="$(basename "$LIBERA_WHEEL" | cut -d- -f2)"
+    PAYLOAD_VERSION="$APP_VERSION"
+    VENV="$WORK/venv"
+else
+    PAYLOAD_VERSION="$(payload_version "$REPO")"
+    APP_VERSION="$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$REPO/pyproject.toml" | head -1)"
+fi
 # The numbers alone, for what Windows reads as a version: 0.4.0 of 0.4.0rc1.
 # Inno Setup refuses anything else in VersionInfoVersion, and the resource
 # below has four numeric fields.
@@ -63,7 +77,7 @@ printf '%s' '<!doctype html><html><body style="margin:0;background:transparent">
     --screenshot="$(cygpath -w "$ICONWORK/icon1024.png")" \
     "file:///$(cygpath -m "$ICONWORK/icon.html")" >/dev/null 2>&1 || true
 ICON="$WORK/Libera.ico"
-uv run --with pillow python - "$(cygpath -m "$ICONWORK/icon1024.png")" "$(cygpath -m "$ICON")" <<'PY'
+uv run --no-project --with pillow python - "$(cygpath -m "$ICONWORK/icon1024.png")" "$(cygpath -m "$ICON")" <<'PY'
 import sys
 from PIL import Image
 im = Image.open(sys.argv[1]).convert("RGBA")
@@ -97,14 +111,31 @@ VSVersionInfo(
 VER
 
 # --- freeze -----------------------------------------------------------------------
+# The Python that freezes, and whose libera it finds: this checkout's, synced
+# by uv, or the new environment of the given wheels, their dependencies from
+# PyPI, libera's own from that folder alone (nothing else has its version).
+SRC="$REPO/src"
+if [ -n "$VENV" ]; then
+    echo "==> the environment, from $WHEELS_DIR"
+    rm -rf "$VENV"
+    uv venv -q -p 3.12 "$VENV"
+    uv pip install -q --python "$VENV" --find-links "$WHEELS_DIR" "$LIBERA_WHEEL" "$PYINSTALLER"
+    SRC="$VENV/Lib/site-packages"
+fi
+py() {
+    if [ -n "$VENV" ]; then "$VENV/Scripts/python.exe" "$@"
+    else uv run --with "$PYINSTALLER" python "$@"
+    fi
+}
+
 echo "==> freeze ($PYINSTALLER, libera $APP_VERSION, payload $PAYLOAD_VERSION)"
 rm -rf "$WORK/freeze" "$WORK/Libera Suite"
 (
     cd "$REPO"
     LIBERA_ICON="$(cygpath -w "$ICON")" \
-    LIBERA_SRC="$(cygpath -w "$REPO/src")" \
+    LIBERA_SRC="$(cygpath -w "$SRC")" \
     LIBERA_VERSION_FILE="$(cygpath -w "$VERSION_FILE")" \
-        uv run --with "$PYINSTALLER" pyinstaller --noconfirm --log-level WARN \
+        py -m PyInstaller --noconfirm --log-level WARN \
             --distpath "$(cygpath -w "$WORK")" \
             --workpath "$(cygpath -w "$WORK/freeze")" \
             "$(cygpath -w "$HERE/libera.spec")"
@@ -134,7 +165,7 @@ du -sh "$APP" | sed 's/^/    /'
 # --- installer ----------------------------------------------------------------------
 echo "==> associations, from src/libera/host/apps.py"
 ASSOC="$WORK/associations.iss"
-(cd "$REPO" && uv run python "$(cygpath -w "$HERE/associations.py")" "$(cygpath -w "$ASSOC")")
+(cd "$REPO" && py "$(cygpath -w "$HERE/associations.py")" "$(cygpath -w "$ASSOC")")
 echo "    $(grep -c 'OpenWithProgids' "$ASSOC") extensions"
 
 echo "==> installer (Inno Setup)"

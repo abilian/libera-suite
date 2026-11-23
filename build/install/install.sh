@@ -109,8 +109,10 @@ case "$CHANNEL" in
 *) die "--channel takes flatpak or pip, not $CHANNEL" ;;
 esac
 # The shape install.ps1 accepts for LIBERA_VERSION: digits and dots, then
-# perhaps a pre-release suffix, which bundles/latest never names.
-if [ -n "$VERSION" ] && ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+(\.[0-9]+)*((a|b|rc)[0-9]+)?$'; then
+# perhaps a pre-release suffix, which bundles/latest never names, then
+# perhaps a local label, which `lb release check` gives the candidates it
+# installs (0.7.4+69906cd) and PyPI refuses.
+if [ -n "$VERSION" ] && ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+(\.[0-9]+)*((a|b|rc)[0-9]+)?(\+[a-z0-9]+)?$'; then
     die "--version is not a version number: $VERSION"
 fi
 

@@ -180,6 +180,13 @@ WHEELS = Knob(
     "the component wheels to install; default $BUILD_ROOT/out/wheels/<version>",
     "DIR",
 )
+BUNDLE_WHEELS = Knob(
+    "--wheels",
+    "BUNDLE_WHEELS",
+    "libera and its components as wheels, packaged as they are;"
+    " default: built here from this checkout",
+    "DIR",
+)
 # Not LANG: every shell here has one, and it would reach every container.
 LINUX_LANG = Knob(
     "--lang",
@@ -382,19 +389,33 @@ FLATPAK_ACTION = {"flatpak": "build", "flatpak-wheels": "wheels"}
 
 def app_build(args: argparse.Namespace) -> Steps:
     target = args.target
-    misplaced(args, {target}, {"standalone": ("macos",), "arch": tuple(FLATPAK_ACTION)})
+    misplaced(
+        args,
+        {target},
+        {
+            "standalone": ("macos",),
+            "arch": tuple(FLATPAK_ACTION),
+            "wheels": ("flatpak", "windows"),
+        },
+    )
     if target == "macos":
         env = {"STANDALONE": "1"} if args.standalone else {}
         return [sh("macos/macos-app.sh", env=env)]
     if target == "macos-launcher":
         return [sh("macos/launcher.sh")]
+    wheels = path_given(args, BUNDLE_WHEELS)
     if target == "windows":
-        return [sh("windows/windows-app.sh")]
-    return [flatpak_call(args, FLATPAK_ACTION[target])]
+        env = {BUNDLE_WHEELS.env: str(wheels)} if wheels else {}
+        return [sh("windows/windows-app.sh", env=env)]
+    return [flatpak_call(args, FLATPAK_ACTION[target], wheels)]
 
 
-def flatpak_call(args: argparse.Namespace, action: str) -> Call:
-    options = FlatpakOptions(action, arch=given(args, ARCH) or host_arch())
+def flatpak_call(
+    args: argparse.Namespace, action: str, wheels: Path | None = None
+) -> Call:
+    options = FlatpakOptions(
+        action, arch=given(args, ARCH) or host_arch(), wheels=wheels
+    )
     return Call(flatpak.run, (options,))
 
 
@@ -762,11 +783,18 @@ def add_app(groups: Groups) -> None:
         "an application: the .app, its launcher, the Flatpak, the Windows installer",
         app_build,
         ARCH,
+        BUNDLE_WHEELS,
         epilog="macos is Libera.app, unsigned; macos-launcher rebuilds\n"
         "src/libera/macos/, its executable and icon, which are committed;\n"
         "flatpak is the bundle with its wheels and its check, flatpak-wheels\n"
-        "the offline wheel set alone; windows is the installer, on Windows.\n\n"
-        + examples("app build macos", "app build flatpak --arch arm64"),
+        "the offline wheel set alone; windows is the installer, on Windows.\n"
+        "--wheels packages libera, libera-core and libera-web as given, under\n"
+        "the version they carry: what a release does.\n\n"
+        + examples(
+            "app build macos",
+            "app build flatpak --arch arm64",
+            "app build windows --wheels ~/libera-stage/0.7.4/wheels",
+        ),
     )
     p.add_argument("target", choices=APP_TARGETS, metavar="TARGET")
     p.add_argument(

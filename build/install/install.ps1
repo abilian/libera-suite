@@ -69,7 +69,8 @@ function Install-LiberaSuite {
     # pointer never names: only a release moves it.
     $version = $env:LIBERA_VERSION
     if ($version) {
-        if ($version -notmatch '^[0-9]+(\.[0-9]+)*((a|b|rc)[0-9]+)?$') {
+        # A local label too (0.7.4+69906cd): what `lb release check` installs.
+        if ($version -notmatch '^[0-9]+(\.[0-9]+)*((a|b|rc)[0-9]+)?(\+[a-z0-9]+)?$') {
             throw "LIBERA_VERSION is not a version number: '$version'"
         }
     } else {

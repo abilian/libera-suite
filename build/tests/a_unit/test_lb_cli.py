@@ -82,6 +82,10 @@ TOOLCHAIN = sh("engine/toolchain.sh", "check")
         ),
         (["app", "build", "macos-launcher"], [sh("macos/launcher.sh")]),
         (["app", "test", "windows"], [sh("windows/gui-test.sh")]),
+        (
+            ["app", "build", "windows", "--wheels", "/w"],
+            [sh("windows/windows-app.sh", BUNDLE_WHEELS="/w")],
+        ),
     ],
 )
 def test_a_command_line_runs_its_scripts(argv, steps):
@@ -96,6 +100,7 @@ def test_a_command_line_runs_its_scripts(argv, steps):
         ["app", "build", "flatpak", "--standalone"],
         ["app", "build", "macos", "--arch", "arm64"],
         ["app", "test", "windows", "--arch", "arm64"],
+        ["app", "build", "macos", "--wheels", "/w"],
     ],
 )
 def test_an_option_for_a_stage_or_target_not_run_is_refused(argv):
@@ -224,7 +229,7 @@ def test_dry_still_works_as_an_environment_variable(monkeypatch):
 def no_knobs(monkeypatch):
     for name in (
         "ARCH", "BUILD_DIR", "VOLUME", "DOCKER_MEMORY", "MIRROR",
-        "V8_BUILD_JOBS", "CORE_BUILD_JOBS", "BUILD_ROOT", "YES",
+        "V8_BUILD_JOBS", "CORE_BUILD_JOBS", "BUILD_ROOT", "YES", "BUNDLE_WHEELS",
     ):  # fmt: skip
         monkeypatch.delenv(name, raising=False)
 
@@ -306,6 +311,8 @@ def test_the_flatpak_defaults_to_this_machines_architecture(no_knobs):
     assert call == cli.Call(flatpak.run, (FlatpakOptions("smoke", arch=host_arch()),))
     (call,) = cli.plan(["app", "build", "flatpak", "--arch", "amd64"])
     assert call.args[0] == FlatpakOptions("build", arch="amd64")
+    (call,) = cli.plan(["app", "build", "flatpak", "--arch", "amd64", "--wheels", "/w"])
+    assert call.args[0] == FlatpakOptions("build", arch="amd64", wheels=Path("/w"))
 
 
 def test_tidy_asks_unless_yes_and_lists_on_a_dry_run(no_knobs):

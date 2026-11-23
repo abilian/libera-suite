@@ -20,14 +20,18 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from libera.payload import locate
-from libera_build import components, versions
+from libera_build import components, relabel, versions
 from libera_build.artifacts import bundle_name
 from libera_build.containers import Engine, Mount, Run, interactive, linux_platform
 from libera_build.process import run_quietly
 from libera_build.repo import REPO
 from libera_build.report import RefusedError, say, step
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 APP_ID = "eu.liberasuite.Libera"
 WORK = REPO / "build" / "flatpak"
@@ -47,6 +51,22 @@ MUST_HAVE = (
 class FlatpakOptions:
     action: str  # build, wheels, check, smoke, shell, versions, image, clean
     arch: str = "amd64"
+    # libera and its components, packaged as they are, under their version:
+    # a release's, built and labelled elsewhere. None: built here.
+    wheels: Path | None = None
+
+
+def given_version(wheels: Path | None) -> str | None:
+    """The version of the one libera wheel in `wheels`, if given; refused
+    unless there is exactly one, since it names the bundle."""
+    if wheels is None:
+        return None
+    found = sorted(wheels.glob("libera-*.whl"))
+    if len(found) != 1:
+        names = ", ".join(p.name for p in found) or "none"
+        msg = f"{wheels} holds {len(found)} libera wheels, not one: {names}"
+        raise RefusedError(msg)
+    return relabel.version_of(found[0])
 
 
 def dockerfile_sum() -> str:
@@ -105,7 +125,7 @@ class Builder:
         # xattrs, and a macOS volume through virtiofs has none ("user xattr:
         # NO"). `lb container clean flatpak` drops it: about 4 GB per architecture.
         self.volume = f"libera-flatpak-{self.arch}"
-        self.app = versions.app_version(REPO)
+        self.app = given_version(options.wheels) or versions.app_version(REPO)
         self.bundle = bundle_name(self.app, self.arch)
 
     # --- the container ---------------------------------------------------------
@@ -204,15 +224,22 @@ class Builder:
         tmp = WORK / "wheels.tmp"
         shutil.rmtree(tmp, ignore_errors=True)
         tmp.mkdir(parents=True)
-        # The components first, this machine's core and the editors, built from
-        # the pinned sources: `pip wheel` finds them there rather than on PyPI.
-        components.wheels(REPO, tmp)
-        # libera itself, built here: it is pure Python. Into the scratch
-        # directory with --out-dir, and never `rm -rf dist && uv build`, which
-        # once deleted the sdist a release had just made.
-        run_quietly(
-            ["uv", "build", "--wheel", "--out-dir", str(tmp)], "the wheel", cwd=REPO
-        )
+        if self.options.wheels:
+            for wheel in self.options.wheels.glob("*.whl"):
+                shutil.copy2(wheel, tmp / wheel.name)
+        else:
+            # The components first, this machine's core and the editors, built
+            # from the pinned sources: `pip wheel` finds them there rather than
+            # on PyPI.
+            components.wheels(REPO, tmp)
+            # libera itself, built here: it is pure Python. Into the scratch
+            # directory with --out-dir, and never `rm -rf dist && uv build`,
+            # which once deleted the sdist a release had just made.
+            run_quietly(
+                ["uv", "build", "--wheel", "--out-dir", str(tmp)],
+                "the wheel",
+                cwd=REPO,
+            )
         # `pip wheel`, not `pip download`: proxy-tools publishes an sdist only,
         # and installing an sdist offline would need its build backend after
         # flatpak-builder has taken the network away. Resolved inside Linux,

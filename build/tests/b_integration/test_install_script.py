@@ -122,5 +122,12 @@ def test_a_version_asked_for_is_the_one_installed_whatever_latest_says(
     assert pip == ["pip", "libera==0.8.0rc1"]
 
 
+def test_a_candidate_of_a_release_check_is_a_version(tmp_path):
+    """What `lb release check` labels the files it installs: a local
+    version, which PyPI refuses."""
+    asked = run(tmp_path, "x86_64", "--channel", "pip", "--version", "0.7.4+69906cd")
+    assert asked == ["pip", "libera==0.7.4+69906cd"]
+
+
 def test_a_version_that_is_not_one_is_refused(tmp_path):
     assert run(tmp_path, "x86_64", "--version", "latest; rm -rf ~") == []
